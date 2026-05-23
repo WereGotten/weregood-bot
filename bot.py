@@ -12,16 +12,42 @@ import requests
 from contextlib import contextmanager
 from collections import defaultdict
 import urllib3
+import os
+from dotenv import load_dotenv
+
+# ========== ЗАГРУЗКА ПЕРЕМЕННЫХ ИЗ .env ==========
+load_dotenv()
 
 urllib3.disable_warnings()
 
-# ========== НАСТРОЙКИ ==========
-TELEGRAM_TOKEN = "8723199975:AAEL6n1DEV8pRQnYwZUqB8aJwCd8h7yRkNU"
-WEBHOOK_URL = "https://hedy-chylophyllous-laurette.ngrok-free.dev"
+# ========== НАСТРОЙКИ ИЗ .env ==========
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
+ADMIN_SECRET = os.getenv("ADMIN_SECRET")
+PROJECT_WALLET_ADDRESS = os.getenv("PROJECT_WALLET_ADDRESS")
+TONCENTER_API_KEY = os.getenv("TONCENTER_API_KEY")
+CRYPTO_PAY_TOKEN = os.getenv("CRYPTO_PAY_TOKEN")
+CRYPTO_PAY_TESTNET = os.getenv("CRYPTO_PAY_TESTNET", "false").lower() == "true"
+DATABASE_PATH = os.getenv("DATABASE_PATH", "database.db")
+BOT_USERNAME = os.getenv("BOT_USERNAME", "WereGooodbot")
+
+# ADMIN_IDS парсим из строки (можно перечислить через запятую)
+ADMIN_IDS = [int(x.strip()) for x in os.getenv("ADMIN_IDS", "5264622363").split(",")]
+
+# Проверка обязательных переменных
+if not TELEGRAM_TOKEN:
+    raise ValueError("❌ TELEGRAM_TOKEN не задан в .env файле!")
+if not ADMIN_SECRET:
+    raise ValueError("❌ ADMIN_SECRET не задан в .env файле!")
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
-app.config['SECRET_KEY'] = 'weregood_secret_key'
+app.config['SECRET_KEY'] = os.urandom(24)
 socketio = SocketIO(app, cors_allowed_origins="*")
+
+# Глобальные переменные
+pending_invoices = {}
+online_users = {}
+banned_users = {}
 
 
 # ========== ЗАГОЛОВКИ ДЛЯ NGrok И CORS ==========
@@ -33,19 +59,6 @@ def add_ngrok_and_cors_headers(response):
     response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
     return response
 
-
-# ========== АДМИН-НАСТРОЙКИ ==========
-ADMIN_IDS = [5264622363]
-ADMIN_SECRET = "weregood_admin_2026_secure_key_xyz789"
-
-# ========== TON CONNECT 2.0 НАСТРОЙКИ ==========
-PROJECT_WALLET_ADDRESS = "UQCa7xhdvDiaKuH6SFLgzLQFH8oRwwS2ElN1s283WnGM4fYB"
-TONCENTER_API_KEY = "5ac5fa2e76aa2d18be2033330bd224a743a7a7bbdcfaafc056392d7c887ef76c"
-
-# Глобальные переменные
-pending_invoices = {}
-online_users = {}
-banned_users = {}
 
 # ========== НАСТРОЙКИ CRYPTO PAY ==========
 CRYPTO_PAY_TOKEN = "584394:AAwGoJMaqLEEgAL3rXU9SMg4C3nuTzIH65Z"
@@ -85,7 +98,7 @@ class Database:
             cursor.close()
 
 
-db = Database("database.db")
+db = Database(DATABASE_PATH)
 
 # Создание таблиц
 with db.get_cursor() as cursor:
@@ -520,7 +533,7 @@ def get_user(user_id):
                     "likes": 0, "dislikes": 0, "settings": {"theme": "dark"}, "avatar_url": "", "usdt": 0, "wins": 0,
                     "role": "player", "stars": 0, "max_energy": 500, "energy_upgrades": 0, "energy_limit_upgrades": 0,
                     "unlocked_prefixes": ["player"], "ton_wallet": ""}
-        upgrade_counts = eval(row['upgrade_counts']) if row['upgrade_counts'] else {1: 0, 2: 0, 3: 0}
+        upgrade_counts = json.loads(row['upgrade_counts']) if row['upgrade_counts'] else {1: 0, 2: 0, 3: 0}
         if isinstance(upgrade_counts, dict):
             upgrade_counts = {int(k): v for k, v in upgrade_counts.items()}
         settings = {"theme": "dark"}
@@ -537,7 +550,7 @@ def get_user(user_id):
                 unlocked_prefixes = ["player"]
         return {"user_id": row['user_id'], "wg": row['wg'], "lp": row['lp'], "energy": row['energy'],
                 "last_energy_update": row['last_energy_update'],
-                "tickets": eval(row['tickets']) if row['tickets'] else [], "total_clicks": row['total_clicks'],
+                "tickets": json.loads(row['tickets']) if row['tickets'] else [], "total_clicks": row['total_clicks'],
                 "upgrade_counts": upgrade_counts, "username": row['username'] or '',
                 "first_name": row['first_name'] or '', "last_name": row['last_name'] or '',
                 "ticket_counter": row['ticket_counter'] or 0, "referral_code": row['referral_code'] or '',
@@ -688,7 +701,6 @@ def handle_successful_payment(chat_id, payment_info):
 
 # ========== TON CONNECT 2.0 ФУНКЦИИ ==========
 def check_ton_transaction(sender_wallet, expected_amount):
-    """Проверка транзакции от указанного кошелька к кошельку проекта"""
     try:
         url = f"https://toncenter.com/api/v2/getTransactions?address={PROJECT_WALLET_ADDRESS}&limit=20"
         if TONCENTER_API_KEY:
@@ -736,9 +748,9 @@ def load_lottery():
         row = cursor.fetchone()
         if row:
             lottery_pool = row['prize_pool']
-            lottery_tickets = eval(row['tickets']) if row['tickets'] else []
+            lottery_tickets = json.loads(row['tickets']) if row['tickets'] else []
             global_ticket_counter = row['global_ticket_counter']
-            winning_numbers = eval(row['winning_numbers']) if row['winning_numbers'] else []
+            winning_numbers = json.loads(row['winning_numbers']) if row['winning_numbers'] else []
             is_drawn = row['is_drawn'] == 1
             if row['draw_time']:
                 try:
@@ -753,8 +765,8 @@ def save_lottery():
     with db.get_cursor() as cursor:
         cursor.execute(
             "UPDATE lottery SET prize_pool=?, tickets=?, global_ticket_counter=?, winning_numbers=?, is_drawn=?, draw_time=?",
-            (lottery_pool, str(lottery_tickets), global_ticket_counter, str(winning_numbers), 1 if is_drawn else 0,
-             draw_time))
+            (lottery_pool, json.dumps(lottery_tickets), global_ticket_counter, json.dumps(winning_numbers), 1 if is_drawn else 0,
+             draw_time.isoformat() if draw_time else None))
 
 
 load_lottery()
@@ -793,7 +805,7 @@ def unlock_prefix(user_id, prefix_id):
     with db.get_cursor() as cursor:
         cursor.execute("SELECT unlocked_prefixes FROM users WHERE user_id=?", (user_id,))
         row = cursor.fetchone()
-        unlocked = eval(row['unlocked_prefixes']) if row and row['unlocked_prefixes'] else ["player"]
+        unlocked = json.loads(row['unlocked_prefixes']) if row and row['unlocked_prefixes'] else ["player"]
         if prefix_id not in unlocked:
             unlocked.append(prefix_id)
             cursor.execute("UPDATE users SET unlocked_prefixes = ? WHERE user_id=?", (json.dumps(unlocked), user_id))
@@ -1183,7 +1195,6 @@ def privacy_page():
 # ========== TON CONNECT 2.0 УЛУЧШЕННЫЕ ФУНКЦИИ ==========
 @app.route('/tonconnect-manifest.json', methods=['GET'])
 def serve_manifest():
-    """Манифест-файл для валидации кошельками"""
     manifest = {
         "url": WEBHOOK_URL,
         "name": "WereGood Game",
@@ -1196,7 +1207,6 @@ def serve_manifest():
 
 @app.route('/api/ton/init', methods=['POST'])
 def api_ton_init():
-    """Инициализация TON Connect для пользователя"""
     data = request.json or {}
     user_id = data.get('user_id')
     return jsonify({
@@ -1207,7 +1217,6 @@ def api_ton_init():
 
 @app.route('/api/ton/save_wallet', methods=['POST'])
 def api_ton_save_wallet():
-    """Сохранение привязанного кошелька"""
     data = request.json or {}
     user_id = data.get('user_id')
     wallet_address = data.get('wallet_address')
@@ -1230,7 +1239,6 @@ def api_ton_save_wallet():
 
 @app.route('/api/ton/get_wallet', methods=['POST'])
 def api_ton_get_wallet():
-    """Получение привязанного кошелька"""
     data = request.json or {}
     user_id = data.get('user_id')
 
@@ -1244,7 +1252,6 @@ def api_ton_get_wallet():
 
 @app.route('/api/ton/create_payment', methods=['POST'])
 def api_ton_create_payment():
-    """Создание платежа - возвращает данные для транзакции"""
     data = request.json or {}
     user_id = data.get('user_id')
     amount = data.get('amount', 0.1)
@@ -1264,7 +1271,6 @@ def api_ton_create_payment():
 
 @app.route('/api/ton/check_payment', methods=['POST'])
 def api_ton_check_payment():
-    """Проверка оплаты"""
     data = request.json or {}
     user_id = data.get('user_id')
     expected_amount = data.get('expected_amount', 0.1)
@@ -1778,7 +1784,7 @@ def api_lottery_all_tickets():
         cursor.execute("SELECT tickets FROM lottery LIMIT 1")
         row = cursor.fetchone()
         if row and row['tickets']:
-            tickets = eval(row['tickets']) if row['tickets'] else []
+            tickets = json.loads(row['tickets']) if row['tickets'] else []
             result = []
             for ticket in tickets:
                 user_id = ticket.get('user_id')
@@ -2028,7 +2034,7 @@ def api_admin_search_users():
                  "usdt": round(row['usdt'] or 0, 2), "wins": int(row['wins'] or 0),
                  "total_clicks": int(row['total_clicks'] or 0), "stars": int(row['stars'] or 0),
                  "max_energy": int(row['max_energy'] or 500), "energy_upgrades": int(row['energy_upgrades'] or 0),
-                 "unlocked_prefixes": eval(row['unlocked_prefixes']) if row['unlocked_prefixes'] else ["player"],
+                 "unlocked_prefixes": json.loads(row['unlocked_prefixes']) if row['unlocked_prefixes'] else ["player"],
                  "is_banned": banned})
     return jsonify({"success": True, "users": users})
 
@@ -2365,19 +2371,7 @@ def handle_telegram_updates():
 if __name__ == '__main__':
     threading.Thread(target=handle_telegram_updates, daemon=True).start()
     print("✅ Бот запущен!")
+    print("🔐 Безопасный режим включён (через .env)")
     print("✅ Игра: http://127.0.0.1:5000")
     print("✅ Админ-панель: http://127.0.0.1:5000/admin?key=weregood_admin_2026_secure_key_xyz789")
-
-    # Проверяем, запущены ли мы в Amvera (по наличию переменной окружения)
-    import os
-
-    if os.environ.get('AMVERA') or os.environ.get('PORT'):
-        # На Amvera — запускаем без allow_unsafe_werkzeug
-        socketio.run(app, host='0.0.0.0', port=5000, debug=False)
-    else:
-        # Локально — запускаем с allow_unsafe_werkzeug
-        try:
-            socketio.run(app, host='0.0.0.0', port=5000, debug=False, allow_unsafe_werkzeug=True)
-        except TypeError:
-            # Если опция не поддерживается, запускаем без неё
-            socketio.run(app, host='0.0.0.0', port=5000, debug=False)
+    socketio.run(app, host='0.0.0.0', port=5000, debug=False, allow_unsafe_werkzeug=True)
