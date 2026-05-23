@@ -2367,4 +2367,17 @@ if __name__ == '__main__':
     print("✅ Бот запущен!")
     print("✅ Игра: http://127.0.0.1:5000")
     print("✅ Админ-панель: http://127.0.0.1:5000/admin?key=weregood_admin_2026_secure_key_xyz789")
-    socketio.run(app, host='0.0.0.0', port=5000, debug=False, allow_unsafe_werkzeug=True)
+
+    # Проверяем, запущены ли мы в Amvera (по наличию переменной окружения)
+    import os
+
+    if os.environ.get('AMVERA') or os.environ.get('PORT'):
+        # На Amvera — запускаем без allow_unsafe_werkzeug
+        socketio.run(app, host='0.0.0.0', port=5000, debug=False)
+    else:
+        # Локально — запускаем с allow_unsafe_werkzeug
+        try:
+            socketio.run(app, host='0.0.0.0', port=5000, debug=False, allow_unsafe_werkzeug=True)
+        except TypeError:
+            # Если опция не поддерживается, запускаем без неё
+            socketio.run(app, host='0.0.0.0', port=5000, debug=False)
