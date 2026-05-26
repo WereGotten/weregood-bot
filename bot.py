@@ -79,6 +79,20 @@ CORS(app, origins=[
 # CORS для SocketIO - ограничиваем в продакшене
 socketio = SocketIO(app, cors_allowed_origins="*" if DEBUG_MODE else ["https://web.telegram.org", "https://t.me"])
 
+# ========== WEBHOOK (ВМЕСТО POLLING) ==========
+@app.route(f'/webhook/{TELEGRAM_WEBHOOK_SECRET}', methods=['POST'])
+def webhook():
+    update = request.get_json()
+    if update:
+        # Обработка входящего обновления
+        thread = threading.Thread(target=process_telegram_update, args=(update,))
+        thread.start()
+    return 'ok', 200
+
+def process_telegram_update(update):
+    # Здесь логика обработки сообщений из handle_telegram_updates
+    pass
+
 # ========== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ==========
 pending_invoices = {}
 online_users = {}
@@ -275,7 +289,7 @@ class Database:
     @contextmanager
     def get_cursor(self):
         if not hasattr(self.local, 'conn'):
-            self.local.conn = sqlite3.connect(self.db_file, check_same_thread=False, timeout=30)
+            self.local.conn = sqlite3.connect(self.db_file, check_same_thread=False, timeout=10)
             self.local.conn.row_factory = sqlite3.Row
             # КЛЮЧЕВЫЕ НАСТРОЙКИ ДЛЯ ПРОИЗВОДИТЕЛЬНОСТИ
             self.local.conn.execute("PRAGMA journal_mode=WAL")
@@ -3062,7 +3076,7 @@ def handle_telegram_updates():
     while True:
         try:
             url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/getUpdates"
-            params = {"offset": last_update_id + 1, "timeout": 30}
+            params = {"offset": last_update_id + 1, "timeout": 5}
             response = requests.get(url, params=params, timeout=35, verify=verify_ssl)
             updates = response.json()
             if updates.get("ok"):
@@ -3166,4 +3180,4 @@ if __name__ == '__main__':
     print("   • Кэширование пользователей (TTL 15 сек)")
     print("   • Оптимизация БД (WAL, mmap, кэш 100МБ)")
     print("=" * 60)
-    socketio.run(app, host='0.0.0.0', port=5000, debug=False, allow_unsafe_werkzeug=True)
+    socketio.run(app, host='0.0.0.0', port=5000, debug=False, allow_unsafe_werkzeug=True, async_mode='eventlet')
