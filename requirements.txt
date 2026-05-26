@@ -4,3 +4,4 @@ requests
 python-dotenv
 eventlet
 simple-websocket
+flask-cors

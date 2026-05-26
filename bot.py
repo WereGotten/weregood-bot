@@ -17,6 +17,7 @@ from collections import defaultdict
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Optional, Tuple, Dict, Any, List
+from flask_cors import CORS
 
 from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_socketio import SocketIO, emit
@@ -67,6 +68,13 @@ app.config['SESSION_COOKIE_SECURE'] = not DEBUG_MODE
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['JSONIFY_PRETTYPRINT_REGULAR'] = False  # Экономит трафик
+
+CORS(app, origins=[
+    "https://weregood.ru",
+    "https://www.weregood.ru",
+    "https://web.telegram.org",
+    "https://t.me"
+])
 
 # CORS для SocketIO - ограничиваем в продакшене
 socketio = SocketIO(app, cors_allowed_origins="*" if DEBUG_MODE else ["https://web.telegram.org", "https://t.me"])
@@ -195,40 +203,7 @@ def validate_ton_address(address: str) -> bool:
 
 # ========== CSRF ЗАЩИТА ==========
 def check_origin():
-    """Проверка Origin заголовка"""
-    if DEBUG_MODE:
-        return True
-
-    if request.method in ['POST', 'PUT', 'DELETE']:
-        origin = request.headers.get('Origin')
-        referer = request.headers.get('Referer')
-
-        allowed_origins = [
-            "https://web.telegram.org",
-            "https://web.telegram.org.kz",
-            "https://telegram.org",
-            "https://t.me",
-            "https://weregood.ru",
-            "https://www.weregood.ru",
-            "http://weregood.ru",
-            "http://80.90.185.16:5000"
-        ]
-
-        if origin:
-            for allowed in allowed_origins:
-                if origin.startswith(allowed):
-                    return True
-
-        if referer and 'api.telegram.org' in referer:
-            return True
-
-        # Дополнительная проверка для webhook
-        if request.path == '/webhook':
-            telegram_secret = request.headers.get('X-Telegram-Bot-Api-Secret-Token')
-            if telegram_secret and secrets.compare_digest(telegram_secret, TELEGRAM_WEBHOOK_SECRET):
-                return True
-
-    return request.method == 'GET'
+    return True
 
 
 @app.before_request
