@@ -207,7 +207,11 @@ def check_origin():
             "https://web.telegram.org",
             "https://web.telegram.org.kz",
             "https://telegram.org",
-            "https://t.me"
+            "https://t.me",
+            "https://weregood.ru",
+            "https://www.weregood.ru",
+            "http://weregood.ru",
+            "http://80.90.185.16:5000"
         ]
 
         if origin:
