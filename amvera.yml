@@ -1,14 +1,14 @@
 meta:
-  environment: python
+  environment: docker
   toolchain:
-    name: pip
-    version: "3.11"
+    name: docker
 build:
-  requirementsPath: requirements.txt
-  useCache: true
+  dockerfile: Dockerfile
+  skip: false
 run:
-  scriptName: bot.py
+  image: null
   command: null
+  args: null
   persistenceMount: /data
   containerPort: "5000"
-  servicePort: "5000"
+  servicePort: "80"
