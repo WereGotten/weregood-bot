@@ -1,0 +1,11 @@
+meta:
+  version: 1.0
+project:
+  name: weregoodbotinok
+  runtime: python
+  build:
+    - pip install -r requirements.txt
+  run:
+    - python bot.py
+  storage:
+    - /data
