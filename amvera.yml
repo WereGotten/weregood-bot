@@ -1,11 +1,14 @@
 meta:
-  version: 1.0
-project:
-  name: weregoodbotinok
-  runtime: python
-  build:
-    - pip install -r requirements.txt
-  run:
-    - python bot.py
-  storage:
-    - /data
+  environment: python
+  toolchain:
+    name: pip
+    version: "3.11"
+build:
+  requirementsPath: requirements.txt
+  useCache: true
+run:
+  scriptName: bot.py
+  command: null
+  persistenceMount: /data
+  containerPort: "5000"
+  servicePort: "5000"
