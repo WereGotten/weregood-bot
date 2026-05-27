@@ -61,7 +61,7 @@ TONCENTER_API_KEY = os.getenv("TONCENTER_API_KEY")
 CRYPTO_PAY_TOKEN = os.getenv("CRYPTO_PAY_TOKEN")
 CRYPTO_PAY_TESTNET = os.getenv("CRYPTO_PAY_TESTNET", "false").lower() == "true"
 DATABASE_PATH = os.getenv("DATABASE_PATH", "database.db")
-BOT_USERNAME = os.getenv("BOT_USERNAME", "WereGooodbot")  # 3 буквы o!
+BOT_USERNAME = os.getenv("BOT_USERNAME", "WereGooodbot")
 
 DEBUG_MODE = os.getenv("DEBUG_MODE", "true").lower() == "true"
 
@@ -156,7 +156,7 @@ user_cache_time = {}
 CACHE_TTL = 60
 leaderboard_cache = []
 leaderboard_cache_time = 0
-LEADERBOARD_CACHE_TTL = 30
+LEADERBOARD_CACHE_TTL = 10  # Изменено с 30 на 10 секунд
 
 used_ton_transactions = set()
 used_transaction_lock = threading.Lock()
@@ -970,7 +970,7 @@ def process_withdrawal_db(withdrawal_id, status, admin_id, admin_name):
 def send_telegram_message(chat_id, text, reply_markup=None):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     try:
-        data = {"chat_id": chat_id, "text": text}
+        data = {"chat_id": chat_id, "text": text, "parse_mode": "Markdown"}
         if reply_markup:
             data["reply_markup"] = reply_markup
         verify_ssl = not DEBUG_MODE
@@ -2932,6 +2932,12 @@ def handle_telegram_updates():
                             send_telegram_message(chat_id,
                                                   "✨ Добро пожаловать в WereGood!\n\n💰 Кликай по монете, улучшай заработок и участвуй в вызовах!\n\n⬇️ Нажми на кнопку ниже, чтобы начать!",
                                                   keyboard)
+                        elif text.startswith("/help"):
+                            keyboard = {
+                                "inline_keyboard": [[{"text": "💰 Открыть игру", "web_app": {"url": WEBHOOK_URL}}]]}
+                            send_telegram_message(chat_id,
+                                                  "🎮 **WereGood - Помощь**\n\n💰 **Клик по монете** - зарабатывай WG\n⚡ **Энергия** - восстанавливается со временем\n🎲 **Лотерея** - участвуй за 100 LP в 21:00\n👥 **Рефералы** - приглашай друзей и получай 5%\n⭐ **Stars** - покупай улучшения за Telegram Stars\n💎 **TON** - покупай улучшения за TON\n\n🔗 **Ссылка на игру:**",
+                                                  keyboard)
                         elif text.startswith("/admin"):
                             if chat_id in ADMIN_IDS:
                                 admin_url = f"{WEBHOOK_URL}/admin?key={ADMIN_SECRET}&user_id={chat_id}"
@@ -2957,8 +2963,9 @@ def handle_telegram_updates():
 
 
 if __name__ == '__main__':
-    if not DEBUG_MODE:
-        threading.Thread(target=handle_telegram_updates, daemon=True).start()
+    # Всегда запускаем polling для обработки команд /start, /help, /admin
+    threading.Thread(target=handle_telegram_updates, daemon=True).start()
+
     print("\n" + "=" * 60)
     print("🔧 WereGood Bot - ОПТИМИЗИРОВАННАЯ ВЕРСИЯ ДЛЯ 1000+ ONLINE")
     print("=" * 60)
@@ -2973,7 +2980,7 @@ if __name__ == '__main__':
     print("=" * 60)
     print("⚡ ОПТИМИЗАЦИИ ВКЛЮЧЕНЫ:")
     print("   • Кэширование пользователей (60 сек)")
-    print("   • Кэширование leaderboard (30 сек)")
+    print("   • Кэширование leaderboard (10 сек)")
     print("   • Увеличен кэш БД до 200MB")
     print("   • Увеличен mmap до 512MB")
     print("   • Оптимизированные блокировки")
