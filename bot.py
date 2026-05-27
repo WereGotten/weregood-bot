@@ -291,7 +291,8 @@ class Database:
     @contextmanager
     def get_cursor(self):
         if not hasattr(self.local, 'conn'):
-            self.local.conn = sqlite3.connect(self.db_file, check_same_thread=False, timeout=10)
+            # ИЗМЕНЕНИЕ №2: timeout уменьшен с 30 до 5 секунд
+            self.local.conn = sqlite3.connect(self.db_file, check_same_thread=False, timeout=5)
             self.local.conn.row_factory = sqlite3.Row
             # КЛЮЧЕВЫЕ НАСТРОЙКИ ДЛЯ ПРОИЗВОДИТЕЛЬНОСТИ
             self.local.conn.execute("PRAGMA journal_mode=WAL")
@@ -299,6 +300,7 @@ class Database:
             self.local.conn.execute("PRAGMA synchronous=NORMAL")
             self.local.conn.execute("PRAGMA cache_size=-102400")  # 100 МБ кэша
             self.local.conn.execute("PRAGMA mmap_size=268435456")  # 256 МБ mmap
+            # ИЗМЕНЕНИЕ №4: добавляем temp_store=MEMORY
             self.local.conn.execute("PRAGMA temp_store=MEMORY")
             self.local.conn.execute("PRAGMA foreign_keys = ON;")
         cursor = self.local.conn.cursor()
@@ -3078,6 +3080,7 @@ def handle_telegram_updates():
     while True:
         try:
             url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/getUpdates"
+            # ИЗМЕНЕНИЕ №3: timeout уменьшен с 30 до 5 секунд
             params = {"offset": last_update_id + 1, "timeout": 5}
             response = requests.get(url, params=params, timeout=35, verify=verify_ssl)
             updates = response.json()
@@ -3162,8 +3165,12 @@ def handle_telegram_updates():
 
 # ========== ЗАПУСК ==========
 if __name__ == '__main__':
+    # ИЗМЕНЕНИЕ №1: Отключаем polling (он вызывает лаги), убираем async_mode='eventlet'
+    # threading.Thread(target=handle_telegram_updates, daemon=True).start()
     print("⚠️ Polling отключён, используется Webhook")
-
+    print("\n" + "=" * 60)
+    print("🔧 ДЛЯ НАСТРОЙКИ WEBHOOK ВЫПОЛНИТЕ КОМАНДУ:")
+    print(f'curl -X POST "https://api.telegram.org/bot{TELEGRAM_TOKEN}/setWebhook" -d "url={WEBHOOK_URL}/webhook/{TELEGRAM_WEBHOOK_SECRET}"')
     print("=" * 60)
     print("✅ БОТ ЗАПУЩЕН!")
     print("🔐 Режим:",
@@ -3180,6 +3187,7 @@ if __name__ == '__main__':
     print("   • Ограничение сумм вывода и платежей")
     print("   • SSL верификация (в продакшене)")
     print("   • Кэширование пользователей (TTL 15 сек)")
-    print("   • Оптимизация БД (WAL, mmap, кэш 100МБ)")
+    print("   • Оптимизация БД (WAL, mmap, кэш 100МБ, temp_store=MEMORY)")
     print("=" * 60)
-    socketio.run(app, host='0.0.0.0', port=5000, debug=False, allow_unsafe_werkzeug=True, async_mode='eventlet')
+    # ИЗМЕНЕНИЕ №1: Убираем async_mode='eventlet' (он вызывает лаги)
+    socketio.run(app, host='0.0.0.0', port=5000, debug=False, allow_unsafe_werkzeug=True)
