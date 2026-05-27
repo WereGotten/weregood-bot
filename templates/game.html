@@ -4340,37 +4340,50 @@ document.getElementById('coin').onclick = async () => {
 
                         // Покупка улучшения с локальной проверкой
         window.buyUpgrade = async (id) => {
-            // ЛОКАЛЬНАЯ ПРОВЕРКА (мгновенно)
-            let cost = 0;
-            if (id === 1) cost = upgradeCosts[1];
-            else if (id === 2) cost = upgradeCosts[2];
-            else if (id === 3) cost = upgradeCosts[3];
+    let cost = upgradeCosts[id];
 
-            if (localWG < cost) {
-                playErrorSound();
-                showToast(`Не хватает WG! Нужно ${cost.toFixed(2)} WG`, 'error');
-                return;
-            }
+    if (localWG < cost) {
+        playErrorSound();
+        showToast(`Не хватает WG! Нужно ${cost.toFixed(2)} WG`, 'error');
+        return;
+    }
 
-            try {
-                let res = await fetch('/api/buy_upgrade', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: userId, upgrade_id: id}) });
-                let data = await res.json();
-                if (data.success) {
-                    playPurchaseSound();
-                    showToast(data.msg, 'success');
-                    upgradeCounts[id] = data.new_count;
-                    upgradeCosts[id] = data.next_cost;
-                    updateUI();
-                    updateStatus();
-                } else {
-                    playErrorSound();
-                    showToast(data.msg, 'error');
-                }
-            } catch(e) {
-                playErrorSound();
-                showToast('Ошибка!', 'error');
-            }
-        };
+    try {
+        let res = await fetch('/api/buy_upgrade', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({user_id: userId, upgrade_id: id})
+        });
+        let data = await res.json();
+
+        if (data.success) {
+            playPurchaseSound();
+            showToast(data.msg, 'success');
+
+            // ПРИНУДИТЕЛЬНО ОБНОВЛЯЕМ ВСЕ ДАННЫЕ
+            upgradeCounts[id] = data.new_count;
+            upgradeCosts[id] = data.next_cost;
+
+            // Обновляем локальный WG
+            localWG -= cost;
+
+            // Принудительно обновляем интерфейс
+            document.getElementById(`upgradeCount${id}`).innerText = data.new_count;
+            document.getElementById(`upgradeCost${id}`).innerHTML = data.next_cost.toFixed(2);
+            document.getElementById('wgBalance').innerText = localWG.toFixed(2);
+
+            // Обновляем заработок за клик
+            await updateStatus();
+            updateUI();
+        } else {
+            playErrorSound();
+            showToast(data.msg, 'error');
+        }
+    } catch(e) {
+        playErrorSound();
+        showToast('Ошибка!', 'error');
+    }
+};
 
         // Покупка билета с локальной проверкой
         document.getElementById('ticketBtn').onclick = async () => {
@@ -5227,62 +5240,75 @@ document.getElementById('coin').onclick = async () => {
 }
 
         // Реклама
-        let adController = null;
-        let adLimitController = null;
+        // В game.html, замени функцию initAds:
 
-        function initAds() {
-            if (typeof window.Adsgram !== 'undefined') {
-                if (!adController) {
-                    try { adController = window.Adsgram.init({ blockId: "29823" }); } catch(e) {}
-                }
-                if (!adLimitController) {
-                    try { adLimitController = window.Adsgram.init({ blockId: "30182" }); } catch(e) {}
-                }
-            }
+let adController = null;
+let adLimitController = null;
+
+function initAds() {
+    if (typeof window.Adsgram !== 'undefined') {
+        if (!adController) {
+            try {
+                adController = window.Adsgram.init({
+                    blockId: "29823",
+                    debug: false
+                });
+            } catch(e) { console.log('Ad init error:', e); }
         }
-
-        window.watchAd = async () => {
-            if (!adController) initAds();
-            if (!adController) {
-                try {
-                    let resp = await fetch('/api/watch_ad_fallback', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: userId}) });
-                    let data = await resp.json();
-                    if (data.success) { showToast(`+50 энергии (реклама недоступна)`, 'info'); updateStatus(); }
-                } catch(e) {}
-                return;
-            }
+        if (!adLimitController) {
             try {
-                const result = await adController.show();
-                if (result.done && !result.error) {
-                    let resp = await fetch('/api/watch_ad', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: userId}) });
-                    let data = await resp.json();
-                    if (data.success) { showToast(`+200 энергии! Спасибо! 🎬`, 'success'); updateStatus(); }
-                } else { showToast('Реклама не загружена', 'error'); }
-            } catch (error) { showToast('Ошибка рекламы', 'error'); }
-        };
+                adLimitController = window.Adsgram.init({
+                    blockId: "30182",
+                    debug: false
+                });
+            } catch(e) { console.log('Ad limit init error:', e); }
+        }
+    }
+}
 
-        window.watchAdLimit = async () => {
-            if (!adLimitController) initAds();
-            if (!adLimitController) {
-                showToast('Реклама временно недоступна', 'error');
-                return;
+window.watchAd = async () => {
+    if (!adController) {
+        initAds();
+        await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
+    if (!adController) {
+        // Фолбэк - даем энергию без рекламы
+        try {
+            let resp = await fetch('/api/watch_ad_fallback', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({user_id: userId})
+            });
+            let data = await resp.json();
+            if (data.success) {
+                showToast(`+50 энергии (реклама временно недоступна)`, 'info');
+                updateStatus();
             }
-            try {
-                const result = await adLimitController.show();
-                if (result.done && !result.error) {
-                    let resp = await fetch('/api/watch_ad_limit', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: userId}) });
-                    let data = await resp.json();
-                    if (data.success) {
-                        showToast(`⚡ +1 к макс. энергии! Теперь лимит: ${data.max_energy}`, 'success');
-                        updateStatus();
-                    } else {
-                        showToast(data.msg || 'Ошибка', 'error');
-                    }
-                } else { showToast('Реклама не загружена', 'error'); }
-            } catch (error) { showToast('Ошибка рекламы', 'error'); }
-        };
+        } catch(e) {}
+        return;
+    }
 
-        setTimeout(() => initAds(), 1000);
+    try {
+        const result = await adController.show();
+        if (result.done && !result.error) {
+            let resp = await fetch('/api/watch_ad', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({user_id: userId})
+            });
+            let data = await resp.json();
+            if (data.success) {
+                showToast(`+200 энергии! Спасибо! 🎬`, 'success');
+                updateStatus();
+            }
+        } else {
+            showToast('Реклама не загружена, попробуйте позже', 'error');
+        }
+    } catch (error) {
+        showToast('Ошибка рекламы, попробуйте через VPN', 'error');
+    }
+};
 
         // Навигация
         function updateNavIcons(activeTab) {
@@ -5496,33 +5522,32 @@ document.getElementById('coin').onclick = async () => {
         }
 
         async function claimDailyReward() {
-            if (!dailyData?.can_claim && dailyData?.current_day !== 1) {
-                showToast('Награда ещё не доступна!', 'error');
-                return;
-            }
-            try {
-                let res = await fetch('/api/claim_daily', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({user_id: userId})
-                });
-                let data = await res.json();
-                if (data.success) {
-                    showToast(data.msg, 'success');
-                    await loadDailyStatus();
-                    await updateStatus();
-                    closeDailyModal();
-                    setTimeout(() => {
-                        checkAndStartTutorial();
-                    }, 1000);
-                } else {
-                    showToast(data.msg, 'error');
-                }
-            } catch(e) {
-                console.error('Error claiming daily reward:', e);
-                showToast('Ошибка при получении награды', 'error');
-            }
+    if (!dailyData?.can_claim && dailyData?.current_day !== 1) {
+        showToast('Награда ещё не доступна!', 'error');
+        return;
+    }
+    try {
+        let res = await fetch('/api/claim_daily', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({user_id: userId})
+        });
+        let data = await res.json();
+        if (data.success) {
+            showToast(data.msg, 'success');
+            await loadDailyStatus();
+            await updateStatus();
+            closeDailyModal();
+            // После получения награды - запускаем обучение
+            setTimeout(() => checkAndStartTutorial(), 500);
+        } else {
+            showToast(data.msg, 'error');
         }
+    } catch(e) {
+        console.error('Error claiming daily reward:', e);
+        showToast('Ошибка при получении награды', 'error');
+    }
+}
 
         async function recoverDailyStreak() {
             if (!confirm('Восстановить прогресс за 20 Stars?')) return;
@@ -5723,18 +5748,37 @@ document.getElementById('coin').onclick = async () => {
         }
 
         async function checkAndStartTutorial() {
-            try {
-                let res = await fetch('/api/get_tutorial_status', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({user_id: userId})
-                });
-                let data = await res.json();
-                if (!data.completed) {
-                    startTutorial();
-                }
-            } catch(e) {}
+    try {
+        // Сначала проверяем ежедневную награду
+        let dailyRes = await fetch('/api/daily_status', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({user_id: userId})
+        });
+        let dailyData = await dailyRes.json();
+
+        // Если есть неполученная награда - не запускаем туториал
+        if (dailyData.can_claim || dailyData.current_day === 1) {
+            console.log('Есть неполученная награда, туториал после получения');
+            return;
         }
+
+        // Только после получения награды проверяем туториал
+        let tutorialRes = await fetch('/api/get_tutorial_status', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({user_id: userId})
+        });
+        let tutorialData = await tutorialRes.json();
+
+        if (!tutorialData.completed) {
+            // Небольшая задержка перед началом туториала
+            setTimeout(() => startTutorial(), 1000);
+        }
+    } catch(e) {
+        console.error('Tutorial check error:', e);
+    }
+}
 
         function startTutorial() {
             if (tutorialActive) return;

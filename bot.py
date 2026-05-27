@@ -1766,11 +1766,11 @@ def health_check():
 @app.route('/tonconnect-manifest.json', methods=['GET'])
 def serve_manifest():
     manifest = {
-        "url": WEBHOOK_URL,
+        "url": "https://weregood.ru",  # <-- ИЗМЕНИТЬ НА ТВОЙ ДОМЕН
         "name": "WereGood Game",
-        "iconUrl": f"{WEBHOOK_URL}/static/coin.png",
-        "termsOfUseUrl": f"{WEBHOOK_URL}/terms",
-        "privacyPolicyUrl": f"{WEBHOOK_URL}/privacy"
+        "iconUrl": "https://weregood.ru/static/coin.png",
+        "termsOfUseUrl": "https://weregood.ru/terms",
+        "privacyPolicyUrl": "https://weregood.ru/privacy"
     }
     return jsonify(manifest)
 
