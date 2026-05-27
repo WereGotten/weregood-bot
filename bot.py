@@ -73,11 +73,13 @@ CORS(app, origins=[
     "https://weregood.ru",
     "https://www.weregood.ru",
     "https://web.telegram.org",
-    "https://t.me"
-])
+    "https://t.me",
+    "http://weregood.ru",
+    "http://80.90.185.16:5000"
+], supports_credentials=True)
 
 # CORS для SocketIO - ограничиваем в продакшене
-socketio = SocketIO(app, cors_allowed_origins="*" if DEBUG_MODE else ["https://web.telegram.org", "https://t.me"])
+socketio = SocketIO(app, cors_allowed_origins=["https://weregood.ru", "https://www.weregood.ru", "https://web.telegram.org", "https://t.me"])
 
 # ========== WEBHOOK (ВМЕСТО POLLING) ==========
 @app.route(f'/webhook/{TELEGRAM_WEBHOOK_SECRET}', methods=['POST'])
@@ -3160,7 +3162,7 @@ def handle_telegram_updates():
 
 # ========== ЗАПУСК ==========
 if __name__ == '__main__':
-    threading.Thread(target=handle_telegram_updates, daemon=True).start()
+    print("⚠️ Polling отключён, используется Webhook")
 
     print("=" * 60)
     print("✅ БОТ ЗАПУЩЕН!")
