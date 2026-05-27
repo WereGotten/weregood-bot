@@ -111,7 +111,7 @@ socketio = SocketIO(app,
                     async_mode='threading')
 
 
-# ========== WEBHOOK (оставляем для совместимости, но используем polling) ==========
+# ========== WEBHOOK (оставляем для совместимости) ==========
 @app.route(f'/webhook/{TELEGRAM_WEBHOOK_SECRET}', methods=['POST'])
 def webhook():
     update = request.get_json()
@@ -122,6 +122,7 @@ def webhook():
 
 
 def process_telegram_update(update):
+    # Этот метод не используется, т.к. мы используем polling
     pass
 
 
@@ -2884,7 +2885,7 @@ def handle_telegram_updates():
     while True:
         try:
             url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/getUpdates"
-            params = {"offset": last_update_id + 1, "timeout": 5}
+            params = {"offset": last_update_id + 1, "timeout": 30}
             response = requests.get(url, params=params, timeout=35, verify=verify_ssl)
             updates = response.json()
             if updates.get("ok"):
