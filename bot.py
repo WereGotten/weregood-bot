@@ -2996,4 +2996,4 @@ if __name__ == '__main__':
     print(f"❤️ Health check: http://0.0.0.0:5000/health")
     print("=" * 60)
 
-    socketio.run(app, host='0.0.0.0, port=5000, debug=False, use_reloader=False, allow_unsafe_werkzeug=True)
+    socketio.run(app, host='0.0.0.0', port=5000, debug=False, use_reloader=False, allow_unsafe_werkzeug=True)
