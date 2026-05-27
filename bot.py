@@ -2888,9 +2888,12 @@ def handle_telegram_updates():
             params = {"offset": last_update_id + 1, "timeout": 30}
             response = requests.get(url, params=params, timeout=35, verify=verify_ssl)
             updates = response.json()
+
             if updates.get("ok"):
                 for update in updates.get("result", []):
                     last_update_id = update["update_id"]
+
+                    # Обработка сообщений
                     if "message" in update and "text" in update["message"]:
                         text = update["message"]["text"]
                         chat_id = update["message"]["chat"]["id"]
@@ -2898,70 +2901,120 @@ def handle_telegram_updates():
                         first_name = sanitize_string(update["message"]["chat"].get("first_name", ""))
                         last_name = sanitize_string(update["message"]["chat"].get("last_name", ""))
 
+                        # Обработка команды /start
                         if text.startswith("/start"):
                             parts = text.split()
                             ref_code = parts[1] if len(parts) > 1 else None
+
+                            print(f"📝 /start от пользователя {chat_id}, реф-код: {ref_code}")
+
                             with db.get_cursor() as cursor:
                                 cursor.execute("SELECT * FROM users WHERE user_id=?", (chat_id,))
                                 existing = cursor.fetchone()
+
                                 if not existing:
+                                    print(f"🆕 Создаём нового пользователя {chat_id}")
                                     now = time.time()
                                     ref_code_new = hashlib.md5(str(chat_id).encode()).hexdigest()[:8]
                                     role = "founder" if chat_id == 5264622363 else "player"
                                     unlocked = json.dumps(["player", "founder"]) if role == "founder" else json.dumps(
                                         ["player"])
                                     referrer_id = 0
+
+                                    # Проверяем реферальный код
                                     if ref_code:
-                                        cursor.execute("SELECT user_id FROM users WHERE referral_code=?", (ref_code,))
+                                        cursor.execute("SELECT user_id, username FROM users WHERE referral_code=?",
+                                                       (ref_code,))
                                         referrer_row = cursor.fetchone()
                                         if referrer_row:
                                             referrer_id = referrer_row['user_id']
+                                            print(f"👥 Реферал найден! referrer_id={referrer_id}")
                                             cursor.execute(
                                                 'INSERT INTO referrals (referrer_id, referred_id, username, first_name) VALUES (?, ?, ?, ?)',
                                                 (referrer_id, chat_id, username, first_name))
                                             send_telegram_message(referrer_id,
                                                                   f"🎉 Новый реферал! {first_name or username} присоединился по вашей ссылке!")
-                                    cursor.execute(
-                                        '''INSERT INTO users (user_id, wg, lp, energy, last_energy_update, tickets, total_clicks, upgrade_counts, ticket_counter, referral_code, referrer_id, likes, dislikes, settings, username, first_name, last_name, avatar_url, usdt, wins, role, stars, max_energy, energy_upgrades, energy_limit_upgrades, unlocked_prefixes, tutorial_completed, ton_wallet, banned_until, ban_reason, banned_by) VALUES (?, 0, 0, 500, ?, '[]', 0, '{"1":0,"2":0,"3":0}', 0, ?, ?, 0, 0, '{"theme":"dark"}', ?, ?, ?, ?, 0, 0, ?, 0, 500, 0, 0, ?, 0, '', 0, '', 0)''',
-                                        (chat_id, now, ref_code_new, referrer_id, username, first_name, last_name, "",
-                                         role, unlocked))
+                                        else:
+                                            print(f"❌ Реферал НЕ найден для кода: {ref_code}")
+
+                                    # Создаём пользователя
+                                    cursor.execute('''
+                                        INSERT INTO users (
+                                            user_id, wg, lp, energy, last_energy_update, tickets, total_clicks,
+                                            upgrade_counts, ticket_counter, referral_code, referrer_id, likes, 
+                                            dislikes, settings, username, first_name, last_name, avatar_url, 
+                                            usdt, wins, role, stars, max_energy, energy_upgrades, 
+                                            energy_limit_upgrades, unlocked_prefixes, tutorial_completed, 
+                                            ton_wallet, banned_until, ban_reason, banned_by
+                                        ) VALUES (?, 0, 0, 500, ?, '[]', 0, '{"1":0,"2":0,"3":0}', 0, ?, ?, 0, 0,
+                                        '{"theme":"dark"}', ?, ?, ?, ?, 0, 0, ?, 0, 500, 0, 0, ?, 0, '', 0, '', 0)
+                                    ''', (chat_id, now, ref_code_new, referrer_id, username, first_name, last_name, "",
+                                          role, unlocked))
+
+                                    print(
+                                        f"✅ Пользователь {chat_id} создан! Реф-код: {ref_code_new}, Пригласил: {referrer_id}")
+                                else:
+                                    print(f"👋 Пользователь {chat_id} уже существует")
+
+                            # Отправляем приветствие
                             keyboard = {
                                 "inline_keyboard": [[{"text": "💰 Открыть игру", "web_app": {"url": WEBHOOK_URL}}]]}
                             send_telegram_message(chat_id,
                                                   "✨ Добро пожаловать в WereGood!\n\n💰 Кликай по монете, улучшай заработок и участвуй в вызовах!\n\n⬇️ Нажми на кнопку ниже, чтобы начать!",
                                                   keyboard)
 
+                        # Обработка команды /help
                         elif text.startswith("/help"):
                             keyboard = {
                                 "inline_keyboard": [[{"text": "💰 Открыть игру", "web_app": {"url": WEBHOOK_URL}}]]}
                             send_telegram_message(chat_id,
-                                                  "🎮 **WereGood - Помощь**\n\n💰 **Клик по монете** - зарабатывай WG\n⚡ **Энергия** - восстанавливается со временем\n🎲 **Лотерея** - участвуй за 100 LP в 21:00\n👥 **Рефералы** - приглашай друзей и получай 5%\n⭐ **Stars** - покупай улучшения за Telegram Stars\n💎 **TON** - покупай улучшения за TON\n\n🔗 **Ссылка на игру:**",
+                                                  "🎮 **WereGood - Помощь**\n\n"
+                                                  "💰 **Клик по монете** - зарабатывай WG\n"
+                                                  "⚡ **Энергия** - восстанавливается со временем\n"
+                                                  "🎲 **Лотерея** - участвуй за 100 LP в 21:00\n"
+                                                  "👥 **Рефералы** - приглашай друзей и получай 5%\n"
+                                                  "⭐ **Stars** - покупай улучшения за Telegram Stars\n"
+                                                  "💎 **TON** - покупай улучшения за TON\n\n"
+                                                  "🔗 **Ссылка на игру:**",
                                                   keyboard)
 
+                        # Обработка команды /admin
                         elif text.startswith("/admin"):
                             if chat_id in ADMIN_IDS:
                                 admin_url = f"{WEBHOOK_URL}/admin?key={ADMIN_SECRET}&user_id={chat_id}"
                                 keyboard = {"inline_keyboard": [
                                     [{"text": "👑 Открыть админ-панель", "web_app": {"url": admin_url}}]]}
                                 send_telegram_message(chat_id,
-                                                      "👑 Админ-панель WereGood\n\n• 📊 Статистика\n• 💰 Выдача валюты\n• 🎲 Управление лотереей\n• 👑 Управление префиксами\n• 💸 Заявки на вывод\n\n⬇️ Нажми на кнопку",
+                                                      "👑 Админ-панель WereGood\n\n"
+                                                      "• 📊 Статистика\n"
+                                                      "• 💰 Выдача валюты\n"
+                                                      "• 🎲 Управление лотереей\n"
+                                                      "• 👑 Управление префиксами\n"
+                                                      "• 💸 Заявки на вывод\n\n"
+                                                      "⬇️ Нажми на кнопку",
                                                       keyboard)
                             else:
                                 send_telegram_message(chat_id, "⛔ У вас нет доступа к админ-панели")
 
+                    # Обработка предварительного запроса на оплату
                     elif "pre_checkout_query" in update:
                         query = update["pre_checkout_query"]
                         answer_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/answerPreCheckoutQuery"
                         requests.post(answer_url, json={"pre_checkout_query_id": query["id"], "ok": True}, timeout=5,
                                       verify=verify_ssl)
+                        print(f"💰 Pre-checkout query для пользователя {query['from']['id']}")
 
+                    # Обработка успешного платежа
                     elif "message" in update and "successful_payment" in update["message"]:
-                        handle_successful_payment(update["message"]["chat"]["id"],
-                                                  update["message"]["successful_payment"])
+                        chat_id = update["message"]["chat"]["id"]
+                        print(f"✅ Успешный платёж от пользователя {chat_id}")
+                        handle_successful_payment(chat_id, update["message"]["successful_payment"])
 
             time.sleep(1)
+
         except Exception as e:
             logger.error(f"Ошибка в polling: {e}")
+            print(f"❌ Ошибка polling: {e}")
             time.sleep(5)
 
 
