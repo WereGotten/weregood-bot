@@ -1944,6 +1944,37 @@
             font-size: 0.9rem;
         }
 
+        .winning-combo-ticket {
+            background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,165,0,0.08));
+            border-radius: 16px;
+            padding: 12px;
+            margin-top: 12px;
+            text-align: center;
+        }
+
+        .winning-combo-title {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #FFD700;
+            margin-bottom: 8px;
+        }
+
+        .winning-combo-numbers {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .winning-combo-number {
+            background: rgba(255,215,0,0.2);
+            border-radius: 8px;
+            padding: 4px 8px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #FFD700;
+        }
+
         .player-modal {
             display: none;
             position: fixed;
@@ -2465,6 +2496,26 @@
             transform: scale(0.97);
         }
 
+        .withdrawal-info-card {
+            background: rgba(255,215,0,0.08);
+            border-radius: 16px;
+            padding: 12px;
+            margin: 16px 0;
+            display: flex;
+            gap: 10px;
+            border: 1px solid rgba(255,215,0,0.15);
+        }
+
+        .withdrawal-info-icon {
+            font-size: 1.2rem;
+        }
+
+        .withdrawal-info-text {
+            font-size: 0.65rem;
+            color: rgba(255,255,255,0.7);
+            line-height: 1.4;
+        }
+
         .withdrawal-history-item {
             background: rgba(255,255,255,0.04);
             border-radius: 20px;
@@ -2808,6 +2859,7 @@
             max-width: 350px;
             padding: 20px;
             position: relative;
+            border: 1px solid rgba(255,215,0,0.2);
         }
 
         .close-prefix-modal {
@@ -2824,6 +2876,10 @@
             cursor: pointer;
         }
 
+        .prefix-list {
+            margin-top: 16px;
+        }
+
         .prefix-option {
             display: flex;
             align-items: center;
@@ -2833,11 +2889,53 @@
             background: rgba(255,255,255,0.05);
             border-radius: 16px;
             cursor: pointer;
+            transition: all 0.2s ease;
         }
 
         .prefix-option.selected {
             border: 2px solid #FFD700;
             background: rgba(255,215,0,0.1);
+        }
+
+        .prefix-icon {
+            font-size: 1.8rem;
+        }
+
+        .prefix-info {
+            flex: 1;
+        }
+
+        .prefix-name {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #FFD700;
+        }
+
+        .prefix-desc {
+            font-size: 0.6rem;
+            opacity: 0.6;
+        }
+
+        .prefix-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.65rem;
+            font-weight: 600;
+        }
+
+        .prefix-badge.player {
+            background: rgba(255,255,255,0.1);
+            color: #aaa;
+        }
+
+        .prefix-badge.pioneer {
+            background: linear-gradient(135deg, #00b4d8, #0077b6);
+            color: white;
+        }
+
+        .prefix-badge.founder {
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            color: white;
         }
 
         @keyframes bounce {
@@ -2902,7 +3000,6 @@
         </header>
 
         <main class="main-content">
-            <!-- TAB HOME -->
             <div id="tabHome" class="tab-pane active">
                 <div class="greeting">Привет, <span id="userGreeting">Игрок</span>!</div>
                 <div class="balance-card">
@@ -2982,7 +3079,6 @@
                 </div>
             </div>
 
-            <!-- TAB SHOP -->
             <div id="tabShop" class="tab-pane">
                 <div class="shop-tabs">
                     <div class="shop-tab active" data-shop-tab="normal">
@@ -3173,7 +3269,6 @@
                 </div>
             </div>
 
-            <!-- TAB LOTTERY -->
             <div id="tabLottery" class="tab-pane">
                 <div class="lottery-header">
                     <h2 class="section-title">
@@ -3243,7 +3338,6 @@
                 </div>
             </div>
 
-            <!-- TAB PROFILE -->
             <div id="tabProfile" class="tab-pane">
                 <div class="profile-header">
                     <div class="profile-cover"></div>
@@ -3395,7 +3489,6 @@
         </nav>
     </div>
 
-    <!-- МОДАЛЬНЫЕ ОКНА -->
     <div id="ticketsPage" class="tickets-page">
         <div class="tickets-header">
             <button class="back-btn" onclick="closeTicketsPage()">←</button>
@@ -3446,7 +3539,10 @@
                 <div class="form-group"><label><img src="/static/withdraw.png" alt="Сумма" style="width: 17px; height: 17px;">Сумма вывода</label><input type="number" class="form-input" id="withdrawalAmount" step="0.01" placeholder="Минимум 2 USDT"></div>
                 <div class="form-group"><label>🏦 Адрес кошелька</label><input type="text" class="form-input" id="withdrawalAddress" placeholder="TRC20 / ERC20 / BEP20 адрес"></div>
                 <div class="form-group"><label>🌐 Сеть</label><select class="form-select" id="withdrawalNetwork"><option value="TRC20">TRC20 (TRON) - рекомендуем</option><option value="ERC20">ERC20 (Ethereum)</option><option value="BEP20">BEP20 (BSC)</option></select></div>
-                <div class="withdrawal-info-card"><div class="withdrawal-info-icon">ℹ️</div><div class="withdrawal-info-text">Вывод обрабатывается вручную администратором. Убедитесь, что адрес корректен!<br>Минимальная сумма: 2 USDT | Поддерживаемые сети: TRC20, ERC20, BEP20</div></div>
+                <div class="withdrawal-info-card">
+                    <div class="withdrawal-info-icon">ℹ️</div>
+                    <div class="withdrawal-info-text">Вывод обрабатывается вручную администратором. Убедитесь, что адрес корректен!<br>Минимальная сумма: 2 USDT | Поддерживаемые сети: TRC20, ERC20, BEP20</div>
+                </div>
                 <button class="withdrawal-submit-btn" onclick="createWithdrawal()"><img src="/static/withdraw.png" alt="Отправить" style="width: 18px; height: 18px;">Отправить заявку</button>
             </div>
             <div id="withdrawalHistory" class="withdrawal-tab-content" style="display: none;"><div id="withdrawalHistoryList" style="max-height: 450px; overflow-y: auto;"></div></div>
@@ -3477,7 +3573,6 @@
 
     <div id="toast" class="toast"></div>
 
-    <!-- Звуки -->
     <audio id="errorSound" preload="auto"><source src="/static/error.mp3" type="audio/mpeg"></audio>
     <audio id="clickSound" preload="auto"><source src="/static/click.mp3" type="audio/mpeg"></audio>
     <audio id="navSound" preload="auto"><source src="/static/nav.mp3" type="audio/mpeg"></audio>
@@ -3486,7 +3581,6 @@
     <audio id="purchaseSound" preload="auto"><source src="/static/purchase.mp3" type="audio/mpeg"></audio>
 
     <script>
-        // ========== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ==========
         let tg = window.Telegram?.WebApp;
         let user = tg?.initDataUnsafe?.user;
         let userId = user ? user.id : 12345678;
@@ -3522,7 +3616,6 @@
         let dailyData = null;
         let dailyTimerInterval = null;
 
-        // Защита от частых вызовов API
         let isUpdatingStatus = false;
         let lastStatusUpdate = 0;
         let isUpdatingLottery = false;
@@ -3530,24 +3623,12 @@
         const STATUS_UPDATE_DELAY = 3000;
         const LOTTERY_UPDATE_DELAY = 5000;
 
-        // Кэш данных
-        let dataCache = {
-            status: null,
-            lottery: null,
-            leaderboard: null
-        };
+        let dataCache = { status: null, lottery: null, leaderboard: null };
 
-        const dailyRewardsList = {
-            1: { reward: "15 WG" }, 2: { reward: "50 WG" }, 3: { reward: "+10 ⚡" },
-            4: { reward: "10 LP" }, 5: { reward: "+15 ⚡" }, 6: { reward: "150 WG" }, 7: { reward: "20 LP" }
-        };
+        const dailyRewardsList = { 1: { reward: "15 WG" }, 2: { reward: "50 WG" }, 3: { reward: "+10 ⚡" }, 4: { reward: "10 LP" }, 5: { reward: "+15 ⚡" }, 6: { reward: "150 WG" }, 7: { reward: "20 LP" } };
 
         function getUpgradeCost(upgradeId, currentCount) {
-            const config = {
-                1: { baseCost: 1.5, bonus: 0.01, name: "Новичок" },
-                2: { baseCost: 10, bonus: 0.03, name: "Профессионал" },
-                3: { baseCost: 70, bonus: 0.07, name: "Мастер" }
-            };
+            const config = { 1: { baseCost: 1.5, bonus: 0.01, name: "Новичок" }, 2: { baseCost: 10, bonus: 0.03, name: "Профессионал" }, 3: { baseCost: 70, bonus: 0.07, name: "Мастер" } };
             const baseCost = config[upgradeId].baseCost;
             if (currentCount === 0) return baseCost;
             return baseCost * Math.pow(1.65, currentCount);
@@ -3564,20 +3645,14 @@
             const soundsToggle = document.getElementById('soundsToggle');
             const soundEnabled = soundsToggle ? soundsToggle.checked : true;
             const purchaseSound = document.getElementById('purchaseSound');
-            if (purchaseSound && soundEnabled) {
-                purchaseSound.currentTime = 0;
-                purchaseSound.play().catch(e => console.log('Purchase sound error:', e));
-            }
+            if (purchaseSound && soundEnabled) { purchaseSound.currentTime = 0; purchaseSound.play().catch(e => console.log('Purchase sound error:', e)); }
         }
 
         function playErrorSound() {
             const soundsToggle = document.getElementById('soundsToggle');
             const soundEnabled = soundsToggle ? soundsToggle.checked : true;
             const errorSound = document.getElementById('errorSound');
-            if (errorSound && soundEnabled) {
-                errorSound.currentTime = 0;
-                errorSound.play().catch(e => console.log('Error sound error:', e));
-            }
+            if (errorSound && soundEnabled) { errorSound.currentTime = 0; errorSound.play().catch(e => console.log('Error sound error:', e)); }
         }
 
         function playClickFeedback() {
@@ -3586,47 +3661,29 @@
             const soundsToggle = document.getElementById('soundsToggle');
             const soundEnabled = soundsToggle ? soundsToggle.checked : true;
             const clickSound = document.getElementById('clickSound');
-
-            if (navigator.vibrate && vibrationEnabled) {
-                navigator.vibrate(15);
-            }
-            if (clickSound && soundEnabled) {
-                clickSound.currentTime = 0;
-                clickSound.play().catch(e => console.log('Audio play error:', e));
-            }
+            if (navigator.vibrate && vibrationEnabled) navigator.vibrate(15);
+            if (clickSound && soundEnabled) { clickSound.currentTime = 0; clickSound.play().catch(e => console.log('Audio play error:', e)); }
         }
 
         function playLpDropSound() {
             const soundsToggle = document.getElementById('soundsToggle');
             const soundEnabled = soundsToggle ? soundsToggle.checked : true;
             const lpDropSound = document.getElementById('lpDropSound');
-            if (lpDropSound && soundEnabled) {
-                lpDropSound.currentTime = 0;
-                lpDropSound.volume = 0.5;
-                lpDropSound.play().catch(e => console.log('LP drop sound error:', e));
-            }
+            if (lpDropSound && soundEnabled) { lpDropSound.currentTime = 0; lpDropSound.volume = 0.5; lpDropSound.play().catch(e => console.log('LP drop sound error:', e)); }
         }
 
         function playNavSound() {
             const soundsToggle = document.getElementById('soundsToggle');
             const soundEnabled = soundsToggle ? soundsToggle.checked : true;
             const navSound = document.getElementById('navSound');
-            if (navSound && soundEnabled) {
-                navSound.currentTime = 0;
-                navSound.volume = 0.3;
-                navSound.play().catch(e => console.log('Nav sound error:', e));
-            }
+            if (navSound && soundEnabled) { navSound.currentTime = 0; navSound.volume = 0.3; navSound.play().catch(e => console.log('Nav sound error:', e)); }
         }
 
         function playSettingsSound() {
             const soundsToggle = document.getElementById('soundsToggle');
             const soundEnabled = soundsToggle ? soundsToggle.checked : true;
             const settingsSound = document.getElementById('settingsSound');
-            if (settingsSound && soundEnabled) {
-                settingsSound.currentTime = 0;
-                settingsSound.volume = 0.3;
-                settingsSound.play().catch(e => console.log('Settings sound error:', e));
-            }
+            if (settingsSound && soundEnabled) { settingsSound.currentTime = 0; settingsSound.volume = 0.3; settingsSound.play().catch(e => console.log('Settings sound error:', e)); }
         }
 
         function updateUI() {
@@ -3635,44 +3692,34 @@
             document.getElementById('energyValue').innerText = localEnergy;
             document.getElementById('maxEnergyValue').innerText = localMaxEnergy;
             document.getElementById('energyHeader').innerText = localEnergy;
-
             let percent = (localEnergy / localMaxEnergy) * 100;
             document.getElementById('energyBar').style.width = percent + '%';
-
             document.getElementById('totalWG').innerText = localWG.toFixed(2);
             document.getElementById('totalLP').innerText = localLP.toFixed(2);
             document.getElementById('totalWGmini').innerText = localWG.toFixed(2);
             document.getElementById('lotteryLPBalance').innerText = localLP.toFixed(2);
-
             document.getElementById('totalClicksMini').innerText = localClicks;
             document.getElementById('profileClicks').innerText = localClicks;
             document.getElementById('profileUSDT').innerText = localUSDT.toFixed(2);
             document.getElementById('profileWins').innerText = localWins;
-
             document.getElementById('earningPerClick').innerText = localEarning.toFixed(2);
             document.getElementById('clickAmount').innerText = localEarning.toFixed(2);
-
             document.getElementById('totalTickets').innerText = currentTickets.length;
             document.getElementById('totalTicketsMini').innerText = currentTickets.length;
-
             document.getElementById('upgradeCount1').innerText = upgradeCounts[1];
             document.getElementById('upgradeCount2').innerText = upgradeCounts[2];
             document.getElementById('upgradeCount3').innerText = upgradeCounts[3];
-
             document.getElementById('upgradeCost1').innerHTML = upgradeCosts[1].toFixed(2);
             document.getElementById('upgradeCost2').innerHTML = upgradeCosts[2].toFixed(2);
             document.getElementById('upgradeCost3').innerHTML = upgradeCosts[3].toFixed(2);
-
             document.getElementById('starsBalance').innerText = localStars;
             document.getElementById('currentMaxEnergy').innerText = localMaxEnergy;
             document.getElementById('energyUpgradeCount').innerText = localEnergyUpgrades;
             document.getElementById('energyUpgradeCountProgress').innerText = localEnergyUpgrades;
-
             let upgradesLeft = Math.max(0, 15 - localEnergyUpgrades);
             document.getElementById('energyUpgradesLeft').innerText = upgradesLeft;
             let progressPercent = (localEnergyUpgrades / 15) * 100;
             document.getElementById('energyUpgradeProgressFill').style.width = progressPercent + '%';
-
             let upgradeBtn = document.getElementById('energyUpgradeBtn');
             let upgradeCard = document.getElementById('energyUpgradeCard');
             if (upgradeBtn && upgradeCard) {
@@ -3688,35 +3735,23 @@
                     upgradeCard.classList.remove('disabled');
                 }
             }
-
-            updateProfileBadges();
-        }
-
-        function updateProfileBadges() {
             const badgesContainer = document.getElementById('profileBadges');
-            if (!badgesContainer) return;
-            let badgesHtml = '';
-            if (localRole === 'founder') {
-                badgesHtml += '<span class="role-badge founder">👑 ОСНОВАТЕЛЬ</span>';
-            } else if (localRole === 'pioneer') {
-                badgesHtml += '<span class="role-badge pioneer">⭐️ ПЕРВООТКРЫВАТЕЛЬ</span>';
-            } else {
-                badgesHtml += '<span class="role-badge player">🎮 Игрок</span>';
+            if (badgesContainer) {
+                let badgesHtml = '';
+                if (localRole === 'founder') badgesHtml += '<span class="role-badge founder">👑 ОСНОВАТЕЛЬ</span>';
+                else if (localRole === 'pioneer') badgesHtml += '<span class="role-badge pioneer">⭐️ ПЕРВООТКРЫВАТЕЛЬ</span>';
+                else badgesHtml += '<span class="role-badge player">🎮 Игрок</span>';
+                badgesContainer.innerHTML = badgesHtml;
             }
-            badgesContainer.innerHTML = badgesHtml;
         }
 
         function updateModalBadges(role) {
             const badgesContainer = document.getElementById('playerModalBadges');
             if (!badgesContainer) return;
             let badgesHtml = '';
-            if (role === 'founder') {
-                badgesHtml += '<span class="role-badge founder">👑 ОСНОВАТЕЛЬ</span>';
-            } else if (role === 'pioneer') {
-                badgesHtml += '<span class="role-badge pioneer">⭐ ПЕРВООТКРЫВАТЕЛЬ</span>';
-            } else {
-                badgesHtml += '<span class="role-badge player">🎮 Игрок</span>';
-            }
+            if (role === 'founder') badgesHtml += '<span class="role-badge founder">👑 ОСНОВАТЕЛЬ</span>';
+            else if (role === 'pioneer') badgesHtml += '<span class="role-badge pioneer">⭐ ПЕРВООТКРЫВАТЕЛЬ</span>';
+            else badgesHtml += '<span class="role-badge player">🎮 Игрок</span>';
             badgesContainer.innerHTML = badgesHtml;
         }
 
@@ -3725,76 +3760,45 @@
             let plus = document.getElementById('clickPlus');
             coin.classList.add('coin-click');
             plus.classList.add('show');
-            setTimeout(() => {
-                coin.classList.remove('coin-click');
-                plus.classList.remove('show');
-            }, 80);
+            setTimeout(() => { coin.classList.remove('coin-click'); plus.classList.remove('show'); }, 80);
         }
 
         async function autoRegister() {
             try {
                 let urlParams = new URLSearchParams(window.location.search);
                 let refCode = urlParams.get('startapp') || '';
-                await fetch('/api/register', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        user_id: userId,
-                        username: username,
-                        first_name: firstName,
-                        avatar_url: photoUrl,
-                        referral_code: refCode
-                    })
-                });
+                await fetch('/api/register', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ user_id: userId, username: username, first_name: firstName, avatar_url: photoUrl, referral_code: refCode }) });
             } catch(e) {}
         }
 
         async function loadSettings() {
             try {
-                let res = await fetch('/api/get_settings', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({user_id: userId})
-                });
+                let res = await fetch('/api/get_settings', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: userId}) });
                 let settings = await res.json();
                 document.getElementById('notificationsToggle').checked = settings.notifications || false;
                 document.getElementById('soundsToggle').checked = settings.sounds || false;
                 document.getElementById('vibrationToggle').checked = settings.vibration || false;
                 document.getElementById('hideFromTopToggle').checked = settings.hideFromTop || false;
                 localHideFromTop = settings.hideFromTop || false;
-                applyTheme(settings.theme || 'dark');
+                if (settings.theme === 'light') document.body.classList.add('light-theme');
+                else document.body.classList.remove('light-theme');
+                document.getElementById('themeToggle').checked = settings.theme === 'dark';
             } catch(e) {}
         }
 
         async function saveSetting(setting, value) {
             try {
-                await fetch('/api/update_settings', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({user_id: userId, setting: setting, value: value})
-                });
-                if (setting === 'theme') applyTheme(value ? 'dark' : 'light');
-                if (setting === 'hideFromTop') {
-                    localHideFromTop = value;
-                    updateLeaderboard();
+                await fetch('/api/update_settings', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: userId, setting: setting, value: value}) });
+                if (setting === 'theme') {
+                    if (value) document.body.classList.add('light-theme');
+                    else document.body.classList.remove('light-theme');
                 }
-                let settingNames = {
-                    'notifications': 'Уведомления',
-                    'sounds': 'Звуки',
-                    'vibration': 'Вибрация',
-                    'theme': 'Тёмная тема',
-                    'hideFromTop': 'Скрытие из топа'
-                };
+                if (setting === 'hideFromTop') localHideFromTop = value;
+                let settingNames = { 'notifications': 'Уведомления', 'sounds': 'Звуки', 'vibration': 'Вибрация', 'theme': 'Тёмная тема', 'hideFromTop': 'Скрытие из топа' };
                 let status = value ? 'включены' : 'выключены';
                 if (setting === 'theme') status = value ? 'включена' : 'выключена';
                 showToast(`${settingNames[setting]} ${status}`, 'info');
             } catch(e) {}
-        }
-
-        function applyTheme(theme) {
-            if (theme === 'light') document.body.classList.add('light-theme');
-            else document.body.classList.remove('light-theme');
-            document.getElementById('themeToggle').checked = theme === 'dark';
         }
 
         document.getElementById('themeToggle').onchange = (e) => saveSetting('theme', e.target.checked);
@@ -3815,24 +3819,13 @@
             const now = Date.now();
             if (now - lastStatusUpdate < STATUS_UPDATE_DELAY) return;
             if (isUpdatingStatus) return;
-
             isUpdatingStatus = true;
             lastStatusUpdate = now;
-
             try {
-                let res = await fetch('/api/status', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({user_id: userId}),
-                    signal: AbortSignal.timeout(5000)
-                });
+                let res = await fetch('/api/status', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: userId}), signal: AbortSignal.timeout(5000) });
                 let data = await res.json();
                 dataCache.status = data;
-
-                if (data.banned) {
-                    showToast(`⚠️ Вы забанены! Причина: ${data.reason}. До: ${data.until}`, 'error');
-                    return;
-                }
+                if (data.banned) { showToast(`⚠️ Вы забанены! Причина: ${data.reason}. До: ${data.until}`, 'error'); return; }
                 localWG = data.wg;
                 localLP = data.lp;
                 localEnergy = data.energy;
@@ -3845,13 +3838,11 @@
                 localMaxEnergy = data.max_energy || 500;
                 localEnergyUpgrades = data.energy_upgrades || 0;
                 if (data.upgrade_counts) upgradeCounts = data.upgrade_counts;
-
                 if (upgradeCounts) {
                     upgradeCosts[1] = getUpgradeCost(1, upgradeCounts[1] || 0);
                     upgradeCosts[2] = getUpgradeCost(2, upgradeCounts[2] || 0);
                     upgradeCosts[3] = getUpgradeCost(3, upgradeCounts[3] || 0);
                 }
-
                 updateUI();
                 let regenTimeHours = (localMaxEnergy - localEnergy) / (localMaxEnergy / 7200) / 3600;
                 document.getElementById('regenInfo').innerHTML = `🕐 Полное восстановление через ${regenTimeHours.toFixed(1)}ч`;
@@ -3873,25 +3864,17 @@
                     if (data.upgrade_counts) upgradeCounts = data.upgrade_counts;
                     updateUI();
                 }
-            } finally {
-                isUpdatingStatus = false;
-            }
+            } finally { isUpdatingStatus = false; }
         }
 
         async function updateLottery() {
             const now = Date.now();
             if (now - lastLotteryUpdate < LOTTERY_UPDATE_DELAY) return;
             if (isUpdatingLottery) return;
-
             isUpdatingLottery = true;
             lastLotteryUpdate = now;
-
             try {
-                let res = await fetch('/api/lottery_status', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({user_id: userId})
-                });
+                let res = await fetch('/api/lottery_status', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: userId}) });
                 let data = await res.json();
                 dataCache.lottery = data;
                 document.getElementById('prizePool').innerText = data.prize_pool.toFixed(2);
@@ -3917,9 +3900,7 @@
                         updateDrawUI();
                     }
                 }
-            } finally {
-                isUpdatingLottery = false;
-            }
+            } finally { isUpdatingLottery = false; }
         }
 
         let leaderboardUpdateTimeout = null;
@@ -3928,7 +3909,6 @@
         async function updateLeaderboard() {
             if (leaderboardUpdatePromise) return leaderboardUpdatePromise;
             if (leaderboardUpdateTimeout) clearTimeout(leaderboardUpdateTimeout);
-
             leaderboardUpdatePromise = new Promise((resolve) => {
                 leaderboardUpdateTimeout = setTimeout(async () => {
                     try {
@@ -3939,27 +3919,14 @@
                             let avatar = user.avatar && user.avatar !== '👤' ? `<img src="${user.avatar}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;">` : '👤';
                             let userName = user.username;
                             let roleBadge = '';
-                            if (user.role === 'founder' && !user.hide_from_top) {
-                                roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#ef4444;">👑</span>';
-                            } else if (user.role === 'pioneer' && !user.hide_from_top) {
-                                roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#00b4d8;">⭐</span>';
-                            }
-                            html += `<div class="leaderboard-mini-item">
-                                <span class="rank">${user.rank}</span>
-                                <span class="avatar-mini">${avatar}</span>
-                                <span class="name">${userName}${roleBadge}</span>
-                                <span class="clicks">${user.total_clicks} кликов</span>
-                            </div>`;
+                            if (user.role === 'founder' && !user.hide_from_top) roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#ef4444;">👑</span>';
+                            else if (user.role === 'pioneer' && !user.hide_from_top) roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#00b4d8;">⭐</span>';
+                            html += `<div class="leaderboard-mini-item"><span class="rank">${user.rank}</span><span class="avatar-mini">${avatar}</span><span class="name">${userName}${roleBadge}</span><span class="clicks">${user.total_clicks} кликов</span></div>`;
                         }
                         document.getElementById('leaderboardMini').innerHTML = html || '<div>Нет данных</div>';
                         resolve(true);
-                    } catch(e) {
-                        console.error('Leaderboard error:', e);
-                        resolve(false);
-                    } finally {
-                        leaderboardUpdateTimeout = null;
-                        leaderboardUpdatePromise = null;
-                    }
+                    } catch(e) { console.error('Leaderboard error:', e); resolve(false); }
+                    finally { leaderboardUpdateTimeout = null; leaderboardUpdatePromise = null; }
                 }, 2000);
             });
             return leaderboardUpdatePromise;
@@ -3979,107 +3946,50 @@
                     let roleBadge = '';
                     if (p.role === 'founder') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#ef4444;">👑</span>';
                     else if (p.role === 'pioneer') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#00b4d8;">⭐</span>';
-                    html += `<div class="recent-player-item" onclick="openPlayerProfile(${p.user_id}, 0)">
-                        <div class="recent-player-avatar">${avatar}</div>
-                        <div class="recent-player-info">
-                            <div class="recent-player-name">${playerName}${roleBadge}</div>
-                            <div class="recent-player-time">${p.time_ago}</div>
-                        </div>
-                        <div class="recent-player-ticket">🎫 #${p.ticket_number}</div>
-                    </div>`;
+                    html += `<div class="recent-player-item" onclick="openPlayerProfile(${p.user_id}, 0)"><div class="recent-player-avatar">${avatar}</div><div class="recent-player-info"><div class="recent-player-name">${playerName}${roleBadge}</div><div class="recent-player-time">${p.time_ago}</div></div><div class="recent-player-ticket">🎫 #${p.ticket_number}</div></div>`;
                 }
                 document.getElementById('recentPlayersList').innerHTML = html || 'Нет участников';
-            } catch(e) {
-                document.getElementById('recentPlayersList').innerHTML = 'Ошибка';
-            }
+            } catch(e) { document.getElementById('recentPlayersList').innerHTML = 'Ошибка'; }
         }
 
         async function loadReferralLink() {
             try {
-                let res = await fetch('/api/get_referral_link', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({user_id: userId})
-                });
+                let res = await fetch('/api/get_referral_link', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: userId}) });
                 let data = await res.json();
                 document.getElementById('referralLinkInput').value = data.link;
-            } catch(e) {
-                document.getElementById('referralLinkInput').value = 'Ошибка';
-            }
+            } catch(e) { document.getElementById('referralLinkInput').value = 'Ошибка'; }
         }
 
         async function loadReferrals() {
             try {
-                let res = await fetch('/api/get_referrals', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({user_id: userId})
-                });
+                let res = await fetch('/api/get_referrals', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: userId}) });
                 let data = await res.json();
                 document.getElementById('referralsCount').innerText = `(${data.referrals.length})`;
                 document.getElementById('totalEarnedAmount').innerText = data.total_earned.toFixed(2);
                 let container = document.getElementById('referralsList');
-                if (data.referrals.length === 0) {
-                    container.innerHTML = '<div class="empty-referrals">😢 Пока нет друзей</div>';
-                    return;
-                }
+                if (data.referrals.length === 0) { container.innerHTML = '<div class="empty-referrals">😢 Пока нет друзей</div>'; return; }
                 let html = '';
                 for (let ref of data.referrals) {
                     let avatarLetter = (ref.username.charAt(0) || '👤').toUpperCase();
-                    html += `
-                        <div class="referral-item">
-                            <div class="referral-avatar">${avatarLetter}</div>
-                            <div class="referral-info">
-                                <div class="referral-name">${ref.username}</div>
-                                <div class="referral-date">${ref.date || 'Недавно'}</div>
-                            </div>
-                            <div class="referral-earned">
-                                <div class="referral-earned-amount">+${ref.earned}</div>
-                                <div class="referral-earned-label">LP</div>
-                            </div>
-                        </div>
-                    `;
+                    html += `<div class="referral-item"><div class="referral-avatar">${avatarLetter}</div><div class="referral-info"><div class="referral-name">${ref.username}</div><div class="referral-date">${ref.date || 'Недавно'}</div></div><div class="referral-earned"><div class="referral-earned-amount">+${ref.earned}</div><div class="referral-earned-label">LP</div></div></div>`;
                 }
                 container.innerHTML = html;
-            } catch(e) {
-                console.error('Error loading referrals:', e);
-            }
+            } catch(e) { console.error('Error loading referrals:', e); }
         }
 
         async function loadWithdrawals() {
             try {
-                let res = await fetch('/api/get_withdrawals', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({user_id: userId})
-                });
+                let res = await fetch('/api/get_withdrawals', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: userId}) });
                 let data = await res.json();
                 let historyHtml = '';
                 for (let w of data.withdrawals) {
                     let statusClass = '';
                     let statusText = '';
-                    if (w.status === 'pending') {
-                        statusClass = 'withdrawal-status-pending';
-                        statusText = '⏳ Ожидание';
-                    } else if (w.status === 'completed') {
-                        statusClass = 'withdrawal-status-completed';
-                        statusText = '✅ Выполнено';
-                    } else {
-                        statusClass = 'withdrawal-status-rejected';
-                        statusText = '❌ Отклонено';
-                    }
+                    if (w.status === 'pending') { statusClass = 'withdrawal-status-pending'; statusText = '⏳ Ожидание'; }
+                    else if (w.status === 'completed') { statusClass = 'withdrawal-status-completed'; statusText = '✅ Выполнено'; }
+                    else { statusClass = 'withdrawal-status-rejected'; statusText = '❌ Отклонено'; }
                     let maskedAddress = w.address.substring(0, 10) + '****' + w.address.substring(w.address.length - 6);
-                    historyHtml += `
-                        <div class="withdrawal-history-item">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                                <span style="font-weight: 600;">${w.amount} USDT</span>
-                                <span class="${statusClass}">${statusText}</span>
-                            </div>
-                            <div style="font-size: 0.7rem; opacity: 0.7;">Адрес: ${maskedAddress}</div>
-                            <div style="font-size: 0.7rem; opacity: 0.7;">Сеть: ${w.network}</div>
-                            <div style="font-size: 0.65rem; opacity: 0.5; margin-top: 5px;">${w.created_at}</div>
-                        </div>
-                    `;
+                    historyHtml += `<div class="withdrawal-history-item"><div style="display: flex; justify-content: space-between; margin-bottom: 8px;"><span style="font-weight: 600;">${w.amount} USDT</span><span class="${statusClass}">${statusText}</span></div><div style="font-size: 0.7rem; opacity: 0.7;">Адрес: ${maskedAddress}</div><div style="font-size: 0.7rem; opacity: 0.7;">Сеть: ${w.network}</div><div style="font-size: 0.65rem; opacity: 0.5; margin-top: 5px;">${w.created_at}</div></div>`;
                 }
                 document.getElementById('withdrawalHistoryList').innerHTML = historyHtml || '<div class="empty-state">История пуста</div>';
             } catch(e) {}
@@ -4091,51 +4001,21 @@
             loadWithdrawals();
         };
 
-        function closeWithdrawalModal() {
-            document.getElementById('withdrawalModal').classList.remove('active');
-        }
+        function closeWithdrawalModal() { document.getElementById('withdrawalModal').classList.remove('active'); }
 
         async function createWithdrawal() {
             let amount = parseFloat(document.getElementById('withdrawalAmount').value);
             let address = document.getElementById('withdrawalAddress').value;
             let network = document.getElementById('withdrawalNetwork').value;
-            if (isNaN(amount) || amount < 2) {
-                showToast('Минимальная сумма вывода: 2 USDT', 'error');
-                return;
-            }
-            if (amount > localUSDT) {
-                showToast('Недостаточно USDT на балансе', 'error');
-                return;
-            }
-            if (!address || address.length < 20) {
-                showToast('Введите корректный адрес кошелька', 'error');
-                return;
-            }
+            if (isNaN(amount) || amount < 2) { showToast('Минимальная сумма вывода: 2 USDT', 'error'); return; }
+            if (amount > localUSDT) { showToast('Недостаточно USDT на балансе', 'error'); return; }
+            if (!address || address.length < 20) { showToast('Введите корректный адрес кошелька', 'error'); return; }
             try {
-                let res = await fetch('/api/create_withdrawal', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        user_id: userId,
-                        amount: amount,
-                        address: address,
-                        network: network
-                    })
-                });
+                let res = await fetch('/api/create_withdrawal', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ user_id: userId, amount: amount, address: address, network: network }) });
                 let data = await res.json();
-                if (data.success) {
-                    showToast(data.msg, 'success');
-                    document.getElementById('withdrawalAmount').value = '';
-                    document.getElementById('withdrawalAddress').value = '';
-                    updateStatus();
-                    loadWithdrawals();
-                    closeWithdrawalModal();
-                } else {
-                    showToast(data.msg, 'error');
-                }
-            } catch(e) {
-                showToast('Ошибка при создании заявки', 'error');
-            }
+                if (data.success) { showToast(data.msg, 'success'); document.getElementById('withdrawalAmount').value = ''; document.getElementById('withdrawalAddress').value = ''; updateStatus(); loadWithdrawals(); closeWithdrawalModal(); }
+                else { showToast(data.msg, 'error'); }
+            } catch(e) { showToast('Ошибка при создании заявки', 'error'); }
         }
 
         document.querySelectorAll('.withdrawal-tab').forEach(tab => {
@@ -4144,55 +4024,27 @@
                 document.querySelectorAll('.withdrawal-tab').forEach(t => t.classList.remove('active'));
                 tab.classList.add('active');
                 document.querySelectorAll('.withdrawal-tab-content').forEach(c => c.style.display = 'none');
-                if (target === 'new') {
-                    document.getElementById('withdrawalNew').style.display = 'block';
-                } else {
-                    document.getElementById('withdrawalHistory').style.display = 'block';
-                    loadWithdrawals();
-                }
+                if (target === 'new') document.getElementById('withdrawalNew').style.display = 'block';
+                else { document.getElementById('withdrawalHistory').style.display = 'block'; loadWithdrawals(); }
             };
         });
 
         window.buyEnergyUpgrade = async function() {
-            if (localEnergyUpgrades >= 15) {
-                showToast('Вы уже достигли максимума улучшений! (15/15)', 'error');
-                return;
-            }
+            if (localEnergyUpgrades >= 15) { showToast('Вы уже достигли максимума улучшений! (15/15)', 'error'); return; }
             showToast('💰 Создаём счёт для оплаты...', 'info');
             try {
-                let res = await fetch('/api/create_stars_invoice', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        user_id: userId,
-                        chat_id: chatId
-                    })
-                });
+                let res = await fetch('/api/create_stars_invoice', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ user_id: userId, chat_id: chatId }) });
                 let data = await res.json();
-                if (!data.success) {
-                    showToast(data.msg || 'Ошибка создания счёта', 'error');
-                    return;
-                }
+                if (!data.success) { showToast(data.msg || 'Ошибка создания счёта', 'error'); return; }
                 if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openInvoice) {
                     window.Telegram.WebApp.openInvoice(data.invoice_link, (status) => {
                         if (status === 'paid') {
                             showToast('✅ Оплата прошла успешно! Улучшение активируется через несколько секунд...', 'success');
-                            setTimeout(() => {
-                                updateStatus();
-                                showToast('✨ Улучшение активировано! +50 к макс. энергии и +50 LP!', 'success');
-                            }, 3000);
-                        } else if (status === 'failed' || status === 'cancelled') {
-                            showToast('❌ Оплата отменена или не удалась', 'error');
-                        }
+                            setTimeout(() => { updateStatus(); showToast('✨ Улучшение активировано! +50 к макс. энергии и +50 LP!', 'success'); }, 3000);
+                        } else if (status === 'failed' || status === 'cancelled') showToast('❌ Оплата отменена или не удалась', 'error');
                     });
-                } else {
-                    window.open(data.invoice_link, '_blank');
-                    showToast('🔗 Оплатите по ссылке в новом окне', 'info');
-                }
-            } catch(e) {
-                console.error('Ошибка при оплате:', e);
-                showToast('Ошибка при создании платежа. Попробуйте позже.', 'error');
-            }
+                } else { window.open(data.invoice_link, '_blank'); showToast('🔗 Оплатите по ссылке в новом окне', 'info'); }
+            } catch(e) { console.error('Ошибка при оплате:', e); showToast('Ошибка при создании платежа. Попробуйте позже.', 'error'); }
         };
 
         document.querySelectorAll('.shop-tab').forEach(tab => {
@@ -4201,12 +4053,8 @@
                 document.querySelectorAll('.shop-tab').forEach(t => t.classList.remove('active'));
                 tab.classList.add('active');
                 document.querySelectorAll('.shop-pane').forEach(pane => pane.classList.remove('active'));
-                if (target === 'normal') {
-                    document.getElementById('shopNormal').classList.add('active');
-                } else {
-                    document.getElementById('shopStars').classList.add('active');
-                    updateStatus();
-                }
+                if (target === 'normal') document.getElementById('shopNormal').classList.add('active');
+                else { document.getElementById('shopStars').classList.add('active'); updateStatus(); }
             };
         });
 
@@ -4215,23 +4063,15 @@
             item.onclick = (e) => {
                 playNavSound();
                 const tab = item.dataset.tab;
-                updateNavIcons(tab);
-                if (oldOnClick) oldOnClick(e);
                 document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
                 item.classList.add('active');
                 document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
                 document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`).classList.add('active');
                 document.querySelector('.main-content').scrollTop = 0;
-                if (tab === 'lottery') {
-                    updateLottery();
-                    loadRecentPlayers();
-                }
-                if (tab === 'profile' || tab === 'shop' || tab === 'home') {
-                    updateStatus();
-                }
-                if (tab === 'home') {
-                    updateLeaderboard();
-                }
+                if (tab === 'lottery') { updateLottery(); loadRecentPlayers(); }
+                if (tab === 'profile' || tab === 'shop' || tab === 'home') updateStatus();
+                if (tab === 'home') updateLeaderboard();
+                if (oldOnClick) oldOnClick(e);
             };
         });
 
@@ -4242,27 +4082,14 @@
             const now = Date.now();
             if (now - lastClickTime < CLICK_DEBOUNCE) return;
             lastClickTime = now;
-
-            if (localEnergy <= 0) {
-                playErrorSound();
-                showToast('Нет энергии!', 'error');
-                return;
-            }
-
+            if (localEnergy <= 0) { playErrorSound(); showToast('Нет энергии!', 'error'); return; }
             playClickFeedback();
             animateClick();
-
             try {
-                let res = await fetch('/api/click', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({user_id: userId}),
-                    signal: AbortSignal.timeout(3000)
-                });
+                let res = await fetch('/api/click', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: userId}), signal: AbortSignal.timeout(3000) });
                 let data = await res.json();
-                if (data.error) {
-                    localEnergy = data.energy;
-                } else {
+                if (data.error) localEnergy = data.energy;
+                else {
                     localEnergy = data.energy;
                     localWG = data.wg;
                     localLP = data.lp;
@@ -4272,42 +4099,26 @@
                         if (navigator.vibrate) navigator.vibrate([15, 30, 15]);
                         playLpDropSound();
                         showToast(`+${data.earned.toFixed(2)} WG и +0.5 LP! 🎲`, 'success');
-                    } else {
-                        showToast(`+${data.earned.toFixed(2)} WG!`, 'success');
-                    }
+                    } else showToast(`+${data.earned.toFixed(2)} WG!`, 'success');
                 }
                 updateUI();
                 updateLeaderboard();
-            } catch(e) {
-                console.error('Click error:', e);
-            }
+            } catch(e) { console.error('Click error:', e); }
         };
 
         setTimeout(() => {
             const settingsToggles = ['notificationsToggle', 'themeToggle', 'soundsToggle', 'vibrationToggle', 'hideFromTopToggle'];
             settingsToggles.forEach(toggleId => {
                 const toggle = document.getElementById(toggleId);
-                if (toggle) {
-                    toggle.addEventListener('change', function() {
-                        playSettingsSound();
-                    });
-                }
+                if (toggle) toggle.addEventListener('change', () => playSettingsSound());
             });
         }, 500);
 
         window.buyUpgrade = async (id) => {
             let cost = upgradeCosts[id];
-            if (localWG < cost) {
-                playErrorSound();
-                showToast(`Не хватает WG! Нужно ${cost.toFixed(2)} WG`, 'error');
-                return;
-            }
+            if (localWG < cost) { playErrorSound(); showToast(`Не хватает WG! Нужно ${cost.toFixed(2)} WG`, 'error'); return; }
             try {
-                let res = await fetch('/api/buy_upgrade', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({user_id: userId, upgrade_id: id})
-                });
+                let res = await fetch('/api/buy_upgrade', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: userId, upgrade_id: id}) });
                 let data = await res.json();
                 if (data.success) {
                     playPurchaseSound();
@@ -4320,28 +4131,14 @@
                     document.getElementById('wgBalance').innerText = localWG.toFixed(2);
                     await updateStatus();
                     updateUI();
-                } else {
-                    playErrorSound();
-                    showToast(data.msg, 'error');
-                }
-            } catch(e) {
-                playErrorSound();
-                showToast('Ошибка!', 'error');
-            }
+                } else { playErrorSound(); showToast(data.msg, 'error'); }
+            } catch(e) { playErrorSound(); showToast('Ошибка!', 'error'); }
         };
 
         document.getElementById('ticketBtn').onclick = async () => {
-            if (localLP < 100) {
-                playErrorSound();
-                showToast('Не хватает LP (нужно 100)', 'error');
-                return;
-            }
+            if (localLP < 100) { playErrorSound(); showToast('Не хватает LP (нужно 100)', 'error'); return; }
             try {
-                let res = await fetch('/api/buy_ticket', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({user_id: userId})
-                });
+                let res = await fetch('/api/buy_ticket', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: userId}) });
                 let data = await res.json();
                 if (data.success) {
                     playPurchaseSound();
@@ -4350,14 +4147,8 @@
                     await updateLottery();
                     await loadRecentPlayers();
                     await loadUserTickets();
-                } else {
-                    playErrorSound();
-                    showToast(data.msg, 'error');
-                }
-            } catch(e) {
-                playErrorSound();
-                showToast('Ошибка!', 'error');
-            }
+                } else { playErrorSound(); showToast(data.msg, 'error'); }
+            } catch(e) { playErrorSound(); showToast('Ошибка!', 'error'); }
         };
 
         document.getElementById('myTicketsBtn').onclick = async () => {
@@ -4385,16 +4176,8 @@
             let link = document.getElementById('referralLinkInput').value;
             let message = `🎮 WereGood — кликай по монете, участвуй в лотерее и зарабатывай USDT!\n\n${link}`;
             let tgShareUrl = `https://t.me/share/url?text=${encodeURIComponent(message)}`;
-            if (navigator.share) {
-                navigator.share({
-                    title: 'WereGood',
-                    text: message
-                }).catch(() => {
-                    window.open(tgShareUrl, '_blank');
-                });
-            } else {
-                window.open(tgShareUrl, '_blank');
-            }
+            if (navigator.share) navigator.share({ title: 'WereGood', text: message }).catch(() => window.open(tgShareUrl, '_blank'));
+            else window.open(tgShareUrl, '_blank');
         };
 
         window.openLeaderboard = async function() {
@@ -4419,26 +4202,13 @@
                     let avatar = userItem.avatar && userItem.avatar !== '👤' ? `<img src="${userItem.avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">` : '👤';
                     let userName = userItem.username;
                     let roleBadge = '';
-                    if (userItem.role === 'founder' && !userItem.hide_from_top) {
-                        roleBadge = '<span class="role-badge founder" style="font-size:0.6rem;padding:2px 6px;margin-left:6px;">👑</span>';
-                    } else if (userItem.role === 'pioneer' && !userItem.hide_from_top) {
-                        roleBadge = '<span class="role-badge pioneer" style="font-size:0.6rem;padding:2px 6px;margin-left:6px;">⭐</span>';
-                    }
+                    if (userItem.role === 'founder' && !userItem.hide_from_top) roleBadge = '<span class="role-badge founder" style="font-size:0.6rem;padding:2px 6px;margin-left:6px;">👑</span>';
+                    else if (userItem.role === 'pioneer' && !userItem.hide_from_top) roleBadge = '<span class="role-badge pioneer" style="font-size:0.6rem;padding:2px 6px;margin-left:6px;">⭐</span>';
                     let reward = userItem.rank === 1 ? '<span class="reward">🏆 +1000 WG</span>' : (userItem.rank < 4 ? '<span class="reward">🥈 +500 WG</span>' : (userItem.rank <= 10 ? '<span class="reward">🎁 +100 WG</span>' : ''));
-                    html += `<div class="leaderboard-item" onclick="openPlayerProfile(${userItem.user_id}, ${userItem.rank})">
-                        <div class="rank">${userItem.rank}</div>
-                        <div class="avatar">${avatar}</div>
-                        <div class="info">
-                            <div class="name">${userName}${roleBadge}</div>
-                            <div class="clicks">${userItem.total_clicks} кликов</div>
-                        </div>
-                        ${reward}
-                    </div>`;
+                    html += `<div class="leaderboard-item" onclick="openPlayerProfile(${userItem.user_id}, ${userItem.rank})"><div class="rank">${userItem.rank}</div><div class="avatar">${avatar}</div><div class="info"><div class="name">${userName}${roleBadge}</div><div class="clicks">${userItem.total_clicks} кликов</div></div>${reward}</div>`;
                 }
                 listDiv.innerHTML = html || '<div class="empty-state">Нет данных</div>';
-            } catch(e) {
-                listDiv.innerHTML = '<div class="empty-state">Ошибка</div>';
-            }
+            } catch(e) { listDiv.innerHTML = '<div class="empty-state">Ошибка</div>'; }
         }
 
         document.querySelectorAll('.leaderboard-tab').forEach(tab => {
@@ -4452,18 +4222,11 @@
         window.openPlayerProfile = async function(targetId, rank) {
             selectedPlayerId = targetId;
             try {
-                let res = await fetch('/api/get_user_stats', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({user_id: targetId})
-                });
+                let res = await fetch('/api/get_user_stats', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: targetId}) });
                 let data = await res.json();
                 let userName = data.username;
                 let avatar = data.avatar_url && data.avatar_url !== '👤' ? `<img src="${data.avatar_url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">` : '👤';
-                if (data.hide_from_top) {
-                    avatar = '👤';
-                    userName = 'Аноним';
-                }
+                if (data.hide_from_top) { avatar = '👤'; userName = 'Аноним'; }
                 document.getElementById('playerModalUsername').innerText = userName;
                 document.getElementById('playerModalClicks').innerText = data.total_clicks;
                 document.getElementById('playerModalWG').innerText = data.wg.toFixed(2);
@@ -4476,64 +4239,32 @@
                 document.getElementById('playerModalAvatar').innerHTML = avatar;
                 document.getElementById('voteMessage').innerHTML = '';
                 document.getElementById('playerModal').classList.add('active');
-            } catch(e) {
-                showToast('Ошибка', 'error');
-            }
+            } catch(e) { showToast('Ошибка', 'error'); }
         };
 
-        window.closePlayerModal = function() {
-            document.getElementById('playerModal').classList.remove('active');
-        };
+        window.closePlayerModal = function() { document.getElementById('playerModal').classList.remove('active'); };
 
         window.voteForPlayer = async function(type) {
             try {
-                let res = await fetch('/api/vote', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({voter_id: userId, target_id: selectedPlayerId, vote_type: type})
-                });
+                let res = await fetch('/api/vote', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({voter_id: userId, target_id: selectedPlayerId, vote_type: type}) });
                 let data = await res.json();
                 if (data.success) {
                     showToast(data.msg, 'success');
-                    if (type === 'like') {
-                        let span = document.getElementById('playerModalLikes');
-                        span.innerText = parseInt(span.innerText) + 1;
-                    } else {
-                        let span = document.getElementById('playerModalDislikes');
-                        span.innerText = parseInt(span.innerText) + 1;
-                    }
-                } else {
-                    document.getElementById('voteMessage').innerHTML = data.msg;
-                    document.getElementById('voteMessage').style.display = 'block';
-                    setTimeout(() => document.getElementById('voteMessage').style.display = 'none', 3000);
-                }
-            } catch(e) {
-                showToast('Ошибка', 'error');
-            }
+                    if (type === 'like') { let span = document.getElementById('playerModalLikes'); span.innerText = parseInt(span.innerText) + 1; }
+                    else { let span = document.getElementById('playerModalDislikes'); span.innerText = parseInt(span.innerText) + 1; }
+                } else { document.getElementById('voteMessage').innerHTML = data.msg; document.getElementById('voteMessage').style.display = 'block'; setTimeout(() => document.getElementById('voteMessage').style.display = 'none', 3000); }
+            } catch(e) { showToast('Ошибка', 'error'); }
         };
 
-        window.openPrefixModal = function() {
-            loadAvailablePrefixes();
-            document.getElementById('prefixModal').classList.add('active');
-        };
-
-        window.closePrefixModal = function() {
-            document.getElementById('prefixModal').classList.remove('active');
-        };
+        window.openPrefixModal = function() { loadAvailablePrefixes(); document.getElementById('prefixModal').classList.add('active'); };
+        window.closePrefixModal = function() { document.getElementById('prefixModal').classList.remove('active'); };
 
         async function loadAvailablePrefixes() {
             try {
-                let res = await fetch('/api/get_available_prefixes', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({user_id: userId})
-                });
+                let res = await fetch('/api/get_available_prefixes', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: userId}) });
                 let data = await res.json();
-                if (data.success) {
-                    availablePrefixes = data.prefixes;
-                } else {
-                    throw new Error('API error');
-                }
+                if (data.success) availablePrefixes = data.prefixes;
+                else throw new Error('API error');
             } catch(e) {
                 availablePrefixes = [
                     { id: 'player', name: 'Игрок', icon: '🎮', desc: 'Выдаётся абсолютно всем игрокам', color: 'player' },
@@ -4556,55 +4287,32 @@
             let html = '';
             availablePrefixes.forEach(prefix => {
                 const isSelected = localRole === prefix.id;
-                html += `
-                    <div class="prefix-option ${isSelected ? 'selected' : ''}" onclick="changePrefix('${prefix.id}')">
-                        <div class="prefix-icon">${prefix.icon}</div>
-                        <div class="prefix-info">
-                            <div class="prefix-name">${prefix.name}</div>
-                            <div class="prefix-desc">${prefix.desc}</div>
-                        </div>
-                        <div class="prefix-badge ${prefix.color}">${prefix.name}</div>
-                    </div>
-                `;
+                html += `<div class="prefix-option ${isSelected ? 'selected' : ''}" onclick="changePrefix('${prefix.id}')"><div class="prefix-icon">${prefix.icon}</div><div class="prefix-info"><div class="prefix-name">${prefix.name}</div><div class="prefix-desc">${prefix.desc}</div></div><div class="prefix-badge ${prefix.color}">${prefix.name}</div></div>`;
             });
             container.innerHTML = html || '<div class="empty-state">Нет доступных префиксов</div>';
         }
 
         async function changePrefix(prefixId) {
             try {
-                let res = await fetch('/api/change_prefix', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({user_id: userId, prefix: prefixId})
-                });
+                let res = await fetch('/api/change_prefix', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: userId, prefix: prefixId}) });
                 let data = await res.json();
                 if (data.success) {
                     localRole = prefixId;
-                    updateProfileBadges();
-                    showToast(`Префикс "${getPrefixName(prefixId)}" установлен!`, 'success');
+                    const names = { 'player': 'Игрок', 'pioneer': 'Первооткрыватель', 'founder': 'Основатель' };
+                    showToast(`Префикс "${names[prefixId]}" установлен!`, 'success');
                     closePrefixModal();
                     updateStatus();
-                } else {
-                    showToast(data.msg || 'Ошибка смены префикса', 'error');
-                }
+                } else showToast(data.msg || 'Ошибка смены префикса', 'error');
             } catch(e) {
                 if (availablePrefixes.some(p => p.id === prefixId)) {
                     localRole = prefixId;
-                    updateProfileBadges();
-                    showToast(`Префикс "${getPrefixName(prefixId)}" установлен!`, 'success');
+                    const names = { 'player': 'Игрок', 'pioneer': 'Первооткрыватель', 'founder': 'Основатель' };
+                    showToast(`Префикс "${names[prefixId]}" установлен!`, 'success');
                     closePrefixModal();
-                } else {
-                    showToast('Этот префикс недоступен для вас', 'error');
-                }
+                } else showToast('Этот префикс недоступен для вас', 'error');
             }
         }
 
-        function getPrefixName(prefixId) {
-            const names = { 'player': 'Игрок', 'pioneer': 'Первооткрыватель', 'founder': 'Основатель' };
-            return names[prefixId] || prefixId;
-        }
-
-        // Лотерейные функции
         function drawScratchPattern(ctx, size) {
             const grad = ctx.createLinearGradient(0, 0, size, size);
             grad.addColorStop(0, '#8a8a8a');
@@ -4619,16 +4327,7 @@
             ctx.beginPath();
             ctx.strokeStyle = '#aaa';
             ctx.lineWidth = 1.5;
-            for(let i = -size; i < size + size; i += 10) {
-                ctx.beginPath();
-                ctx.moveTo(i, 0);
-                ctx.lineTo(i + size, size);
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.moveTo(0, i);
-                ctx.lineTo(size, i + size);
-                ctx.stroke();
-            }
+            for(let i = -size; i < size + size; i += 10) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i + size, size); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(size, i + size); ctx.stroke(); }
         }
 
         function initScratchCell(canvasId, size, number, isWin, isRevealed) {
@@ -4637,11 +4336,7 @@
             canvas.width = size;
             canvas.height = size;
             const ctx = canvas.getContext('2d');
-            if (isRevealed) {
-                canvas.style.display = 'none';
-                canvas.isRevealed = true;
-                return;
-            }
+            if (isRevealed) { canvas.style.display = 'none'; canvas.isRevealed = true; return; }
             drawScratchPattern(ctx, size);
             canvas.isRevealed = false;
             canvas.number = number;
@@ -4654,9 +4349,7 @@
                     ctx.putImageData(savedImageData, 0, 0);
                     const imageData = ctx.getImageData(0, 0, size, size);
                     let transparent = 0;
-                    for(let i = 3; i < imageData.data.length; i += 4) {
-                        if(imageData.data[i] === 0) transparent++;
-                    }
+                    for(let i = 3; i < imageData.data.length; i += 4) if(imageData.data[i] === 0) transparent++;
                     canvas.erasedPercent = (transparent / (size * size)) * 100;
                 }
             }
@@ -4671,7 +4364,6 @@
             numberDiv.innerHTML = number;
             numberDiv.classList.add('normal');
             numberDiv.classList.remove('win');
-
             const getCoords = (clientX, clientY, targetCanvas) => {
                 const rect = targetCanvas.getBoundingClientRect();
                 const scaleX = targetCanvas.width / rect.width;
@@ -4682,7 +4374,6 @@
                 y = Math.max(0, Math.min(targetCanvas.height, y));
                 return { x, y };
             };
-
             const eraseAt = (targetCanvas, x, y, tNum, cIdx, isWinCell, cellNumber) => {
                 if (targetCanvas.isRevealed) return;
                 const ctx = targetCanvas.getContext('2d');
@@ -4692,40 +4383,25 @@
                 ctx.arc(x, y, 14, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.restore();
-
                 const progressKey = `${targetCanvas.id}_progress`;
                 const imageData = ctx.getImageData(0, 0, targetCanvas.width, targetCanvas.height);
                 scratchProgress.set(progressKey, imageData);
-
                 let transparent = 0;
-                for(let j = 3; j < imageData.data.length; j += 4) {
-                    if(imageData.data[j] === 0) transparent++;
-                }
+                for(let j = 3; j < imageData.data.length; j += 4) if(imageData.data[j] === 0) transparent++;
                 targetCanvas.erasedPercent = (transparent / (targetCanvas.width * targetCanvas.height)) * 100;
-
                 if (targetCanvas.erasedPercent >= 60 && !targetCanvas.isRevealed) {
                     const cellDiv = targetCanvas.parentElement;
                     const numDiv = cellDiv.querySelector('.scratch-number-layer');
-                    if (isWinCell) {
-                        numDiv.classList.add('win');
-                        numDiv.classList.remove('normal');
-                    }
+                    if (isWinCell) { numDiv.classList.add('win'); numDiv.classList.remove('normal'); }
                     targetCanvas.style.display = 'none';
                     targetCanvas.isRevealed = true;
                     scratchProgress.delete(progressKey);
-                    if (socket && socket.connected) {
-                        socket.emit('reveal_cell', {
-                            user_id: userId,
-                            ticket_number: tNum,
-                            cell_index: cIdx
-                        });
-                    }
+                    if (socket && socket.connected) socket.emit('reveal_cell', { user_id: userId, ticket_number: tNum, cell_index: cIdx });
                     if (navigator.vibrate) navigator.vibrate(30);
                     showToast(`Клетка ${cellNumber} открыта! 🎉`, 'success');
                     updateTopPlayers();
                 }
             };
-
             let mouseErasing = false;
             const onMouseMove = (e) => {
                 if (!mouseErasing || !isDrawn) return;
@@ -4746,18 +4422,9 @@
                     }
                 }
             };
-
-            const onMouseUp = () => {
-                mouseErasing = false;
-                document.removeEventListener('mousemove', onMouseMove);
-                document.removeEventListener('mouseup', onMouseUp);
-            };
-
+            const onMouseUp = () => { mouseErasing = false; document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); };
             const onMouseDown = (e) => {
-                if (!isDrawn) {
-                    showToast('Розыгрыш ещё не начался! ⏳', 'error');
-                    return;
-                }
+                if (!isDrawn) { showToast('Розыгрыш ещё не начался! ⏳', 'error'); return; }
                 if (canvas.isRevealed) return;
                 e.preventDefault();
                 mouseErasing = true;
@@ -4775,13 +4442,9 @@
                 document.addEventListener('mousemove', onMouseMove);
                 document.addEventListener('mouseup', onMouseUp);
             };
-
             let activeTouches = new Map();
             const onTouchStart = (e) => {
-                if (!isDrawn) {
-                    showToast('Розыгрыш ещё не начался! ⏳', 'error');
-                    return;
-                }
+                if (!isDrawn) { showToast('Розыгрыш ещё не начался! ⏳', 'error'); return; }
                 e.preventDefault();
                 for (let i = 0; i < e.touches.length; i++) {
                     const touch = e.touches[i];
@@ -4803,7 +4466,6 @@
                     }
                 }
             };
-
             const onTouchMove = (e) => {
                 if (!isDrawn) return;
                 e.preventDefault();
@@ -4827,14 +4489,7 @@
                     }
                 }
             };
-
-            const onTouchEnd = (e) => {
-                e.preventDefault();
-                for (let i = 0; i < e.changedTouches.length; i++) {
-                    activeTouches.delete(e.changedTouches[i].identifier);
-                }
-            };
-
+            const onTouchEnd = (e) => { e.preventDefault(); for (let i = 0; i < e.changedTouches.length; i++) activeTouches.delete(e.changedTouches[i].identifier); };
             canvas.addEventListener('mousedown', onMouseDown);
             canvas.addEventListener('touchstart', onTouchStart, { passive: false });
             canvas.addEventListener('touchmove', onTouchMove, { passive: false });
@@ -4854,34 +4509,15 @@
                 const isWin = isDrawn && winningNumbers.includes(number);
                 const canvasId = `scratch_${ticketNumber}_${i}`;
                 const bgClass = (isRevealed && isWin) ? 'win' : 'normal';
-                cellsHtml += `<div class="scratch-cell">
-                    <div class="scratch-number-layer ${bgClass}" style="display: flex;">${number}</div>
-                    <canvas id="${canvasId}" class="scratch-canvas" width="${cellSize}" height="${cellSize}"></canvas>
-                </div>`;
+                cellsHtml += `<div class="scratch-cell"><div class="scratch-number-layer ${bgClass}" style="display: flex;">${number}</div><canvas id="${canvasId}" class="scratch-canvas" width="${cellSize}" height="${cellSize}"></canvas></div>`;
             }
             let matches = 0, revealedCount = 0;
-            for (let i = 0; i < 12; i++) {
-                if (revealed[i]) {
-                    revealedCount++;
-                    if (isDrawn && winningNumbers.includes(numbers[i])) matches++;
-                }
-            }
+            for (let i = 0; i < 12; i++) { if (revealed[i]) { revealedCount++; if (isDrawn && winningNumbers.includes(numbers[i])) matches++; } }
             let winningComboHtml = '';
             if (isDrawn && winningNumbers.length > 0) {
-                winningComboHtml = `<div class="winning-combo-ticket">
-                    <div class="winning-combo-title">🎲 ВЫИГРЫШНАЯ КОМБИНАЦИЯ 🎲</div>
-                    <div class="winning-combo-numbers">
-                        ${winningNumbers.map(num => `<div class="winning-combo-number">${num}</div>`).join('')}
-                    </div>
-                </div>`;
+                winningComboHtml = `<div class="winning-combo-ticket"><div class="winning-combo-title">🎲 ВЫИГРЫШНАЯ КОМБИНАЦИЯ 🎲</div><div class="winning-combo-numbers">${winningNumbers.map(num => `<div class="winning-combo-number">${num}</div>`).join('')}</div></div>`;
             }
-            return `<div class="ticket-container" data-ticket-number="${ticketNumber}">
-                <div class="ticket-number"> Билет #${ticketNumber}</div>
-                <div class="ticket-purchase-num">Покупка #${ticket.purchase_number}</div>
-                <div class="scratch-grid">${cellsHtml}</div>
-                <div class="matches-counter">🏆 Совпадений: <span>${matches}/${revealedCount}</span></div>
-                ${winningComboHtml}
-            </div>`;
+            return `<div class="ticket-container" data-ticket-number="${ticketNumber}"><div class="ticket-number"> Билет #${ticketNumber}</div><div class="ticket-purchase-num">Покупка #${ticket.purchase_number}</div><div class="scratch-grid">${cellsHtml}</div><div class="matches-counter">🏆 Совпадений: <span>${matches}/${revealedCount}</span></div>${winningComboHtml}</div>`;
         }
 
         function initSlideCanvases(slideElement, ticket) {
@@ -4900,19 +4536,12 @@
                         canvas.isRevealed = true;
                         if (numberDiv) {
                             numberDiv.style.display = 'flex';
-                            if (isWin) {
-                                numberDiv.classList.add('win');
-                                numberDiv.classList.remove('normal');
-                            } else {
-                                numberDiv.classList.add('normal');
-                                numberDiv.classList.remove('win');
-                            }
+                            if (isWin) { numberDiv.classList.add('win'); numberDiv.classList.remove('normal'); }
+                            else { numberDiv.classList.add('normal'); numberDiv.classList.remove('win'); }
                         }
                     } else {
                         initScratchCell(canvas.id, 70, number, isWin, false);
-                        if (isDrawn) {
-                            setupScratchHandlers(canvas.id, ticket.number, i, 70, isWin, number);
-                        }
+                        if (isDrawn) setupScratchHandlers(canvas.id, ticket.number, i, 70, isWin, number);
                     }
                 }
             }
@@ -4922,29 +4551,16 @@
             const container = document.getElementById('ticketsContainer');
             const dotsContainer = document.getElementById('carouselDots');
             if (!container) return;
-            if (currentTickets.length === 0) {
-                container.innerHTML = '<div class="empty-state">😢 У вас пока нет билетов</div>';
-                dotsContainer.innerHTML = '';
-                return;
-            }
+            if (currentTickets.length === 0) { container.innerHTML = '<div class="empty-state">😢 У вас пока нет билетов</div>'; dotsContainer.innerHTML = ''; return; }
             let slidesHtml = '';
-            currentTickets.forEach((ticket, idx) => {
-                slidesHtml += `<div class="ticket-slide" data-index="${idx}">${renderTicketForCarousel(ticket)}</div>`;
-            });
+            currentTickets.forEach((ticket, idx) => { slidesHtml += `<div class="ticket-slide" data-index="${idx}">${renderTicketForCarousel(ticket)}</div>`; });
             container.innerHTML = slidesHtml;
             let dotsHtml = '';
-            currentTickets.forEach((_, idx) => {
-                dotsHtml += `<div class="carousel-dot ${idx === currentTicketIndex ? 'active' : ''}" onclick="goToTicket(${idx})"></div>`;
-            });
+            currentTickets.forEach((_, idx) => { dotsHtml += `<div class="carousel-dot ${idx === currentTicketIndex ? 'active' : ''}" onclick="goToTicket(${idx})"></div>`; });
             dotsContainer.innerHTML = dotsHtml;
             const allSlides = document.querySelectorAll('.ticket-slide');
-            allSlides.forEach((slide, idx) => {
-                if (currentTickets[idx]) {
-                    initSlideCanvases(slide, currentTickets[idx]);
-                }
-            });
-            let scrollTimeout;
-            let lastScrollTime = 0;
+            allSlides.forEach((slide, idx) => { if (currentTickets[idx]) initSlideCanvases(slide, currentTickets[idx]); });
+            let scrollTimeout, lastScrollTime = 0;
             container.onscroll = () => {
                 const now = Date.now();
                 if (now - lastScrollTime < 150) return;
@@ -4956,9 +4572,7 @@
                     const newIndex = Math.round(scrollLeft / slideWidth);
                     if (newIndex !== currentTicketIndex && newIndex >= 0 && newIndex < currentTickets.length) {
                         currentTicketIndex = newIndex;
-                        document.querySelectorAll('.carousel-dot').forEach((dot, i) => {
-                            dot.classList.toggle('active', i === currentTicketIndex);
-                        });
+                        document.querySelectorAll('.carousel-dot').forEach((dot, i) => dot.classList.toggle('active', i === currentTicketIndex));
                     }
                 }, 200);
             };
@@ -4969,32 +4583,18 @@
             const slideWidth = container.clientWidth;
             container.scrollTo({ left: slideWidth * index, behavior: 'smooth' });
             currentTicketIndex = index;
-            document.querySelectorAll('.carousel-dot').forEach((dot, i) => {
-                dot.classList.toggle('active', i === currentTicketIndex);
-            });
+            document.querySelectorAll('.carousel-dot').forEach((dot, i) => dot.classList.toggle('active', i === currentTicketIndex));
         };
 
         async function loadUserTickets() {
             try {
-                let res = await fetch('/api/lottery_status', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({user_id: userId})
-                });
+                let res = await fetch('/api/lottery_status', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: userId}) });
                 let data = await res.json();
-                if (data.tickets && data.tickets.length > 0) {
-                    currentTickets = data.tickets;
-                    updateCarousel();
-                    updateTopPlayers();
-                } else {
-                    currentTickets = [];
-                    updateCarousel();
-                }
+                if (data.tickets && data.tickets.length > 0) { currentTickets = data.tickets; updateCarousel(); updateTopPlayers(); }
+                else { currentTickets = []; updateCarousel(); }
                 document.getElementById('totalTickets').innerText = currentTickets.length;
                 document.getElementById('totalTicketsMini').innerText = currentTickets.length;
-            } catch(e) {
-                console.error('Error loading tickets:', e);
-            }
+            } catch(e) { console.error('Error loading tickets:', e); }
         }
 
         function updateTopPlayers() {
@@ -5004,71 +4604,33 @@
                 const revealed = ticket.revealed || [];
                 const numbers = ticket.numbers;
                 let matches = 0, revealedCount = 0;
-                for (let i = 0; i < 12; i++) {
-                    if (revealed[i]) {
-                        revealedCount++;
-                        if (winningNumbers.includes(numbers[i])) matches++;
-                    }
-                }
-                if (revealedCount > 0) {
-                    const playerId = userId;
-                    if (!playersData[playerId] || playersData[playerId].matches < matches) {
-                        playersData[playerId] = { matches: matches, revealed: revealedCount, user_id: playerId, username: username };
-                    }
-                }
+                for (let i = 0; i < 12; i++) { if (revealed[i]) { revealedCount++; if (winningNumbers.includes(numbers[i])) matches++; } }
+                if (revealedCount > 0) { const playerId = userId; if (!playersData[playerId] || playersData[playerId].matches < matches) playersData[playerId] = { matches: matches, revealed: revealedCount, user_id: playerId, username: username }; }
             });
-            fetch('/api/lottery_all_tickets', { method: 'GET', headers: { 'Content-Type': 'application/json' } })
-            .then(res => res.json())
-            .then(data => {
+            fetch('/api/lottery_all_tickets', { method: 'GET', headers: { 'Content-Type': 'application/json' } }).then(res => res.json()).then(data => {
                 const allTickets = data.tickets || [];
                 allTickets.forEach(ticket => {
                     const revealed = ticket.revealed || [];
                     const numbers = ticket.numbers;
                     let matches = 0, revealedCount = 0;
-                    for (let i = 0; i < 12; i++) {
-                        if (revealed[i]) {
-                            revealedCount++;
-                            if (winningNumbers.includes(numbers[i])) matches++;
-                        }
-                    }
-                    if (revealedCount > 0) {
-                        const playerId = ticket.user_id;
-                        if (!playersData[playerId] || playersData[playerId].matches < matches) {
-                            playersData[playerId] = { matches: matches, revealed: revealedCount, user_id: playerId, username: ticket.username || 'Игрок' };
-                        }
-                    }
+                    for (let i = 0; i < 12; i++) { if (revealed[i]) { revealedCount++; if (winningNumbers.includes(numbers[i])) matches++; } }
+                    if (revealedCount > 0) { const playerId = ticket.user_id; if (!playersData[playerId] || playersData[playerId].matches < matches) playersData[playerId] = { matches: matches, revealed: revealedCount, user_id: playerId, username: ticket.username || 'Игрок' }; }
                 });
                 const sorted = Object.values(playersData).sort((a, b) => b.matches - a.matches).slice(0, 5);
                 updateTopPlayersList(sorted);
-            })
-            .catch(err => {
-                console.error('Ошибка загрузки всех билетов:', err);
-                const sorted = Object.values(playersData).sort((a, b) => b.matches - a.matches).slice(0, 5);
-                updateTopPlayersList(sorted);
-            });
+            }).catch(err => { console.error('Ошибка загрузки всех билетов:', err); const sorted = Object.values(playersData).sort((a, b) => b.matches - a.matches).slice(0, 5); updateTopPlayersList(sorted); });
         }
 
         function updateTopPlayersList(players) {
             const container = document.getElementById('topPlayersList');
             if (!container) return;
-            if (players.length === 0) {
-                container.innerHTML = '<div class="empty-state">Пока никто не открыл билеты</div>';
-                return;
-            }
+            if (players.length === 0) { container.innerHTML = '<div class="empty-state">Пока никто не открыл билеты</div>'; return; }
             let html = '';
             players.forEach((player, idx) => {
                 let playerName = (player.username || 'Игрок').replace(/^@@/, '');
                 if (playerName.startsWith('Player_')) playerName = 'Игрок';
                 if (localHideFromTop && player.user_id == userId) playerName = 'Anonim';
-                html += `<div class="top-player-item" onclick="openPlayerProfile(${player.user_id}, 0)">
-                    <div class="top-player-rank">${idx + 1}</div>
-                    <div class="top-player-avatar">👤</div>
-                    <div class="top-player-info">
-                        <div class="top-player-name">${playerName}</div>
-                        <div class="top-player-matches">Открыто: ${player.revealed}/12</div>
-                    </div>
-                    <div class="top-player-score">${player.matches}/12</div>
-                </div>`;
+                html += `<div class="top-player-item" onclick="openPlayerProfile(${player.user_id}, 0)"><div class="top-player-rank">${idx + 1}</div><div class="top-player-avatar">👤</div><div class="top-player-info"><div class="top-player-name">${playerName}</div><div class="top-player-matches">Открыто: ${player.revealed}/12</div></div><div class="top-player-score">${player.matches}/12</div></div>`;
             });
             container.innerHTML = html;
         }
@@ -5079,12 +4641,7 @@
             function updateTimer() {
                 const now = new Date();
                 const remaining = Math.max(0, Math.floor((endTime - now) / 1000));
-                if (remaining <= 0) {
-                    clearInterval(timerInterval);
-                    document.getElementById('drawTimer').innerHTML = '⏰ Время вышло!';
-                    document.getElementById('drawTimer').style.display = 'block';
-                    return;
-                }
+                if (remaining <= 0) { clearInterval(timerInterval); document.getElementById('drawTimer').innerHTML = '⏰ Время вышло!'; document.getElementById('drawTimer').style.display = 'block'; return; }
                 const minutes = Math.floor(remaining / 60);
                 const seconds = remaining % 60;
                 document.getElementById('drawTimer').innerHTML = `<img src="/static/hourglass.png" style="width: 14px; height: 14px;"> Осталось: ${minutes}:${seconds.toString().padStart(2, '0')}`;
@@ -5094,13 +4651,7 @@
             timerInterval = setInterval(updateTimer, 1000);
         }
 
-        function stopTimer() {
-            if (timerInterval) {
-                clearInterval(timerInterval);
-                timerInterval = null;
-            }
-            document.getElementById('drawTimer').style.display = 'none';
-        }
+        function stopTimer() { if (timerInterval) { clearInterval(timerInterval); timerInterval = null; } document.getElementById('drawTimer').style.display = 'none'; }
 
         function updateDrawUI() {
             const statusDiv = document.getElementById('drawStatus');
@@ -5131,87 +4682,17 @@
         }
 
         function initSocket() {
-            socket = io({
-                reconnection: true,
-                reconnectionAttempts: 3,
-                reconnectionDelay: 2000,
-                reconnectionDelayMax: 5000,
-                timeout: 20000,
-                transports: ['websocket']
-            });
-
-            socket.on('connect', () => {
-                socket.emit('get_draw_status', {});
-                socket.emit('get_remaining_time', {});
-            });
-
-            socket.on('connect_error', (error) => {
-                console.log('Socket connection error:', error);
-            });
-
-            socket.on('disconnect', (reason) => {
-                if (reason === 'io server disconnect') {
-                    socket.connect();
-                }
-            });
-
-            socket.on('remaining_time', (data) => {
-                if (data.seconds > 0 && isDrawn) {
-                    const endTime = new Date(Date.now() + data.seconds * 1000);
-                    startTimer(endTime.toISOString());
-                }
-            });
-
-            socket.on('draw_status', (data) => {
-                isDrawn = data.is_drawn;
-                winningNumbers = data.winning_numbers || [];
-                updateDrawUI();
-                if (isDrawn) {
-                    loadUserTickets();
-                }
-            });
-
-            socket.on('draw_completed', (data) => {
-                isDrawn = true;
-                winningNumbers = data.winning_numbers || [];
-                updateDrawUI();
-                showToast(data.message, 'success');
-                if (data.end_time) {
-                    startTimer(data.end_time);
-                }
-                updateLottery();
-                loadUserTickets();
-            });
-
-            socket.on('auto_revealed', (data) => {
-                showToast(data.message, 'info');
-                loadUserTickets();
-                updateTopPlayers();
-                stopTimer();
-            });
-
-            socket.on('prizes_distributed', (data) => {
-                showToast(data.message, 'success');
-                stopTimer();
-                updateStatus();
-                updateLottery();
-                loadUserTickets();
-            });
-
-            socket.on('draw_reset', (data) => {
-                isDrawn = false;
-                winningNumbers = [];
-                updateDrawUI();
-                showToast(data.message, 'info');
-                updateLottery();
-                loadUserTickets();
-                stopTimer();
-            });
-
-            socket.on('cell_revealed', (data) => {
-                loadUserTickets();
-                updateTopPlayers();
-            });
+            socket = io({ reconnection: true, reconnectionAttempts: 3, reconnectionDelay: 2000, reconnectionDelayMax: 5000, timeout: 20000, transports: ['websocket'] });
+            socket.on('connect', () => { socket.emit('get_draw_status', {}); socket.emit('get_remaining_time', {}); });
+            socket.on('connect_error', (error) => console.log('Socket connection error:', error));
+            socket.on('disconnect', (reason) => { if (reason === 'io server disconnect') socket.connect(); });
+            socket.on('remaining_time', (data) => { if (data.seconds > 0 && isDrawn) { const endTime = new Date(Date.now() + data.seconds * 1000); startTimer(endTime.toISOString()); } });
+            socket.on('draw_status', (data) => { isDrawn = data.is_drawn; winningNumbers = data.winning_numbers || []; updateDrawUI(); if (isDrawn) loadUserTickets(); });
+            socket.on('draw_completed', (data) => { isDrawn = true; winningNumbers = data.winning_numbers || []; updateDrawUI(); showToast(data.message, 'success'); if (data.end_time) startTimer(data.end_time); updateLottery(); loadUserTickets(); });
+            socket.on('auto_revealed', (data) => { showToast(data.message, 'info'); loadUserTickets(); updateTopPlayers(); stopTimer(); });
+            socket.on('prizes_distributed', (data) => { showToast(data.message, 'success'); stopTimer(); updateStatus(); updateLottery(); loadUserTickets(); });
+            socket.on('draw_reset', (data) => { isDrawn = false; winningNumbers = []; updateDrawUI(); showToast(data.message, 'info'); updateLottery(); loadUserTickets(); stopTimer(); });
+            socket.on('cell_revealed', (data) => { loadUserTickets(); updateTopPlayers(); });
         }
 
         let adController = null;
@@ -5219,183 +4700,47 @@
 
         function initAds() {
             if (typeof window.Adsgram !== 'undefined') {
-                if (!adController) {
-                    try {
-                        adController = window.Adsgram.init({ blockId: "29823", debug: false });
-                    } catch(e) { console.log('Ad init error:', e); }
-                }
-                if (!adLimitController) {
-                    try {
-                        adLimitController = window.Adsgram.init({ blockId: "30182", debug: false });
-                    } catch(e) { console.log('Ad limit init error:', e); }
-                }
+                if (!adController) { try { adController = window.Adsgram.init({ blockId: "33075" }); console.log('Adsgram: обычная реклама готова'); } catch(e) { console.log('Ad init error:', e); } }
+                if (!adLimitController) { try { adLimitController = window.Adsgram.init({ blockId: "33076" }); console.log('Adsgram: лимитная реклама готова'); } catch(e) { console.log('Ad limit init error:', e); } }
             }
         }
 
         window.watchAd = async () => {
+            if (!adController) { initAds(); await new Promise(resolve => setTimeout(resolve, 500)); }
             if (!adController) {
-                initAds();
-                await new Promise(resolve => setTimeout(resolve, 500));
-            }
-
-            if (!adController) {
-                try {
-                    let resp = await fetch('/api/watch_ad_fallback', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({user_id: userId})
-                    });
-                    let data = await resp.json();
-                    if (data.success) {
-                        showToast(`+50 энергии (реклама временно недоступна)`, 'info');
-                        updateStatus();
-                    }
-                } catch(e) {}
+                try { let resp = await fetch('/api/watch_ad_fallback', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: userId}) }); let data = await resp.json(); if (data.success) { showToast(`+50 энергии (реклама временно недоступна)`, 'info'); updateStatus(); } } catch(e) {}
                 return;
             }
-
             try {
                 const result = await adController.show();
-                if (result.done && !result.error) {
-                    let resp = await fetch('/api/watch_ad', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({user_id: userId})
-                    });
-                    let data = await resp.json();
-                    if (data.success) {
-                        showToast(`+200 энергии! Спасибо! 🎬`, 'success');
-                        updateStatus();
-                    }
-                } else {
-                    showToast('Реклама не загружена, попробуйте позже', 'error');
-                }
-            } catch (error) {
-                showToast('Ошибка рекламы, попробуйте через VPN', 'error');
-            }
+                if (result.done && !result.error) { let resp = await fetch('/api/watch_ad', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: userId}) }); let data = await resp.json(); if (data.success) { showToast(`+200 энергии! Спасибо! 🎬`, 'success'); updateStatus(); } }
+                else { showToast('Реклама не загружена, попробуйте позже', 'error'); }
+            } catch (error) { showToast('Ошибка рекламы, попробуйте через VPN', 'error'); }
         };
 
         window.watchAdLimit = async () => {
             if (!adLimitController) initAds();
-            if (!adLimitController) {
-                showToast('Реклама временно недоступна', 'error');
-                return;
-            }
+            if (!adLimitController) { showToast('Реклама временно недоступна', 'error'); return; }
             try {
                 const result = await adLimitController.show();
-                if (result.done && !result.error) {
-                    let resp = await fetch('/api/watch_ad_limit', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({user_id: userId})
-                    });
-                    let data = await resp.json();
-                    if (data.success) {
-                        showToast(`⚡ +1 к макс. энергии! Теперь лимит: ${data.max_energy}`, 'success');
-                        updateStatus();
-                    } else {
-                        showToast(data.msg || 'Ошибка', 'error');
-                    }
-                } else {
-                    showToast('Реклама не загружена', 'error');
-                }
-            } catch (error) {
-                showToast('Ошибка рекламы', 'error');
-            }
+                if (result.done && !result.error) { let resp = await fetch('/api/watch_ad_limit', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: userId}) }); let data = await resp.json(); if (data.success) { showToast(`⚡ +1 к макс. энергии! Теперь лимит: ${data.max_energy}`, 'success'); updateStatus(); } }
+                else { showToast('Реклама не загружена', 'error'); }
+            } catch (error) { showToast('Ошибка рекламы', 'error'); }
         };
 
-        window.donate = function() {
-            window.open('https://t.me/WereGoodSupport', '_blank');
-        };
-
-        function updateNavIcons(activeTab) {
-            document.querySelectorAll('.nav-icon-img').forEach(icon => {
-                icon.classList.remove('neon');
-            });
-            const homeIcon = document.getElementById('homeIcon');
-            if (homeIcon) {
-                if (activeTab === 'home') {
-                    homeIcon.src = '/static/home_neon.png';
-                    homeIcon.classList.add('neon');
-                } else {
-                    homeIcon.src = '/static/home_normal.png';
-                }
-            }
-            const shopIcon = document.getElementById('shopIcon');
-            if (shopIcon) {
-                if (activeTab === 'shop') {
-                    shopIcon.src = '/static/shop_neon.png';
-                    shopIcon.classList.add('neon');
-                } else {
-                    shopIcon.src = '/static/shop_normal.png';
-                }
-            }
-            const lotteryIcon = document.getElementById('lotteryIcon');
-            if (lotteryIcon) {
-                if (activeTab === 'lottery') {
-                    lotteryIcon.src = '/static/fire_neon.png';
-                    lotteryIcon.classList.add('neon');
-                } else {
-                    lotteryIcon.src = '/static/fire_normal.png';
-                }
-            }
-            const profileIcon = document.getElementById('profileIcon');
-            if (profileIcon) {
-                if (activeTab === 'profile') {
-                    profileIcon.src = '/static/profile_neon.png';
-                    profileIcon.classList.add('neon');
-                } else {
-                    profileIcon.src = '/static/profile_normal.png';
-                }
-            }
-        }
-
-        updateNavIcons('home');
+        window.donate = function() { window.open('https://t.me/WereGoodSupport', '_blank'); };
 
         let displayUserName = username;
-        if (displayUserName.startsWith('Player_') || displayUserName.includes('Player_')) {
-            displayUserName = firstName || 'Игрок';
-        }
-        if (displayUserName.startsWith('@')) {
-            displayUserName = displayUserName.substring(1);
-        }
+        if (displayUserName.startsWith('Player_') || displayUserName.includes('Player_')) displayUserName = firstName || 'Игрок';
+        if (displayUserName.startsWith('@')) displayUserName = displayUserName.substring(1);
         document.getElementById('usernameDisplay').innerText = displayUserName;
         document.getElementById('userGreeting').innerText = displayUserName;
 
-        async function logGameEntry() {
-            try {
-                await fetch('/api/log_game_entry', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: userId })
-                });
-            } catch(e) {}
-        }
-
-        window.addEventListener('beforeunload', async () => {
-            try {
-                await fetch('/api/log_game_exit', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: userId })
-                });
-            } catch(e) {}
-        });
+        async function logGameEntry() { try { await fetch('/api/log_game_entry', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: userId }) }); } catch(e) {} }
+        window.addEventListener('beforeunload', async () => { try { await fetch('/api/log_game_exit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: userId }) }); } catch(e) {} });
 
         async function loadDailyStatus() {
-            try {
-                let res = await fetch('/api/daily_status', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({user_id: userId})
-                });
-                dailyData = await res.json();
-                renderDailyGrid();
-                updateDailyTimer();
-                return dailyData;
-            } catch(e) {
-                console.error('Error loading daily:', e);
-            }
+            try { let res = await fetch('/api/daily_status', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: userId}) }); dailyData = await res.json(); renderDailyGrid(); updateDailyTimer(); return dailyData; } catch(e) { console.error('Error loading daily:', e); }
         }
 
         function renderDailyGrid() {
@@ -5407,54 +4752,26 @@
             const lostStreak = dailyData?.lost_streak || false;
             if (currentDay === 1) canClaim = true;
             for (let i = 1; i <= 7; i++) {
-                let statusClass = '';
-                let statusIcon = '';
-                if (i < currentDay) {
-                    statusClass = 'claimed';
-                    statusIcon = '<div class="daily-day-status">✓</div>';
-                } else if (i === currentDay) {
-                    if (canClaim) statusClass = 'current';
-                    else statusClass = 'locked';
-                } else {
-                    statusClass = 'locked';
-                }
-                html += `
-                    <div class="daily-day-card ${statusClass}">
-                        <div class="daily-day-number">День ${i}</div>
-                        <div class="daily-day-reward">${dailyRewardsList[i]?.reward || ''}</div>
-                        ${statusIcon}
-                    </div>
-                `;
+                let statusClass = '', statusIcon = '';
+                if (i < currentDay) { statusClass = 'claimed'; statusIcon = '<div class="daily-day-status">✓</div>'; }
+                else if (i === currentDay) { if (canClaim) statusClass = 'current'; else statusClass = 'locked'; }
+                else statusClass = 'locked';
+                html += `<div class="daily-day-card ${statusClass}"><div class="daily-day-number">День ${i}</div><div class="daily-day-reward">${dailyRewardsList[i]?.reward || ''}</div>${statusIcon}</div>`;
             }
             container.innerHTML = html;
             const recoverBtn = document.getElementById('dailyRecover');
-            if (recoverBtn) {
-                recoverBtn.style.display = lostStreak ? 'block' : 'none';
-            }
+            if (recoverBtn) recoverBtn.style.display = lostStreak ? 'block' : 'none';
         }
 
         function updateDailyTimer() {
             if (dailyTimerInterval) clearInterval(dailyTimerInterval);
-            if (dailyData?.can_claim) {
-                document.getElementById('dailyTimerValue').innerText = 'Доступно!';
-                document.getElementById('dailyClaimBtn').classList.remove('disabled');
-                return;
-            }
-            if (!dailyData?.next_claim_time) {
-                document.getElementById('dailyTimerValue').innerText = 'Доступно!';
-                return;
-            }
+            if (dailyData?.can_claim) { document.getElementById('dailyTimerValue').innerText = 'Доступно!'; document.getElementById('dailyClaimBtn').classList.remove('disabled'); return; }
+            if (!dailyData?.next_claim_time) { document.getElementById('dailyTimerValue').innerText = 'Доступно!'; return; }
             const nextTime = new Date(dailyData.next_claim_time);
             function updateTimer() {
                 const now = new Date();
                 const diff = Math.max(0, Math.floor((nextTime - now) / 1000));
-                if (diff <= 0) {
-                    clearInterval(dailyTimerInterval);
-                    document.getElementById('dailyTimerValue').innerText = 'Доступно!';
-                    document.getElementById('dailyClaimBtn').classList.remove('disabled');
-                    loadDailyStatus();
-                    return;
-                }
+                if (diff <= 0) { clearInterval(dailyTimerInterval); document.getElementById('dailyTimerValue').innerText = 'Доступно!'; document.getElementById('dailyClaimBtn').classList.remove('disabled'); loadDailyStatus(); return; }
                 const hours = Math.floor(diff / 3600);
                 const minutes = Math.floor((diff % 3600) / 60);
                 const seconds = diff % 60;
@@ -5466,262 +4783,80 @@
         }
 
         window.claimDailyReward = async function() {
-            if (!dailyData?.can_claim && dailyData?.current_day !== 1) {
-                showToast('Награда ещё не доступна!', 'error');
-                return;
-            }
+            if (!dailyData?.can_claim && dailyData?.current_day !== 1) { showToast('Награда ещё не доступна!', 'error'); return; }
             try {
-                let res = await fetch('/api/claim_daily', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({user_id: userId})
-                });
+                let res = await fetch('/api/claim_daily', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: userId}) });
                 let data = await res.json();
-                if (data.success) {
-                    showToast(data.msg, 'success');
-                    await loadDailyStatus();
-                    await updateStatus();
-                    closeDailyModal();
-                    setTimeout(() => checkAndStartTutorial(), 500);
-                } else {
-                    showToast(data.msg, 'error');
-                }
-            } catch(e) {
-                console.error('Error claiming daily reward:', e);
-                showToast('Ошибка при получении награды', 'error');
-            }
+                if (data.success) { showToast(data.msg, 'success'); await loadDailyStatus(); await updateStatus(); closeDailyModal(); setTimeout(() => checkAndStartTutorial(), 500); }
+                else { showToast(data.msg, 'error'); }
+            } catch(e) { console.error('Error claiming daily reward:', e); showToast('Ошибка при получении награды', 'error'); }
         };
 
         window.recoverDailyStreak = async function() {
             if (!confirm('Восстановить прогресс за 20 Stars?')) return;
             try {
-                let res = await fetch('/api/recover_daily', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({user_id: userId})
-                });
+                let res = await fetch('/api/recover_daily', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: userId}) });
                 let data = await res.json();
-                if (data.success) {
-                    showToast(data.msg, 'success');
-                    await loadDailyStatus();
-                    await updateStatus();
-                } else {
-                    showToast(data.msg, 'error');
-                }
-            } catch(e) {
-                showToast('Ошибка', 'error');
-            }
+                if (data.success) { showToast(data.msg, 'success'); await loadDailyStatus(); await updateStatus(); }
+                else { showToast(data.msg, 'error'); }
+            } catch(e) { showToast('Ошибка', 'error'); }
         };
 
-        function openDailyModal() {
-            document.getElementById('dailyModal').classList.add('active');
-            loadDailyStatus();
-        }
+        function openDailyModal() { document.getElementById('dailyModal').classList.add('active'); loadDailyStatus(); }
+        function closeDailyModal() { document.getElementById('dailyModal').classList.remove('active'); if (dailyTimerInterval) clearInterval(dailyTimerInterval); }
 
-        function closeDailyModal() {
-            document.getElementById('dailyModal').classList.remove('active');
-            if (dailyTimerInterval) clearInterval(dailyTimerInterval);
-        }
-
-        let tonConnectUI = null;
-        let paymentCheckInterval = null;
-        let tonInitAttempts = 0;
-
+        let tonConnectUI = null, paymentCheckInterval = null, tonInitAttempts = 0;
         async function initTonConnect() {
             try {
-                if (typeof window.TonConnectUI === 'undefined' && typeof window.TON_CONNECT_UI === 'undefined') {
-                    tonInitAttempts++;
-                    if (tonInitAttempts < 20) {
-                        setTimeout(() => initTonConnect(), 500);
-                        return;
-                    }
-                    return;
-                }
+                if (typeof window.TonConnectUI === 'undefined' && typeof window.TON_CONNECT_UI === 'undefined') { tonInitAttempts++; if (tonInitAttempts < 20) { setTimeout(() => initTonConnect(), 500); return; } return; }
                 const TonConnectClass = window.TonConnectUI || window.TON_CONNECT_UI?.TonConnectUI;
                 if (!TonConnectClass) return;
                 const manifestUrl = `${window.location.origin}/tonconnect-manifest.json`;
-                tonConnectUI = new TonConnectClass({
-                    manifestUrl: manifestUrl,
-                    actionsConfiguration: { twaReturnUrl: window.location.origin + '/' }
-                });
-                if (tonConnectUI.wallet) {
-                    const address = tonConnectUI.wallet.account.address;
-                    await saveWalletToBackend(address);
-                    showToast(`✅ Кошелёк подключён: ${address.slice(0, 6)}...${address.slice(-4)}`, 'success');
-                }
-                tonConnectUI.onStatusChange(async (wallet) => {
-                    if (wallet) {
-                        const address = wallet.account.address;
-                        await saveWalletToBackend(address);
-                        showToast(`✅ Кошелёк привязан: ${address.slice(0, 6)}...${address.slice(-4)}`, 'success');
-                    } else {
-                        await saveWalletToBackend('');
-                    }
-                });
-            } catch(e) {
-                console.error('Ошибка инициализации TON Connect:', e);
-            }
+                tonConnectUI = new TonConnectClass({ manifestUrl: manifestUrl, actionsConfiguration: { twaReturnUrl: window.location.origin + '/' } });
+                if (tonConnectUI.wallet) { const address = tonConnectUI.wallet.account.address; await saveWalletToBackend(address); showToast(`✅ Кошелёк подключён: ${address.slice(0, 6)}...${address.slice(-4)}`, 'success'); }
+                tonConnectUI.onStatusChange(async (wallet) => { if (wallet) { const address = wallet.account.address; await saveWalletToBackend(address); showToast(`✅ Кошелёк привязан: ${address.slice(0, 6)}...${address.slice(-4)}`, 'success'); } else await saveWalletToBackend(''); });
+            } catch(e) { console.error('Ошибка инициализации TON Connect:', e); }
         }
 
-        async function saveWalletToBackend(address) {
-            try {
-                await fetch('/api/ton/save_wallet', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ user_id: userId, wallet_address: address })
-                });
-            } catch(e) {
-                console.error('Ошибка сохранения кошелька:', e);
-            }
-        }
+        async function saveWalletToBackend(address) { try { await fetch('/api/ton/save_wallet', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ user_id: userId, wallet_address: address }) }); } catch(e) { console.error('Ошибка сохранения кошелька:', e); } }
 
         window.buyWithTon = async function() {
-            if (!tonConnectUI) {
-                showToast('🔄 Система оплаты загружается, подождите...', 'info');
-                await initTonConnect();
-                if (!tonConnectUI) {
-                    showToast('❌ Система оплаты недоступна, попробуйте позже', 'error');
-                    return;
-                }
-            }
+            if (!tonConnectUI) { showToast('🔄 Система оплаты загружается, подождите...', 'info'); await initTonConnect(); if (!tonConnectUI) { showToast('❌ Система оплаты недоступна, попробуйте позже', 'error'); return; } }
             const amount = 0.1;
-            if (!tonConnectUI.wallet) {
-                showToast('🔗 Подключите TON кошелёк для оплаты', 'info');
-                try {
-                    await tonConnectUI.openModal();
-                } catch(e) {
-                    showToast('❌ Не удалось открыть список кошельков', 'error');
-                }
-                return;
-            }
-            const transaction = {
-                validUntil: Math.floor(Date.now() / 1000) + 300,
-                messages: [{
-                    address: "UQCa7xhdvDiaKuH6SFLgzLQFH8oRwwS2ElN1s283WnGM4fYB",
-                    amount: (amount * 1e9).toString(),
-                    payload: `WereGood:${userId}`
-                }]
-            };
-            try {
-                showToast('💎 Открываем кошелёк для оплаты...', 'info');
-                const result = await tonConnectUI.sendTransaction(transaction);
-                if (result) {
-                    showToast('💰 Платёж отправлен! Проверяем...', 'info');
-                    startPaymentCheck(amount);
-                }
-            } catch(e) {
-                if (e.message && e.message.includes('cancelled')) {
-                    showToast('❌ Платёж отменён', 'error');
-                } else {
-                    showToast('❌ Ошибка при отправке платежа', 'error');
-                }
-            }
+            if (!tonConnectUI.wallet) { showToast('🔗 Подключите TON кошелёк для оплаты', 'info'); try { await tonConnectUI.openModal(); } catch(e) { showToast('❌ Не удалось открыть список кошельков', 'error'); } return; }
+            const transaction = { validUntil: Math.floor(Date.now() / 1000) + 300, messages: [{ address: "UQCa7xhdvDiaKuH6SFLgzLQFH8oRwwS2ElN1s283WnGM4fYB", amount: (amount * 1e9).toString(), payload: `WereGood:${userId}` }] };
+            try { showToast('💎 Открываем кошелёк для оплаты...', 'info'); const result = await tonConnectUI.sendTransaction(transaction); if (result) { showToast('💰 Платёж отправлен! Проверяем...', 'info'); startPaymentCheck(amount); } } catch(e) { if (e.message && e.message.includes('cancelled')) showToast('❌ Платёж отменён', 'error'); else showToast('❌ Ошибка при отправке платежа', 'error'); }
         };
 
         function startPaymentCheck(expectedAmount) {
-            let attempts = 0;
-            const maxAttempts = 30;
+            let attempts = 0, maxAttempts = 30;
             if (paymentCheckInterval) clearInterval(paymentCheckInterval);
             paymentCheckInterval = setInterval(async () => {
                 attempts++;
-                try {
-                    const res = await fetch('/api/ton/check_payment', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({ user_id: userId, expected_amount: expectedAmount })
-                    });
-                    const data = await res.json();
-                    if (data.confirmed) {
-                        clearInterval(paymentCheckInterval);
-                        paymentCheckInterval = null;
-                        showToast(`✅ Оплата подтверждена! +50 LP и +25 Stars!`, 'success');
-                        await updateStatus();
-                        updateUI();
-                    } else if (attempts >= maxAttempts) {
-                        clearInterval(paymentCheckInterval);
-                        paymentCheckInterval = null;
-                        showToast('⏰ Время ожидания истекло. Если средства списались, обратитесь в поддержку.', 'info');
-                    }
-                } catch(e) {
-                    console.error('Ошибка проверки платежа:', e);
-                }
+                try { const res = await fetch('/api/ton/check_payment', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ user_id: userId, expected_amount: expectedAmount }) }); const data = await res.json(); if (data.confirmed) { clearInterval(paymentCheckInterval); paymentCheckInterval = null; showToast(`✅ Оплата подтверждена! +50 LP и +25 Stars!`, 'success'); await updateStatus(); updateUI(); } else if (attempts >= maxAttempts) { clearInterval(paymentCheckInterval); paymentCheckInterval = null; showToast('⏰ Время ожидания истекло. Если средства списались, обратитесь в поддержку.', 'info'); } } catch(e) { console.error('Ошибка проверки платежа:', e); }
             }, 5000);
         }
 
-        let tutorialSteps = [];
-        let currentTutorialStep = 0;
-        let tutorialActive = false;
-        let tutorialClickListener = null;
-
-        function disableScroll() {
-            document.body.style.overflow = 'hidden';
-            document.body.style.position = 'fixed';
-            document.body.style.width = '100%';
-        }
-
-        function enableScroll() {
-            document.body.style.overflow = '';
-            document.body.style.position = '';
-            document.body.style.width = '';
-        }
+        let tutorialSteps = [], currentTutorialStep = 0, tutorialActive = false, tutorialClickListener = null;
+        function disableScroll() { document.body.style.overflow = 'hidden'; document.body.style.position = 'fixed'; document.body.style.width = '100%'; }
+        function enableScroll() { document.body.style.overflow = ''; document.body.style.position = ''; document.body.style.width = ''; }
 
         async function checkAndStartTutorial() {
             try {
-                let dailyRes = await fetch('/api/daily_status', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({user_id: userId})
-                });
+                let dailyRes = await fetch('/api/daily_status', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: userId}) });
                 let dailyDataCheck = await dailyRes.json();
-                if (dailyDataCheck.can_claim || dailyDataCheck.current_day === 1) {
-                    return;
-                }
-                let tutorialRes = await fetch('/api/get_tutorial_status', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({user_id: userId})
-                });
+                if (dailyDataCheck.can_claim || dailyDataCheck.current_day === 1) return;
+                let tutorialRes = await fetch('/api/get_tutorial_status', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: userId}) });
                 let tutorialData = await tutorialRes.json();
-                if (!tutorialData.completed) {
-                    setTimeout(() => startTutorial(), 1000);
-                }
-            } catch(e) {
-                console.error('Tutorial check error:', e);
-            }
+                if (!tutorialData.completed) setTimeout(() => startTutorial(), 1000);
+            } catch(e) { console.error('Tutorial check error:', e); }
         }
 
-        function startTutorial() {
-            if (tutorialActive) return;
-            tutorialActive = true;
-            currentTutorialStep = 0;
-            disableScroll();
-            initTutorialSteps();
-            showTutorialStep();
-        }
-
-        function initTutorialSteps() {
-            tutorialSteps = [
-                { tab: 'home', elementId: 'coin', text: '💰 Кликай по монете и зарабатывай WG Coin!', position: 'bottom' },
-                { tab: 'home', elementId: 'leaderboard-mini', text: '🏆 Топ игроков — чем больше кликов, тем выше место!', position: 'top' },
-                { tab: 'shop', elementId: 'upgrade-card', text: '🛒 Улучшай заработок за WG Coin. Цена растёт с каждой покупкой!', position: 'bottom', subTab: 'normal' },
-                { tab: 'shop', elementId: 'ad-card', text: '🎬 Смотри рекламу → +200 энергии или +1 к макс. энергии!', position: 'bottom', subTab: 'normal' },
-                { tab: 'shop', elementId: 'energyUpgradeCard', text: '⭐ Покупай усиление за Telegram Stars: +50 энергии и +50 LP!', position: 'bottom', subTab: 'stars' },
-                { tab: 'shop', elementId: 'tonDonateBtn', text: '💎 Купи улучшение за TON через TON Connect!', position: 'bottom', subTab: 'stars' },
-                { tab: 'lottery', elementId: 'ticketBtn', text: '🎫 Купи билет за 100 LP и участвуй в розыгрыше USDT!', position: 'top' },
-                { tab: 'lottery', elementId: 'myTicketsBtn', text: '📋 Здесь твои билеты — стирай их после розыгрыша!', position: 'bottom' },
-                { tab: 'lottery', elementId: 'prize-card', text: '🏆 Главный фонд — в 21:00 он достанется победителям!', position: 'top' },
-                { tab: 'profile', elementId: 'stats-grid', text: '📊 Твои ресурсы: WG, LP, USDT, победы и клики.', position: 'bottom' },
-                { tab: 'profile', elementId: 'withdrawal-btn', text: '💸 Выводи USDT (минимум 2).', position: 'top' },
-                { tab: 'profile', elementId: 'referral-section', text: '👥 Приглашай друзей и получай 5% от их трат LP!', position: 'top' },
-                { tab: 'profile', elementId: 'settings-card', text: '⚙️ Настройки — можно скрыть себя из топа.', position: 'top' }
-            ];
-        }
+        function startTutorial() { if (tutorialActive) return; tutorialActive = true; currentTutorialStep = 0; disableScroll(); initTutorialSteps(); showTutorialStep(); }
+        function initTutorialSteps() { tutorialSteps = [ { tab: 'home', elementId: 'coin', text: '💰 Кликай по монете и зарабатывай WG Coin!', position: 'bottom' }, { tab: 'home', elementId: 'leaderboard-mini', text: '🏆 Топ игроков — чем больше кликов, тем выше место!', position: 'top' }, { tab: 'shop', elementId: 'upgrade-card', text: '🛒 Улучшай заработок за WG Coin. Цена растёт с каждой покупкой!', position: 'bottom', subTab: 'normal' }, { tab: 'shop', elementId: 'ad-card', text: '🎬 Смотри рекламу → +200 энергии или +1 к макс. энергии!', position: 'bottom', subTab: 'normal' }, { tab: 'shop', elementId: 'energyUpgradeCard', text: '⭐ Покупай усиление за Telegram Stars: +50 энергии и +50 LP!', position: 'bottom', subTab: 'stars' }, { tab: 'shop', elementId: 'tonDonateBtn', text: '💎 Купи улучшение за TON через TON Connect!', position: 'bottom', subTab: 'stars' }, { tab: 'lottery', elementId: 'ticketBtn', text: '🎫 Купи билет за 100 LP и участвуй в розыгрыше USDT!', position: 'top' }, { tab: 'lottery', elementId: 'myTicketsBtn', text: '📋 Здесь твои билеты — стирай их после розыгрыша!', position: 'bottom' }, { tab: 'lottery', elementId: 'prize-card', text: '🏆 Главный фонд — в 21:00 он достанется победителям!', position: 'top' }, { tab: 'profile', elementId: 'stats-grid', text: '📊 Твои ресурсы: WG, LP, USDT, победы и клики.', position: 'bottom' }, { tab: 'profile', elementId: 'withdrawal-btn', text: '💸 Выводи USDT (минимум 2).', position: 'top' }, { tab: 'profile', elementId: 'referral-section', text: '👥 Приглашай друзей и получай 5% от их трат LP!', position: 'top' }, { tab: 'profile', elementId: 'settings-card', text: '⚙️ Настройки — можно скрыть себя из топа.', position: 'top' } ]; }
 
         async function showTutorialStep() {
-            if (currentTutorialStep >= tutorialSteps.length) {
-                finishTutorial();
-                return;
-            }
+            if (currentTutorialStep >= tutorialSteps.length) { finishTutorial(); return; }
             const step = tutorialSteps[currentTutorialStep];
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             const targetNav = document.querySelector(`[data-tab="${step.tab}"]`);
@@ -5731,62 +4866,26 @@
             if (targetPane) targetPane.classList.add('active');
             if (step.subTab) {
                 document.querySelectorAll('.shop-tab').forEach(t => t.classList.remove('active'));
-                if (step.subTab === 'stars') {
-                    const starsTab = document.querySelector('[data-shop-tab="stars"]');
-                    if (starsTab) starsTab.classList.add('active');
-                    const shopNormal = document.getElementById('shopNormal');
-                    const shopStars = document.getElementById('shopStars');
-                    if (shopNormal) shopNormal.classList.remove('active');
-                    if (shopStars) shopStars.classList.add('active');
-                } else {
-                    const normalTab = document.querySelector('[data-shop-tab="normal"]');
-                    if (normalTab) normalTab.classList.add('active');
-                    const shopStars = document.getElementById('shopStars');
-                    const shopNormal = document.getElementById('shopNormal');
-                    if (shopStars) shopStars.classList.remove('active');
-                    if (shopNormal) shopNormal.classList.add('active');
-                }
+                if (step.subTab === 'stars') { const starsTab = document.querySelector('[data-shop-tab="stars"]'); if (starsTab) starsTab.classList.add('active'); const shopNormal = document.getElementById('shopNormal'); const shopStars = document.getElementById('shopStars'); if (shopNormal) shopNormal.classList.remove('active'); if (shopStars) shopStars.classList.add('active'); }
+                else { const normalTab = document.querySelector('[data-shop-tab="normal"]'); if (normalTab) normalTab.classList.add('active'); const shopStars = document.getElementById('shopStars'); const shopNormal = document.getElementById('shopNormal'); if (shopStars) shopStars.classList.remove('active'); if (shopNormal) shopNormal.classList.add('active'); }
             }
             await new Promise(resolve => setTimeout(resolve, 50));
             let element = getElementByStepId(step.elementId);
-            if (element) {
-                element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
-                await new Promise(resolve => setTimeout(resolve, 500));
-                highlightElement(element, step.text, step.position);
-            } else {
-                console.warn(`Элемент ${step.elementId} не найден`);
-                nextTutorialStep();
-            }
+            if (element) { element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' }); await new Promise(resolve => setTimeout(resolve, 500)); highlightElement(element, step.text, step.position); }
+            else { console.warn(`Элемент ${step.elementId} не найден`); nextTutorialStep(); }
         }
 
         function getElementByStepId(elementId) {
             let element = document.getElementById(elementId);
             if (!element) {
-                const selectors = {
-                    'upgrade-card': '.upgrade-card',
-                    'ad-card': '.ad-card',
-                    'energyUpgradeCard': '#energyUpgradeCard',
-                    'tonDonateBtn': '#tonDonateBtn',
-                    'ticketBtn': '#ticketBtn',
-                    'myTicketsBtn': '#myTicketsBtn',
-                    'prize-card': '.prize-card',
-                    'stats-grid': '.stats-grid',
-                    'withdrawal-btn': '.withdrawal-btn',
-                    'referral-section': '.referral-section',
-                    'settings-card': '.settings-card'
-                };
-                if (selectors[elementId]) {
-                    element = document.querySelector(selectors[elementId]);
-                }
+                const selectors = { 'upgrade-card': '.upgrade-card', 'ad-card': '.ad-card', 'energyUpgradeCard': '#energyUpgradeCard', 'tonDonateBtn': '#tonDonateBtn', 'ticketBtn': '#ticketBtn', 'myTicketsBtn': '#myTicketsBtn', 'prize-card': '.prize-card', 'stats-grid': '.stats-grid', 'withdrawal-btn': '.withdrawal-btn', 'referral-section': '.referral-section', 'settings-card': '.settings-card' };
+                if (selectors[elementId]) element = document.querySelector(selectors[elementId]);
             }
             return element;
         }
 
-        function highlightElement(element, text, position = 'bottom') {
-            if (!element) {
-                nextTutorialStep();
-                return;
-            }
+                function highlightElement(element, text, position = 'bottom') {
+            if (!element) { nextTutorialStep(); return; }
             const rect = element.getBoundingClientRect();
             const overlay = document.getElementById('tutorialOverlay');
             const highlight = document.getElementById('tutorialHighlight');
@@ -5802,25 +4901,18 @@
             const tooltipHeight = 180;
             let tooltipTop, tooltipLeft;
             if (position === 'top' || (rect.top < tooltipHeight + 20 && rect.bottom + tooltipHeight > window.innerHeight)) {
-                if (rect.top - tooltipHeight > 20) {
-                    tooltipTop = rect.top - tooltipHeight - 10;
-                } else {
-                    tooltipTop = rect.bottom + 15;
-                }
-            } else {
-                if (rect.bottom + tooltipHeight < window.innerHeight - 20) {
-                    tooltipTop = rect.bottom + 15;
-                } else {
-                    tooltipTop = rect.top - tooltipHeight - 10;
-                }
+                if (rect.top - tooltipHeight > 20) tooltipTop = rect.top - tooltipHeight - 10;
+                else tooltipTop = rect.bottom + 15;
+            }
+            else {
+                if (rect.bottom + tooltipHeight < window.innerHeight - 20) tooltipTop = rect.bottom + 15;
+                else tooltipTop = rect.top - tooltipHeight - 10;
             }
             tooltipLeft = Math.max(10, Math.min(rect.left + (rect.width / 2) - 140, window.innerWidth - 290));
             tooltip.style.top = tooltipTop + 'px';
             tooltip.style.left = tooltipLeft + 'px';
             tooltip.style.display = 'block';
-            if (window.tutorialClickListener) {
-                document.removeEventListener('click', window.tutorialClickListener);
-            }
+            if (window.tutorialClickListener) document.removeEventListener('click', window.tutorialClickListener);
             window.tutorialClickListener = function(e) {
                 if (e.target.closest('.tutorial-next') || e.target.closest('.tutorial-skip')) return;
                 nextTutorialStep();
@@ -5843,9 +4935,7 @@
             showTutorialStep();
         }
 
-        function skipTutorial() {
-            finishTutorial();
-        }
+        function skipTutorial() { finishTutorial(); }
 
         async function finishTutorial() {
             const overlay = document.getElementById('tutorialOverlay');
@@ -5864,7 +4954,6 @@
             showToast('🎓 Обучение завершено! Добро пожаловать в игру!', 'success');
         }
 
-        // Анимации
         const dailyIconElement = document.querySelector('.daily-icon');
         const energyBadgeElement = document.querySelector('.stat-badge');
 
@@ -5903,9 +4992,7 @@
         }
 
         if (energyBadgeElement) {
-            energyBadgeElement.addEventListener('click', function(e) {
-                clickBounceElements();
-            });
+            energyBadgeElement.addEventListener('click', function(e) { clickBounceElements(); });
         }
 
         setTimeout(() => bounceElements(), 500);
@@ -5916,6 +5003,7 @@
                 if (e.animationName === 'bounceClick') this.classList.remove('click-animate');
             });
         }
+
         if (energyBadgeElement) {
             energyBadgeElement.addEventListener('animationend', function(e) {
                 if (e.animationName === 'bounce') this.classList.remove('bounce-animate');
@@ -5923,7 +5011,6 @@
             });
         }
 
-        // ФИНАЛЬНАЯ ИНИЦИАЛИЗАЦИЯ
         document.addEventListener("DOMContentLoaded", () => {
             initTonConnect();
             initSocket();
@@ -5942,10 +5029,7 @@
             setInterval(updateStatus, 10000);
             setInterval(updateLottery, 30000);
             setInterval(loadRecentPlayers, 15000);
-            if (tg) {
-                tg.ready();
-                tg.expand();
-            }
+            if (tg) { tg.ready(); tg.expand(); }
         });
 
         document.getElementById('tutorialNextBtn').onclick = () => nextTutorialStep();
