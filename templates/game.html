@@ -3799,39 +3799,58 @@
         }
 
                 async function updateStatus() {
-            try {
-                let res = await fetch('/api/status', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: userId}) });
-                let data = await res.json();
-                if (data.banned) {
-                    showToast(`⚠️ Вы забанены! Причина: ${data.reason}. До: ${data.until}`, 'error');
-                    return;
-                }
-                localWG = data.wg;
-                localLP = data.lp;
-                localEnergy = data.energy;
-                localClicks = data.total_clicks;
-                localEarning = data.earning_per_click;
-                localUSDT = data.usdt || 0;
-                localWins = data.wins || 0;
-                localRole = data.role || 'player';
-                localStars = data.stars || 0;
-                localMaxEnergy = data.max_energy || 500;
-                localEnergyUpgrades = data.energy_upgrades || 0;
-                if (data.upgrade_counts) upgradeCounts = data.upgrade_counts;
+    // Защита от слишком частых вызовов
+    const now = Date.now();
+    if (now - lastStatusUpdate < STATUS_UPDATE_DELAY) {
+        return;
+    }
+    if (isUpdatingStatus) {
+        return;
+    }
 
-                // 👇 ИСПРАВЛЕНИЕ: обновляем стоимости улучшений из данных с сервера
-                // Нужно пересчитать актуальные цены на основе текущих upgrade_counts
-                if (upgradeCounts) {
-                    upgradeCosts[1] = getUpgradeCost(1, upgradeCounts[1] || 0);
-                    upgradeCosts[2] = getUpgradeCost(2, upgradeCounts[2] || 0);
-                    upgradeCosts[3] = getUpgradeCost(3, upgradeCounts[3] || 0);
-                }
+    isUpdatingStatus = true;
+    lastStatusUpdate = now;
 
-                updateUI();
-                let regenTimeHours = (localMaxEnergy - localEnergy) / (localMaxEnergy / 7200) / 3600;
-                document.getElementById('regenInfo').innerHTML = `🕐 Полное восстановление через ${regenTimeHours.toFixed(1)}ч`;
-            } catch(e) {}
+    try {
+        let res = await fetch('/api/status', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({user_id: userId}),
+            signal: AbortSignal.timeout(5000) // Таймаут 5 секунд
+        });
+        let data = await res.json();
+        if (data.banned) {
+            showToast(`⚠️ Вы забанены! Причина: ${data.reason}. До: ${data.until}`, 'error');
+            return;
         }
+        localWG = data.wg;
+        localLP = data.lp;
+        localEnergy = data.energy;
+        localClicks = data.total_clicks;
+        localEarning = data.earning_per_click;
+        localUSDT = data.usdt || 0;
+        localWins = data.wins || 0;
+        localRole = data.role || 'player';
+        localStars = data.stars || 0;
+        localMaxEnergy = data.max_energy || 500;
+        localEnergyUpgrades = data.energy_upgrades || 0;
+        if (data.upgrade_counts) upgradeCounts = data.upgrade_counts;
+
+        if (upgradeCounts) {
+            upgradeCosts[1] = getUpgradeCost(1, upgradeCounts[1] || 0);
+            upgradeCosts[2] = getUpgradeCost(2, upgradeCounts[2] || 0);
+            upgradeCosts[3] = getUpgradeCost(3, upgradeCounts[3] || 0);
+        }
+
+        updateUI();
+        let regenTimeHours = (localMaxEnergy - localEnergy) / (localMaxEnergy / 7200) / 3600;
+        document.getElementById('regenInfo').innerHTML = `🕐 Полное восстановление через ${regenTimeHours.toFixed(1)}ч`;
+    } catch(e) {
+        console.error('Status update error:', e);
+    } finally {
+        isUpdatingStatus = false;
+    }
+}
 
         async function updateLottery() {
             try {
@@ -4223,43 +4242,55 @@ async function updateLeaderboard() {
             }
         }
 
-        document.getElementById('coin').onclick = async () => {
+        let lastClickTime = 0;
+const CLICK_DEBOUNCE = 40;  // 40ms между кликами = 25 кликов/сек
 
-                        if (localEnergy <= 0) {
-                playErrorSound();
-                showToast('Нет энергии!', 'error');
-                return;
+document.getElementById('coin').onclick = async () => {
+    const now = Date.now();
+    if (now - lastClickTime < CLICK_DEBOUNCE) {
+        return;  // Слишком быстро - игнорируем
+    }
+    lastClickTime = now;
+
+    if (localEnergy <= 0) {
+        playErrorSound();
+        showToast('Нет энергии!', 'error');
+        return;
+    }
+
+    playClickFeedback();
+    animateClick();
+
+    try {
+        let res = await fetch('/api/click', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({user_id: userId}),
+            signal: AbortSignal.timeout(3000)
+        });
+        let data = await res.json();
+        if (data.error) {
+            localEnergy = data.energy;
+        } else {
+            localEnergy = data.energy;
+            localWG = data.wg;
+            localLP = data.lp;
+            localClicks = data.total_clicks;
+            localEarning = data.earning_per_click;
+            if (data.lp_reward) {
+                if (navigator.vibrate) navigator.vibrate([15, 30, 15]);
+                playLpDropSound();
+                showToast(`+${data.earned.toFixed(2)} WG и +0.5 LP! 🎲`, 'success');
+            } else {
+                showToast(`+${data.earned.toFixed(2)} WG!`, 'success');
             }
-
-            // Воспроизводим звук и вибрацию при клике
-            playClickFeedback();
-
-            animateClick();
-            try {
-                let res = await fetch('/api/click', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: userId}) });
-                let data = await res.json();
-                if (data.error) {
-                    localEnergy = data.energy;
-                } else {
-                    localEnergy = data.energy;
-                    localWG = data.wg;
-                    localLP = data.lp;
-                    localClicks = data.total_clicks;
-                    localEarning = data.earning_per_click;
-                    if (data.lp_reward) {
-                        // Дополнительная вибрация для редкого дропа
-                        if (navigator.vibrate) navigator.vibrate([15, 30, 15]);
-                        // 👇 ВОСПРОИЗВОДИМ ЗВУК LP ДРОПА 👇
-                        playLpDropSound();
-                        showToast(`+${data.earned.toFixed(2)} WG и +0.5 LP! 🎲`, 'success');
-                    } else {
-                        showToast(`+${data.earned.toFixed(2)} WG!`, 'success');
-                    }
-                }
-                updateUI();
-                updateLeaderboard();
-            } catch(e) {}
-        };
+        }
+        updateUI();
+        updateLeaderboard();
+    } catch(e) {
+        console.error('Click error:', e);
+    }
+};
 
                 // Функция для воспроизведения звука настроек
         function playSettingsSound() {
@@ -5107,63 +5138,93 @@ async function updateLeaderboard() {
 }
 
         function initSocket() {
-            socket = io();
-            socket.on('connect', () => {
-                socket.emit('get_draw_status', {});
-                socket.emit('get_remaining_time', {});
-            });
-            socket.on('remaining_time', (data) => {
-                if (data.seconds > 0 && isDrawn) {
-                    const endTime = new Date(Date.now() + data.seconds * 1000);
-                    startTimer(endTime.toISOString());
-                }
-            });
-            socket.on('draw_status', (data) => {
-                isDrawn = data.is_drawn;
-                winningNumbers = data.winning_numbers || [];
-                updateDrawUI();
-                if (isDrawn) {
-                    loadUserTickets();
-                }
-            });
-            socket.on('draw_completed', (data) => {
-                isDrawn = true;
-                winningNumbers = data.winning_numbers || [];
-                updateDrawUI();
-                showToast(data.message, 'success');
-                if (data.end_time) {
-                    startTimer(data.end_time);
-                }
-                updateLottery();
-                loadUserTickets();
-            });
-            socket.on('auto_revealed', (data) => {
-                showToast(data.message, 'info');
-                loadUserTickets();
-                updateTopPlayers();
-                stopTimer();
-            });
-            socket.on('prizes_distributed', (data) => {
-                showToast(data.message, 'success');
-                stopTimer();
-                updateStatus();
-                updateLottery();
-                loadUserTickets();
-            });
-            socket.on('draw_reset', (data) => {
-                isDrawn = false;
-                winningNumbers = [];
-                updateDrawUI();
-                showToast(data.message, 'info');
-                updateLottery();
-                loadUserTickets();
-                stopTimer();
-            });
-            socket.on('cell_revealed', (data) => {
-                loadUserTickets();
-                updateTopPlayers();
-            });
+    socket = io({
+        reconnection: true,
+        reconnectionAttempts: 3,      // Ограничиваем попытки (было бесконечно)
+        reconnectionDelay: 2000,       // Увеличиваем задержку
+        reconnectionDelayMax: 5000,
+        timeout: 20000,
+        transports: ['websocket']      // Только websocket
+    });
+
+    socket.on('connect', () => {
+        console.log('Socket connected');
+        socket.emit('get_draw_status', {});
+        socket.emit('get_remaining_time', {});
+    });
+
+    socket.on('connect_error', (error) => {
+        console.log('Socket connection error:', error);
+        // Не спамим reconnect
+    });
+
+    socket.on('disconnect', (reason) => {
+        console.log('Socket disconnected:', reason);
+        if (reason === 'io server disconnect') {
+            // reconnect manually
+            socket.connect();
         }
+    });
+
+    // Остальные обработчики...
+    socket.on('remaining_time', (data) => {
+        if (data.seconds > 0 && isDrawn) {
+            const endTime = new Date(Date.now() + data.seconds * 1000);
+            startTimer(endTime.toISOString());
+        }
+    });
+
+    socket.on('draw_status', (data) => {
+        isDrawn = data.is_drawn;
+        winningNumbers = data.winning_numbers || [];
+        updateDrawUI();
+        if (isDrawn) {
+            loadUserTickets();
+        }
+    });
+
+    socket.on('draw_completed', (data) => {
+        isDrawn = true;
+        winningNumbers = data.winning_numbers || [];
+        updateDrawUI();
+        showToast(data.message, 'success');
+        if (data.end_time) {
+            startTimer(data.end_time);
+        }
+        updateLottery();
+        loadUserTickets();
+    });
+
+    socket.on('auto_revealed', (data) => {
+        showToast(data.message, 'info');
+        loadUserTickets();
+        updateTopPlayers();
+        stopTimer();
+    });
+
+    socket.on('prizes_distributed', (data) => {
+        showToast(data.message, 'success');
+        stopTimer();
+        updateStatus();
+        updateLottery();
+        loadUserTickets();
+    });
+
+    socket.on('draw_reset', (data) => {
+        isDrawn = false;
+        winningNumbers = [];
+        updateDrawUI();
+        showToast(data.message, 'info');
+        updateLottery();
+        loadUserTickets();
+        stopTimer();
+    });
+
+    socket.on('cell_revealed', (data) => {
+        loadUserTickets();
+        updateTopPlayers();
+    });
+}
 
         // Реклама
         let adController = null;
