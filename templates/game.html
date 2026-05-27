@@ -4724,47 +4724,107 @@
         }
 
         let adController = null;
-        let adLimitController = null;
+let adLimitController = null;
 
-        function initAds() {
+function initAds() {
     if (typeof window.Adsgram !== 'undefined') {
         if (!adController) {
             try {
-                adController = window.Adsgram.init({ blockId: "33075", debug: true });
-                console.log('Adsgram: обычная реклама инициализирована');
-            } catch(e) { console.log('Ad init error:', e); }
+                adController = window.Adsgram.init({ blockId: "33133" });
+                console.log('Adsgram: реклама +200 энергии (ID: 33133)');
+            } catch(e) {
+                console.log('Ad init error:', e);
+            }
         }
         if (!adLimitController) {
             try {
-                adLimitController = window.Adsgram.init({ blockId: "33076", debug: true });
-                console.log('Adsgram: лимитная реклама инициализирована');
-            } catch(e) { console.log('Ad limit init error:', e); }
+                adLimitController = window.Adsgram.init({ blockId: "33132" });
+                console.log('Adsgram: реклама +1 лимит (ID: 33132)');
+            } catch(e) {
+                console.log('Ad limit init error:', e);
+            }
         }
     }
 }
 
         window.watchAd = async () => {
-            if (!adController) { initAds(); await new Promise(resolve => setTimeout(resolve, 500)); }
-            if (!adController) {
-                try { let resp = await fetch('/api/watch_ad_fallback', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: userId}) }); let data = await resp.json(); if (data.success) { showToast(`+50 энергии (реклама временно недоступна)`, 'info'); updateStatus(); } } catch(e) {}
-                return;
-            }
-            try {
-                const result = await adController.show();
-                if (result.done && !result.error) { let resp = await fetch('/api/watch_ad', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: userId}) }); let data = await resp.json(); if (data.success) { showToast(`+200 энергии! Спасибо! 🎬`, 'success'); updateStatus(); } }
-                else { showToast('Реклама не загружена, попробуйте позже', 'error'); }
-            } catch (error) { showToast('Ошибка рекламы, попробуйте через VPN', 'error'); }
-        };
+    if (!adController) {
+        initAds();
+        await new Promise(resolve => setTimeout(resolve, 500));
+    }
 
-        window.watchAdLimit = async () => {
-            if (!adLimitController) initAds();
-            if (!adLimitController) { showToast('Реклама временно недоступна', 'error'); return; }
-            try {
-                const result = await adLimitController.show();
-                if (result.done && !result.error) { let resp = await fetch('/api/watch_ad_limit', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: userId}) }); let data = await resp.json(); if (data.success) { showToast(`⚡ +1 к макс. энергии! Теперь лимит: ${data.max_energy}`, 'success'); updateStatus(); } }
-                else { showToast('Реклама не загружена', 'error'); }
-            } catch (error) { showToast('Ошибка рекламы', 'error'); }
-        };
+    if (!adController) {
+        try {
+            let resp = await fetch('/api/watch_ad_fallback', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({user_id: userId})
+            });
+            let data = await resp.json();
+            if (data.success) {
+                showToast(`+50 энергии (реклама временно недоступна)`, 'info');
+                updateStatus();
+            }
+        } catch(e) {}
+        return;
+    }
+
+    try {
+        const result = await adController.show();
+        if (result.done && !result.error) {
+            let resp = await fetch('/api/watch_ad', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({user_id: userId})
+            });
+            let data = await resp.json();
+            if (data.success) {
+                showToast(`+200 энергии! Спасибо! 🎬`, 'success');
+                updateStatus();
+            }
+        } else {
+            showToast('Реклама не загружена, попробуйте позже', 'error');
+        }
+    } catch (error) {
+        console.error('Ad error:', error);
+        showToast('Ошибка рекламы, попробуйте через VPN', 'error');
+    }
+};
+
+window.watchAdLimit = async () => {
+    if (!adLimitController) {
+        initAds();
+        await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
+    if (!adLimitController) {
+        showToast('Реклама временно недоступна', 'error');
+        return;
+    }
+
+    try {
+        const result = await adLimitController.show();
+        if (result.done && !result.error) {
+            let resp = await fetch('/api/watch_ad_limit', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({user_id: userId})
+            });
+            let data = await resp.json();
+            if (data.success) {
+                showToast(`⚡ +1 к макс. энергии! Теперь лимит: ${data.max_energy}`, 'success');
+                updateStatus();
+            } else {
+                showToast(data.msg || 'Ошибка', 'error');
+            }
+        } else {
+            showToast('Реклама не загружена', 'error');
+        }
+    } catch (error) {
+        console.error('Ad limit error:', error);
+        showToast('Ошибка рекламы', 'error');
+    }
+};
 
         window.donate = function() { window.open('https://t.me/WereGoodSupport', '_blank'); };
 
