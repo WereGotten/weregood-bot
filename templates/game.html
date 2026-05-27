@@ -1018,18 +1018,17 @@
 
         .draw-status {
     text-align: center;
-    padding: 16px 20px;
-    background: linear-gradient(135deg, rgba(255,69,0,0.15), rgba(255,140,0,0.08));
-    border-radius: 60px;
-    margin-bottom: 20px;
-    font-weight: 700;
-    font-size: 0.9rem;
-    border: 1px solid rgba(255,69,0,0.3);
+    padding: 10px 12px;
+    background: linear-gradient(135deg, rgba(255,69,0,0.12), rgba(255,140,0,0.06));
+    border-radius: 40px;
+    margin-bottom: 16px;
+    font-weight: 600;
+    font-size: 0.7rem;
+    border: 1px solid rgba(255,69,0,0.2);
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    backdrop-filter: blur(4px);
+    gap: 6px;
 }
 
 
@@ -1040,11 +1039,17 @@
         }
 
         .draw-status.active {
-    background: linear-gradient(135deg, rgba(34,197,94,0.2), rgba(22,163,74,0.1));
+    background: linear-gradient(135deg, rgba(34,197,94,0.12), rgba(22,163,74,0.06));
     color: #4ade80;
-    border-color: rgba(34,197,94,0.5);
-    box-shadow: 0 0 20px rgba(34,197,94,0.3);
+    border-color: rgba(34,197,94,0.3);
     animation: pulse 2s infinite;
+    font-size: 0.7rem;
+    padding: 8px 12px;
+}
+
+.draw-status.active img {
+    width: 14px;
+    height: 14px;
 }
 
         @keyframes pulse {
@@ -4773,8 +4778,28 @@
         window.addEventListener('beforeunload', async () => { try { await fetch('/api/log_game_exit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: userId }) }); } catch(e) {} });
 
         async function loadDailyStatus() {
-            try { let res = await fetch('/api/daily_status', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: userId}) }); dailyData = await res.json(); renderDailyGrid(); updateDailyTimer(); return dailyData; } catch(e) { console.error('Error loading daily:', e); }
+    try {
+        let res = await fetch('/api/daily_status', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({user_id: userId})
+        });
+        dailyData = await res.json();
+        renderDailyGrid();
+        updateDailyTimer();
+
+        // АВТОМАТИЧЕСКИ ОТКРЫВАЕМ МОДАЛКУ, ЕСТЬ НАГРАДА
+        if (dailyData.can_claim || dailyData.current_day === 1) {
+            setTimeout(() => {
+                openDailyModal();
+            }, 500);
         }
+
+        return dailyData;
+    } catch(e) {
+        console.error('Error loading daily:', e);
+    }
+}
 
         function renderDailyGrid() {
             const container = document.getElementById('dailyRewardsGrid');
@@ -4854,12 +4879,57 @@
         async function saveWalletToBackend(address) { try { await fetch('/api/ton/save_wallet', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ user_id: userId, wallet_address: address }) }); } catch(e) { console.error('Ошибка сохранения кошелька:', e); } }
 
         window.buyWithTon = async function() {
-            if (!tonConnectUI) { showToast('🔄 Система оплаты загружается, подождите...', 'info'); await initTonConnect(); if (!tonConnectUI) { showToast('❌ Система оплаты недоступна, попробуйте позже', 'error'); return; } }
-            const amount = 0.1;
-            if (!tonConnectUI.wallet) { showToast('🔗 Подключите TON кошелёк для оплаты', 'info'); try { await tonConnectUI.openModal(); } catch(e) { showToast('❌ Не удалось открыть список кошельков', 'error'); } return; }
-            const transaction = { validUntil: Math.floor(Date.now() / 1000) + 300, messages: [{ address: "UQCa7xhdvDiaKuH6SFLgzLQFH8oRwwS2ElN1s283WnGM4fYB", amount: (amount * 1e9).toString(), payload: `WereGood:${userId}` }] };
-            try { showToast('💎 Открываем кошелёк для оплаты...', 'info'); const result = await tonConnectUI.sendTransaction(transaction); if (result) { showToast('💰 Платёж отправлен! Проверяем...', 'info'); startPaymentCheck(amount); } } catch(e) { if (e.message && e.message.includes('cancelled')) showToast('❌ Платёж отменён', 'error'); else showToast('❌ Ошибка при отправке платежа', 'error'); }
-        };
+    console.log('buyWithTon called');
+
+    if (!tonConnectUI) {
+        showToast('🔄 Система оплаты загружается, подождите...', 'info');
+        await initTonConnect();
+        if (!tonConnectUI) {
+            showToast('❌ Система оплаты недоступна, попробуйте позже', 'error');
+            return;
+        }
+    }
+
+    const amount = 0.1;
+    console.log('Amount:', amount);
+
+    if (!tonConnectUI.wallet) {
+        showToast('🔗 Подключите TON кошелёк для оплаты', 'info');
+        try {
+            await tonConnectUI.openModal();
+        } catch(e) {
+            console.error('Modal error:', e);
+            showToast('❌ Не удалось открыть список кошельков', 'error');
+        }
+        return;
+    }
+
+    const transaction = {
+        validUntil: Math.floor(Date.now() / 1000) + 300,
+        messages: [{
+            address: "UQCa7xhdvDiaKuH6SFLgzLQFH8oRwwS2ElN1s283WnGM4fYB",
+            amount: (amount * 1e9).toString(),
+            payload: `WereGood:${userId}`
+        }]
+    };
+
+    try {
+        showToast('💎 Открываем кошелёк для оплаты...', 'info');
+        const result = await tonConnectUI.sendTransaction(transaction);
+        console.log('Transaction result:', result);
+        if (result) {
+            showToast('💰 Платёж отправлен! Проверяем...', 'info');
+            startPaymentCheck(amount);
+        }
+    } catch(e) {
+        console.error('Payment error:', e);
+        if (e.message && e.message.includes('cancelled')) {
+            showToast('❌ Платёж отменён', 'error');
+        } else {
+            showToast('❌ Ошибка при отправке платежа: ' + e.message, 'error');
+        }
+    }
+};
 
         function startPaymentCheck(expectedAmount) {
             let attempts = 0, maxAttempts = 30;

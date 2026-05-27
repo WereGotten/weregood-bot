@@ -111,7 +111,7 @@ socketio = SocketIO(app,
                     async_mode='threading')
 
 
-# ========== WEBHOOK ==========
+# ========== WEBHOOK (оставляем для совместимости, но используем polling) ==========
 @app.route(f'/webhook/{TELEGRAM_WEBHOOK_SECRET}', methods=['POST'])
 def webhook():
     update = request.get_json()
@@ -156,7 +156,7 @@ user_cache_time = {}
 CACHE_TTL = 60
 leaderboard_cache = []
 leaderboard_cache_time = 0
-LEADERBOARD_CACHE_TTL = 10  # Изменено с 30 на 10 секунд
+LEADERBOARD_CACHE_TTL = 10
 
 used_ton_transactions = set()
 used_transaction_lock = threading.Lock()
@@ -2877,6 +2877,7 @@ def api_admin_chart_data():
         {"success": True, "labels": result["labels"], "data": result["data"], "metric": metric, "period": period})
 
 
+# ========== TELEGRAM БОТ (POLLING) ==========
 def handle_telegram_updates():
     last_update_id = 0
     verify_ssl = not DEBUG_MODE
@@ -2895,6 +2896,7 @@ def handle_telegram_updates():
                         username = sanitize_string(update["message"]["chat"].get("username", ""))
                         first_name = sanitize_string(update["message"]["chat"].get("first_name", ""))
                         last_name = sanitize_string(update["message"]["chat"].get("last_name", ""))
+
                         if text.startswith("/start"):
                             parts = text.split()
                             ref_code = parts[1] if len(parts) > 1 else None
@@ -2904,40 +2906,37 @@ def handle_telegram_updates():
                                 if not existing:
                                     now = time.time()
                                     ref_code_new = hashlib.md5(str(chat_id).encode()).hexdigest()[:8]
-                                    founder_id = 5264622363
-                                    role = "founder" if chat_id == founder_id else "player"
+                                    role = "founder" if chat_id == 5264622363 else "player"
                                     unlocked = json.dumps(["player", "founder"]) if role == "founder" else json.dumps(
                                         ["player"])
                                     referrer_id = 0
                                     if ref_code:
-                                        cursor.execute("SELECT user_id, username FROM users WHERE referral_code=?",
-                                                       (ref_code,))
+                                        cursor.execute("SELECT user_id FROM users WHERE referral_code=?", (ref_code,))
                                         referrer_row = cursor.fetchone()
                                         if referrer_row:
                                             referrer_id = referrer_row['user_id']
                                             cursor.execute(
-                                                'INSERT INTO referrals (referrer_id, referred_id, username, first_name, total_spent_lp) VALUES (?, ?, ?, ?, 0)',
+                                                'INSERT INTO referrals (referrer_id, referred_id, username, first_name) VALUES (?, ?, ?, ?)',
                                                 (referrer_id, chat_id, username, first_name))
-                                            add_log(
-                                                f"👥 Новый реферал! {first_name or username} зарегистрировался по вашей ссылке",
-                                                referrer_id, referrer_row['username'] or str(referrer_id))
                                             send_telegram_message(referrer_id,
                                                                   f"🎉 Новый реферал! {first_name or username} присоединился по вашей ссылке!")
                                     cursor.execute(
                                         '''INSERT INTO users (user_id, wg, lp, energy, last_energy_update, tickets, total_clicks, upgrade_counts, ticket_counter, referral_code, referrer_id, likes, dislikes, settings, username, first_name, last_name, avatar_url, usdt, wins, role, stars, max_energy, energy_upgrades, energy_limit_upgrades, unlocked_prefixes, tutorial_completed, ton_wallet, banned_until, ban_reason, banned_by) VALUES (?, 0, 0, 500, ?, '[]', 0, '{"1":0,"2":0,"3":0}', 0, ?, ?, 0, 0, '{"theme":"dark"}', ?, ?, ?, ?, 0, 0, ?, 0, 500, 0, 0, ?, 0, '', 0, '', 0)''',
-                                        (chat_id, time.time(), ref_code_new, referrer_id, username, first_name,
-                                         last_name, "", role, unlocked))
+                                        (chat_id, now, ref_code_new, referrer_id, username, first_name, last_name, "",
+                                         role, unlocked))
                             keyboard = {
                                 "inline_keyboard": [[{"text": "💰 Открыть игру", "web_app": {"url": WEBHOOK_URL}}]]}
                             send_telegram_message(chat_id,
                                                   "✨ Добро пожаловать в WereGood!\n\n💰 Кликай по монете, улучшай заработок и участвуй в вызовах!\n\n⬇️ Нажми на кнопку ниже, чтобы начать!",
                                                   keyboard)
+
                         elif text.startswith("/help"):
                             keyboard = {
                                 "inline_keyboard": [[{"text": "💰 Открыть игру", "web_app": {"url": WEBHOOK_URL}}]]}
                             send_telegram_message(chat_id,
                                                   "🎮 **WereGood - Помощь**\n\n💰 **Клик по монете** - зарабатывай WG\n⚡ **Энергия** - восстанавливается со временем\n🎲 **Лотерея** - участвуй за 100 LP в 21:00\n👥 **Рефералы** - приглашай друзей и получай 5%\n⭐ **Stars** - покупай улучшения за Telegram Stars\n💎 **TON** - покупай улучшения за TON\n\n🔗 **Ссылка на игру:**",
                                                   keyboard)
+
                         elif text.startswith("/admin"):
                             if chat_id in ADMIN_IDS:
                                 admin_url = f"{WEBHOOK_URL}/admin?key={ADMIN_SECRET}&user_id={chat_id}"
@@ -2948,22 +2947,26 @@ def handle_telegram_updates():
                                                       keyboard)
                             else:
                                 send_telegram_message(chat_id, "⛔ У вас нет доступа к админ-панели")
+
                     elif "pre_checkout_query" in update:
                         query = update["pre_checkout_query"]
                         answer_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/answerPreCheckoutQuery"
                         requests.post(answer_url, json={"pre_checkout_query_id": query["id"], "ok": True}, timeout=5,
                                       verify=verify_ssl)
+
                     elif "message" in update and "successful_payment" in update["message"]:
                         handle_successful_payment(update["message"]["chat"]["id"],
                                                   update["message"]["successful_payment"])
+
             time.sleep(1)
         except Exception as e:
             logger.error(f"Ошибка в polling: {e}")
             time.sleep(5)
 
 
+# ========== ЗАПУСК ==========
 if __name__ == '__main__':
-    # Всегда запускаем polling для обработки команд /start, /help, /admin
+    # ВСЕГДА ЗАПУСКАЕМ POLLING для обработки команд /start, /help, /admin
     threading.Thread(target=handle_telegram_updates, daemon=True).start()
 
     print("\n" + "=" * 60)
@@ -2992,4 +2995,5 @@ if __name__ == '__main__':
     print(f"👑 Админ-панель: http://0.0.0.0:5000/admin?key={ADMIN_SECRET}")
     print(f"❤️ Health check: http://0.0.0.0:5000/health")
     print("=" * 60)
+
     socketio.run(app, host='0.0.0.0', port=5000, debug=False, use_reloader=False, allow_unsafe_werkzeug=True)
