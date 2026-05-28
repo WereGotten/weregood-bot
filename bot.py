@@ -2171,7 +2171,7 @@ def api_watch_ad():
     if not is_valid:
         return jsonify({"success": False, "msg": "Invalid user_id"}), 400
 
-    can_watch, msg = check_ad_cooldown(user_id, "energy_200", 5, 40)
+    can_watch, msg = check_ad_cooldown(user_id, "energy_200", 2, 40)
     if not can_watch:
         return jsonify({"success": False, "msg": msg}), 429
 
