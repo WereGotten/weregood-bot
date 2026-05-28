@@ -2733,7 +2733,7 @@ def api_admin_create_promo():
         f"🎫 Создал промокод {code} | {reward_type}: {reward_amount} | Макс: {max_uses} | Пароль: {'Да' if password else 'Нет'}",
         admin_id, admin_name, details=f"ID: {promo_id}")
 
-    promo_url = f"{WEBHOOK_URL}/claim?code={code}"
+    promo_url = f"https://t.me/WereGooodbot/WereGood?startapp=claim_{code}"
     return jsonify({"success": True, "promo_id": promo_id, "code": code, "promo_url": promo_url})
 
 
