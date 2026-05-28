@@ -2133,8 +2133,6 @@ def api_recent_players():
 @app.route('/api/get_referral_link', methods=['POST'])
 def api_get_referral_link():
     data = request.json
-    if not data:
-        return jsonify({"link": ""}), 400
     user_id = data.get('user_id')
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid:
@@ -2148,7 +2146,8 @@ def api_get_referral_link():
         else:
             code = hashlib.md5(str(user_id).encode()).hexdigest()[:8]
             safe_update_user(user_id, referral_code=code)
-    link = f"https://t.me/{BOT_USERNAME}?start={code}"
+    # ИСПРАВИТЬ ЗДЕСЬ:
+    link = f"https://t.me/{BOT_USERNAME}/WereGood?startapp={code}"
     add_log(f"📨 Получил реферальную ссылку", user_id, user['username'])
     return jsonify({"link": link})
 
