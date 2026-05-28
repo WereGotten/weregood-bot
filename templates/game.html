@@ -1017,20 +1017,19 @@
         }
 
         .draw-status {
-    text-align: center;
-    padding: 10px 12px;
-    background: linear-gradient(135deg, rgba(255,69,0,0.12), rgba(255,140,0,0.06));
-    border-radius: 40px;
-    margin-bottom: 16px;
-    font-weight: 600;
-    font-size: 0.7rem;
-    border: 1px solid rgba(255,69,0,0.2);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-}
-
+            text-align: center;
+            padding: 10px 12px;
+            background: linear-gradient(135deg, rgba(255,69,0,0.12), rgba(255,140,0,0.06));
+            border-radius: 40px;
+            margin-bottom: 16px;
+            font-weight: 600;
+            font-size: 0.7rem;
+            border: 1px solid rgba(255,69,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
 
         .draw-status img {
             width: 16px;
@@ -1039,18 +1038,18 @@
         }
 
         .draw-status.active {
-    background: linear-gradient(135deg, rgba(34,197,94,0.12), rgba(22,163,74,0.06));
-    color: #4ade80;
-    border-color: rgba(34,197,94,0.3);
-    animation: pulse 2s infinite;
-    font-size: 0.7rem;
-    padding: 8px 12px;
-}
+            background: linear-gradient(135deg, rgba(34,197,94,0.12), rgba(22,163,74,0.06));
+            color: #4ade80;
+            border-color: rgba(34,197,94,0.3);
+            animation: pulse 2s infinite;
+            font-size: 0.7rem;
+            padding: 8px 12px;
+        }
 
-.draw-status.active img {
-    width: 14px;
-    height: 14px;
-}
+        .draw-status.active img {
+            width: 14px;
+            height: 14px;
+        }
 
         @keyframes pulse {
             0% { box-shadow: 0 0 0 0 rgba(34,197,94,0.4); }
@@ -1074,6 +1073,34 @@
             height: 14px;
             display: inline-block;
             vertical-align: middle;
+        }
+
+        .reveal-all-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #9C27B0, #7B1FA2);
+            border: none;
+            border-radius: 40px;
+            padding: 12px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: white;
+            cursor: pointer;
+            margin: 8px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: transform 0.1s ease;
+        }
+
+        .reveal-all-btn:active {
+            transform: scale(0.97);
+        }
+
+        .reveal-all-btn.disabled {
+            background: #555;
+            cursor: not-allowed;
+            opacity: 0.5;
         }
 
         .top-players-section {
@@ -1953,45 +1980,45 @@
         }
 
         .winning-combo-ticket {
-    background: linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,165,0,0.1));
-    border-radius: 20px;
-    padding: 16px;
-    margin-top: 16px;
-    text-align: center;
-    border: 1px solid rgba(255,215,0,0.3);
-    box-shadow: 0 0 15px rgba(255,215,0,0.2);
-}
+            background: linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,165,0,0.1));
+            border-radius: 20px;
+            padding: 16px;
+            margin-top: 16px;
+            text-align: center;
+            border: 1px solid rgba(255,215,0,0.3);
+            box-shadow: 0 0 15px rgba(255,215,0,0.2);
+        }
 
-.winning-combo-title {
-    font-size: 0.8rem;
-    font-weight: 700;
-    color: #FFD700;
-    margin-bottom: 12px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-}
+        .winning-combo-title {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #FFD700;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
 
-.winning-combo-numbers {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 10px;
-}
+        .winning-combo-numbers {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
 
-.winning-combo-number {
-    background: linear-gradient(135deg, #FFD700, #FFA500);
-    border-radius: 12px;
-    padding: 6px 12px;
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: #0a0a1a;
-    min-width: 40px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-}
+        .winning-combo-number {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            border-radius: 12px;
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #0a0a1a;
+            min-width: 40px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
 
         .player-modal {
             display: none;
@@ -2871,14 +2898,14 @@
         }
 
         .prefix-modal-content {
-    background: linear-gradient(145deg, #1a1a2e, #0f0f20);
-    border-radius: 28px;
-    width: 90%;
-    max-width: 350px;
-    padding: 24px;
-    border: 1px solid rgba(255,215,0,0.3);
-    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-}
+            background: linear-gradient(145deg, #1a1a2e, #0f0f20);
+            border-radius: 28px;
+            width: 90%;
+            max-width: 350px;
+            padding: 24px;
+            border: 1px solid rgba(255,215,0,0.3);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
 
         .close-prefix-modal {
             position: absolute;
@@ -2899,45 +2926,45 @@
         }
 
         .prefix-option {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 14px;
-    margin: 10px 0;
-    background: rgba(255,255,255,0.06);
-    border-radius: 20px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    border: 1px solid transparent;
-}
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px;
+            margin: 10px 0;
+            background: rgba(255,255,255,0.06);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+        }
 
-.prefix-option:hover {
-    background: rgba(255,215,0,0.1);
-    transform: translateX(4px);
-}
+        .prefix-option:hover {
+            background: rgba(255,215,0,0.1);
+            transform: translateX(4px);
+        }
 
         .prefix-icon {
-    font-size: 2rem;
-}
+            font-size: 2rem;
+        }
 
         .prefix-info {
             flex: 1;
         }
 
         .prefix-option.selected {
-    border: 2px solid #FFD700;
-    background: rgba(255,215,0,0.15);
-    box-shadow: 0 0 15px rgba(255,215,0,0.3);
-}
+            border: 2px solid #FFD700;
+            background: rgba(255,215,0,0.15);
+            box-shadow: 0 0 15px rgba(255,215,0,0.3);
+        }
 
-.prefix-name {
-    font-size: 1rem;
-    font-weight: 700;
-    background: linear-gradient(135deg, #FFD700, #FFA500);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-}
+        .prefix-name {
+            font-size: 1rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
 
         .prefix-desc {
             font-size: 0.6rem;
@@ -3004,128 +3031,128 @@
             display: inline-block;
             line-height: 1;
         }
-        /* Промокод модалка */
-.promo-modal {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.95);
-    z-index: 2500;
-    align-items: center;
-    justify-content: center;
-}
 
-.promo-modal.active {
-    display: flex;
-}
+        .promo-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 2500;
+            align-items: center;
+            justify-content: center;
+        }
 
-.promo-modal-content {
-    background: linear-gradient(145deg, #1a1a2e, #0f0f20);
-    border-radius: 28px;
-    width: 90%;
-    max-width: 400px;
-    padding: 24px;
-    border: 1px solid rgba(255,215,0,0.2);
-    animation: fadeIn 0.2s ease;
-}
+        .promo-modal.active {
+            display: flex;
+        }
 
-.promo-modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid rgba(255,215,0,0.15);
-}
+        .promo-modal-content {
+            background: linear-gradient(145deg, #1a1a2e, #0f0f20);
+            border-radius: 28px;
+            width: 90%;
+            max-width: 400px;
+            padding: 24px;
+            border: 1px solid rgba(255,215,0,0.2);
+            animation: fadeIn 0.2s ease;
+        }
 
-.promo-modal-header h2 {
-    font-size: 1.3rem;
-    font-weight: 700;
-    background: linear-gradient(135deg, #FFD700, #FFA500);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-}
+        .promo-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(255,215,0,0.15);
+        }
 
-.promo-modal-close {
-    background: rgba(255,255,255,0.1);
-    border: none;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    cursor: pointer;
-    color: white;
-    font-size: 1.1rem;
-}
+        .promo-modal-header h2 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
 
-.promo-info {
-    background: rgba(255,215,0,0.08);
-    border-radius: 16px;
-    padding: 12px;
-    margin-bottom: 20px;
-    text-align: center;
-}
+        .promo-modal-close {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            color: white;
+            font-size: 1.1rem;
+        }
 
-.promo-reward {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #FFD700;
-}
+        .promo-info {
+            background: rgba(255,215,0,0.08);
+            border-radius: 16px;
+            padding: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
 
-.promo-remaining {
-    font-size: 0.7rem;
-    opacity: 0.6;
-    margin-top: 4px;
-}
+        .promo-reward {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #FFD700;
+        }
 
-.promo-input {
-    width: 100%;
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,215,0,0.15);
-    border-radius: 16px;
-    padding: 14px 16px;
-    color: white;
-    font-size: 0.9rem;
-    text-align: center;
-    letter-spacing: 1px;
-    margin-bottom: 16px;
-}
+        .promo-remaining {
+            font-size: 0.7rem;
+            opacity: 0.6;
+            margin-top: 4px;
+        }
 
-.promo-input:focus {
-    border-color: #FFD700;
-    outline: none;
-}
+        .promo-input {
+            width: 100%;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,215,0,0.15);
+            border-radius: 16px;
+            padding: 14px 16px;
+            color: white;
+            font-size: 0.9rem;
+            text-align: center;
+            letter-spacing: 1px;
+            margin-bottom: 16px;
+        }
 
-.promo-activate-btn {
-    width: 100%;
-    background: linear-gradient(135deg, #FFD700, #FFA500);
-    border: none;
-    border-radius: 50px;
-    padding: 14px;
-    font-weight: 700;
-    font-size: 1rem;
-    color: #0a0a1a;
-    cursor: pointer;
-    transition: transform 0.1s ease;
-}
+        .promo-input:focus {
+            border-color: #FFD700;
+            outline: none;
+        }
 
-.promo-activate-btn:active {
-    transform: scale(0.97);
-}
+        .promo-activate-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            border: none;
+            border-radius: 50px;
+            padding: 14px;
+            font-weight: 700;
+            font-size: 1rem;
+            color: #0a0a1a;
+            cursor: pointer;
+            transition: transform 0.1s ease;
+        }
 
-.promo-message {
-    margin-top: 12px;
-    font-size: 0.7rem;
-    text-align: center;
-    color: #f44336;
-}
+        .promo-activate-btn:active {
+            transform: scale(0.97);
+        }
 
-.promo-message.success {
-    color: #4caf50;
-}
+        .promo-message {
+            margin-top: 12px;
+            font-size: 0.7rem;
+            text-align: center;
+            color: #f44336;
+        }
+
+        .promo-message.success {
+            color: #4caf50;
+        }
     </style>
 </head>
 <body>
@@ -3457,6 +3484,10 @@
                         <img src="/static/ticket.png" alt="Мои билеты">
                         Мои билеты
                     </button>
+                    <button class="reveal-all-btn" id="revealAllTicketsBtn" style="display: none;">
+                        <img src="/static/magic.png" alt="Открыть всё" style="width: 20px; height: 20px;">
+                        Открыть все билеты сразу
+                    </button>
                 </div>
                 <div id="drawStatus" class="draw-status">
                     <img src="/static/hourglass.png" alt="Ожидание" style="width: 18px; height: 18px;">
@@ -3483,7 +3514,7 @@
                     </div>
                     <div class="info-text">
                         <h4>Как это работает?</h4>
-                        <p>Участвуй за 100 LP → В 21:00 появится выигрышная комбинация → У тебя есть 30 минут, чтобы стереть билет → Победитель получает весь фонд в USDT!</p>
+                        <p>Участвуй за 100 LP → В 21:00 появится выигрышная комбинация → У тебя есть 3 часа, чтобы стереть билет → Победитель получает весь фонд в USDT!</p>
                     </div>
                 </div>
             </div>
@@ -3712,24 +3743,23 @@
         </div>
     </div>
 
-    <!-- Модальное окно активации промокода -->
-<div id="promoModal" class="promo-modal">
-    <div class="promo-modal-content">
-        <div class="promo-modal-header">
-            <h2>🎫 Активация промокода</h2>
-            <button class="promo-modal-close" onclick="closePromoModal()">✕</button>
+    <div id="promoModal" class="promo-modal">
+        <div class="promo-modal-content">
+            <div class="promo-modal-header">
+                <h2>🎫 Активация промокода</h2>
+                <button class="promo-modal-close" onclick="closePromoModal()">✕</button>
+            </div>
+            <div id="promoInfo" class="promo-info">
+                <div class="promo-reward" id="promoReward"></div>
+                <div class="promo-remaining" id="promoRemaining"></div>
+            </div>
+            <div class="form-group">
+                <input type="text" class="promo-input" id="promoCodeInput" placeholder="Введите промокод" maxlength="30" autocomplete="off">
+            </div>
+            <button class="promo-activate-btn" id="activatePromoBtn">🎁 Активировать</button>
+            <div id="promoMessage" class="promo-message"></div>
         </div>
-        <div id="promoInfo" class="promo-info">
-            <div class="promo-reward" id="promoReward"></div>
-            <div class="promo-remaining" id="promoRemaining"></div>
-        </div>
-        <div class="form-group">
-            <input type="text" class="promo-input" id="promoCodeInput" placeholder="Введите промокод" maxlength="30" autocomplete="off">
-        </div>
-        <button class="promo-activate-btn" id="activatePromoBtn">🎁 Активировать</button>
-        <div id="promoMessage" class="promo-message"></div>
     </div>
-</div>
 
     <div id="tutorialOverlay" class="tutorial-overlay">
         <div id="tutorialHighlight" class="tutorial-highlight"></div>
@@ -4013,8 +4043,18 @@
                     upgradeCosts[3] = getUpgradeCost(3, upgradeCounts[3] || 0);
                 }
                 updateUI();
-                let regenTimeHours = (localMaxEnergy - localEnergy) / (localMaxEnergy / 7200) / 3600;
-                document.getElementById('regenInfo').innerHTML = `🕐 Полное восстановление через ${regenTimeHours.toFixed(1)}ч`;
+                let regenMinutes = Math.ceil((localMaxEnergy - localEnergy) / (localMaxEnergy / 7200) / 60);
+                if (regenMinutes < 60) {
+                    document.getElementById('regenInfo').innerHTML = `🕐 Осталось ${regenMinutes} мин`;
+                } else {
+                    let hours = Math.floor(regenMinutes / 60);
+                    let minutes = regenMinutes % 60;
+                    if (minutes > 0) {
+                        document.getElementById('regenInfo').innerHTML = `🕐 Осталось ${hours} ч ${minutes} мин`;
+                    } else {
+                        document.getElementById('regenInfo').innerHTML = `🕐 Осталось ${hours} ч`;
+                    }
+                }
             } catch(e) {
                 console.error('Status update error:', e);
                 if (dataCache.status) {
@@ -4325,6 +4365,34 @@
             document.getElementById('ticketsPage').classList.add('active');
             document.getElementById('bottomNav').style.display = 'none';
             document.body.style.overflow = 'hidden';
+        };
+
+        // Новая кнопка: открыть все билеты сразу
+        document.getElementById('revealAllTicketsBtn').onclick = async () => {
+            if (!isDrawn) {
+                showToast('Розыгрыш ещё не начался!', 'error');
+                return;
+            }
+            try {
+                let res = await fetch('/api/reveal_all_tickets_fast', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({user_id: userId})
+                });
+                let data = await res.json();
+                if (data.success) {
+                    showToast(data.msg, 'success');
+                    await loadUserTickets();
+                    updateTopPlayers();
+                    if (socket && socket.connected) {
+                        socket.emit('reveal_all_tickets', {user_id: userId});
+                    }
+                } else {
+                    showToast(data.msg, 'error');
+                }
+            } catch(e) {
+                showToast('Ошибка при открытии билетов', 'error');
+            }
         };
 
         window.closeTicketsPage = function() {
@@ -4763,6 +4831,16 @@
                 else { currentTickets = []; updateCarousel(); }
                 document.getElementById('totalTickets').innerText = currentTickets.length;
                 document.getElementById('totalTicketsMini').innerText = currentTickets.length;
+
+                // Показываем/скрываем кнопку "Открыть все билеты"
+                const revealAllBtn = document.getElementById('revealAllTicketsBtn');
+                if (revealAllBtn) {
+                    if (isDrawn && currentTickets.length > 0) {
+                        revealAllBtn.style.display = 'flex';
+                    } else {
+                        revealAllBtn.style.display = 'none';
+                    }
+                }
             } catch(e) { console.error('Error loading tickets:', e); }
         }
 
@@ -4828,7 +4906,7 @@
             const topPlayersBlock = document.getElementById('topPlayersBlock');
             const recentSection = document.getElementById('recentPlayersSection');
             if (isDrawn && winningNumbers.length > 0) {
-                statusDiv.innerHTML = '🎉 РОЗЫГРЫШ СОСТОЯЛСЯ! 🎉<br><img src="/static/fire.png" style="width: 18px; height: 18px;"> Водите пальцем по клеткам, чтобы стереть защитный слой! У вас 30 минут! <img src="/static/fire.png" style="width: 18px; height: 18px;">';
+                statusDiv.innerHTML = '🎉 РОЗЫГРЫШ СОСТОЯЛСЯ! 🎉<br><img src="/static/fire.png" style="width: 18px; height: 18px;"> Водите пальцем по клеткам, чтобы стереть защитный слой! У вас 3 часа! <img src="/static/fire.png" style="width: 18px; height: 18px;">';
                 statusDiv.classList.add('active');
                 ticketBtn.disabled = true;
                 ticketBtn.classList.add('disabled');
@@ -4865,107 +4943,107 @@
         }
 
         let adController = null;
-let adLimitController = null;
+        let adLimitController = null;
 
-function initAds() {
-    if (typeof window.Adsgram !== 'undefined') {
-        if (!adController) {
-            try {
-                adController = window.Adsgram.init({ blockId: "33133" });
-                console.log('Adsgram: реклама +200 энергии (ID: 33133)');
-            } catch(e) {
-                console.log('Ad init error:', e);
+        function initAds() {
+            if (typeof window.Adsgram !== 'undefined') {
+                if (!adController) {
+                    try {
+                        adController = window.Adsgram.init({ blockId: "33133" });
+                        console.log('Adsgram: реклама +200 энергии (ID: 33133)');
+                    } catch(e) {
+                        console.log('Ad init error:', e);
+                    }
+                }
+                if (!adLimitController) {
+                    try {
+                        adLimitController = window.Adsgram.init({ blockId: "33132" });
+                        console.log('Adsgram: реклама +1 лимит (ID: 33132)');
+                    } catch(e) {
+                        console.log('Ad limit init error:', e);
+                    }
+                }
             }
         }
-        if (!adLimitController) {
-            try {
-                adLimitController = window.Adsgram.init({ blockId: "33132" });
-                console.log('Adsgram: реклама +1 лимит (ID: 33132)');
-            } catch(e) {
-                console.log('Ad limit init error:', e);
-            }
-        }
-    }
-}
 
         window.watchAd = async () => {
-    if (!adController) {
-        initAds();
-        await new Promise(resolve => setTimeout(resolve, 500));
-    }
-
-    if (!adController) {
-        try {
-            let resp = await fetch('/api/watch_ad_fallback', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({user_id: userId})
-            });
-            let data = await resp.json();
-            if (data.success) {
-                showToast(`+50 энергии (реклама временно недоступна)`, 'info');
-                updateStatus();
+            if (!adController) {
+                initAds();
+                await new Promise(resolve => setTimeout(resolve, 500));
             }
-        } catch(e) {}
-        return;
-    }
 
-    try {
-        const result = await adController.show();
-        if (result.done && !result.error) {
-            let resp = await fetch('/api/watch_ad', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({user_id: userId})
-            });
-            let data = await resp.json();
-            if (data.success) {
-                showToast(`+200 энергии! Спасибо! 🎬`, 'success');
-                updateStatus();
+            if (!adController) {
+                try {
+                    let resp = await fetch('/api/watch_ad_fallback', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({user_id: userId})
+                    });
+                    let data = await resp.json();
+                    if (data.success) {
+                        showToast(`+50 энергии (реклама временно недоступна)`, 'info');
+                        updateStatus();
+                    }
+                } catch(e) {}
+                return;
             }
-        } else {
-            showToast('Реклама не загружена, попробуйте позже', 'error');
-        }
-    } catch (error) {
-        console.error('Ad error:', error);
-        showToast('Ошибка рекламы, попробуйте через VPN', 'error');
-    }
-};
 
-window.watchAdLimit = async () => {
-    if (!adLimitController) {
-        initAds();
-        await new Promise(resolve => setTimeout(resolve, 500));
-    }
-
-    if (!adLimitController) {
-        showToast('Реклама временно недоступна', 'error');
-        return;
-    }
-
-    try {
-        const result = await adLimitController.show();
-        if (result.done && !result.error) {
-            let resp = await fetch('/api/watch_ad_limit', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({user_id: userId})
-            });
-            let data = await resp.json();
-            if (data.success) {
-                showToast(`⚡ +1 к макс. энергии! Теперь лимит: ${data.max_energy}`, 'success');
-                updateStatus();
-            } else {
-                showToast(data.msg || 'Ошибка', 'error');
+            try {
+                const result = await adController.show();
+                if (result.done && !result.error) {
+                    let resp = await fetch('/api/watch_ad', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({user_id: userId})
+                    });
+                    let data = await resp.json();
+                    if (data.success) {
+                        showToast(`+200 энергии! Спасибо! 🎬`, 'success');
+                        updateStatus();
+                    }
+                } else {
+                    showToast('Реклама не загружена, попробуйте позже', 'error');
+                }
+            } catch (error) {
+                console.error('Ad error:', error);
+                showToast('Ошибка рекламы, попробуйте через VPN', 'error');
             }
-        } else {
-            showToast('Реклама не загружена', 'error');
-        }
-    } catch (error) {
-        console.error('Ad limit error:', error);
-        showToast('Ошибка рекламы', 'error');
-    }
-};
+        };
+
+        window.watchAdLimit = async () => {
+            if (!adLimitController) {
+                initAds();
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+
+            if (!adLimitController) {
+                showToast('Реклама временно недоступна', 'error');
+                return;
+            }
+
+            try {
+                const result = await adLimitController.show();
+                if (result.done && !result.error) {
+                    let resp = await fetch('/api/watch_ad_limit', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({user_id: userId})
+                    });
+                    let data = await resp.json();
+                    if (data.success) {
+                        showToast(`⚡ +1 к макс. энергии! Теперь лимит: ${data.max_energy}`, 'success');
+                        updateStatus();
+                    } else {
+                        showToast(data.msg || 'Ошибка', 'error');
+                    }
+                } else {
+                    showToast('Реклама не загружена', 'error');
+                }
+            } catch (error) {
+                console.error('Ad limit error:', error);
+                showToast('Ошибка рекламы', 'error');
+            }
+        };
 
         window.donate = function() { window.open('https://t.me/WereGoodSupport', '_blank'); };
 
@@ -4979,28 +5057,27 @@ window.watchAdLimit = async () => {
         window.addEventListener('beforeunload', async () => { try { await fetch('/api/log_game_exit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: userId }) }); } catch(e) {} });
 
         async function loadDailyStatus() {
-    try {
-        let res = await fetch('/api/daily_status', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({user_id: userId})
-        });
-        dailyData = await res.json();
-        renderDailyGrid();
-        updateDailyTimer();
+            try {
+                let res = await fetch('/api/daily_status', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({user_id: userId})
+                });
+                dailyData = await res.json();
+                renderDailyGrid();
+                updateDailyTimer();
 
-        // АВТОМАТИЧЕСКИ ОТКРЫВАЕМ МОДАЛКУ, ЕСТЬ НАГРАДА
-        if (dailyData.can_claim || dailyData.current_day === 1) {
-            setTimeout(() => {
-                openDailyModal();
-            }, 500);
+                if (dailyData.can_claim || dailyData.current_day === 1) {
+                    setTimeout(() => {
+                        openDailyModal();
+                    }, 500);
+                }
+
+                return dailyData;
+            } catch(e) {
+                console.error('Error loading daily:', e);
+            }
         }
-
-        return dailyData;
-    } catch(e) {
-        console.error('Error loading daily:', e);
-    }
-}
 
         function renderDailyGrid() {
             const container = document.getElementById('dailyRewardsGrid');
@@ -5024,31 +5101,91 @@ window.watchAdLimit = async () => {
 
         function updateDailyTimer() {
             if (dailyTimerInterval) clearInterval(dailyTimerInterval);
-            if (dailyData?.can_claim) { document.getElementById('dailyTimerValue').innerText = 'Доступно!'; document.getElementById('dailyClaimBtn').classList.remove('disabled'); return; }
-            if (!dailyData?.next_claim_time) { document.getElementById('dailyTimerValue').innerText = 'Доступно!'; return; }
+
+            const claimBtn = document.getElementById('dailyClaimBtn');
+
+            if (dailyData?.can_claim) {
+                document.getElementById('dailyTimerValue').innerText = 'Доступно!';
+                if (claimBtn) {
+                    claimBtn.classList.remove('disabled');
+                    claimBtn.style.background = 'linear-gradient(135deg, #FFD700, #FFA500)';
+                    claimBtn.style.opacity = '1';
+                }
+                return;
+            }
+
+            if (!dailyData?.next_claim_time) {
+                document.getElementById('dailyTimerValue').innerText = 'Доступно!';
+                if (claimBtn) {
+                    claimBtn.classList.remove('disabled');
+                    claimBtn.style.background = 'linear-gradient(135deg, #FFD700, #FFA500)';
+                    claimBtn.style.opacity = '1';
+                }
+                return;
+            }
+
             const nextTime = new Date(dailyData.next_claim_time);
+
             function updateTimer() {
                 const now = new Date();
                 const diff = Math.max(0, Math.floor((nextTime - now) / 1000));
-                if (diff <= 0) { clearInterval(dailyTimerInterval); document.getElementById('dailyTimerValue').innerText = 'Доступно!'; document.getElementById('dailyClaimBtn').classList.remove('disabled'); loadDailyStatus(); return; }
+
+                if (diff <= 0) {
+                    clearInterval(dailyTimerInterval);
+                    document.getElementById('dailyTimerValue').innerText = 'Доступно!';
+                    if (claimBtn) {
+                        claimBtn.classList.remove('disabled');
+                        claimBtn.style.background = 'linear-gradient(135deg, #FFD700, #FFA500)';
+                        claimBtn.style.opacity = '1';
+                    }
+                    loadDailyStatus();
+                    return;
+                }
+
                 const hours = Math.floor(diff / 3600);
                 const minutes = Math.floor((diff % 3600) / 60);
                 const seconds = diff % 60;
                 document.getElementById('dailyTimerValue').innerText = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-                document.getElementById('dailyClaimBtn').classList.add('disabled');
+
+                if (claimBtn) {
+                    claimBtn.classList.add('disabled');
+                    claimBtn.style.background = '#555';
+                    claimBtn.style.opacity = '0.6';
+                }
             }
             updateTimer();
             dailyTimerInterval = setInterval(updateTimer, 1000);
         }
 
         window.claimDailyReward = async function() {
-            if (!dailyData?.can_claim && dailyData?.current_day !== 1) { showToast('Награда ещё не доступна!', 'error'); return; }
+            if (!dailyData?.can_claim && dailyData?.current_day !== 1) {
+                showToast('Награда ещё не доступна!', 'error');
+                return;
+            }
             try {
-                let res = await fetch('/api/claim_daily', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: userId}) });
+                let res = await fetch('/api/claim_daily', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({user_id: userId})
+                });
                 let data = await res.json();
-                if (data.success) { showToast(data.msg, 'success'); await loadDailyStatus(); await updateStatus(); closeDailyModal(); setTimeout(() => checkAndStartTutorial(), 500); }
-                else { showToast(data.msg, 'error'); }
-            } catch(e) { console.error('Error claiming daily reward:', e); showToast('Ошибка при получении награды', 'error'); }
+                if (data.success) {
+                    showToast(data.msg, 'success');
+                    await loadDailyStatus();
+                    await updateStatus();
+                    closeDailyModal();
+
+                    // Запуск туториала после получения награды
+                    setTimeout(() => {
+                        checkAndStartTutorial();
+                    }, 500);
+                } else {
+                    showToast(data.msg, 'error');
+                }
+            } catch(e) {
+                console.error('Error claiming daily reward:', e);
+                showToast('Ошибка при получении награды', 'error');
+            }
         };
 
         window.recoverDailyStreak = async function() {
@@ -5080,57 +5217,57 @@ window.watchAdLimit = async () => {
         async function saveWalletToBackend(address) { try { await fetch('/api/ton/save_wallet', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ user_id: userId, wallet_address: address }) }); } catch(e) { console.error('Ошибка сохранения кошелька:', e); } }
 
         window.buyWithTon = async function() {
-    console.log('buyWithTon called');
+            console.log('buyWithTon called');
 
-    if (!tonConnectUI) {
-        showToast('🔄 Система оплаты загружается, подождите...', 'info');
-        await initTonConnect();
-        if (!tonConnectUI) {
-            showToast('❌ Система оплаты недоступна, попробуйте позже', 'error');
-            return;
-        }
-    }
+            if (!tonConnectUI) {
+                showToast('🔄 Система оплаты загружается, подождите...', 'info');
+                await initTonConnect();
+                if (!tonConnectUI) {
+                    showToast('❌ Система оплаты недоступна, попробуйте позже', 'error');
+                    return;
+                }
+            }
 
-    const amount = 0.1;
-    console.log('Amount:', amount);
+            const amount = 0.1;
+            console.log('Amount:', amount);
 
-    if (!tonConnectUI.wallet) {
-        showToast('🔗 Подключите TON кошелёк для оплаты', 'info');
-        try {
-            await tonConnectUI.openModal();
-        } catch(e) {
-            console.error('Modal error:', e);
-            showToast('❌ Не удалось открыть список кошельков', 'error');
-        }
-        return;
-    }
+            if (!tonConnectUI.wallet) {
+                showToast('🔗 Подключите TON кошелёк для оплаты', 'info');
+                try {
+                    await tonConnectUI.openModal();
+                } catch(e) {
+                    console.error('Modal error:', e);
+                    showToast('❌ Не удалось открыть список кошельков', 'error');
+                }
+                return;
+            }
 
-    const transaction = {
-        validUntil: Math.floor(Date.now() / 1000) + 300,
-        messages: [{
-            address: "UQCa7xhdvDiaKuH6SFLgzLQFH8oRwwS2ElN1s283WnGM4fYB",
-            amount: (amount * 1e9).toString(),
-            payload: `WereGood:${userId}`
-        }]
-    };
+            const transaction = {
+                validUntil: Math.floor(Date.now() / 1000) + 300,
+                messages: [{
+                    address: "UQCa7xhdvDiaKuH6SFLgzLQFH8oRwwS2ElN1s283WnGM4fYB",
+                    amount: (amount * 1e9).toString(),
+                    payload: `WereGood:${userId}`
+                }]
+            };
 
-    try {
-        showToast('💎 Открываем кошелёк для оплаты...', 'info');
-        const result = await tonConnectUI.sendTransaction(transaction);
-        console.log('Transaction result:', result);
-        if (result) {
-            showToast('💰 Платёж отправлен! Проверяем...', 'info');
-            startPaymentCheck(amount);
-        }
-    } catch(e) {
-        console.error('Payment error:', e);
-        if (e.message && e.message.includes('cancelled')) {
-            showToast('❌ Платёж отменён', 'error');
-        } else {
-            showToast('❌ Ошибка при отправке платежа: ' + e.message, 'error');
-        }
-    }
-};
+            try {
+                showToast('💎 Открываем кошелёк для оплаты...', 'info');
+                const result = await tonConnectUI.sendTransaction(transaction);
+                console.log('Transaction result:', result);
+                if (result) {
+                    showToast('💰 Платёж отправлен! Проверяем...', 'info');
+                    startPaymentCheck(amount);
+                }
+            } catch(e) {
+                console.error('Payment error:', e);
+                if (e.message && e.message.includes('cancelled')) {
+                    showToast('❌ Платёж отменён', 'error');
+                } else {
+                    showToast('❌ Ошибка при отправке платежа: ' + e.message, 'error');
+                }
+            }
+        };
 
         function startPaymentCheck(expectedAmount) {
             let attempts = 0, maxAttempts = 30;
@@ -5157,7 +5294,24 @@ window.watchAdLimit = async () => {
         }
 
         function startTutorial() { if (tutorialActive) return; tutorialActive = true; currentTutorialStep = 0; disableScroll(); initTutorialSteps(); showTutorialStep(); }
-        function initTutorialSteps() { tutorialSteps = [ { tab: 'home', elementId: 'coin', text: '💰 Кликай по монете и зарабатывай WG Coin!', position: 'bottom' }, { tab: 'home', elementId: 'leaderboard-mini', text: '🏆 Топ игроков — чем больше кликов, тем выше место!', position: 'top' }, { tab: 'shop', elementId: 'upgrade-card', text: '🛒 Улучшай заработок за WG Coin. Цена растёт с каждой покупкой!', position: 'bottom', subTab: 'normal' }, { tab: 'shop', elementId: 'ad-card', text: '🎬 Смотри рекламу → +200 энергии или +1 к макс. энергии!', position: 'bottom', subTab: 'normal' }, { tab: 'shop', elementId: 'energyUpgradeCard', text: '⭐ Покупай усиление за Telegram Stars: +50 энергии и +50 LP!', position: 'bottom', subTab: 'stars' }, { tab: 'shop', elementId: 'tonDonateBtn', text: '💎 Купи улучшение за TON через TON Connect!', position: 'bottom', subTab: 'stars' }, { tab: 'lottery', elementId: 'ticketBtn', text: '🎫 Купи билет за 100 LP и участвуй в розыгрыше USDT!', position: 'top' }, { tab: 'lottery', elementId: 'myTicketsBtn', text: '📋 Здесь твои билеты — стирай их после розыгрыша!', position: 'bottom' }, { tab: 'lottery', elementId: 'prize-card', text: '🏆 Главный фонд — в 21:00 он достанется победителям!', position: 'top' }, { tab: 'profile', elementId: 'stats-grid', text: '📊 Твои ресурсы: WG, LP, USDT, победы и клики.', position: 'bottom' }, { tab: 'profile', elementId: 'withdrawal-btn', text: '💸 Выводи USDT (минимум 2).', position: 'top' }, { tab: 'profile', elementId: 'referral-section', text: '👥 Приглашай друзей и получай 5% от их трат LP!', position: 'top' }, { tab: 'profile', elementId: 'settings-card', text: '⚙️ Настройки — можно скрыть себя из топа.', position: 'top' } ]; }
+
+        function initTutorialSteps() {
+            tutorialSteps = [
+                { tab: 'home', elementId: 'coin', text: '💰 Кликай по монете и зарабатывай WG Coin!', position: 'bottom' },
+                { tab: 'home', elementId: 'leaderboard-mini', text: '🏆 Топ игроков — чем больше кликов, тем выше место!', position: 'top' },
+                { tab: 'shop', elementId: 'upgrade-card', text: '🛒 Улучшай заработок за WG Coin. Цена растёт с каждой покупкой!', position: 'bottom', subTab: 'normal' },
+                { tab: 'shop', elementId: 'ad-card', text: '🎬 Смотри рекламу → +200 энергии или +1 к макс. энергии!', position: 'bottom', subTab: 'normal' },
+                { tab: 'shop', elementId: 'energyUpgradeCard', text: '⭐ Покупай усиление за Telegram Stars: +50 энергии и +50 LP!', position: 'bottom', subTab: 'stars' },
+                { tab: 'shop', elementId: 'tonDonateBtn', text: '💎 Купи улучшение за TON через TON Connect!', position: 'bottom', subTab: 'stars' },
+                { tab: 'lottery', elementId: 'ticketBtn', text: '🎫 Купи билет за 100 LP и участвуй в розыгрыше USDT!', position: 'top' },
+                { tab: 'lottery', elementId: 'myTicketsBtn', text: '📋 Здесь твои билеты — стирай их после розыгрыша!', position: 'bottom' },
+                { tab: 'lottery', elementId: 'prize-card', text: '🏆 Главный фонд — в 21:00 он достанется победителям!', position: 'top' },
+                { tab: 'profile', elementId: 'stats-grid', text: '📊 Твои ресурсы: WG, LP, USDT, победы и клики.', position: 'bottom' },
+                { tab: 'profile', elementId: 'withdrawal-btn', text: '💸 Выводи USDT (минимум 2).', position: 'top' },
+                { tab: 'profile', elementId: 'referral-section', text: '👥 Приглашай друзей и получай 5% от их трат LP!', position: 'top' },
+                { tab: 'profile', elementId: 'settings-card', text: '⚙️ Настройки — можно скрыть себя из топа.', position: 'top' }
+            ];
+        }
 
         async function showTutorialStep() {
             if (currentTutorialStep >= tutorialSteps.length) { finishTutorial(); return; }
@@ -5188,78 +5342,23 @@ window.watchAdLimit = async () => {
             return element;
         }
 
-                // ========== ПРОМОКОДЫ ==========
-        async function openPromoModalWithCode(promoCode) {
-            const modal = document.getElementById('promoModal');
-            const input = document.getElementById('promoCodeInput');
-            if (promoCode && input) {
-                input.value = promoCode.toUpperCase();
-            }
-            modal.classList.add('active');
-        }
+        function highlightElement(element, text, position = 'bottom') {
+            if (!element) { nextTutorialStep(); return; }
+            const rect = element.getBoundingClientRect();
+            const overlay = document.getElementById('tutorialOverlay');
+            const highlight = document.getElementById('tutorialHighlight');
+            const tooltip = document.getElementById('tutorialTooltip');
+            const tooltipText = document.getElementById('tutorialText');
 
-        function closePromoModal() {
-            const modal = document.getElementById('promoModal');
-            const input = document.getElementById('promoCodeInput');
-            const message = document.getElementById('promoMessage');
-            if (modal) modal.classList.remove('active');
-            if (input) input.value = '';
-            if (message) message.innerHTML = '';
-        }
+            overlay.style.backgroundColor = 'transparent';
+            overlay.classList.add('active');
 
-        async function activatePromoCode() {
-            const code = document.getElementById('promoCodeInput').value.toUpperCase().trim();
-            const messageDiv = document.getElementById('promoMessage');
-            const btn = document.getElementById('activatePromoBtn');
-            if (!code) {
-                messageDiv.innerHTML = 'Введите промокод';
-                return;
-            }
-            btn.disabled = true;
-            btn.textContent = '⏳ Проверка...';
-            messageDiv.innerHTML = '';
-            try {
-                const res = await fetch('/api/activate_promo', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: userId, code: code })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    messageDiv.innerHTML = `✅ ${data.message}`;
-                    messageDiv.classList.add('success');
-                    updateStatus();
-                    setTimeout(() => closePromoModal(), 2000);
-                } else {
-                    messageDiv.innerHTML = `❌ ${data.error}`;
-                    messageDiv.classList.remove('success');
-                }
-            } catch (e) {
-                messageDiv.innerHTML = '❌ Ошибка при активации';
-            } finally {
-                btn.disabled = false;
-                btn.textContent = '🎁 Активировать';
-            }
-        }
-
-                function highlightElement(element, text, position = 'bottom') {
-    if (!element) { nextTutorialStep(); return; }
-    const rect = element.getBoundingClientRect();
-    const overlay = document.getElementById('tutorialOverlay');
-    const highlight = document.getElementById('tutorialHighlight');
-    const tooltip = document.getElementById('tutorialTooltip');
-    const tooltipText = document.getElementById('tutorialText');
-
-    // Убираем затемнение фона
-    overlay.style.backgroundColor = 'transparent';
-    overlay.classList.add('active');
-
-    highlight.style.display = 'block';
-    highlight.style.top = rect.top - 8 + 'px';
-    highlight.style.left = rect.left - 8 + 'px';
-    highlight.style.width = rect.width + 16 + 'px';
-    highlight.style.height = rect.height + 16 + 'px';
-    tooltipText.innerHTML = text;
+            highlight.style.display = 'block';
+            highlight.style.top = rect.top - 8 + 'px';
+            highlight.style.left = rect.left - 8 + 'px';
+            highlight.style.width = rect.width + 16 + 'px';
+            highlight.style.height = rect.height + 16 + 'px';
+            tooltipText.innerHTML = text;
             const tooltipHeight = 180;
             let tooltipTop, tooltipLeft;
             if (position === 'top' || (rect.top < tooltipHeight + 20 && rect.bottom + tooltipHeight > window.innerHeight)) {
@@ -5274,40 +5373,59 @@ window.watchAdLimit = async () => {
             tooltip.style.top = tooltipTop + 'px';
             tooltip.style.left = tooltipLeft + 'px';
             tooltip.style.display = 'block';
+
+            // Убираем старый обработчик, чтобы не было дублей
             if (window.tutorialClickListener) document.removeEventListener('click', window.tutorialClickListener);
-            window.tutorialClickListener = function(e) {
-                if (e.target.closest('.tutorial-next') || e.target.closest('.tutorial-skip')) return;
-                nextTutorialStep();
-            };
-            document.addEventListener('click', window.tutorialClickListener);
         }
+
+        // Обработчики кнопок туториала
+        document.getElementById('tutorialNextBtn').onclick = () => nextTutorialStep();
+        document.getElementById('tutorialSkipBtn').onclick = () => skipTutorial();
 
         function nextTutorialStep() {
             const overlay = document.getElementById('tutorialOverlay');
             const highlight = document.getElementById('tutorialHighlight');
             const tooltip = document.getElementById('tutorialTooltip');
-            overlay.classList.remove('active');
-            highlight.style.display = 'none';
-            tooltip.style.display = 'none';
+
+            if (overlay) overlay.classList.remove('active');
+            if (highlight) highlight.style.display = 'none';
+            if (tooltip) tooltip.style.display = 'none';
+
             if (window.tutorialClickListener) {
                 document.removeEventListener('click', window.tutorialClickListener);
                 window.tutorialClickListener = null;
             }
+
             currentTutorialStep++;
-            showTutorialStep();
+
+            if (currentTutorialStep >= tutorialSteps.length) {
+                finishTutorial();
+            } else {
+                showTutorialStep();
+            }
         }
 
-        function skipTutorial() { finishTutorial(); }
+        function skipTutorial() {
+            const overlay = document.getElementById('tutorialOverlay');
+            if (overlay) overlay.classList.remove('active');
+            tutorialActive = false;
+            enableScroll();
+
+            fetch('/api/complete_tutorial', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({user_id: userId})
+            }).catch(e => console.log('Tutorial skip error:', e));
+
+            showToast('Обучение пропущено', 'info');
+        }
 
         async function finishTutorial() {
             const overlay = document.getElementById('tutorialOverlay');
             if (overlay) overlay.classList.remove('active');
             tutorialActive = false;
             enableScroll();
-            if (window.tutorialClickListener) {
-                document.removeEventListener('click', window.tutorialClickListener);
-                window.tutorialClickListener = null;
-            }
+
             await fetch('/api/complete_tutorial', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -5373,7 +5491,61 @@ window.watchAdLimit = async () => {
             });
         }
 
-                                document.addEventListener("DOMContentLoaded", () => {
+        // ========== ПРОМОКОДЫ ==========
+        async function openPromoModalWithCode(promoCode) {
+            const modal = document.getElementById('promoModal');
+            const input = document.getElementById('promoCodeInput');
+            if (promoCode && input) {
+                input.value = promoCode.toUpperCase();
+            }
+            modal.classList.add('active');
+        }
+
+        function closePromoModal() {
+            const modal = document.getElementById('promoModal');
+            const input = document.getElementById('promoCodeInput');
+            const message = document.getElementById('promoMessage');
+            if (modal) modal.classList.remove('active');
+            if (input) input.value = '';
+            if (message) message.innerHTML = '';
+        }
+
+        async function activatePromoCode() {
+            const code = document.getElementById('promoCodeInput').value.toUpperCase().trim();
+            const messageDiv = document.getElementById('promoMessage');
+            const btn = document.getElementById('activatePromoBtn');
+            if (!code) {
+                messageDiv.innerHTML = 'Введите промокод';
+                return;
+            }
+            btn.disabled = true;
+            btn.textContent = '⏳ Проверка...';
+            messageDiv.innerHTML = '';
+            try {
+                const res = await fetch('/api/activate_promo', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId, code: code })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    messageDiv.innerHTML = `✅ ${data.message}`;
+                    messageDiv.classList.add('success');
+                    updateStatus();
+                    setTimeout(() => closePromoModal(), 2000);
+                } else {
+                    messageDiv.innerHTML = `❌ ${data.error}`;
+                    messageDiv.classList.remove('success');
+                }
+            } catch (e) {
+                messageDiv.innerHTML = '❌ Ошибка при активации';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🎁 Активировать';
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
             initTonConnect();
             initSocket();
             autoRegister();
@@ -5391,8 +5563,9 @@ window.watchAdLimit = async () => {
             setInterval(updateStatus, 10000);
             setInterval(updateLottery, 30000);
             setInterval(loadRecentPlayers, 15000);
+            setInterval(() => updateLeaderboard(), 8000); // Моментальное обновление лидерборда
 
-            // ========== ОБРАБОТЧИКИ ПРОМОКОДОВ ==========
+            // Обработчики промокодов
             const activateBtn = document.getElementById('activatePromoBtn');
             const promoInput = document.getElementById('promoCodeInput');
 
@@ -5408,12 +5581,11 @@ window.watchAdLimit = async () => {
                 };
             }
 
-            // ========== ОБРАБОТКА start_param (промокоды и рефералы) ==========
+            // Обработка start_param
             if (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
                 const startParam = tg.initDataUnsafe.start_param;
                 console.log('📱 Параметр startapp:', startParam);
 
-                // Обработка промокода (начинается с claim_)
                 if (startParam && startParam.startsWith('claim_')) {
                     const promoCode = startParam.replace('claim_', '');
                     console.log('🎫 Найден промокод для активации:', promoCode);
@@ -5427,7 +5599,6 @@ window.watchAdLimit = async () => {
                         }
                     }, 2000);
                 }
-                // Обработка реферального кода (все остальные случаи)
                 else if (startParam && !startParam.startsWith('claim_')) {
                     const refCode = startParam;
                     console.log('👥 Найден реферальный код:', refCode);

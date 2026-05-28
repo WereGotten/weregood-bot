@@ -119,13 +119,14 @@ global_ticket_counter = 0
 winning_numbers = []
 is_drawn = False
 draw_time = None
+lottery_phase = "buy"  # "buy" - можно покупать, "reveal" - можно открывать
 
 user_cache = {}
 user_cache_time = {}
 CACHE_TTL = 60
 leaderboard_cache = []
 leaderboard_cache_time = 0
-LEADERBOARD_CACHE_TTL = 10
+LEADERBOARD_CACHE_TTL = 5  # Уменьшил до 5 секунд для моментального обновления
 
 used_ton_transactions = set()
 used_transaction_lock = threading.Lock()
@@ -194,9 +195,12 @@ def check_rate_limit(key: str, limit: int = 30, window_seconds: int = 10) -> boo
     elif key.startswith("ticket_"):
         limit = 10
         window_seconds = 60
-    elif key.startswith("ad_") or key.startswith("ad_limit_"):
-        limit = 10
-        window_seconds = 60
+    elif key.startswith("ad_200_"):
+        limit = 40
+        window_seconds = 86400
+    elif key.startswith("ad_limit_"):
+        limit = 15
+        window_seconds = 86400
     elif key.startswith("status_"):
         limit = 180
         window_seconds = 60
@@ -231,6 +235,44 @@ def check_rate_limit(key: str, limit: int = 30, window_seconds: int = 10) -> boo
         return False
     rate_limits[key].append(now)
     return True
+
+
+def check_ad_cooldown(user_id: int, ad_type: str, cooldown_minutes: int, daily_limit: int) -> Tuple[bool, str]:
+    """Проверка кулдауна и дневного лимита для рекламы"""
+    with db.get_cursor() as cursor:
+        cursor.execute('''
+            SELECT COUNT(*) FROM ad_watch_history 
+            WHERE user_id = ? AND ad_type = ? 
+            AND watched_at > datetime('now', '-1 day')
+        ''', (user_id, ad_type))
+        daily_count = cursor.fetchone()[0]
+
+        if daily_count >= daily_limit:
+            return False, f"Дневной лимит ({daily_limit} раз) исчерпан"
+
+        cursor.execute('''
+            SELECT watched_at FROM ad_watch_history 
+            WHERE user_id = ? AND ad_type = ? 
+            ORDER BY watched_at DESC LIMIT 1
+        ''', (user_id, ad_type))
+        last_watch = cursor.fetchone()
+
+        if last_watch:
+            last_time = datetime.datetime.fromisoformat(last_watch[0])
+            time_passed = (datetime.datetime.now() - last_time).total_seconds() / 60
+            if time_passed < cooldown_minutes:
+                remaining = int(cooldown_minutes - time_passed)
+                return False, f"Подождите {remaining} минут перед следующим просмотром"
+
+        return True, "OK"
+
+
+def record_ad_watch(user_id: int, ad_type: str):
+    with db.get_cursor() as cursor:
+        cursor.execute('''
+            INSERT INTO ad_watch_history (user_id, ad_type, watched_at)
+            VALUES (?, ?, datetime('now'))
+        ''', (user_id, ad_type))
 
 
 def check_admin_bruteforce(ip: str) -> bool:
@@ -269,7 +311,7 @@ def check_origin():
 def before_request():
     if request.path.startswith('/static') or request.path == '/health' or request.path.startswith(
             '/tonconnect') or request.path.startswith('/api/adsgram') or request.path.startswith(
-            '/api/promo') or request.path.startswith('/claim'):
+        '/api/promo') or request.path.startswith('/claim'):
         return None
     if not check_origin():
         logger.warning(f"CSRF попытка с Origin: {request.headers.get('Origin')}")
@@ -548,7 +590,8 @@ def init_db():
                 last_draw TIMESTAMP,
                 global_ticket_counter INTEGER DEFAULT 0,
                 is_drawn BOOLEAN DEFAULT 0,
-                draw_time TIMESTAMP
+                draw_time TIMESTAMP,
+                lottery_phase TEXT DEFAULT 'buy'
             )
         ''')
 
@@ -680,12 +723,27 @@ def init_db():
             )
         ''')
 
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS ad_watch_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                ad_type TEXT,
+                watched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
+        # Индексы для быстрых запросов
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_ad_watch_user_type ON ad_watch_history(user_id, ad_type)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_ad_watch_date ON ad_watch_history(watched_at)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_logs_timestamp ON system_logs(timestamp DESC)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_logs_user_id ON system_logs(user_id)')
+
         for col in ['banned_until', 'ban_reason', 'banned_by']:
             try:
                 cursor.execute(f"ALTER TABLE users ADD COLUMN {col} DEFAULT 0")
             except:
                 pass
-        for col in ['is_drawn', 'draw_time', 'global_ticket_counter']:
+        for col in ['is_drawn', 'draw_time', 'global_ticket_counter', 'lottery_phase']:
             try:
                 cursor.execute(f"ALTER TABLE lottery ADD COLUMN {col} DEFAULT 0")
             except:
@@ -694,7 +752,7 @@ def init_db():
         cursor.execute("SELECT * FROM lottery LIMIT 1")
         if not cursor.fetchone():
             cursor.execute(
-                "INSERT INTO lottery (prize_pool, tickets, winning_numbers, is_drawn) VALUES (0, '[]', '', 0)")
+                "INSERT INTO lottery (prize_pool, tickets, winning_numbers, is_drawn, lottery_phase) VALUES (0, '[]', '', 0, 'buy')")
 
 
 init_db()
@@ -776,7 +834,8 @@ def add_admin_log(action, admin_id, admin_name, target_id=None, target_name=None
     logger.info(f"ADMIN: {log_msg}")
 
 
-def get_logs(log_type='all', limit=100000, date=None, action_filter=None, user_id_filter=None):
+def get_logs(log_type='all', limit=100, offset=0, date=None, action_filter=None, user_id_filter=None):
+    """Получение логов с пагинацией (лимит 100 по умолчанию для админки)"""
     with db.get_cursor() as cursor:
         query = "SELECT * FROM system_logs"
         conditions = []
@@ -796,16 +855,24 @@ def get_logs(log_type='all', limit=100000, date=None, action_filter=None, user_i
             params.append(int(user_id_filter))
         if conditions:
             query += " WHERE " + " AND ".join(conditions)
-        query += " ORDER BY id DESC LIMIT ?"
+        query += " ORDER BY id DESC LIMIT ? OFFSET ?"
         params.append(limit)
+        params.append(offset)
         cursor.execute(query, params)
         rows = cursor.fetchall()
+
+        count_query = "SELECT COUNT(*) as total FROM system_logs"
+        if conditions:
+            count_query += " WHERE " + " AND ".join(conditions)
+        cursor.execute(count_query, params[:len(params) - 2] if len(params) > 2 else [])
+        total = cursor.fetchone()['total']
+
         logs = []
         for row in rows:
             logs.append({"id": row['id'], "timestamp": row['timestamp'], "action": escape_html(row['action']),
                          "user_id": row['user_id'], "username": escape_html(row['username']),
                          "details": escape_html(row['details']), "type": row['log_type']})
-        return logs
+        return logs, total
 
 
 def update_stats_history(date, clicks=0, ad_views=0, stars=0, online=0, tickets=0, users=0):
@@ -942,6 +1009,26 @@ def calculate_energy(user_data):
     recovered = int(seconds_passed * recovery_rate)
     new_energy = min(max_energy, user_data["energy"] + recovered)
     return new_energy, seconds_passed
+
+
+def get_energy_regen_text(max_energy, current_energy):
+    if current_energy >= max_energy:
+        return "⚡ Энергия полна!"
+
+    recovery_rate = max_energy / 7200
+    needed = max_energy - current_energy
+    seconds_needed = int(needed / recovery_rate)
+    minutes_needed = (seconds_needed + 59) // 60
+
+    if minutes_needed < 60:
+        return f"🕐 Осталось {minutes_needed} мин"
+    else:
+        hours = minutes_needed // 60
+        minutes = minutes_needed % 60
+        if minutes > 0:
+            return f"🕐 Осталось {hours} ч {minutes} мин"
+        else:
+            return f"🕐 Осталось {hours} ч"
 
 
 def update_energy_in_db(user_id, user_data, new_energy):
@@ -1106,11 +1193,33 @@ def get_user_ton_wallet(user_id):
         return row['ton_wallet'] if row else None
 
 
+def update_lottery_phase():
+    global lottery_phase
+    now = datetime.datetime.now()
+    current_hour = now.hour
+
+    if 21 <= current_hour or current_hour < 0:
+        new_phase = "reveal"
+    else:
+        new_phase = "buy"
+
+    if lottery_phase != new_phase:
+        lottery_phase = new_phase
+        with db.get_cursor() as cursor:
+            cursor.execute("UPDATE lottery SET lottery_phase = ? WHERE id = 1", (lottery_phase,))
+        add_log(f"🔄 Смена фазы лотереи: {lottery_phase}", 0, "System")
+
+
+def check_lottery_phase():
+    update_lottery_phase()
+    return lottery_phase
+
+
 def load_lottery():
-    global lottery_pool, lottery_tickets, global_ticket_counter, winning_numbers, is_drawn, draw_time
+    global lottery_pool, lottery_tickets, global_ticket_counter, winning_numbers, is_drawn, draw_time, lottery_phase
     with db.get_cursor() as cursor:
         cursor.execute(
-            "SELECT prize_pool, tickets, global_ticket_counter, winning_numbers, is_drawn, draw_time FROM lottery LIMIT 1")
+            "SELECT prize_pool, tickets, global_ticket_counter, winning_numbers, is_drawn, draw_time, lottery_phase FROM lottery LIMIT 1")
         row = cursor.fetchone()
         if row:
             lottery_pool = row['prize_pool']
@@ -1118,6 +1227,7 @@ def load_lottery():
             global_ticket_counter = row['global_ticket_counter']
             winning_numbers = json.loads(row['winning_numbers']) if row['winning_numbers'] else []
             is_drawn = row['is_drawn'] == 1
+            lottery_phase = row['lottery_phase'] or 'buy'
             if row['draw_time']:
                 try:
                     draw_time = datetime.datetime.fromisoformat(row['draw_time'])
@@ -1125,14 +1235,15 @@ def load_lottery():
                     draw_time = None
             else:
                 draw_time = None
+    update_lottery_phase()
 
 
 def save_lottery():
     with db.get_cursor() as cursor:
         cursor.execute(
-            "UPDATE lottery SET prize_pool=?, tickets=?, global_ticket_counter=?, winning_numbers=?, is_drawn=?, draw_time=?",
+            "UPDATE lottery SET prize_pool=?, tickets=?, global_ticket_counter=?, winning_numbers=?, is_drawn=?, draw_time=?, lottery_phase=?",
             (lottery_pool, json.dumps(lottery_tickets), global_ticket_counter, json.dumps(winning_numbers),
-             1 if is_drawn else 0, draw_time.isoformat() if draw_time else None))
+             1 if is_drawn else 0, draw_time.isoformat() if draw_time else None, lottery_phase))
 
 
 load_lottery()
@@ -1192,6 +1303,9 @@ def update_online_count():
 def buy_ticket(user_id, user_data):
     global lottery_pool, lottery_tickets, global_ticket_counter
     with lottery_lock:
+        update_lottery_phase()
+        if lottery_phase != "buy":
+            return False, "Сейчас нельзя купить билеты! Приём билетов с 00:00 до 21:00"
         if is_drawn:
             return False, "Розыгрыш уже прошёл!"
         if user_data["lp"] < 100:
@@ -1232,27 +1346,46 @@ def buy_ticket(user_id, user_data):
         return True, f"Билет #{ticket_num} куплен!"
 
 
+def reveal_all_tickets(user_id):
+    with lottery_lock:
+        if not is_drawn:
+            return False, "Розыгрыш ещё не начался!"
+        revealed_count = 0
+        for ticket in lottery_tickets:
+            if ticket.get("user_id") == user_id:
+                for i in range(12):
+                    if not ticket["revealed"][i]:
+                        ticket["revealed"][i] = True
+                        revealed_count += 1
+        if revealed_count > 0:
+            save_lottery()
+            add_log(f"🔓 Открыл все клетки ({revealed_count} клеток)", user_id, str(user_id))
+            return True, f"Открыто {revealed_count} клеток!"
+        return False, "Нет неоткрытых клеток"
+
+
 def perform_draw():
-    global winning_numbers, is_drawn, draw_time
+    global winning_numbers, is_drawn, draw_time, lottery_phase
     with lottery_lock:
         if lottery_tickets:
             winning_numbers = generate_winning_numbers()
             is_drawn = True
             draw_time = datetime.datetime.now()
+            lottery_phase = "reveal"
             save_lottery()
-            end_time = draw_time + datetime.timedelta(seconds=1800)
+            end_time = draw_time + datetime.timedelta(seconds=10800)
             try:
                 socketio.emit('draw_completed', {'winning_numbers': winning_numbers,
-                                                 'message': '🎉 Розыгрыш начался! У вас 30 минут на открытие билетов! ⏰',
+                                                 'message': '🎉 Розыгрыш начался! У вас 3 часа на открытие билетов! ⏰',
                                                  'end_time': end_time.isoformat()})
             except:
                 pass
             add_log(f"🎲 Розыгрыш лотереи начался. Выигрышные номера: {winning_numbers}", 0, "System")
-            threading.Timer(1800, auto_reveal_and_distribute).start()
+            threading.Timer(10800, auto_reveal_and_distribute).start()
 
 
 def auto_reveal_and_distribute():
-    time.sleep(1800)
+    time.sleep(10800)
     with lottery_lock:
         if is_drawn:
             for ticket in lottery_tickets:
@@ -1261,7 +1394,7 @@ def auto_reveal_and_distribute():
             save_lottery()
             add_log(f"⏰ Автоматическое открытие билетов (время вышло)", 0, "System")
             try:
-                socketio.emit('auto_revealed', {'message': '⏰ 30 минут истекли! Билеты открыты автоматически!'})
+                socketio.emit('auto_revealed', {'message': '⏰ Время истекло! Билеты открыты автоматически!'})
             except:
                 pass
             distribute_prizes()
@@ -1306,7 +1439,7 @@ def distribute_prizes():
 
 
 def reset_lottery():
-    global is_drawn, winning_numbers, draw_time, lottery_tickets, lottery_pool, global_ticket_counter
+    global is_drawn, winning_numbers, draw_time, lottery_tickets, lottery_pool, global_ticket_counter, lottery_phase
     with lottery_lock:
         is_drawn = False
         winning_numbers = []
@@ -1314,6 +1447,7 @@ def reset_lottery():
         lottery_tickets = []
         lottery_pool = 0
         global_ticket_counter = 0
+        lottery_phase = "buy"
         save_lottery()
         add_log(f"🔄 Сброс лотереи для нового розыгрыша", 0, "System")
         try:
@@ -1419,7 +1553,10 @@ def claim_daily_reward(user_id):
         time_diff = (now - last_claim).total_seconds()
         current_day = row['current_day']
         if current_day != 1 and time_diff < 86400:
-            return {"success": False, "msg": "Награда ещё не доступна"}
+            remaining = int(86400 - time_diff)
+            hours = remaining // 3600
+            minutes = (remaining % 3600) // 60
+            return {"success": False, "msg": f"Следующая награда через {hours} ч {minutes} мин"}
         recovered_count = row['recovered_count'] or 0
         give_daily_reward(user_id, current_day)
         new_day = current_day + 1
@@ -1472,6 +1609,46 @@ def check_and_reset_streak(user_id):
     return False
 
 
+# ========== НОВЫЙ ЭНДПОИНТ: ОТКРЫТЬ ВСЕ БИЛЕТЫ ОДНОЙ КНОПКОЙ ==========
+@app.route('/api/reveal_all_tickets_fast', methods=['POST'])
+def api_reveal_all_tickets_fast():
+    data = request.json
+    if not data:
+        return jsonify({"success": False, "msg": "No data"}), 400
+    user_id = data.get('user_id')
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"success": False, "msg": "Invalid user_id"}), 400
+
+    with lottery_lock:
+        if not is_drawn:
+            return jsonify({"success": False, "msg": "Розыгрыш ещё не начался!"})
+
+        revealed_count = 0
+        tickets_revealed = 0
+
+        for ticket in lottery_tickets:
+            if ticket.get("user_id") == user_id:
+                ticket_revealed = False
+                for i in range(12):
+                    if not ticket["revealed"][i]:
+                        ticket["revealed"][i] = True
+                        revealed_count += 1
+                        ticket_revealed = True
+                if ticket_revealed:
+                    tickets_revealed += 1
+
+        if revealed_count > 0:
+            save_lottery()
+            user = get_user(user_id)
+            add_log(f"🔓 Открыл все клетки ({revealed_count} клеток, {tickets_revealed} билетов)", user_id,
+                    user['username'])
+            return jsonify({"success": True, "msg": f"Открыто {revealed_count} клеток в {tickets_revealed} билетах!",
+                            "revealed": revealed_count})
+
+        return jsonify({"success": False, "msg": "Нет неоткрытых клеток"})
+
+
 @socketio.on('reveal_cell')
 def handle_reveal_cell(data):
     user_id = data.get('user_id')
@@ -1503,9 +1680,20 @@ def handle_reveal_cell(data):
                 return
 
 
+@socketio.on('reveal_all_tickets')
+def handle_reveal_all_tickets(data):
+    user_id = data.get('user_id')
+    success, msg = reveal_all_tickets(user_id)
+    if success:
+        emit('reveal_all_completed', {'message': msg})
+    else:
+        emit('reveal_error', {'message': msg})
+
+
 @socketio.on('get_draw_status')
 def handle_get_draw_status(data):
-    emit('draw_status', {'is_drawn': is_drawn, 'winning_numbers': winning_numbers if is_drawn else []})
+    emit('draw_status',
+         {'is_drawn': is_drawn, 'winning_numbers': winning_numbers if is_drawn else [], 'lottery_phase': lottery_phase})
 
 
 @socketio.on('get_remaining_time')
@@ -1518,7 +1706,7 @@ def handle_get_remaining_time(data):
             except:
                 draw_time = None
         if draw_time:
-            end_time = draw_time + datetime.timedelta(seconds=1800)
+            end_time = draw_time + datetime.timedelta(seconds=10800)
             now = datetime.datetime.now()
             remaining = int((end_time - now).total_seconds())
             if remaining < 0:
@@ -1922,17 +2110,19 @@ def api_status():
     if banned:
         return jsonify({"banned": True, "reason": ban_info['reason'], "until": ban_info['until_date']})
     user = get_user(user_id)
-    current_energy, _ = calculate_energy(user)
+    current_energy, seconds_passed = calculate_energy(user)
     earning = get_total_earning(user["upgrade_counts"])
     with online_users_lock:
         online_users[user_id] = time.time()
     update_online_count()
+    regen_text = get_energy_regen_text(user["max_energy"], current_energy)
     return jsonify({"wg": user["wg"], "lp": user["lp"], "energy": current_energy, "total_clicks": user["total_clicks"],
                     "earning_per_click": earning, "upgrade_counts": user["upgrade_counts"], "likes": user["likes"],
                     "dislikes": user["dislikes"], "username": user["username"], "first_name": user["first_name"],
                     "avatar_url": user["avatar_url"], "settings": user["settings"], "usdt": user["usdt"],
                     "wins": user["wins"], "role": user["role"], "stars": user["stars"],
-                    "max_energy": user["max_energy"], "energy_upgrades": user["energy_upgrades"]})
+                    "max_energy": user["max_energy"], "energy_upgrades": user["energy_upgrades"],
+                    "regen_text": regen_text})
 
 
 @app.route('/api/buy_upgrade', methods=['POST'])
@@ -1982,8 +2172,11 @@ def api_watch_ad():
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid:
         return jsonify({"success": False, "msg": "Invalid user_id"}), 400
-    if not check_rate_limit(f"ad_{user_id}", limit=10, window_seconds=60):
-        return jsonify({"success": False, "msg": "Слишком частый просмотр рекламы"}), 429
+
+    can_watch, msg = check_ad_cooldown(user_id, "energy_200", 5, 40)
+    if not can_watch:
+        return jsonify({"success": False, "msg": msg}), 429
+
     banned, ban_info = is_banned(user_id)
     if banned:
         return jsonify({"success": False, "msg": f"Вы забанены! {ban_info['reason']}"})
@@ -1993,6 +2186,9 @@ def api_watch_ad():
     old_energy = current_energy
     new_energy = min(max_energy, current_energy + 200)
     update_energy_in_db(user_id, user, new_energy)
+
+    record_ad_watch(user_id, "energy_200")
+
     today = datetime.datetime.now().strftime("%Y-%m-%d")
     update_stats_history(today, ad_views=1)
     add_log(f"🎬 Просмотрел рекламу (+200 энергии)", user_id, user['username'], old_value=old_energy,
@@ -2009,12 +2205,20 @@ def api_watch_ad_fallback():
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid:
         return jsonify({"success": False, "msg": "Invalid user_id"}), 400
+
+    can_watch, msg = check_ad_cooldown(user_id, "energy_50", 2, 20)
+    if not can_watch:
+        return jsonify({"success": False, "msg": msg}), 429
+
     user = get_user(user_id)
     current_energy, _ = calculate_energy(user)
     max_energy = user.get("max_energy", 500)
     old_energy = current_energy
     new_energy = min(max_energy, current_energy + 50)
     update_energy_in_db(user_id, user, new_energy)
+
+    record_ad_watch(user_id, "energy_50")
+
     add_log(f"🎬 Просмотрел рекламу (резервная, +50 энергии)", user_id, user['username'], old_value=old_energy,
             new_value=new_energy, currency="energy")
     return jsonify({"success": True, "energy": 50})
@@ -2029,8 +2233,11 @@ def api_watch_ad_limit():
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid:
         return jsonify({"success": False, "msg": "Invalid user_id"}), 400
-    if not check_rate_limit(f"ad_limit_{user_id}", limit=10, window_seconds=60):
-        return jsonify({"success": False, "msg": "Слишком частый просмотр рекламы"}), 429
+
+    can_watch, msg = check_ad_cooldown(user_id, "energy_limit", 10, 15)
+    if not can_watch:
+        return jsonify({"success": False, "msg": msg}), 429
+
     banned, ban_info = is_banned(user_id)
     if banned:
         return jsonify({"success": False, "msg": f"Вы забанены! {ban_info['reason']}"})
@@ -2042,6 +2249,9 @@ def api_watch_ad_limit():
     new_max_energy = old_max_energy + 1
     new_upgrades = current_upgrades + 1
     safe_update_user(user_id, max_energy=new_max_energy, energy_limit_upgrades=new_upgrades)
+
+    record_ad_watch(user_id, "energy_limit")
+
     add_log(f"🎬 Просмотрел рекламу (+1 к макс. энергии, теперь {new_max_energy})", user_id, user['username'],
             old_value=old_max_energy, new_value=new_max_energy, currency="energy")
     return jsonify({"success": True, "max_energy": new_max_energy, "upgrades": new_upgrades})
@@ -2066,6 +2276,19 @@ def api_buy_ticket():
     return jsonify({"success": success, "msg": msg, "lp": user["lp"]})
 
 
+@app.route('/api/reveal_all_tickets', methods=['POST'])
+def api_reveal_all_tickets():
+    data = request.json
+    if not data:
+        return jsonify({"success": False, "msg": "No data"}), 400
+    user_id = data.get('user_id')
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"success": False, "msg": "Invalid user_id"}), 400
+    success, msg = reveal_all_tickets(user_id)
+    return jsonify({"success": success, "msg": msg})
+
+
 @app.route('/api/lottery_status', methods=['POST'])
 def api_lottery_status():
     data = request.json
@@ -2077,9 +2300,10 @@ def api_lottery_status():
         return jsonify({"error": "Invalid user_id"}), 400
     user = get_user(user_id)
     user_tickets = [t for t in lottery_tickets if t.get("user_id") == user_id]
-    return jsonify(
-        {"prize_pool": lottery_pool, "user_tickets": len(user_tickets), "user_lp": user["lp"], "is_drawn": is_drawn,
-         "winning_numbers": winning_numbers if is_drawn else [], "tickets": user_tickets})
+    update_lottery_phase()
+    return jsonify({"prize_pool": lottery_pool, "user_tickets": len(user_tickets), "user_lp": user["lp"],
+                    "is_drawn": is_drawn, "winning_numbers": winning_numbers if is_drawn else [],
+                    "tickets": user_tickets, "lottery_phase": lottery_phase})
 
 
 @app.route('/api/user_tickets', methods=['POST'])
@@ -2133,6 +2357,8 @@ def api_recent_players():
 @app.route('/api/get_referral_link', methods=['POST'])
 def api_get_referral_link():
     data = request.json
+    if not data:
+        return jsonify({"link": ""}), 400
     user_id = data.get('user_id')
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid:
@@ -2146,7 +2372,6 @@ def api_get_referral_link():
         else:
             code = hashlib.md5(str(user_id).encode()).hexdigest()[:8]
             safe_update_user(user_id, referral_code=code)
-    # ИСПРАВИТЬ ЗДЕСЬ:
     link = f"https://t.me/{BOT_USERNAME}/WereGood?startapp={code}"
     add_log(f"📨 Получил реферальную ссылку", user_id, user['username'])
     return jsonify({"link": link})
@@ -2184,7 +2409,7 @@ def api_leaderboard():
     now = time.time()
     if now - leaderboard_cache_time < LEADERBOARD_CACHE_TTL:
         return jsonify(leaderboard_cache)
-    limit = int(request.args.get('limit', 50))
+    limit = int(request.args.get('limit', 100))
     limit = min(limit, 100)
     with db.get_cursor() as cursor:
         cursor.execute(
@@ -2827,12 +3052,13 @@ def api_admin_lottery_participants():
 @require_admin
 def api_admin_logs():
     log_type = request.args.get('type', 'all')
-    limit = int(request.args.get('limit', 100000))
+    limit = int(request.args.get('limit', 100))
+    offset = int(request.args.get('offset', 0))
     date = request.args.get('date', '')
     action_filter = request.args.get('action', '')
     user_id_filter = request.args.get('user_id', '')
-    logs = get_logs(log_type, limit, date, action_filter, user_id_filter)
-    return jsonify({"success": True, "logs": logs, "total": len(logs)})
+    logs, total = get_logs(log_type, limit, offset, date, action_filter, user_id_filter)
+    return jsonify({"success": True, "logs": logs, "total": total, "offset": offset, "limit": limit})
 
 
 @app.route('/api/admin/withdrawals', methods=['GET'])
@@ -2892,7 +3118,7 @@ def api_admin_get_user():
             {"username": escape_html(r['username'] or r['first_name'] or 'Игрок'), "date": r['created_at'],
              "spent_lp": r['total_spent_lp'] or 0, "earned": round((r['total_spent_lp'] or 0) * 0.05, 2)} for r in
             referrals]
-    user['personal_logs'] = get_logs('all', 100000, None, None, str(user_id))
+    user['personal_logs'], _ = get_logs('all', 100, 0, None, None, str(user_id))
     return jsonify({"success": True, "user": user})
 
 
@@ -3187,24 +3413,21 @@ def handle_telegram_updates():
 if __name__ == '__main__':
     threading.Thread(target=handle_telegram_updates, daemon=True).start()
     print("\n" + "=" * 60)
-    print("🔧 WereGood Bot - ПОЛНАЯ ВЕРСИЯ С ПРОМОКОДАМИ")
+    print("🔧 WereGood Bot - ПОЛНАЯ ВЕРСИЯ С ПРОМОКОДАМИ И КУЛДАУНАМИ")
     print("=" * 60)
     print("✅ ВСЕ ФУНКЦИИ СОХРАНЕНЫ:")
-    print("   • Лотерея с розыгрышами")
+    print("   • Лотерея с розыгрышами и новой логикой")
     print("   • Реферальная система")
-    print("   • Ежедневные награды")
+    print("   • Ежедневные награды (24 часа)")
     print("   • TON Connect 2.0")
     print("   • Stars оплата")
     print("   • Промокоды (НОВАЯ СИСТЕМА)")
     print("   • Полная админ-панель")
-    print("   • Бесконечные логи (хранятся всё)")
-    print("=" * 60)
-    print("🎫 НОВЫЕ ФУНКЦИИ:")
-    print("   • Создание промокодов на WG, LP, лимит энергии")
-    print("   • Ограничение по количеству активаций")
-    print("   • Опциональный пароль на промокод")
-    print("   • Статистика активаций")
-    print("   • Ссылка на активацию: /claim?code=XXXX")
+    print("   • Бесконечные логи с пагинацией (по 100 записей)")
+    print("   • КУЛДАУН НА РЕКЛАМУ:")
+    print("     • +200 энергии: 5 мин кулдаун, 40 раз в день")
+    print("     • +1 к макс. энергии: 10 мин кулдаун, 15 раз в день")
+    print("   • Энергия: отображение в минутах")
     print("=" * 60)
     print(f"🌐 Игра: http://0.0.0.0:5000")
     print(f"👑 Админ-панель: http://0.0.0.0:5000/admin?key={ADMIN_SECRET}")

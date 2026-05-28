@@ -649,6 +649,47 @@
             color: #4caf50;
         }
 
+        /* Пагинация логов */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .pagination-btn {
+            background: rgba(255,255,255,0.05);
+            border: none;
+            padding: 6px 12px;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            font-size: 0.7rem;
+        }
+
+        .pagination-btn:hover {
+            background: rgba(255,215,0,0.15);
+        }
+
+        .pagination-btn.active {
+            background: rgba(255,215,0,0.3);
+            color: #FFD700;
+        }
+
+        .pagination-btn.disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .pagination-info {
+            font-size: 0.7rem;
+            opacity: 0.6;
+            margin: 0 12px;
+        }
+
         ::-webkit-scrollbar {
             width: 5px;
         }
@@ -813,7 +854,7 @@
                     <input type="text" class="search-input" id="logSearch" placeholder="Поиск по действию...">
                     <input type="text" class="search-input" id="logUserFilter" placeholder="Фильтр по ID" style="max-width: 130px;">
                     <input type="date" class="search-input" id="logDateFilter" style="max-width: 140px;">
-                    <button class="search-btn" onclick="loadLogs()">🔍 Поиск</button>
+                    <button class="search-btn" onclick="loadLogs(1)">🔍 Поиск</button>
                     <button class="btn refresh-btn" onclick="refreshLogs()">🔄 Обновить</button>
                 </div>
                 <div class="chart-card">
@@ -822,7 +863,8 @@
                         <button class="btn-sm" onclick="setLogType('user')">👤 Игроки</button>
                         <button class="btn-sm" onclick="setLogType('admin')">👑 Админы</button>
                     </div>
-                    <div id="logsList" style="max-height: 60vh; overflow-y: auto;"></div>
+                    <div id="logsList" style="max-height: 60vh; overflow-y: auto; min-height: 400px;"></div>
+                    <div id="logsPagination" class="pagination" style="display: none;"></div>
                 </div>
             </div>
 
@@ -966,6 +1008,10 @@
         let currentPeriod = 'week';
         let currentMetric = 'clicks';
         let currentLogType = 'all';
+        let currentLogPage = 1;
+        let currentLogTotalPages = 1;
+        let currentLogTotal = 0;
+        const LOGS_PER_PAGE = 100;
 
         function formatNumber(num) {
             if (num === undefined || num === null) return '0';
@@ -1284,7 +1330,7 @@
                             <span class="clickable-value" onclick='showPromoDetail(${JSON.stringify(p).replace(/'/g, "&#39;")})'>📋 ${p.activations.length} активаций</span>
                             <br>
                             <span class="promo-link" onclick="copyToClipboard('${promoUrl}')">🔗 Скопировать ссылку</span>
-                        </td>
+                         </td>
                         <td><button class="btn-sm" onclick="deletePromoCode(${p.id}, '${p.code}')">🗑️ Удалить</button></td>
                     </tr>
                 `;
@@ -1348,38 +1394,38 @@
         }
 
         async function createPromoCode() {
-    const code = document.getElementById('promoCode').value.toUpperCase().trim();
-    const reward_type = document.getElementById('promoRewardType').value;
-    const reward_amount = parseInt(document.getElementById('promoAmount').value);
-    const max_uses = parseInt(document.getElementById('promoMaxUses').value);
-    const password = document.getElementById('promoPassword').value.trim();
+            const code = document.getElementById('promoCode').value.toUpperCase().trim();
+            const reward_type = document.getElementById('promoRewardType').value;
+            const reward_amount = parseInt(document.getElementById('promoAmount').value);
+            const max_uses = parseInt(document.getElementById('promoMaxUses').value);
+            const password = document.getElementById('promoPassword').value.trim();
 
-    if (!code) { alert('Введите код промокода'); return; }
-    if (reward_amount <= 0) { alert('Количество должно быть больше 0'); return; }
-    if (max_uses <= 0) { alert('Максимум активаций должен быть больше 0'); return; }
+            if (!code) { alert('Введите код промокода'); return; }
+            if (reward_amount <= 0) { alert('Количество должно быть больше 0'); return; }
+            if (max_uses <= 0) { alert('Максимум активаций должен быть больше 0'); return; }
 
-    const body = { code, reward_type, reward_amount, max_uses };
-    if (password) body.password = password;
+            const body = { code, reward_type, reward_amount, max_uses };
+            if (password) body.password = password;
 
-    try {
-        const response = await fetch(`/api/admin/create_promo?key=${adminKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-        });
-        const result = await response.json();
+            try {
+                const response = await fetch(`/api/admin/create_promo?key=${adminKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const result = await response.json();
 
-        if (result.success) {
-            alert(`✅ Промокод ${result.code} создан!\nСсылка: ${result.promo_url}`);
-            closePromoModal();
-            loadPromoCodes();
-        } else {
-            alert('❌ Ошибка: ' + (result.error || result.msg));
+                if (result.success) {
+                    alert(`✅ Промокод ${result.code} создан!\nСсылка: ${result.promo_url}`);
+                    closePromoModal();
+                    loadPromoCodes();
+                } else {
+                    alert('❌ Ошибка: ' + (result.error || result.msg));
+                }
+            } catch(e) {
+                alert('❌ Ошибка: ' + e.message);
+            }
         }
-    } catch(e) {
-        alert('❌ Ошибка: ' + e.message);
-    }
-}
 
         async function deletePromoCode(id, code) {
             if (!confirm(`Удалить промокод ${code}?`)) return;
@@ -1395,21 +1441,37 @@
             }
         }
 
-        async function loadLogs() {
+        async function loadLogs(page = 1) {
+            currentLogPage = page;
             const search = document.getElementById('logSearch')?.value || '';
             const userId = document.getElementById('logUserFilter')?.value || '';
             const date = document.getElementById('logDateFilter')?.value || '';
-            let url = `logs?type=${currentLogType}&limit=100000`;
+            const offset = (page - 1) * LOGS_PER_PAGE;
+
+            let url = `logs?type=${currentLogType}&limit=${LOGS_PER_PAGE}&offset=${offset}`;
             if (search) url += `&action=${encodeURIComponent(search)}`;
             if (userId) url += `&user_id=${userId}`;
             if (date) url += `&date=${date}`;
+
             const data = await apiRequest(url);
             const logsList = document.getElementById('logsList');
+            const paginationDiv = document.getElementById('logsPagination');
+
             if (!logsList) return;
             if (!data.success) {
                 logsList.innerHTML = '<div class="error-message">❌ Ошибка загрузки логов</div>';
                 return;
             }
+
+            currentLogTotal = data.total;
+            currentLogTotalPages = Math.ceil(data.total / LOGS_PER_PAGE);
+
+            if (data.logs.length === 0) {
+                logsList.innerHTML = '<div class="loading">📭 Нет логов</div>';
+                if (paginationDiv) paginationDiv.style.display = 'none';
+                return;
+            }
+
             logsList.innerHTML = data.logs.map(log => `
                 <div class="log-entry">
                     <span class="log-time">[${log.timestamp}]</span>
@@ -1417,16 +1479,38 @@
                     <span style="opacity:0.5;"> - ${log.username || 'System'} (ID: ${log.user_id || 0})</span>
                     ${log.details ? `<span style="opacity:0.3;"> ${log.details}</span>` : ''}
                 </div>
-            `).join('') || '<div class="loading">📭 Нет логов</div>';
+            `).join('');
+
+            if (paginationDiv && currentLogTotalPages > 1) {
+                paginationDiv.style.display = 'flex';
+                let paginationHtml = '';
+
+                paginationHtml += `<button class="pagination-btn" onclick="loadLogs(1)" ${page === 1 ? 'disabled' : ''}>⏮ Первая</button>`;
+                paginationHtml += `<button class="pagination-btn" onclick="loadLogs(${page - 1})" ${page <= 1 ? 'disabled' : ''}>◀ Назад</button>`;
+
+                let startPage = Math.max(1, page - 2);
+                let endPage = Math.min(currentLogTotalPages, page + 2);
+                for (let i = startPage; i <= endPage; i++) {
+                    paginationHtml += `<button class="pagination-btn ${i === page ? 'active' : ''}" onclick="loadLogs(${i})">${i}</button>`;
+                }
+
+                paginationHtml += `<button class="pagination-btn" onclick="loadLogs(${page + 1})" ${page >= currentLogTotalPages ? 'disabled' : ''}>Вперед ▶</button>`;
+                paginationHtml += `<button class="pagination-btn" onclick="loadLogs(${currentLogTotalPages})" ${page === currentLogTotalPages ? 'disabled' : ''}>Последняя ⏩</button>`;
+                paginationHtml += `<span class="pagination-info">Всего: ${currentLogTotal} записей</span>`;
+
+                paginationDiv.innerHTML = paginationHtml;
+            } else if (paginationDiv) {
+                paginationDiv.style.display = 'none';
+            }
         }
 
         function refreshLogs() {
-            loadLogs();
+            loadLogs(1);
         }
 
         function setLogType(type) {
             currentLogType = type;
-            loadLogs();
+            loadLogs(1);
         }
 
         async function searchPlayers() {
@@ -1739,7 +1823,7 @@
                     const pageTitle = document.getElementById('pageTitle');
                     if (pageTitle) pageTitle.innerText = titles[page];
                     if (page === 'lottery') loadLotteryStats();
-                    if (page === 'logs') loadLogs();
+                    if (page === 'logs') loadLogs(1);
                     if (page === 'charts') loadChart();
                     if (page === 'withdrawals') loadWithdrawals();
                     if (page === 'promocodes') loadPromoCodes();
@@ -1752,7 +1836,7 @@
                 const pageLogs = document.getElementById('page-logs');
                 const pageWithdrawals = document.getElementById('page-withdrawals');
                 const pagePromocodes = document.getElementById('page-promocodes');
-                if (pageLogs && pageLogs.style.display !== 'none') loadLogs();
+                if (pageLogs && pageLogs.style.display !== 'none') loadLogs(currentLogPage);
                 if (pageWithdrawals && pageWithdrawals.style.display !== 'none') loadWithdrawals();
                 if (pagePromocodes && pagePromocodes.style.display !== 'none') loadPromoCodes();
             }, 10000);
