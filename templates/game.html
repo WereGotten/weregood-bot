@@ -5373,7 +5373,7 @@ window.watchAdLimit = async () => {
             });
         }
 
-                document.addEventListener("DOMContentLoaded", () => {
+                        document.addEventListener("DOMContentLoaded", () => {
             initTonConnect();
             initSocket();
             autoRegister();
@@ -5402,6 +5402,27 @@ window.watchAdLimit = async () => {
                 promoInput.onkeypress = function(e) {
                     if (e.key === 'Enter') activatePromoCode();
                 };
+            }
+
+                        // ========== АВТОМАТИЧЕСКАЯ АКТИВАЦИЯ ПРОМОКОДА ИЗ ССЫЛКИ ==========
+            if (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
+                const startParam = tg.initDataUnsafe.start_param;
+                console.log('📱 Параметр startapp:', startParam);
+
+                if (startParam && startParam.startsWith('claim_')) {
+                    const promoCode = startParam.replace('claim_', '');
+                    console.log('🎫 Найден промокод для активации:', promoCode);
+
+                    // Ждём загрузки игры и открываем модалку с промокодом
+                    setTimeout(() => {
+                        if (typeof openPromoModalWithCode === 'function') {
+                            openPromoModalWithCode(promoCode);
+                            showToast(`🎫 Промокод ${promoCode} готов к активации!`, 'success');
+                        } else {
+                            console.log('Функция openPromoModalWithCode не найдена');
+                        }
+                    }, 2000);
+                }
             }
 
             if (tg) { tg.ready(); tg.expand(); }
