@@ -3506,6 +3506,10 @@
                         <img src="/static/ticket.png" alt="Мои билеты">
                         Мои билеты
                     </button>
+                    <button class="reveal-all-btn" id="revealAllTicketsBtn" style="display: none;">
+                        <img src="/static/magic.png" alt="Открыть всё" style="width: 20px; height: 20px;">
+                        Открыть все билеты сразу
+                    </button>
                 </div>
                 <div id="drawStatus" class="draw-status">
                     <img src="/static/hourglass.png" alt="Ожидание" style="width: 18px; height: 18px;">
@@ -4785,40 +4789,6 @@
         ${winningComboHtml}
     </div>`;
 }
-
-// Открыть все клетки для конкретного билета
-window.revealAllCellsForTicket = async function(ticketNumber) {
-    console.log('revealAllCellsForTicket called for ticket:', ticketNumber);
-
-    if (!isDrawn) {
-        showToast('Розыгрыш ещё не начался!', 'error');
-        return;
-    }
-
-    try {
-        const response = await fetch('/api/reveal_ticket_cells', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                user_id: userId,
-                ticket_number: ticketNumber
-            })
-        });
-        const data = await response.json();
-        console.log('Response:', data);
-
-        if (data.success) {
-            showToast(data.msg, 'success');
-            await loadUserTickets();
-            updateTopPlayers();
-        } else {
-            showToast(data.msg, 'error');
-        }
-    } catch(e) {
-        console.error('Error:', e);
-        showToast('Ошибка при открытии клеток', 'error');
-    }
-};
 
         function initSlideCanvases(slideElement, ticket) {
             if (!slideElement) return;
