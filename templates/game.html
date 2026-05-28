@@ -3004,7 +3004,7 @@
             display: inline-block;
             line-height: 1;
         }
-/* Промокод модалка - премиум дизайн */
+        /* Промокод модалка */
 .promo-modal {
     display: none;
     position: fixed;
@@ -3012,8 +3012,7 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0,0,0,0.96);
-    backdrop-filter: blur(8px);
+    background: rgba(0,0,0,0.95);
     z-index: 2500;
     align-items: center;
     justify-content: center;
@@ -3025,296 +3024,107 @@
 
 .promo-modal-content {
     background: linear-gradient(145deg, #1a1a2e, #0f0f20);
-    border-radius: 48px;
+    border-radius: 28px;
     width: 90%;
     max-width: 400px;
-    padding: 0;
+    padding: 24px;
     border: 1px solid rgba(255,215,0,0.2);
-    animation: fadeIn 0.3s ease;
-    box-shadow: 0 25px 50px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,215,0,0.1) inset;
-    overflow: hidden;
+    animation: fadeIn 0.2s ease;
 }
 
-/* Голова модалки с градиентом */
 .promo-modal-header {
-    background: linear-gradient(135deg, rgba(255,215,0,0.12), rgba(255,165,0,0.06));
-    padding: 24px 20px 20px;
-    text-align: center;
-    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
     border-bottom: 1px solid rgba(255,215,0,0.15);
 }
 
-.promo-modal-header::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, #FFD700, #FFA500, #FFD700);
-}
-
 .promo-modal-header h2 {
-    font-size: 1.8rem;
-    font-weight: 800;
+    font-size: 1.3rem;
+    font-weight: 700;
     background: linear-gradient(135deg, #FFD700, #FFA500);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
-    margin: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-}
-
-.promo-header-icon {
-    font-size: 1.8rem;
 }
 
 .promo-modal-close {
-    position: absolute;
-    top: 16px;
-    right: 16px;
-    background: rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.1);
     border: none;
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     cursor: pointer;
     color: white;
-    font-size: 1.2rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
+    font-size: 1.1rem;
 }
 
-.promo-modal-close:active {
-    transform: scale(0.95);
-    background: rgba(255,255,255,0.15);
-}
-
-/* Тело модалки */
-.promo-modal-body {
-    padding: 24px 20px 28px;
-}
-
-/* Инфо-карточка с наградой */
-.promo-info-card {
-    background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,165,0,0.05));
-    border-radius: 28px;
-    padding: 20px;
+.promo-info {
+    background: rgba(255,215,0,0.08);
+    border-radius: 16px;
+    padding: 12px;
     margin-bottom: 20px;
     text-align: center;
-    border: 1px solid rgba(255,215,0,0.15);
-    position: relative;
-    overflow: hidden;
 }
 
-.promo-info-card::after {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: linear-gradient(45deg, transparent, rgba(255,215,0,0.05), transparent);
-    transform: rotate(45deg);
-    animation: promoShine 3s infinite;
-}
-
-@keyframes promoShine {
-    0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
-    100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
-}
-
-.promo-reward-label {
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    color: rgba(255,255,255,0.5);
-    margin-bottom: 8px;
-}
-
-.promo-reward-value {
-    font-size: 2.2rem;
-    font-weight: 800;
-    margin-bottom: 4px;
-}
-
-.promo-reward-value.wg {
-    background: linear-gradient(135deg, #FFD700, #FFA500);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-}
-
-.promo-reward-value.lp {
-    color: #00E5FF;
-    text-shadow: 0 0 15px rgba(0,229,255,0.3);
-}
-
-.promo-reward-value.energy {
-    color: #4caf50;
-    text-shadow: 0 0 15px rgba(76,175,80,0.3);
-}
-
-/* Прогресс использования */
-.promo-stats {
-    background: rgba(0,0,0,0.3);
-    border-radius: 20px;
-    padding: 14px 16px;
-    margin-bottom: 20px;
-}
-
-.promo-stat-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 10px;
-}
-
-.promo-stat-item:last-child {
-    margin-bottom: 0;
-}
-
-.promo-stat-label {
-    font-size: 0.7rem;
-    color: rgba(255,255,255,0.5);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.promo-stat-value {
+.promo-reward {
     font-size: 0.9rem;
-    font-weight: 700;
+    font-weight: 600;
     color: #FFD700;
 }
 
-.promo-progress-bar {
-    background: rgba(255,255,255,0.1);
-    border-radius: 20px;
-    height: 6px;
-    overflow: hidden;
-    margin-top: 8px;
+.promo-remaining {
+    font-size: 0.7rem;
+    opacity: 0.6;
+    margin-top: 4px;
 }
 
-.promo-progress-fill {
-    background: linear-gradient(90deg, #FFD700, #FFA500);
-    height: 100%;
-    width: 0%;
-    border-radius: 20px;
-    transition: width 0.5s ease;
-}
-
-/* Поле ввода пароля */
-.promo-password-group {
-    margin-bottom: 20px;
-}
-
-.promo-password-input {
+.promo-input {
     width: 100%;
     background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,215,0,0.2);
-    border-radius: 60px;
-    padding: 14px 20px;
+    border: 1px solid rgba(255,215,0,0.15);
+    border-radius: 16px;
+    padding: 14px 16px;
     color: white;
     font-size: 0.9rem;
     text-align: center;
-    letter-spacing: 2px;
-    font-family: monospace;
-    outline: none;
-    transition: all 0.2s;
+    letter-spacing: 1px;
+    margin-bottom: 16px;
 }
 
-.promo-password-input:focus {
+.promo-input:focus {
     border-color: #FFD700;
-    background: rgba(255,215,0,0.08);
-    box-shadow: 0 0 15px rgba(255,215,0,0.2);
+    outline: none;
 }
 
-.promo-password-input::placeholder {
-    color: rgba(255,255,255,0.3);
-    letter-spacing: normal;
-}
-
-/* Кнопка активации */
 .promo-activate-btn {
     width: 100%;
     background: linear-gradient(135deg, #FFD700, #FFA500);
     border: none;
-    border-radius: 60px;
-    padding: 16px;
+    border-radius: 50px;
+    padding: 14px;
     font-weight: 700;
     font-size: 1rem;
     color: #0a0a1a;
     cursor: pointer;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    margin-bottom: 16px;
-    position: relative;
-    overflow: hidden;
-}
-
-.promo-activate-btn::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-    transition: left 0.5s ease;
-}
-
-.promo-activate-btn:active::before {
-    left: 100%;
+    transition: transform 0.1s ease;
 }
 
 .promo-activate-btn:active {
     transform: scale(0.97);
 }
 
-/* Сообщения */
 .promo-message {
-    margin-top: 16px;
-    font-size: 0.75rem;
+    margin-top: 12px;
+    font-size: 0.7rem;
     text-align: center;
-    padding: 10px 16px;
-    border-radius: 40px;
-    display: none;
-    animation: fadeIn 0.3s ease;
-}
-
-.promo-message.error {
-    background: rgba(244,67,54,0.15);
     color: #f44336;
-    border: 1px solid rgba(244,67,54,0.3);
-    display: block;
 }
 
 .promo-message.success {
-    background: rgba(34,197,94,0.15);
-    color: #22c55e;
-    border: 1px solid rgba(34,197,94,0.3);
-    display: block;
-}
-
-/* Ссылка на игру */
-.promo-open-game {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    font-size: 0.7rem;
-    color: rgba(255,255,255,0.4);
-    text-decoration: none;
-    margin-top: 12px;
+    color: #4caf50;
 }
     </style>
 </head>
@@ -3906,41 +3716,18 @@
 <div id="promoModal" class="promo-modal">
     <div class="promo-modal-content">
         <div class="promo-modal-header">
+            <h2>🎫 Активация промокода</h2>
             <button class="promo-modal-close" onclick="closePromoModal()">✕</button>
-            <h2>
-                <span class="promo-header-icon">🎫</span>
-                Активация промокода
-            </h2>
         </div>
-        <div class="promo-modal-body">
-            <div class="promo-info-card">
-                <div class="promo-reward-label">ВАША НАГРАДА</div>
-                <div class="promo-reward-value" id="promoRewardValue">—</div>
-                <div class="promo-remaining" id="promoRemainingInfo"></div>
-            </div>
-
-            <div class="promo-stats" id="promoStats" style="display: none;">
-                <div class="promo-stat-item">
-                    <span class="promo-stat-label">📊 Активаций осталось</span>
-                    <span class="promo-stat-value" id="promoRemainingCount">0</span>
-                </div>
-                <div class="promo-progress-bar">
-                    <div class="promo-progress-fill" id="promoProgressFill" style="width: 0%"></div>
-                </div>
-            </div>
-
-            <div id="promoPasswordSection" style="display: none;">
-                <div class="promo-password-group">
-                    <input type="text" class="promo-password-input" id="promoPasswordInput" placeholder="🔒 Введите пароль" maxlength="20" autocomplete="off">
-                </div>
-            </div>
-
-            <button class="promo-activate-btn" id="promoActivateBtn">
-                🎁 Активировать ✨
-            </button>
-            <div id="promoMessage" class="promo-message"></div>
-            <a href="/" class="promo-open-game">🏠 Открыть игру</a>
+        <div id="promoInfo" class="promo-info">
+            <div class="promo-reward" id="promoReward"></div>
+            <div class="promo-remaining" id="promoRemaining"></div>
         </div>
+        <div class="form-group">
+            <input type="text" class="promo-input" id="promoCodeInput" placeholder="Введите промокод" maxlength="30" autocomplete="off">
+        </div>
+        <button class="promo-activate-btn" id="activatePromoBtn">🎁 Активировать</button>
+        <div id="promoMessage" class="promo-message"></div>
     </div>
 </div>
 
@@ -5402,127 +5189,58 @@ window.watchAdLimit = async () => {
         }
 
                 // ========== ПРОМОКОДЫ ==========
-async function openPromoModalWithCode(promoCode) {
-    const modal = document.getElementById('promoModal');
-    const input = document.getElementById('promoCodeInput');
-
-    if (promoCode && input) {
-        input.value = promoCode.toUpperCase();
-    }
-
-    // Показываем модалку
-    modal.classList.add('active');
-
-    // Если есть код в параметре, сразу проверяем промокод через API
-    if (promoCode) {
-        await checkPromoCodeInfo(promoCode);
-    } else {
-        // Сброс отображения
-        document.getElementById('promoRewardValue').innerHTML = '—';
-        document.getElementById('promoRemainingInfo').innerHTML = '';
-        document.getElementById('promoStats').style.display = 'none';
-    }
-}
-
-async function checkPromoCodeInfo(code) {
-    try {
-        const res = await fetch(`/api/promo/info?code=${code}`);
-        const data = await res.json();
-
-        if (data.success) {
-            // Показываем информацию о промокоде
-            let rewardHtml = '';
-            let rewardClass = '';
-
-            if (data.reward_type === 'wg') {
-                rewardHtml = `${data.reward_amount} WG`;
-                rewardClass = 'wg';
-            } else if (data.reward_type === 'lp') {
-                rewardHtml = `${data.reward_amount} LP`;
-                rewardClass = 'lp';
-            } else {
-                rewardHtml = `+${data.reward_amount} ⚡ энергии`;
-                rewardClass = 'energy';
+        async function openPromoModalWithCode(promoCode) {
+            const modal = document.getElementById('promoModal');
+            const input = document.getElementById('promoCodeInput');
+            if (promoCode && input) {
+                input.value = promoCode.toUpperCase();
             }
+            modal.classList.add('active');
+        }
 
-            document.getElementById('promoRewardValue').innerHTML = `<span class="promo-reward-value ${rewardClass}">${rewardHtml}</span>`;
-            document.getElementById('promoRemainingInfo').innerHTML = `Осталось активаций: ${data.remaining}`;
-            document.getElementById('promoRemainingCount').innerHTML = data.remaining;
+        function closePromoModal() {
+            const modal = document.getElementById('promoModal');
+            const input = document.getElementById('promoCodeInput');
+            const message = document.getElementById('promoMessage');
+            if (modal) modal.classList.remove('active');
+            if (input) input.value = '';
+            if (message) message.innerHTML = '';
+        }
 
-            const percent = (data.remaining / data.max_uses) * 100;
-            document.getElementById('promoProgressFill').style.width = percent + '%';
-            document.getElementById('promoStats').style.display = 'block';
-
-            if (data.has_password) {
-                document.getElementById('promoPasswordSection').style.display = 'block';
+        async function activatePromoCode() {
+            const code = document.getElementById('promoCodeInput').value.toUpperCase().trim();
+            const messageDiv = document.getElementById('promoMessage');
+            const btn = document.getElementById('activatePromoBtn');
+            if (!code) {
+                messageDiv.innerHTML = 'Введите промокод';
+                return;
+            }
+            btn.disabled = true;
+            btn.textContent = '⏳ Проверка...';
+            messageDiv.innerHTML = '';
+            try {
+                const res = await fetch('/api/activate_promo', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId, code: code })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    messageDiv.innerHTML = `✅ ${data.message}`;
+                    messageDiv.classList.add('success');
+                    updateStatus();
+                    setTimeout(() => closePromoModal(), 2000);
+                } else {
+                    messageDiv.innerHTML = `❌ ${data.error}`;
+                    messageDiv.classList.remove('success');
+                }
+            } catch (e) {
+                messageDiv.innerHTML = '❌ Ошибка при активации';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🎁 Активировать';
             }
         }
-    } catch(e) {
-        console.error('Ошибка проверки промокода:', e);
-    }
-}
-
-function closePromoModal() {
-    const modal = document.getElementById('promoModal');
-    const input = document.getElementById('promoCodeInput');
-    const passwordInput = document.getElementById('promoPasswordInput');
-    const message = document.getElementById('promoMessage');
-    const stats = document.getElementById('promoStats');
-    const passwordSection = document.getElementById('promoPasswordSection');
-
-    if (modal) modal.classList.remove('active');
-    if (input) input.value = '';
-    if (passwordInput) passwordInput.value = '';
-    if (message) {
-        message.innerHTML = '';
-        message.className = 'promo-message';
-    }
-    if (stats) stats.style.display = 'none';
-    if (passwordSection) passwordSection.style.display = 'none';
-}
-
-async function activatePromoCode() {
-    const code = document.getElementById('promoCodeInput').value.toUpperCase().trim();
-    const password = document.getElementById('promoPasswordInput')?.value.trim() || '';
-    const messageDiv = document.getElementById('promoMessage');
-    const btn = document.getElementById('promoActivateBtn');
-
-    if (!code) {
-        messageDiv.innerHTML = '❌ Введите промокод';
-        messageDiv.className = 'promo-message error';
-        return;
-    }
-
-    btn.disabled = true;
-    btn.innerHTML = '⏳ Проверка...';
-    messageDiv.innerHTML = '';
-    messageDiv.className = 'promo-message';
-
-    try {
-        const res = await fetch('/api/activate_promo', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId, code: code, password: password })
-        });
-        const data = await res.json();
-
-        if (data.success) {
-            messageDiv.innerHTML = `🎉 ${data.message}`;
-            messageDiv.className = 'promo-message success';
-            updateStatus();
-            setTimeout(() => closePromoModal(), 2000);
-        } else {
-            messageDiv.innerHTML = `❌ ${data.error}`;
-            messageDiv.className = 'promo-message error';
-        }
-    } catch (e) {
-        messageDiv.innerHTML = '❌ Ошибка при активации';
-        messageDiv.className = 'promo-message error';
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = '🎁 Активировать ✨';
-    }
-}
 
                 function highlightElement(element, text, position = 'bottom') {
     if (!element) { nextTutorialStep(); return; }
