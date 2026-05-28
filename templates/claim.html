@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Активация промокода - WereGood</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(145deg, #0a0a1a 0%, #12122a 100%);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .claim-container {
+            max-width: 450px;
+            width: 100%;
+            background: linear-gradient(145deg, #1a1a2e, #0f0f20);
+            border-radius: 32px;
+            padding: 32px 24px;
+            border: 1px solid rgba(255,215,0,0.2);
+            text-align: center;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .promo-icon { font-size: 64px; margin-bottom: 20px; }
+        h2 { font-size: 1.5rem; margin-bottom: 8px; background: linear-gradient(135deg, #FFD700, #FFA500); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .code { font-size: 1.2rem; font-weight: 700; color: #FFD700; background: rgba(255,215,0,0.1); padding: 8px 16px; border-radius: 40px; display: inline-block; margin: 16px 0; font-family: monospace; }
+        .reward-card { background: rgba(255,215,0,0.08); border-radius: 20px; padding: 16px; margin: 20px 0; }
+        .reward-label { font-size: 0.7rem; opacity: 0.6; margin-bottom: 4px; }
+        .reward-value { font-size: 1.8rem; font-weight: 800; }
+        .reward-value.wg { background: linear-gradient(135deg, #FFD700, #FFA500); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .reward-value.lp { color: #00E5FF; }
+        .reward-value.energy { color: #4caf50; }
+        .remaining { font-size: 0.7rem; opacity: 0.5; margin-top: 8px; }
+        .password-input { width: 100%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,215,0,0.15); border-radius: 16px; padding: 14px; color: white; font-size: 0.9rem; text-align: center; margin: 16px 0; outline: none; }
+        .password-input:focus { border-color: #FFD700; }
+        .activate-btn { width: 100%; background: linear-gradient(135deg, #FFD700, #FFA500); border: none; border-radius: 60px; padding: 16px; font-weight: 700; font-size: 1rem; color: #0a0a1a; cursor: pointer; transition: transform 0.1s ease; margin-top: 8px; }
+        .activate-btn:active { transform: scale(0.97); }
+        .message { margin-top: 16px; font-size: 0.75rem; padding: 10px; border-radius: 12px; display: none; }
+        .message.error { background: rgba(244,67,54,0.15); color: #f44336; display: block; }
+        .message.success { background: rgba(34,197,94,0.15); color: #22c55e; display: block; }
+        .open-app-btn { margin-top: 20px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,215,0,0.2); border-radius: 60px; padding: 12px; font-weight: 600; font-size: 0.85rem; color: #FFD700; cursor: pointer; text-decoration: none; display: inline-block; width: 100%; text-align: center; }
+        .loading { text-align: center; padding: 40px; opacity: 0.6; }
+        .error-page { text-align: center; }
+        .error-page h2 { color: #f44336; background: none; -webkit-background-clip: unset; }
+    </style>
+</head>
+<body>
+    <div class="claim-container" id="claimContainer">
+        <div id="loadingState" class="loading">🔄 Загрузка...</div>
+        <div id="errorState" style="display: none;" class="error-page">
+            <div class="promo-icon">❌</div>
+            <h2>Ошибка</h2>
+            <p id="errorMessage"></p>
+            <a href="/" class="open-app-btn">📱 Открыть игру</a>
+        </div>
+        <div id="promoState" style="display: none;">
+            <div class="promo-icon">🎁</div>
+            <h2>Активация промокода</h2>
+            <div class="code" id="promoCodeDisplay"></div>
+            <div class="reward-card">
+                <div class="reward-label">Ваша награда</div>
+                <div class="reward-value" id="rewardValue"></div>
+                <div class="remaining" id="remainingInfo"></div>
+            </div>
+            <div id="passwordSection" style="display: none;">
+                <input type="text" class="password-input" id="passwordInput" placeholder="Введите пароль промокода" maxlength="20">
+            </div>
+            <button class="activate-btn" id="activateBtn">🎁 Активировать</button>
+            <div id="message" class="message"></div>
+            <a href="/" class="open-app-btn">📱 Открыть игру</a>
+        </div>
+        <div id="successState" style="display: none;">
+            <div class="promo-icon">✅</div>
+            <h2>Промокод активирован!</h2>
+            <div class="reward-card">
+                <div class="reward-label">Вы получили</div>
+                <div class="reward-value" id="successRewardValue"></div>
+            </div>
+            <a href="/" class="open-app-btn">📱 Играть</a>
+        </div>
+    </div>
+    <script>
+        let tg = window.Telegram?.WebApp;
+        let userId = null;
+        let promoCode = null;
+        let promoData = null;
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+
+        if (tg && tg.initDataUnsafe?.user) {
+            userId = tg.initDataUnsafe.user.id;
+            tg.ready();
+            tg.expand();
+        }
+
+        async function loadPromoInfo() {
+            if (!code) {
+                showError('Не указан код промокода');
+                return;
+            }
+            promoCode = code;
+            try {
+                const res = await fetch(`/api/promo/info?code=${code}`);
+                const data = await res.json();
+                if (!data.success) {
+                    showError(data.error || 'Промокод не найден');
+                    return;
+                }
+                promoData = data;
+                showPromoForm();
+            } catch (e) {
+                showError('Ошибка загрузки промокода');
+            }
+        }
+
+        function showError(message) {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('errorState').style.display = 'block';
+            document.getElementById('errorMessage').innerHTML = message;
+        }
+
+        function showPromoForm() {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('promoState').style.display = 'block';
+            document.getElementById('promoCodeDisplay').innerHTML = promoData.code;
+
+            let rewardHtml = '';
+            let rewardClass = '';
+            if (promoData.reward_type === 'wg') {
+                rewardHtml = `${promoData.reward_amount} WG`;
+                rewardClass = 'wg';
+            } else if (promoData.reward_type === 'lp') {
+                rewardHtml = `${promoData.reward_amount} LP`;
+                rewardClass = 'lp';
+            } else {
+                rewardHtml = `+${promoData.reward_amount} к лимиту энергии`;
+                rewardClass = 'energy';
+            }
+            document.getElementById('rewardValue').innerHTML = `<span class="${rewardClass}">${rewardHtml}</span>`;
+            document.getElementById('rewardValue').className = `reward-value ${rewardClass}`;
+            document.getElementById('remainingInfo').innerHTML = `Осталось активаций: ${promoData.remaining}`;
+
+            if (promoData.has_password) {
+                document.getElementById('passwordSection').style.display = 'block';
+            }
+        }
+
+        function showSuccess() {
+            document.getElementById('promoState').style.display = 'none';
+            document.getElementById('successState').style.display = 'block';
+            let rewardHtml = '';
+            if (promoData.reward_type === 'wg') {
+                rewardHtml = `${promoData.reward_amount} WG`;
+            } else if (promoData.reward_type === 'lp') {
+                rewardHtml = `${promoData.reward_amount} LP`;
+            } else {
+                rewardHtml = `+${promoData.reward_amount} к лимиту энергии`;
+            }
+            document.getElementById('successRewardValue').innerHTML = rewardHtml;
+        }
+
+        async function activatePromo() {
+            const password = document.getElementById('passwordInput')?.value || '';
+            const btn = document.getElementById('activateBtn');
+            const messageDiv = document.getElementById('message');
+
+            btn.disabled = true;
+            btn.textContent = '⏳ Активация...';
+            messageDiv.className = 'message';
+            messageDiv.style.display = 'none';
+
+            try {
+                const res = await fetch('/api/activate_promo_via_web', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code: promoCode, user_id: userId, password: password })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    messageDiv.innerHTML = `✅ ${data.message}`;
+                    messageDiv.classList.add('success');
+                    messageDiv.style.display = 'block';
+                    setTimeout(() => showSuccess(), 1500);
+                } else {
+                    messageDiv.innerHTML = `❌ ${data.error}`;
+                    messageDiv.classList.add('error');
+                    messageDiv.style.display = 'block';
+                    btn.disabled = false;
+                    btn.textContent = '🎁 Активировать';
+                }
+            } catch (e) {
+                messageDiv.innerHTML = '❌ Ошибка при активации';
+                messageDiv.classList.add('error');
+                messageDiv.style.display = 'block';
+                btn.disabled = false;
+                btn.textContent = '🎁 Активировать';
+            }
+        }
+
+        document.getElementById('activateBtn')?.addEventListener('click', activatePromo);
+        document.getElementById('passwordInput')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') activatePromo();
+        });
+
+        if (!userId) {
+            showError('Авторизуйтесь в Telegram, чтобы активировать промокод');
+        } else {
+            loadPromoInfo();
+        }
+    </script>
+</body>
+</html>

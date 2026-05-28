@@ -3004,6 +3004,128 @@
             display: inline-block;
             line-height: 1;
         }
+        /* Промокод модалка */
+.promo-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.95);
+    z-index: 2500;
+    align-items: center;
+    justify-content: center;
+}
+
+.promo-modal.active {
+    display: flex;
+}
+
+.promo-modal-content {
+    background: linear-gradient(145deg, #1a1a2e, #0f0f20);
+    border-radius: 28px;
+    width: 90%;
+    max-width: 400px;
+    padding: 24px;
+    border: 1px solid rgba(255,215,0,0.2);
+    animation: fadeIn 0.2s ease;
+}
+
+.promo-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255,215,0,0.15);
+}
+
+.promo-modal-header h2 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.promo-modal-close {
+    background: rgba(255,255,255,0.1);
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    color: white;
+    font-size: 1.1rem;
+}
+
+.promo-info {
+    background: rgba(255,215,0,0.08);
+    border-radius: 16px;
+    padding: 12px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.promo-reward {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #FFD700;
+}
+
+.promo-remaining {
+    font-size: 0.7rem;
+    opacity: 0.6;
+    margin-top: 4px;
+}
+
+.promo-input {
+    width: 100%;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,215,0,0.15);
+    border-radius: 16px;
+    padding: 14px 16px;
+    color: white;
+    font-size: 0.9rem;
+    text-align: center;
+    letter-spacing: 1px;
+    margin-bottom: 16px;
+}
+
+.promo-input:focus {
+    border-color: #FFD700;
+    outline: none;
+}
+
+.promo-activate-btn {
+    width: 100%;
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    border: none;
+    border-radius: 50px;
+    padding: 14px;
+    font-weight: 700;
+    font-size: 1rem;
+    color: #0a0a1a;
+    cursor: pointer;
+    transition: transform 0.1s ease;
+}
+
+.promo-activate-btn:active {
+    transform: scale(0.97);
+}
+
+.promo-message {
+    margin-top: 12px;
+    font-size: 0.7rem;
+    text-align: center;
+    color: #f44336;
+}
+
+.promo-message.success {
+    color: #4caf50;
+}
     </style>
 </head>
 <body>
@@ -3589,6 +3711,25 @@
             </button>
         </div>
     </div>
+
+    <!-- Модальное окно активации промокода -->
+<div id="promoModal" class="promo-modal">
+    <div class="promo-modal-content">
+        <div class="promo-modal-header">
+            <h2>🎫 Активация промокода</h2>
+            <button class="promo-modal-close" onclick="closePromoModal()">✕</button>
+        </div>
+        <div id="promoInfo" class="promo-info">
+            <div class="promo-reward" id="promoReward"></div>
+            <div class="promo-remaining" id="promoRemaining"></div>
+        </div>
+        <div class="form-group">
+            <input type="text" class="promo-input" id="promoCodeInput" placeholder="Введите промокод" maxlength="30" autocomplete="off">
+        </div>
+        <button class="promo-activate-btn" id="activatePromoBtn">🎁 Активировать</button>
+        <div id="promoMessage" class="promo-message"></div>
+    </div>
+</div>
 
     <div id="tutorialOverlay" class="tutorial-overlay">
         <div id="tutorialHighlight" class="tutorial-highlight"></div>
@@ -5047,6 +5188,60 @@ window.watchAdLimit = async () => {
             return element;
         }
 
+                // ========== ПРОМОКОДЫ ==========
+        async function openPromoModalWithCode(promoCode) {
+            const modal = document.getElementById('promoModal');
+            const input = document.getElementById('promoCodeInput');
+            if (promoCode && input) {
+                input.value = promoCode.toUpperCase();
+            }
+            modal.classList.add('active');
+        }
+
+        function closePromoModal() {
+            const modal = document.getElementById('promoModal');
+            const input = document.getElementById('promoCodeInput');
+            const message = document.getElementById('promoMessage');
+            if (modal) modal.classList.remove('active');
+            if (input) input.value = '';
+            if (message) message.innerHTML = '';
+        }
+
+        async function activatePromoCode() {
+            const code = document.getElementById('promoCodeInput').value.toUpperCase().trim();
+            const messageDiv = document.getElementById('promoMessage');
+            const btn = document.getElementById('activatePromoBtn');
+            if (!code) {
+                messageDiv.innerHTML = 'Введите промокод';
+                return;
+            }
+            btn.disabled = true;
+            btn.textContent = '⏳ Проверка...';
+            messageDiv.innerHTML = '';
+            try {
+                const res = await fetch('/api/activate_promo', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId, code: code })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    messageDiv.innerHTML = `✅ ${data.message}`;
+                    messageDiv.classList.add('success');
+                    updateStatus();
+                    setTimeout(() => closePromoModal(), 2000);
+                } else {
+                    messageDiv.innerHTML = `❌ ${data.error}`;
+                    messageDiv.classList.remove('success');
+                }
+            } catch (e) {
+                messageDiv.innerHTML = '❌ Ошибка при активации';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🎁 Активировать';
+            }
+        }
+
                 function highlightElement(element, text, position = 'bottom') {
     if (!element) { nextTutorialStep(); return; }
     const rect = element.getBoundingClientRect();
@@ -5178,7 +5373,7 @@ window.watchAdLimit = async () => {
             });
         }
 
-        document.addEventListener("DOMContentLoaded", () => {
+                document.addEventListener("DOMContentLoaded", () => {
             initTonConnect();
             initSocket();
             autoRegister();
@@ -5196,11 +5391,21 @@ window.watchAdLimit = async () => {
             setInterval(updateStatus, 10000);
             setInterval(updateLottery, 30000);
             setInterval(loadRecentPlayers, 15000);
+
+            // ========== ОБРАБОТЧИКИ ПРОМОКОДОВ ==========
+            const activateBtn = document.getElementById('activatePromoBtn');
+            const promoInput = document.getElementById('promoCodeInput');
+            if (activateBtn) {
+                activateBtn.onclick = activatePromoCode;
+            }
+            if (promoInput) {
+                promoInput.onkeypress = function(e) {
+                    if (e.key === 'Enter') activatePromoCode();
+                };
+            }
+
             if (tg) { tg.ready(); tg.expand(); }
         });
-
-        document.getElementById('tutorialNextBtn').onclick = () => nextTutorialStep();
-        document.getElementById('tutorialSkipBtn').onclick = () => skipTutorial();
     </script>
 </body>
 </html>
