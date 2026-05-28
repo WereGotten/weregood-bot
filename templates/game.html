@@ -3153,6 +3153,28 @@
         .promo-message.success {
             color: #4caf50;
         }
+
+        .reveal-ticket-btn {
+    width: 100%;
+    background: linear-gradient(135deg, #9C27B0, #7B1FA2);
+    border: none;
+    border-radius: 40px;
+    padding: 10px;
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: white;
+    cursor: pointer;
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: transform 0.1s ease;
+}
+
+.reveal-ticket-btn:active {
+    transform: scale(0.97);
+}
     </style>
 </head>
 <body>
@@ -4735,27 +4757,38 @@
         }
 
         function renderTicketForCarousel(ticket) {
-            const revealed = ticket.revealed || new Array(12).fill(false);
-            const numbers = ticket.numbers;
-            const ticketNumber = ticket.number;
-            const cellSize = 70;
-            let cellsHtml = '';
-            for (let i = 0; i < 12; i++) {
-                const isRevealed = revealed[i];
-                const number = numbers[i];
-                const isWin = isDrawn && winningNumbers.includes(number);
-                const canvasId = `scratch_${ticketNumber}_${i}`;
-                const bgClass = (isRevealed && isWin) ? 'win' : 'normal';
-                cellsHtml += `<div class="scratch-cell"><div class="scratch-number-layer ${bgClass}" style="display: flex;">${number}</div><canvas id="${canvasId}" class="scratch-canvas" width="${cellSize}" height="${cellSize}"></canvas></div>`;
-            }
-            let matches = 0, revealedCount = 0;
-            for (let i = 0; i < 12; i++) { if (revealed[i]) { revealedCount++; if (isDrawn && winningNumbers.includes(numbers[i])) matches++; } }
-            let winningComboHtml = '';
-            if (isDrawn && winningNumbers.length > 0) {
-                winningComboHtml = `<div class="winning-combo-ticket"><div class="winning-combo-title">🎲 ВЫИГРЫШНАЯ КОМБИНАЦИЯ 🎲</div><div class="winning-combo-numbers">${winningNumbers.map(num => `<div class="winning-combo-number">${num}</div>`).join('')}</div></div>`;
-            }
-            return `<div class="ticket-container" data-ticket-number="${ticketNumber}"><div class="ticket-number"> Билет #${ticketNumber}</div><div class="ticket-purchase-num">Покупка #${ticket.purchase_number}</div><div class="scratch-grid">${cellsHtml}</div><div class="matches-counter">🏆 Совпадений: <span>${matches}/${revealedCount}</span></div>${winningComboHtml}</div>`;
-        }
+    const revealed = ticket.revealed || new Array(12).fill(false);
+    const numbers = ticket.numbers;
+    const ticketNumber = ticket.number;
+    const cellSize = 70;
+    let cellsHtml = '';
+    for (let i = 0; i < 12; i++) {
+        const isRevealed = revealed[i];
+        const number = numbers[i];
+        const isWin = isDrawn && winningNumbers.includes(number);
+        const canvasId = `scratch_${ticketNumber}_${i}`;
+        const bgClass = (isRevealed && isWin) ? 'win' : 'normal';
+        cellsHtml += `<div class="scratch-cell"><div class="scratch-number-layer ${bgClass}" style="display: flex;">${number}</div><canvas id="${canvasId}" class="scratch-canvas" width="${cellSize}" height="${cellSize}"></canvas></div>`;
+    }
+    let matches = 0, revealedCount = 0;
+    for (let i = 0; i < 12; i++) { if (revealed[i]) { revealedCount++; if (isDrawn && winningNumbers.includes(numbers[i])) matches++; } }
+    let winningComboHtml = '';
+    if (isDrawn && winningNumbers.length > 0) {
+        winningComboHtml = `<div class="winning-combo-ticket"><div class="winning-combo-title">🎲 ВЫИГРЫШНАЯ КОМБИНАЦИЯ 🎲</div><div class="winning-combo-numbers">${winningNumbers.map(num => `<div class="winning-combo-number">${num}</div>`).join('')}</div></div>`;
+    }
+
+    // Кнопка "Открыть все клетки" для ЭТОГО билета (только если розыгрыш идёт)
+    const revealAllCellsBtn = isDrawn ? `<button class="reveal-ticket-btn" onclick="revealAllCellsForTicket(${ticketNumber})">🔓 Открыть все клетки этого билета</button>` : '';
+
+    return `<div class="ticket-container" data-ticket-number="${ticketNumber}">
+        <div class="ticket-number"> Билет #${ticketNumber}</div>
+        <div class="ticket-purchase-num">Покупка #${ticket.purchase_number}</div>
+        <div class="scratch-grid">${cellsHtml}</div>
+        <div class="matches-counter">🏆 Совпадений: <span>${matches}/${revealedCount}</span></div>
+        ${revealAllCellsBtn}
+        ${winningComboHtml}
+    </div>`;
+}
 
         function initSlideCanvases(slideElement, ticket) {
             if (!slideElement) return;
@@ -4967,83 +5000,108 @@
         }
 
         window.watchAd = async () => {
-            if (!adController) {
-                initAds();
-                await new Promise(resolve => setTimeout(resolve, 500));
-            }
+    // Сначала проверяем на сервере можно ли смотреть
+    try {
+        const checkRes = await fetch('/api/can_watch_ad', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({user_id: userId, ad_type: 'energy_200'})
+        });
+        const checkData = await checkRes.json();
 
-            if (!adController) {
-                try {
-                    let resp = await fetch('/api/watch_ad_fallback', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({user_id: userId})
-                    });
-                    let data = await resp.json();
-                    if (data.success) {
-                        showToast(`+50 энергии (реклама временно недоступна)`, 'info');
-                        updateStatus();
-                    }
-                } catch(e) {}
-                return;
-            }
+        if (!checkData.can) {
+            showToast(checkData.message, 'error');
+            return;
+        }
+    } catch(e) {
+        console.log('Check error:', e);
+    }
 
-            try {
-                const result = await adController.show();
-                if (result.done && !result.error) {
-                    let resp = await fetch('/api/watch_ad', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({user_id: userId})
-                    });
-                    let data = await resp.json();
-                    if (data.success) {
-                        showToast(`+200 энергии! Спасибо! 🎬`, 'success');
-                        updateStatus();
-                    }
-                } else {
-                    showToast('Реклама не загружена, попробуйте позже', 'error');
-                }
-            } catch (error) {
-                console.error('Ad error:', error);
-                showToast('Ошибка рекламы, попробуйте через VPN', 'error');
-            }
-        };
+    if (!adController) {
+        initAds();
+        await new Promise(resolve => setTimeout(resolve, 500));
+    }
 
-        window.watchAdLimit = async () => {
-            if (!adLimitController) {
-                initAds();
-                await new Promise(resolve => setTimeout(resolve, 500));
-            }
+    if (!adController) {
+        showToast('❌ Реклама недоступна, попробуйте позже или включите VPN', 'error');
+        return;
+    }
 
-            if (!adLimitController) {
-                showToast('Реклама временно недоступна', 'error');
-                return;
+    try {
+        const result = await adController.show();
+        if (result.done && !result.error) {
+            let resp = await fetch('/api/watch_ad', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({user_id: userId})
+            });
+            let data = await resp.json();
+            if (data.success) {
+                showToast(`+200 энергии! Спасибо! 🎬`, 'success');
+                updateStatus();
+            } else if (data.msg) {
+                showToast(data.msg, 'error');
             }
+        } else {
+            showToast('Реклама не загружена, попробуйте позже', 'error');
+        }
+    } catch (error) {
+        console.error('Ad error:', error);
+        showToast('Ошибка рекламы, попробуйте через VPN', 'error');
+    }
+};
 
-            try {
-                const result = await adLimitController.show();
-                if (result.done && !result.error) {
-                    let resp = await fetch('/api/watch_ad_limit', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({user_id: userId})
-                    });
-                    let data = await resp.json();
-                    if (data.success) {
-                        showToast(`⚡ +1 к макс. энергии! Теперь лимит: ${data.max_energy}`, 'success');
-                        updateStatus();
-                    } else {
-                        showToast(data.msg || 'Ошибка', 'error');
-                    }
-                } else {
-                    showToast('Реклама не загружена', 'error');
-                }
-            } catch (error) {
-                console.error('Ad limit error:', error);
-                showToast('Ошибка рекламы', 'error');
+window.watchAdLimit = async () => {
+    // Сначала проверяем на сервере можно ли смотреть
+    try {
+        const checkRes = await fetch('/api/can_watch_ad', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({user_id: userId, ad_type: 'energy_limit'})
+        });
+        const checkData = await checkRes.json();
+
+        if (!checkData.can) {
+            showToast(checkData.message, 'error');
+            return;
+        }
+    } catch(e) {
+        console.log('Check error:', e);
+    }
+
+    if (!adLimitController) {
+        initAds();
+        await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
+    if (!adLimitController) {
+        showToast('❌ Реклама недоступна, попробуйте позже или включите VPN', 'error');
+        return;
+    }
+
+    try {
+        const result = await adLimitController.show();
+        if (result.done && !result.error) {
+            let resp = await fetch('/api/watch_ad_limit', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({user_id: userId})
+            });
+            let data = await resp.json();
+            if (data.success) {
+                showToast(`⚡ +1 к макс. энергии! Теперь лимит: ${data.max_energy}`, 'success');
+                updateStatus();
+            } else if (data.msg) {
+                showToast(data.msg, 'error');
             }
-        };
+        } else {
+            showToast('Реклама не загружена', 'error');
+        }
+    } catch (error) {
+        console.error('Ad limit error:', error);
+        showToast('Ошибка рекламы', 'error');
+    }
+};
 
         window.donate = function() { window.open('https://t.me/WereGoodSupport', '_blank'); };
 

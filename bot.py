@@ -1303,11 +1303,9 @@ def update_online_count():
 def buy_ticket(user_id, user_data):
     global lottery_pool, lottery_tickets, global_ticket_counter
     with lottery_lock:
-        update_lottery_phase()
-        if lottery_phase != "buy":
-            return False, "Сейчас нельзя купить билеты! Приём билетов с 00:00 до 21:00"
+        # НЕЛЬЗЯ покупать ТОЛЬКО когда идёт стирание (21:00 - 00:00)
         if is_drawn:
-            return False, "Розыгрыш уже прошёл!"
+            return False, "Сейчас идёт стирание билетов! Новые билеты появятся в 00:00"
         if user_data["lp"] < 100:
             return False, "Не хватает LP (нужно 100)"
         bought = len([t for t in lottery_tickets if t.get("user_id") == user_id])
@@ -2257,6 +2255,27 @@ def api_watch_ad_limit():
     return jsonify({"success": True, "max_energy": new_max_energy, "upgrades": new_upgrades})
 
 
+@app.route('/api/can_watch_ad', methods=['POST'])
+def api_can_watch_ad():
+    """Проверка, может ли пользователь смотреть рекламу (без показа)"""
+    data = request.json
+    if not data:
+        return jsonify({"can": False, "message": "No data"}), 400
+    user_id = data.get('user_id')
+    ad_type = data.get('ad_type')
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"can": False, "message": "Invalid user_id"}), 400
+
+    if ad_type == 'energy_200':
+        can_watch, msg = check_ad_cooldown(user_id, "energy_200", 5, 40)
+        return jsonify({"can": can_watch, "message": msg if not can_watch else ""})
+    elif ad_type == 'energy_limit':
+        can_watch, msg = check_ad_cooldown(user_id, "energy_limit", 10, 15)
+        return jsonify({"can": can_watch, "message": msg if not can_watch else ""})
+    else:
+        return jsonify({"can": False, "message": "Unknown ad type"})
+
 @app.route('/api/buy_ticket', methods=['POST'])
 def api_buy_ticket():
     data = request.json
@@ -2288,6 +2307,42 @@ def api_reveal_all_tickets():
     success, msg = reveal_all_tickets(user_id)
     return jsonify({"success": success, "msg": msg})
 
+
+@app.route('/api/reveal_ticket_cells', methods=['POST'])
+def api_reveal_ticket_cells():
+    """Открыть ВСЕ клетки КОНКРЕТНОГО билета"""
+    data = request.json
+    if not data:
+        return jsonify({"success": False, "msg": "No data"}), 400
+    user_id = data.get('user_id')
+    ticket_number = data.get('ticket_number')
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"success": False, "msg": "Invalid user_id"}), 400
+
+    with lottery_lock:
+        if not is_drawn:
+            return jsonify({"success": False, "msg": "Розыгрыш ещё не начался!"})
+
+        for ticket in lottery_tickets:
+            if ticket.get("user_id") == user_id and ticket.get("number") == ticket_number:
+                revealed_count = 0
+                for i in range(12):
+                    if not ticket["revealed"][i]:
+                        ticket["revealed"][i] = True
+                        revealed_count += 1
+
+                if revealed_count > 0:
+                    save_lottery()
+                    user = get_user(user_id)
+                    add_log(f"🔓 Открыл все клетки билета #{ticket_number} ({revealed_count} клеток)", user_id,
+                            user['username'])
+                    return jsonify(
+                        {"success": True, "msg": f"Билет #{ticket_number} полностью открыт! ({revealed_count} клеток)"})
+                else:
+                    return jsonify({"success": False, "msg": "В этом билете уже всё открыто"})
+
+        return jsonify({"success": False, "msg": "Билет не найден"})
 
 @app.route('/api/lottery_status', methods=['POST'])
 def api_lottery_status():
