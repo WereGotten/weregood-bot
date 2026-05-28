@@ -5392,59 +5392,76 @@ window.watchAdLimit = async () => {
             setInterval(updateLottery, 30000);
             setInterval(loadRecentPlayers, 15000);
 
-            // ========== ОБРАБОТЧИКИ ПРОМОКОДОВ ==========
+                        // ========== ОБРАБОТЧИКИ ПРОМОКОДОВ ==========
             const activateBtn = document.getElementById('activatePromoBtn');
             const promoInput = document.getElementById('promoCodeInput');
+
             if (activateBtn) {
                 activateBtn.onclick = activatePromoCode;
             }
+
             if (promoInput) {
                 promoInput.onkeypress = function(e) {
-                    if (e.key === 'Enter') activatePromoCode();
+                    if (e.key === 'Enter') {
+                        activatePromoCode();
+                    }
                 };
             }
 
-                                    // ========== ОБРАБОТКА start_param ==========
+            // ========== ОБРАБОТКА start_param (промокоды и рефералы) ==========
             if (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
                 const startParam = tg.initDataUnsafe.start_param;
                 console.log('📱 Параметр startapp:', startParam);
 
-                // Обработка промокода
+                // Обработка промокода (начинается с claim_)
                 if (startParam && startParam.startsWith('claim_')) {
                     const promoCode = startParam.replace('claim_', '');
                     console.log('🎫 Найден промокод для активации:', promoCode);
+
                     setTimeout(() => {
                         if (typeof openPromoModalWithCode === 'function') {
                             openPromoModalWithCode(promoCode);
                             showToast(`🎫 Промокод ${promoCode} готов к активации!`, 'success');
+                        } else {
+                            console.log('❌ Функция openPromoModalWithCode не найдена');
                         }
                     }, 2000);
                 }
-
-                // Обработка реферального кода (если не промокод)
+                // Обработка реферального кода (все остальные случаи)
                 else if (startParam && !startParam.startsWith('claim_')) {
                     const refCode = startParam;
                     console.log('👥 Найден реферальный код:', refCode);
+
                     setTimeout(async () => {
                         try {
                             const response = await fetch('/api/set_referral', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ user_id: userId, referral_code: refCode })
+                                body: JSON.stringify({
+                                    user_id: userId,
+                                    referral_code: refCode
+                                })
                             });
                             const data = await response.json();
+
                             if (data.success) {
-                                console.log('✅ Реферальный код привязан');
+                                console.log('✅ Реферальный код привязан:', data.message);
                                 showToast('🎉 Реферальный код активирован!', 'success');
+                            } else {
+                                console.log('❌ Ошибка привязки реферала:', data.error);
+                                // Не показываем ошибку пользователю, чтобы не смущать
                             }
                         } catch(e) {
-                            console.error('Ошибка:', e);
+                            console.error('❌ Ошибка отправки реферального кода:', e);
                         }
                     }, 1500);
                 }
             }
 
-            if (tg) { tg.ready(); tg.expand(); }
+            if (tg) {
+                tg.ready();
+                tg.expand();
+            }
     </script>
 </body>
 </html>
