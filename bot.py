@@ -3291,6 +3291,54 @@ def api_promo_info():
             "has_password": bool(promo['password'])
         })
 
+
+@app.route('/api/set_referral', methods=['POST'])
+def api_set_referral():
+    data = request.json
+    user_id = data.get('user_id')
+    referral_code = data.get('referral_code', '').strip()
+
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"success": False, "error": "Invalid user_id"}), 400
+
+    if not referral_code:
+        return jsonify({"success": False, "error": "No referral code"}), 400
+
+    with db.get_cursor() as cursor:
+        # Проверяем, существует ли пользователь
+        cursor.execute("SELECT referrer_id FROM users WHERE user_id = ?", (user_id,))
+        user = cursor.fetchone()
+
+        if not user:
+            return jsonify({"success": False, "error": "User not found"}), 404
+
+        # Если реферер уже есть — не меняем
+        if user['referrer_id'] and user['referrer_id'] != 0:
+            return jsonify({"success": True, "message": "Referrer already set"}), 200
+
+        # Ищем реферера по коду
+        cursor.execute("SELECT user_id FROM users WHERE referral_code = ?", (referral_code,))
+        referrer = cursor.fetchone()
+
+        if referrer and referrer['user_id'] != user_id:
+            cursor.execute("UPDATE users SET referrer_id = ? WHERE user_id = ?", (referrer['user_id'], user_id))
+
+            # Добавляем запись в таблицу рефералов
+            cursor.execute('''
+                INSERT INTO referrals (referrer_id, referred_id, username, first_name)
+                SELECT ?, ?, username, first_name FROM users WHERE user_id = ?
+            ''', (referrer['user_id'], user_id, user_id))
+
+            add_log(f"👥 Реферал привязан! Код: {referral_code}", user_id, str(user_id))
+
+            # Отправляем уведомление рефереру
+            send_telegram_message(referrer['user_id'], f"🎉 Новый реферал присоединился по вашей ссылке!")
+
+            return jsonify({"success": True, "message": "Referral attached"}), 200
+
+    return jsonify({"success": False, "error": "Referrer not found"}), 404
+
 # ========== ЗАПУСК ==========
 if __name__ == '__main__':
     threading.Thread(target=handle_telegram_updates, daemon=True).start()

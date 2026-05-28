@@ -5404,29 +5404,47 @@ window.watchAdLimit = async () => {
                 };
             }
 
-                        // ========== АВТОМАТИЧЕСКАЯ АКТИВАЦИЯ ПРОМОКОДА ИЗ ССЫЛКИ ==========
+                                    // ========== ОБРАБОТКА start_param ==========
             if (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
                 const startParam = tg.initDataUnsafe.start_param;
                 console.log('📱 Параметр startapp:', startParam);
 
+                // Обработка промокода
                 if (startParam && startParam.startsWith('claim_')) {
                     const promoCode = startParam.replace('claim_', '');
                     console.log('🎫 Найден промокод для активации:', promoCode);
-
-                    // Ждём загрузки игры и открываем модалку с промокодом
                     setTimeout(() => {
                         if (typeof openPromoModalWithCode === 'function') {
                             openPromoModalWithCode(promoCode);
                             showToast(`🎫 Промокод ${promoCode} готов к активации!`, 'success');
-                        } else {
-                            console.log('Функция openPromoModalWithCode не найдена');
                         }
                     }, 2000);
+                }
+
+                // Обработка реферального кода (если не промокод)
+                else if (startParam && !startParam.startsWith('claim_')) {
+                    const refCode = startParam;
+                    console.log('👥 Найден реферальный код:', refCode);
+                    setTimeout(async () => {
+                        try {
+                            const response = await fetch('/api/set_referral', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ user_id: userId, referral_code: refCode })
+                            });
+                            const data = await response.json();
+                            if (data.success) {
+                                console.log('✅ Реферальный код привязан');
+                                showToast('🎉 Реферальный код активирован!', 'success');
+                            }
+                        } catch(e) {
+                            console.error('Ошибка:', e);
+                        }
+                    }, 1500);
                 }
             }
 
             if (tg) { tg.ready(); tg.expand(); }
-        });
     </script>
 </body>
 </html>
