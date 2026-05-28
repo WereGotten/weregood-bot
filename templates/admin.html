@@ -1271,7 +1271,7 @@
                 else if (p.reward_type === 'lp') { rewardClass = 'reward-lp'; rewardIcon = '💎'; }
                 else { rewardClass = 'reward-energy'; rewardIcon = '⚡'; }
                 const usedPercent = (p.used_count / p.max_uses * 100).toFixed(0);
-                const promoUrl = `${window.location.origin}/claim?code=${p.code}`;
+                const promoUrl = `https://t.me/WereGooodbot/WereGood?startapp=claim_${p.code}`;
                 return `
                     <tr>
                         <td><code class="promo-code">${p.code}</code><span class="password-badge">${p.has_password ? '🔒 Пароль' : '🔓 Без пароля'}</span></td>
@@ -1299,7 +1299,7 @@
             if (promo.reward_type === 'wg') rewardText = `💰 ${promo.reward_amount} WG Coin`;
             else if (promo.reward_type === 'lp') rewardText = `💎 ${promo.reward_amount} LP Coin`;
             else rewardText = `⚡ +${promo.reward_amount} к лимиту энергии`;
-            const promoUrl = `${window.location.origin}/claim?code=${promo.code}`;
+            const promoUrl = `https://t.me/WereGooodbot/WereGood?startapp=claim_${promo.code}`;
             let activationsHtml = '<div class="loading">Нет активаций</div>';
             if (promo.activations && promo.activations.length > 0) {
                 activationsHtml = promo.activations.map(a => `
