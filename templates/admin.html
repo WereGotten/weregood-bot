@@ -1348,35 +1348,38 @@
         }
 
         async function createPromoCode() {
-            const code = document.getElementById('promoCode').value.toUpperCase().trim();
-            const reward_type = document.getElementById('promoRewardType').value;
-            const reward_amount = parseInt(document.getElementById('promoAmount').value);
-            const max_uses = parseInt(document.getElementById('promoMaxUses').value);
-            const password = document.getElementById('promoPassword').value.trim();
-            if (!code) {
-                alert('Введите код промокода');
-                return;
-            }
-            if (reward_amount <= 0) {
-                alert('Количество должно быть больше 0');
-                return;
-            }
-            if (max_uses <= 0) {
-                alert('Максимум активаций должен быть больше 0');
-                return;
-            }
-            const result = await apiRequest('create_promo', {
-                method: 'POST',
-                body: JSON.stringify({ code, reward_type, reward_amount, max_uses, password: password || null })
-            });
-            if (result.success) {
-                alert(`✅ Промокод ${result.code} создан!\nСсылка: ${result.promo_url}`);
-                closePromoModal();
-                loadPromoCodes();
-            } else {
-                alert('❌ Ошибка: ' + (result.error || result.msg));
-            }
+    const code = document.getElementById('promoCode').value.toUpperCase().trim();
+    const reward_type = document.getElementById('promoRewardType').value;
+    const reward_amount = parseInt(document.getElementById('promoAmount').value);
+    const max_uses = parseInt(document.getElementById('promoMaxUses').value);
+    const password = document.getElementById('promoPassword').value.trim();
+
+    if (!code) { alert('Введите код промокода'); return; }
+    if (reward_amount <= 0) { alert('Количество должно быть больше 0'); return; }
+    if (max_uses <= 0) { alert('Максимум активаций должен быть больше 0'); return; }
+
+    const body = { code, reward_type, reward_amount, max_uses };
+    if (password) body.password = password;
+
+    try {
+        const response = await fetch(`/api/admin/create_promo?key=${adminKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        const result = await response.json();
+
+        if (result.success) {
+            alert(`✅ Промокод ${result.code} создан!\nСсылка: ${result.promo_url}`);
+            closePromoModal();
+            loadPromoCodes();
+        } else {
+            alert('❌ Ошибка: ' + (result.error || result.msg));
         }
+    } catch(e) {
+        alert('❌ Ошибка: ' + e.message);
+    }
+}
 
         async function deletePromoCode(id, code) {
             if (!confirm(`Удалить промокод ${code}?`)) return;

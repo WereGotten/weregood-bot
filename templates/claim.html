@@ -7,10 +7,15 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(145deg, #0a0a1a 0%, #12122a 100%);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: radial-gradient(ellipse at 20% 30%, #0f0f23, #0a0a15);
             color: #fff;
             min-height: 100vh;
             display: flex;
@@ -18,78 +23,494 @@
             justify-content: center;
             padding: 20px;
         }
-        .claim-container {
-            max-width: 450px;
+
+        /* Анимированный фон */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
             width: 100%;
-            background: linear-gradient(145deg, #1a1a2e, #0f0f20);
-            border-radius: 32px;
-            padding: 32px 24px;
+            height: 100%;
+            background: radial-gradient(circle at 50% 50%, rgba(255,215,0,0.08) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+
+        @keyframes glow {
+            0% { box-shadow: 0 0 5px rgba(255,215,0,0.3); }
+            50% { box-shadow: 0 0 25px rgba(255,215,0,0.5); }
+            100% { box-shadow: 0 0 5px rgba(255,215,0,0.3); }
+        }
+
+        @keyframes shine {
+            0% { background-position: -100% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        .claim-container {
+            max-width: 480px;
+            width: 100%;
+            background: linear-gradient(145deg, rgba(26,26,46,0.95), rgba(15,15,32,0.98));
+            backdrop-filter: blur(10px);
+            border-radius: 48px;
+            padding: 32px 28px;
             border: 1px solid rgba(255,215,0,0.2);
+            position: relative;
+            z-index: 1;
+            animation: float 3s ease-in-out infinite;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,215,0,0.1) inset;
+        }
+
+        .claim-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #FFD700, #FFA500, #FFD700, transparent);
+            border-radius: 48px 48px 0 0;
+        }
+
+        /* Иконка с анимацией */
+        .promo-icon-wrapper {
             text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .promo-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,165,0,0.08));
+            border-radius: 50%;
+            font-size: 48px;
+            animation: glow 2s ease-in-out infinite;
+            border: 1px solid rgba(255,215,0,0.3);
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #FFD700, #FFA500, #FFD700);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.5);
+            margin-bottom: 28px;
+        }
+
+        /* Код промокода */
+        .code-container {
+            background: linear-gradient(135deg, rgba(0,0,0,0.4), rgba(0,0,0,0.2));
+            border-radius: 60px;
+            padding: 4px;
+            margin-bottom: 24px;
+            border: 1px solid rgba(255,215,0,0.15);
+        }
+
+        .code {
+            background: rgba(0,0,0,0.5);
+            border-radius: 56px;
+            padding: 16px 20px;
+            text-align: center;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 1.3rem;
+            font-weight: 800;
+            letter-spacing: 2px;
+            color: #FFD700;
+            text-shadow: 0 0 10px rgba(255,215,0,0.3);
+            word-break: break-all;
+        }
+
+        /* Карточка награды */
+        .reward-card {
+            background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,165,0,0.05));
+            border-radius: 32px;
+            padding: 24px 20px;
+            margin-bottom: 24px;
+            text-align: center;
+            border: 1px solid rgba(255,215,0,0.15);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .reward-card::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,215,0,0.05), transparent);
+            transform: rotate(45deg);
+            animation: shine 3s infinite;
+        }
+
+        .reward-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: rgba(255,255,255,0.5);
+            margin-bottom: 8px;
+        }
+
+        .reward-value {
+            font-size: 2.2rem;
+            font-weight: 800;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .reward-value.wg {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .reward-value.lp {
+            color: #00E5FF;
+            text-shadow: 0 0 15px rgba(0,229,255,0.3);
+        }
+
+        .reward-value.energy {
+            color: #4caf50;
+            text-shadow: 0 0 15px rgba(76,175,80,0.3);
+        }
+
+        .reward-icon {
+            font-size: 1.8rem;
+        }
+
+        /* Прогресс-бар остатка */
+        .remaining-container {
+            margin: 20px 0;
+        }
+
+        .remaining-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            color: rgba(255,255,255,0.5);
+            margin-bottom: 8px;
+        }
+
+        .progress-bar {
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            height: 6px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            background: linear-gradient(90deg, #FFD700, #FFA500);
+            height: 100%;
+            width: 0%;
+            border-radius: 20px;
+            transition: width 0.5s ease;
+        }
+
+        .remaining-value {
+            color: #FFD700;
+            font-weight: 600;
+        }
+
+        /* Поле ввода пароля */
+        .password-group {
+            margin-bottom: 20px;
+        }
+
+        .password-input {
+            width: 100%;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,215,0,0.2);
+            border-radius: 60px;
+            padding: 16px 20px;
+            color: white;
+            font-size: 0.9rem;
+            text-align: center;
+            letter-spacing: 1px;
+            outline: none;
+            transition: all 0.2s ease;
+            font-family: monospace;
+        }
+
+        .password-input:focus {
+            border-color: #FFD700;
+            background: rgba(255,215,0,0.05);
+            box-shadow: 0 0 15px rgba(255,215,0,0.2);
+        }
+
+        .password-input::placeholder {
+            color: rgba(255,255,255,0.3);
+        }
+
+        /* Кнопка активации */
+        .activate-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            border: none;
+            border-radius: 60px;
+            padding: 18px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #0a0a1a;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 16px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .activate-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .activate-btn:hover::before {
+            left: 100%;
+        }
+
+        .activate-btn:active {
+            transform: scale(0.97);
+        }
+
+        .activate-btn.disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .activate-btn.disabled:active {
+            transform: none;
+        }
+
+        /* Кнопка открыть игру */
+        .open-app-btn {
+            width: 100%;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,215,0,0.2);
+            border-radius: 60px;
+            padding: 14px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #FFD700;
+            cursor: pointer;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .open-app-btn:hover {
+            background: rgba(255,215,0,0.1);
+            border-color: rgba(255,215,0,0.4);
+        }
+
+        .open-app-btn:active {
+            transform: scale(0.97);
+        }
+
+        /* Сообщения */
+        .message {
+            margin-top: 16px;
+            font-size: 0.8rem;
+            padding: 12px;
+            border-radius: 60px;
+            text-align: center;
+            display: none;
             animation: fadeIn 0.3s ease;
         }
+
+        .message.error {
+            background: linear-gradient(135deg, rgba(244,67,54,0.15), rgba(244,67,54,0.08));
+            color: #f44336;
+            border: 1px solid rgba(244,67,54,0.3);
+            display: block;
+        }
+
+        .message.success {
+            background: linear-gradient(135deg, rgba(34,197,94,0.15), rgba(34,197,94,0.08));
+            color: #22c55e;
+            border: 1px solid rgba(34,197,94,0.3);
+            display: block;
+        }
+
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
+            from { opacity: 0; transform: translateY(-10px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        .promo-icon { font-size: 64px; margin-bottom: 20px; }
-        h2 { font-size: 1.5rem; margin-bottom: 8px; background: linear-gradient(135deg, #FFD700, #FFA500); -webkit-background-clip: text; background-clip: text; color: transparent; }
-        .code { font-size: 1.2rem; font-weight: 700; color: #FFD700; background: rgba(255,215,0,0.1); padding: 8px 16px; border-radius: 40px; display: inline-block; margin: 16px 0; font-family: monospace; }
-        .reward-card { background: rgba(255,215,0,0.08); border-radius: 20px; padding: 16px; margin: 20px 0; }
-        .reward-label { font-size: 0.7rem; opacity: 0.6; margin-bottom: 4px; }
-        .reward-value { font-size: 1.8rem; font-weight: 800; }
-        .reward-value.wg { background: linear-gradient(135deg, #FFD700, #FFA500); -webkit-background-clip: text; background-clip: text; color: transparent; }
-        .reward-value.lp { color: #00E5FF; }
-        .reward-value.energy { color: #4caf50; }
-        .remaining { font-size: 0.7rem; opacity: 0.5; margin-top: 8px; }
-        .password-input { width: 100%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,215,0,0.15); border-radius: 16px; padding: 14px; color: white; font-size: 0.9rem; text-align: center; margin: 16px 0; outline: none; }
-        .password-input:focus { border-color: #FFD700; }
-        .activate-btn { width: 100%; background: linear-gradient(135deg, #FFD700, #FFA500); border: none; border-radius: 60px; padding: 16px; font-weight: 700; font-size: 1rem; color: #0a0a1a; cursor: pointer; transition: transform 0.1s ease; margin-top: 8px; }
-        .activate-btn:active { transform: scale(0.97); }
-        .message { margin-top: 16px; font-size: 0.75rem; padding: 10px; border-radius: 12px; display: none; }
-        .message.error { background: rgba(244,67,54,0.15); color: #f44336; display: block; }
-        .message.success { background: rgba(34,197,94,0.15); color: #22c55e; display: block; }
-        .open-app-btn { margin-top: 20px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,215,0,0.2); border-radius: 60px; padding: 12px; font-weight: 600; font-size: 0.85rem; color: #FFD700; cursor: pointer; text-decoration: none; display: inline-block; width: 100%; text-align: center; }
-        .loading { text-align: center; padding: 40px; opacity: 0.6; }
-        .error-page { text-align: center; }
-        .error-page h2 { color: #f44336; background: none; -webkit-background-clip: unset; }
+
+        /* Состояния */
+        .loading-state {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            margin: 0 auto 20px;
+            border: 3px solid rgba(255,215,0,0.2);
+            border-top-color: #FFD700;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.6);
+        }
+
+        .error-page {
+            text-align: center;
+        }
+
+        .error-page h2 {
+            background: linear-gradient(135deg, #f44336, #d32f2f);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 16px;
+        }
+
+        .success-state {
+            text-align: center;
+        }
+
+        .confetti-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+            display: inline-block;
+            animation: bounce 0.6s ease;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
+
+        .success-message {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 16px 0;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
     </style>
 </head>
 <body>
     <div class="claim-container" id="claimContainer">
-        <div id="loadingState" class="loading">🔄 Загрузка...</div>
+        <!-- Состояние загрузки -->
+        <div id="loadingState" class="loading-state">
+            <div class="spinner"></div>
+            <div class="loading-text">Проверка промокода...</div>
+        </div>
+
+        <!-- Состояние ошибки -->
         <div id="errorState" style="display: none;" class="error-page">
-            <div class="promo-icon">❌</div>
+            <div class="promo-icon-wrapper">
+                <div class="promo-icon">❌</div>
+            </div>
             <h2>Ошибка</h2>
-            <p id="errorMessage"></p>
-            <a href="/" class="open-app-btn">📱 Открыть игру</a>
+            <p id="errorMessage" style="margin-bottom: 24px; color: rgba(255,255,255,0.7);"></p>
+            <a href="/" class="open-app-btn">✨ Открыть игру ✨</a>
         </div>
+
+        <!-- Состояние активации промокода -->
         <div id="promoState" style="display: none;">
-            <div class="promo-icon">🎁</div>
+            <div class="promo-icon-wrapper">
+                <div class="promo-icon">🎁</div>
+            </div>
             <h2>Активация промокода</h2>
-            <div class="code" id="promoCodeDisplay"></div>
+            <div class="subtitle">Введите код и получите награду</div>
+
+            <div class="code-container">
+                <div class="code" id="promoCodeDisplay"></div>
+            </div>
+
             <div class="reward-card">
-                <div class="reward-label">Ваша награда</div>
+                <div class="reward-label">ВАША НАГРАДА</div>
                 <div class="reward-value" id="rewardValue"></div>
-                <div class="remaining" id="remainingInfo"></div>
             </div>
+
+            <div class="remaining-container" id="remainingContainer">
+                <div class="remaining-label">
+                    <span>Осталось активаций</span>
+                    <span class="remaining-value" id="remainingInfo">0</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+            </div>
+
             <div id="passwordSection" style="display: none;">
-                <input type="text" class="password-input" id="passwordInput" placeholder="Введите пароль промокода" maxlength="20">
+                <div class="password-group">
+                    <input type="text" class="password-input" id="passwordInput" placeholder="🔒 Введите пароль промокода" maxlength="20" autocomplete="off">
+                </div>
             </div>
-            <button class="activate-btn" id="activateBtn">🎁 Активировать</button>
+
+            <button class="activate-btn" id="activateBtn">
+                <span>🎁</span> Активировать <span>✨</span>
+            </button>
+
             <div id="message" class="message"></div>
-            <a href="/" class="open-app-btn">📱 Открыть игру</a>
+
+            <a href="/" class="open-app-btn">🏠 Открыть игру</a>
         </div>
-        <div id="successState" style="display: none;">
-            <div class="promo-icon">✅</div>
+
+        <!-- Состояние успеха -->
+        <div id="successState" style="display: none;" class="success-state">
+            <div class="confetti-icon">🎉</div>
+            <div class="promo-icon-wrapper">
+                <div class="promo-icon">✅</div>
+            </div>
             <h2>Промокод активирован!</h2>
-            <div class="reward-card">
-                <div class="reward-label">Вы получили</div>
+            <div class="success-message" id="successMessage">Награда получена!</div>
+            <div class="reward-card" style="margin-top: 20px;">
+                <div class="reward-label">ВЫ ПОЛУЧИЛИ</div>
                 <div class="reward-value" id="successRewardValue"></div>
             </div>
-            <a href="/" class="open-app-btn">📱 Играть</a>
+            <a href="/" class="open-app-btn" style="margin-top: 24px;">🎮 Играть сейчас 🎮</a>
         </div>
     </div>
+
     <script>
         let tg = window.Telegram?.WebApp;
         let userId = null;
@@ -103,6 +524,12 @@
             userId = tg.initDataUnsafe.user.id;
             tg.ready();
             tg.expand();
+        }
+
+        function updateProgressBar(remaining, maxUses) {
+            const percent = (remaining / maxUses) * 100;
+            const fill = document.getElementById('progressFill');
+            if (fill) fill.style.width = percent + '%';
         }
 
         async function loadPromoInfo() {
@@ -138,19 +565,26 @@
 
             let rewardHtml = '';
             let rewardClass = '';
+            let rewardIcon = '';
+
             if (promoData.reward_type === 'wg') {
                 rewardHtml = `${promoData.reward_amount} WG`;
                 rewardClass = 'wg';
+                rewardIcon = '💰';
             } else if (promoData.reward_type === 'lp') {
                 rewardHtml = `${promoData.reward_amount} LP`;
                 rewardClass = 'lp';
+                rewardIcon = '💎';
             } else {
-                rewardHtml = `+${promoData.reward_amount} к лимиту энергии`;
+                rewardHtml = `+${promoData.reward_amount} ⚡ к лимиту энергии`;
                 rewardClass = 'energy';
+                rewardIcon = '⚡';
             }
-            document.getElementById('rewardValue').innerHTML = `<span class="${rewardClass}">${rewardHtml}</span>`;
-            document.getElementById('rewardValue').className = `reward-value ${rewardClass}`;
-            document.getElementById('remainingInfo').innerHTML = `Осталось активаций: ${promoData.remaining}`;
+
+            document.getElementById('rewardValue').innerHTML = `${rewardIcon} <span class="${rewardClass}">${rewardHtml}</span>`;
+
+            document.getElementById('remainingInfo').innerHTML = promoData.remaining;
+            updateProgressBar(promoData.remaining, promoData.max_uses || 10);
 
             if (promoData.has_password) {
                 document.getElementById('passwordSection').style.display = 'block';
@@ -160,15 +594,17 @@
         function showSuccess() {
             document.getElementById('promoState').style.display = 'none';
             document.getElementById('successState').style.display = 'block';
+
             let rewardHtml = '';
             if (promoData.reward_type === 'wg') {
                 rewardHtml = `${promoData.reward_amount} WG`;
             } else if (promoData.reward_type === 'lp') {
                 rewardHtml = `${promoData.reward_amount} LP`;
             } else {
-                rewardHtml = `+${promoData.reward_amount} к лимиту энергии`;
+                rewardHtml = `+${promoData.reward_amount} ⚡ к лимиту энергии`;
             }
             document.getElementById('successRewardValue').innerHTML = rewardHtml;
+            document.getElementById('successMessage').innerHTML = `Вы получили ${rewardHtml}!`;
         }
 
         async function activatePromo() {
@@ -177,7 +613,7 @@
             const messageDiv = document.getElementById('message');
 
             btn.disabled = true;
-            btn.textContent = '⏳ Активация...';
+            btn.innerHTML = '<span>⏳</span> Активация... <span>⏳</span>';
             messageDiv.className = 'message';
             messageDiv.style.display = 'none';
 
@@ -189,7 +625,7 @@
                 });
                 const data = await res.json();
                 if (data.success) {
-                    messageDiv.innerHTML = `✅ ${data.message}`;
+                    messageDiv.innerHTML = `🎉 ${data.message} 🎉`;
                     messageDiv.classList.add('success');
                     messageDiv.style.display = 'block';
                     setTimeout(() => showSuccess(), 1500);
@@ -198,14 +634,14 @@
                     messageDiv.classList.add('error');
                     messageDiv.style.display = 'block';
                     btn.disabled = false;
-                    btn.textContent = '🎁 Активировать';
+                    btn.innerHTML = '<span>🎁</span> Активировать <span>✨</span>';
                 }
             } catch (e) {
-                messageDiv.innerHTML = '❌ Ошибка при активации';
+                messageDiv.innerHTML = '❌ Ошибка при активации. Попробуйте позже.';
                 messageDiv.classList.add('error');
                 messageDiv.style.display = 'block';
                 btn.disabled = false;
-                btn.textContent = '🎁 Активировать';
+                btn.innerHTML = '<span>🎁</span> Активировать <span>✨</span>';
             }
         }
 
