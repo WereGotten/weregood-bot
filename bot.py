@@ -3249,6 +3249,39 @@ def handle_telegram_updates():
             time.sleep(5)
 
 
+@app.route('/api/promo/info', methods=['GET'])
+def api_promo_info():
+    code = request.args.get('code', '').upper().strip()
+    if not code:
+        return jsonify({"success": False, "error": "No code provided"}), 400
+
+    with db.get_cursor() as cursor:
+        cursor.execute('SELECT * FROM promo_codes WHERE code = ? AND is_active = 1', (code,))
+        promo = cursor.fetchone()
+
+        if not promo:
+            return jsonify({"success": False, "error": "Promo code not found"}), 404
+
+        if promo['expires_at']:
+            expires = datetime.datetime.fromisoformat(promo['expires_at'])
+            if datetime.datetime.now() > expires:
+                return jsonify({"success": False, "error": "Promo code expired"}), 400
+
+        used_count = promo['used_count'] or 0
+        remaining = promo['max_uses'] - used_count
+
+        if remaining <= 0:
+            return jsonify({"success": False, "error": "Promo code is no longer active"}), 400
+
+        return jsonify({
+            "success": True,
+            "code": promo['code'],
+            "reward_type": promo['reward_type'],
+            "reward_amount": promo['reward_amount'],
+            "remaining": remaining,
+            "has_password": bool(promo['password'])
+        })
+
 # ========== ЗАПУСК ==========
 if __name__ == '__main__':
     threading.Thread(target=handle_telegram_updates, daemon=True).start()
