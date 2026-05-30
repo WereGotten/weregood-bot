@@ -5991,7 +5991,12 @@
     selectedTask = currentTasks.find(t => t.id === taskId);
     if (!selectedTask) return;
 
-    const rewardIcon = selectedTask.reward_type === 'wg' ? '' : (selectedTask.reward_type === 'lp' ? '' : (selectedTask.reward_type === 'usdt' ? '' : '⚡'));
+    // Исправлено: правильные иконки для каждого типа награды
+    let rewardIcon = '';
+    if (selectedTask.reward_type === 'wg') rewardIcon = '💰';
+    else if (selectedTask.reward_type === 'lp') rewardIcon = '💎';
+    else if (selectedTask.reward_type === 'usdt') rewardIcon = '💵';
+    else rewardIcon = '⚡';
 
     document.getElementById('taskDetailTitle').innerText = selectedTask.title;
     document.getElementById('taskDetailReward').innerHTML = `${rewardIcon} ${selectedTask.reward_amount} ${selectedTask.reward_type.toUpperCase()}`;
@@ -6003,7 +6008,6 @@
     const closeBtn = document.querySelector('#taskDetailModal .task-detail-close');
 
     if (selectedTask.is_completed) {
-        // Если задание выполнено — показываем надпись вместо кнопок
         buttonsContainer.innerHTML = `
             <div style="text-align: center; padding: 12px; background: rgba(34,197,94,0.15); border-radius: 40px; width: 100%;">
                 ✅ Задание выполнено! Награда получена.
@@ -6011,7 +6015,6 @@
         `;
         if (closeBtn) closeBtn.style.display = 'block';
     } else {
-        // Если не выполнено — показываем кнопки
         buttonsContainer.innerHTML = `
             <button class="task-detail-btn task-link-btn" onclick="openTaskChannel()">
                 🔗 Перейти по ссылке
