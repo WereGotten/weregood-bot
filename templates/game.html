@@ -5987,19 +5987,44 @@
             document.body.style.overflow = '';
         }
 
-        function openTaskDetail(taskId) {
-            selectedTask = currentTasks.find(t => t.id === taskId);
-            if (!selectedTask) return;
+            function openTaskDetail(taskId) {
+    selectedTask = currentTasks.find(t => t.id === taskId);
+    if (!selectedTask) return;
 
-            const rewardIcon = selectedTask.reward_type === 'wg' ? '💰' : (selectedTask.reward_type === 'lp' ? '💎' : (selectedTask.reward_type === 'usdt' ? '💵' : '⚡'));
+    const rewardIcon = selectedTask.reward_type === 'wg' ? '💰' : (selectedTask.reward_type === 'lp' ? '💎' : (selectedTask.reward_type === 'usdt' ? '💵' : '⚡'));
 
-            document.getElementById('taskDetailTitle').innerText = selectedTask.title;
-            document.getElementById('taskDetailReward').innerHTML = `${rewardIcon} ${selectedTask.reward_amount} ${selectedTask.reward_type.toUpperCase()}`;
-            document.getElementById('taskDetailRemaining').innerHTML = `${selectedTask.completed_count}/${selectedTask.total_limit}`;
-            document.getElementById('taskDetailAvatar').innerHTML = selectedTask.channel_avatar ? `<img src="${selectedTask.channel_avatar}" style="width:100%;height:100%;object-fit:cover;">` : '📢';
+    document.getElementById('taskDetailTitle').innerText = selectedTask.title;
+    document.getElementById('taskDetailReward').innerHTML = `${rewardIcon} ${selectedTask.reward_amount} ${selectedTask.reward_type.toUpperCase()}`;
+    document.getElementById('taskDetailRemaining').innerHTML = `${selectedTask.completed_count}/${selectedTask.total_limit}`;
+    document.getElementById('taskDetailAvatar').innerHTML = getAvatarUrl(selectedTask.channel_avatar);
 
-            document.getElementById('taskDetailModal').classList.add('active');
-        }
+    // Показываем разные кнопки в зависимости от статуса выполнения
+    const buttonsContainer = document.querySelector('#taskDetailModal .task-detail-buttons');
+    const closeBtn = document.querySelector('#taskDetailModal .task-detail-close');
+
+    if (selectedTask.is_completed) {
+        // Если задание выполнено — показываем надпись вместо кнопок
+        buttonsContainer.innerHTML = `
+            <div style="text-align: center; padding: 12px; background: rgba(34,197,94,0.15); border-radius: 40px; width: 100%;">
+                ✅ Задание выполнено! Награда получена.
+            </div>
+        `;
+        if (closeBtn) closeBtn.style.display = 'block';
+    } else {
+        // Если не выполнено — показываем кнопки
+        buttonsContainer.innerHTML = `
+            <button class="task-detail-btn task-link-btn" onclick="openTaskChannel()">
+                🔗 Перейти по ссылке
+            </button>
+            <button class="task-detail-btn task-check-btn" onclick="checkTaskCompletion()">
+                ✅ Проверить выполнение
+            </button>
+        `;
+        if (closeBtn) closeBtn.style.display = 'block';
+    }
+
+    document.getElementById('taskDetailModal').classList.add('active');
+}
 
         function closeTaskDetailModal() {
             document.getElementById('taskDetailModal').classList.remove('active');
