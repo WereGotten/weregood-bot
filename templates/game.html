@@ -3426,6 +3426,96 @@
     color: rgba(255,255,255,0.6);
     cursor: pointer;
 }
+        /* Полноэкранная вкладка заданий */
+.tasks-list-full {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 16px;
+    padding-bottom: 80px;
+}
+
+.tasks-header {
+    margin-bottom: 20px;
+}
+
+.task-card-full {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: linear-gradient(145deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+    border-radius: 20px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid rgba(255,215,0,0.1);
+}
+
+.task-card-full:hover {
+    transform: translateX(5px);
+    background: rgba(255,215,0,0.08);
+    border-color: rgba(255,215,0,0.3);
+}
+
+.task-card-full.completed {
+    opacity: 0.6;
+    background: rgba(34,197,94,0.05);
+}
+
+.task-avatar-full {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: rgba(255,215,0,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.task-avatar-full img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.task-info-full {
+    flex: 1;
+}
+
+.task-channel-full {
+    font-size: 0.7rem;
+    opacity: 0.6;
+}
+
+.task-title-full {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-top: 4px;
+}
+
+.task-status-full {
+    font-size: 0.7rem;
+    padding: 4px 12px;
+    border-radius: 20px;
+    background: rgba(255,215,0,0.15);
+    color: #FFD700;
+    white-space: nowrap;
+}
+
+.task-card-full.completed .task-status-full {
+    background: rgba(34,197,94,0.15);
+    color: #22c55e;
+}
+
+.task-reward-full {
+    font-size: 0.9rem;
+    font-weight: 700;
+    white-space: nowrap;
+    color: #FFD700;
+}
     </style>
 </head>
 <body>
@@ -3730,6 +3820,7 @@
                     </h2>
                     <div class="lottery-badge">21:00</div>
                 </div>
+
                 <div class="prize-card">
                     <div class="prize-info">
                         <div class="prize-label">🏆 ГЛАВНЫЙ ФОНД</div>
@@ -3794,6 +3885,18 @@
                     </div>
                 </div>
             </div>
+
+            <div id="tabTasks" class="tab-pane">
+    <div class="tasks-header">
+        <h2 class="section-title">
+            <img src="/static/tasks.png" alt="Задания" style="width: 30px; height: 30px;">
+            <span>Доступные задания</span>
+        </h2>
+    </div>
+    <div class="tasks-list-full" id="tasksListFull">
+        <div class="loading">Загрузка...</div>
+    </div>
+</div>?
 
             <div id="tabProfile" class="tab-pane">
                 <div class="profile-header">
@@ -3927,24 +4030,28 @@
         </main>
 
         <nav class="bottom-nav" id="bottomNav">
-            <div class="nav-item active" data-tab="home">
-                <div class="nav-icon"><img src="/static/home_normal.png" alt="Главная" class="nav-icon-img" id="homeIcon" style="width: 24px; height: 24px;"></div>
-                <div class="nav-label">Главная</div>
-            </div>
-            <div class="nav-item" data-tab="shop">
-                <div class="nav-icon"><img src="/static/shop_normal.png" alt="Магазин" class="nav-icon-img" id="shopIcon" style="width: 24px; height: 24px;"></div>
-                <div class="nav-label">Магазин</div>
-            </div>
-            <div class="nav-item" data-tab="lottery">
-                <div class="nav-icon"><img src="/static/fire_normal.png" alt="Вызов" class="nav-icon-img" id="lotteryIcon" style="width: 24px; height: 24px;"></div>
-                <div class="nav-label">Вызов</div>
-            </div>
-            <div class="nav-item" data-tab="profile">
-                <div class="nav-icon"><img src="/static/profile_normal.png" alt="Профиль" class="nav-icon-img" id="profileIcon" style="width: 24px; height: 24px;"></div>
-                <div class="nav-label">Профиль</div>
-            </div>
-        </nav>
+    <div class="nav-item active" data-tab="home">
+        <div class="nav-icon"><img src="/static/home_normal.png" alt="Главная" class="nav-icon-img" id="homeIcon" style="width: 24px; height: 24px;"></div>
+        <div class="nav-label">Главная</div>
     </div>
+    <div class="nav-item" data-tab="shop">
+        <div class="nav-icon"><img src="/static/shop_normal.png" alt="Магазин" class="nav-icon-img" id="shopIcon" style="width: 24px; height: 24px;"></div>
+        <div class="nav-label">Магазин</div>
+    </div>
+    <div class="nav-item" data-tab="lottery">
+        <div class="nav-icon"><img src="/static/fire_normal.png" alt="Вызов" class="nav-icon-img" id="lotteryIcon" style="width: 24px; height: 24px;"></div>
+        <div class="nav-label">Вызов</div>
+    </div>
+    <div class="nav-item" data-tab="tasks">
+        <div class="nav-icon"><img src="/static/tasks.png" alt="Задания" class="nav-icon-img" style="width: 24px; height: 24px;"></div>
+        <div class="nav-label">Задания</div>
+    </div>
+    <div class="nav-item" data-tab="profile">
+        <div class="nav-icon"><img src="/static/profile_normal.png" alt="Профиль" class="nav-icon-img" id="profileIcon" style="width: 24px; height: 24px;"></div>
+        <div class="nav-label">Профиль</div>
+    </div>
+</nav>
+        </div>
 
     <div id="ticketsPage" class="tickets-page">
         <div class="tickets-header">
@@ -4586,21 +4693,22 @@
         });
 
         document.querySelectorAll('.nav-item').forEach(item => {
-            const oldOnClick = item.onclick;
-            item.onclick = (e) => {
-                playNavSound();
-                const tab = item.dataset.tab;
-                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-                item.classList.add('active');
-                document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-                document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`).classList.add('active');
-                document.querySelector('.main-content').scrollTop = 0;
-                if (tab === 'lottery') { updateLottery(); loadRecentPlayers(); }
-                if (tab === 'profile' || tab === 'shop' || tab === 'home') updateStatus();
-                if (tab === 'home') updateLeaderboard();
-                if (oldOnClick) oldOnClick(e);
-            };
-        });
+    const oldOnClick = item.onclick;
+    item.onclick = (e) => {
+        playNavSound();
+        const tab = item.dataset.tab;
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        item.classList.add('active');
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+        document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`).classList.add('active');
+        document.querySelector('.main-content').scrollTop = 0;
+        if (tab === 'lottery') { updateLottery(); loadRecentPlayers(); }
+        if (tab === 'profile' || tab === 'shop' || tab === 'home') updateStatus();
+        if (tab === 'home') updateLeaderboard();
+        if (tab === 'tasks') { loadTasks(); }  // ← ЭТУ СТРОКУ ДОБАВИТЬ
+        if (oldOnClick) oldOnClick(e);
+    };
+});
 
         let lastClickTime = 0;
         const CLICK_DEBOUNCE = 40;
@@ -5899,7 +6007,7 @@ window.watchAdLimit = async () => {
             }
         }
 
-        // ========== ЗАДАНИЯ ==========
+        // ========== ЗАДАНИЯ (ПОЛНОЭКРАННАЯ ВКЛАДКА) ==========
 let currentTasks = [];
 let selectedTask = null;
 
@@ -5909,15 +6017,15 @@ async function loadTasks() {
         const data = await res.json();
         if (data.success) {
             currentTasks = data.tasks;
-            renderTasksList();
+            renderTasksFullList();
         }
     } catch(e) {
         console.error('Error loading tasks:', e);
     }
 }
 
-function renderTasksList() {
-    const container = document.getElementById('tasksList');
+function renderTasksFullList() {
+    const container = document.getElementById('tasksListFull');
     if (!container) return;
 
     if (currentTasks.length === 0) {
@@ -5927,36 +6035,25 @@ function renderTasksList() {
 
     let html = '';
     for (const task of currentTasks) {
-        const statusClass = task.is_completed ? 'completed' : 'available';
+        const statusClass = task.is_completed ? 'completed' : '';
         const statusText = task.is_completed ? '✅ Выполнено' : '🟢 Доступно';
         const rewardIcon = task.reward_type === 'wg' ? '💰' : (task.reward_type === 'lp' ? '💎' : (task.reward_type === 'usdt' ? '💵' : '⚡'));
 
         html += `
-            <div class="task-card ${statusClass}" onclick="openTaskDetail(${task.id})">
-                <div class="task-avatar">
+            <div class="task-card-full ${statusClass}" onclick="openTaskDetail(${task.id})">
+                <div class="task-avatar-full">
                     ${task.channel_avatar ? `<img src="${task.channel_avatar}" alt="">` : '📢'}
                 </div>
-                <div class="task-info">
-                    <div class="task-channel">${task.channel_username}</div>
-                    <div class="task-title">${task.title}</div>
+                <div class="task-info-full">
+                    <div class="task-channel-full">${escapeHtml(task.channel_username)}</div>
+                    <div class="task-title-full">${escapeHtml(task.title)}</div>
                 </div>
-                <div class="task-status">${statusText}</div>
-                <div class="task-reward">${rewardIcon} ${task.reward_amount}</div>
+                <div class="task-status-full">${statusText}</div>
+                <div class="task-reward-full">${rewardIcon} ${task.reward_amount}</div>
             </div>
         `;
     }
     container.innerHTML = html;
-}
-
-function openTasksModal() {
-    loadTasks();
-    document.getElementById('tasksModal').classList.add('active');
-    document.body.style.overflow = 'hidden';
-}
-
-function closeTasksModal() {
-    document.getElementById('tasksModal').classList.remove('active');
-    document.body.style.overflow = '';
 }
 
 function openTaskDetail(taskId) {
@@ -5964,6 +6061,65 @@ function openTaskDetail(taskId) {
     if (!selectedTask) return;
 
     const rewardIcon = selectedTask.reward_type === 'wg' ? '💰' : (selectedTask.reward_type === 'lp' ? '💎' : (selectedTask.reward_type === 'usdt' ? '💵' : '⚡'));
+
+    document.getElementById('taskDetailTitle').innerText = selectedTask.title;
+    document.getElementById('taskDetailReward').innerHTML = `${rewardIcon} ${selectedTask.reward_amount} ${selectedTask.reward_type.toUpperCase()}`;
+    document.getElementById('taskDetailRemaining').innerHTML = `${selectedTask.completed_count}/${selectedTask.total_limit}`;
+    document.getElementById('taskDetailAvatar').innerHTML = selectedTask.channel_avatar ? `<img src="${selectedTask.channel_avatar}" style="width:100%;height:100%;object-fit:cover;">` : '📢';
+
+    document.getElementById('taskDetailModal').classList.add('active');
+}
+
+function closeTaskDetailModal() {
+    document.getElementById('taskDetailModal').classList.remove('active');
+    selectedTask = null;
+}
+
+function openTaskChannel() {
+    if (selectedTask) {
+        window.open(selectedTask.channel_link, '_blank');
+    }
+}
+
+async function checkTaskCompletion() {
+    if (!selectedTask) return;
+    if (selectedTask.is_completed) {
+        showToast('Вы уже выполнили это задание', 'error');
+        return;
+    }
+
+    const btn = document.getElementById('taskCheckBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Проверка...';
+
+    try {
+        const res = await fetch('/api/check_task_subscription', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                user_id: userId,
+                task_id: selectedTask.id
+            })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            showToast(data.message, 'success');
+            selectedTask.is_completed = true;
+            renderTasksFullList();
+            closeTaskDetailModal();
+            updateStatus();
+        } else {
+            showToast(data.error, 'error');
+        }
+    } catch(e) {
+        console.error('Error checking task:', e);
+        showToast('Ошибка при проверке', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '✅ Проверить выполнение';
+    }
+}
 
     document.getElementById('taskDetailTitle').innerText = selectedTask.title;
     document.getElementById('taskDetailReward').innerHTML = `${rewardIcon} ${selectedTask.reward_amount} ${selectedTask.reward_type.toUpperCase()}`;
