@@ -5991,7 +5991,7 @@
     selectedTask = currentTasks.find(t => t.id === taskId);
     if (!selectedTask) return;
 
-    const rewardIcon = selectedTask.reward_type === 'wg' ? '💰' : (selectedTask.reward_type === 'lp' ? '💎' : (selectedTask.reward_type === 'usdt' ? '💵' : '⚡'));
+    const rewardIcon = selectedTask.reward_type === 'wg' ? '' : (selectedTask.reward_type === 'lp' ? '' : (selectedTask.reward_type === 'usdt' ? '' : '⚡'));
 
     document.getElementById('taskDetailTitle').innerText = selectedTask.title;
     document.getElementById('taskDetailReward').innerHTML = `${rewardIcon} ${selectedTask.reward_amount} ${selectedTask.reward_type.toUpperCase()}`;
