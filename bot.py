@@ -119,14 +119,14 @@ global_ticket_counter = 0
 winning_numbers = []
 is_drawn = False
 draw_time = None
-lottery_phase = "buy"  # "buy" - можно покупать, "reveal" - можно открывать
+lottery_phase = "buy"
 
 user_cache = {}
 user_cache_time = {}
 CACHE_TTL = 60
 leaderboard_cache = []
 leaderboard_cache_time = 0
-LEADERBOARD_CACHE_TTL = 5  # Уменьшил до 5 секунд для моментального обновления
+LEADERBOARD_CACHE_TTL = 5
 
 used_ton_transactions = set()
 used_transaction_lock = threading.Lock()
@@ -238,7 +238,6 @@ def check_rate_limit(key: str, limit: int = 30, window_seconds: int = 10) -> boo
 
 
 def check_ad_cooldown(user_id: int, ad_type: str, cooldown_minutes: int, daily_limit: int) -> Tuple[bool, str]:
-    """Проверка кулдауна и дневного лимита для рекламы"""
     with db.get_cursor() as cursor:
         cursor.execute('''
             SELECT COUNT(*) FROM ad_watch_history 
@@ -382,6 +381,30 @@ class Database:
             cursor.close()
 
 
+def repair_database():
+    if not os.path.exists(DATABASE_PATH):
+        return True
+    try:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
+        cursor.execute("PRAGMA integrity_check")
+        result = cursor.fetchone()
+        if result[0] == "ok":
+            conn.close()
+            return True
+        logger.warning(f"БД повреждена: {result[0]}. Удаляем...")
+        conn.close()
+        os.remove(DATABASE_PATH)
+        for ext in ['-wal', '-shm']:
+            if os.path.exists(DATABASE_PATH + ext):
+                os.remove(DATABASE_PATH + ext)
+        return True
+    except Exception as e:
+        logger.error(f"Ошибка восстановления БД: {e}")
+        return False
+
+
+repair_database()
 db = Database(DATABASE_PATH)
 
 ALLOWED_UPDATE_FIELDS = {
@@ -732,11 +755,41 @@ def init_db():
             )
         ''')
 
-        # Индексы для быстрых запросов
+        # ========== НОВЫЕ ТАБЛИЦЫ ДЛЯ ЗАДАНИЙ ==========
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS tasks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                channel_link TEXT NOT NULL,
+                channel_username TEXT NOT NULL,
+                channel_avatar TEXT DEFAULT '',
+                reward_amount INTEGER DEFAULT 10,
+                reward_type TEXT DEFAULT 'wg',
+                daily_limit INTEGER DEFAULT 1,
+                total_limit INTEGER DEFAULT 100,
+                completed_count INTEGER DEFAULT 0,
+                days_remaining INTEGER DEFAULT 7,
+                is_active BOOLEAN DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS user_tasks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                task_id INTEGER,
+                completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                reward_claimed BOOLEAN DEFAULT 1,
+                UNIQUE(user_id, task_id)
+            )
+        ''')
+
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_ad_watch_user_type ON ad_watch_history(user_id, ad_type)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_ad_watch_date ON ad_watch_history(watched_at)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_logs_timestamp ON system_logs(timestamp DESC)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_logs_user_id ON system_logs(user_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_tasks ON user_tasks(user_id, task_id)')
 
         for col in ['banned_until', 'ban_reason', 'banned_by']:
             try:
@@ -835,7 +888,6 @@ def add_admin_log(action, admin_id, admin_name, target_id=None, target_name=None
 
 
 def get_logs(log_type='all', limit=100, offset=0, date=None, action_filter=None, user_id_filter=None):
-    """Получение логов с пагинацией (лимит 100 по умолчанию для админки)"""
     with db.get_cursor() as cursor:
         query = "SELECT * FROM system_logs"
         conditions = []
@@ -1303,7 +1355,6 @@ def update_online_count():
 def buy_ticket(user_id, user_data):
     global lottery_pool, lottery_tickets, global_ticket_counter
     with lottery_lock:
-        # НЕЛЬЗЯ покупать ТОЛЬКО когда идёт стирание (21:00 - 00:00)
         if is_drawn:
             return False, "Сейчас идёт стирание билетов! Новые билеты появятся в 00:00"
         if user_data["lp"] < 100:
@@ -1607,7 +1658,6 @@ def check_and_reset_streak(user_id):
     return False
 
 
-# ========== НОВЫЙ ЭНДПОИНТ: ОТКРЫТЬ ВСЕ БИЛЕТЫ ОДНОЙ КНОПКОЙ ==========
 @app.route('/api/reveal_all_tickets_fast', methods=['POST'])
 def api_reveal_all_tickets_fast():
     data = request.json
@@ -1716,7 +1766,6 @@ def handle_get_remaining_time(data):
         emit('remaining_time', {'seconds': 0})
 
 
-# ========== ОСНОВНЫЕ СТРАНИЦЫ ==========
 @app.route('/')
 def game_page():
     return render_template('game.html')
@@ -1856,7 +1905,6 @@ def privacy_page():
     return '<!DOCTYPE html><html><head><title>Политика конфиденциальности</title></head><body style="background:#0a0a1a; color:white; padding:20px; font-family:system-ui;"><h1>Политика конфиденциальности WereGood</h1><p>Мы собираем только ваш Telegram ID и данные профиля для работы игры.</p><p>Данные не передаются третьим лицам.</p><p>Вы можете удалить свои данные, обратившись к администратору.</p></body></html>'
 
 
-# ========== API TON ==========
 @app.route('/api/ton/init', methods=['POST'])
 def api_ton_init():
     return jsonify({"success": True, "manifestUrl": f"{WEBHOOK_URL}/tonconnect-manifest.json"})
@@ -1950,7 +1998,6 @@ def api_ton_check_payment():
     return jsonify({"success": True, "confirmed": False})
 
 
-# ========== API ИГРЫ ==========
 @app.route('/api/log_game_entry', methods=['POST'])
 def api_log_game_entry():
     data = request.json
@@ -2171,7 +2218,7 @@ def api_watch_ad():
     if not is_valid:
         return jsonify({"success": False, "msg": "Invalid user_id"}), 400
 
-    can_watch, msg = check_ad_cooldown(user_id, "energy_200", 2, 40)
+    can_watch, msg = check_ad_cooldown(user_id, "energy_200", 5, 40)
     if not can_watch:
         return jsonify({"success": False, "msg": msg}), 429
 
@@ -2257,7 +2304,6 @@ def api_watch_ad_limit():
 
 @app.route('/api/can_watch_ad', methods=['POST'])
 def api_can_watch_ad():
-    """Проверка, может ли пользователь смотреть рекламу (без показа)"""
     data = request.json
     if not data:
         return jsonify({"can": False, "message": "No data"}), 400
@@ -2275,6 +2321,7 @@ def api_can_watch_ad():
         return jsonify({"can": can_watch, "message": msg if not can_watch else ""})
     else:
         return jsonify({"can": False, "message": "Unknown ad type"})
+
 
 @app.route('/api/buy_ticket', methods=['POST'])
 def api_buy_ticket():
@@ -2310,7 +2357,6 @@ def api_reveal_all_tickets():
 
 @app.route('/api/reveal_ticket_cells', methods=['POST'])
 def api_reveal_ticket_cells():
-    """Открыть ВСЕ клетки КОНКРЕТНОГО билета"""
     data = request.json
     if not data:
         return jsonify({"success": False, "msg": "No data"}), 400
@@ -2343,6 +2389,7 @@ def api_reveal_ticket_cells():
                     return jsonify({"success": False, "msg": "В этом билете уже всё открыто"})
 
         return jsonify({"success": False, "msg": "Билет не найден"})
+
 
 @app.route('/api/lottery_status', methods=['POST'])
 def api_lottery_status():
@@ -2875,6 +2922,247 @@ def api_complete_tutorial():
     return jsonify({"success": True})
 
 
+# ========== ЗАДАНИЯ API ==========
+@app.route('/api/tasks', methods=['GET'])
+def api_get_tasks():
+    user_id = request.args.get('user_id')
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({'success': False, 'error': 'Invalid user_id'}), 400
+
+    with db.get_cursor() as cursor:
+        cursor.execute('''
+            SELECT t.*, 
+                   CASE WHEN ut.id IS NOT NULL THEN 1 ELSE 0 END as is_completed
+            FROM tasks t
+            LEFT JOIN user_tasks ut ON t.id = ut.task_id AND ut.user_id = ?
+            WHERE t.is_active = 1
+            ORDER BY is_completed ASC, t.created_at DESC
+        ''', (user_id,))
+        rows = cursor.fetchall()
+
+        tasks = []
+        for row in rows:
+            tasks.append({
+                'id': row['id'],
+                'title': row['title'],
+                'channel_link': row['channel_link'],
+                'channel_username': row['channel_username'],
+                'channel_avatar': row['channel_avatar'],
+                'reward_amount': row['reward_amount'],
+                'reward_type': row['reward_type'],
+                'daily_limit': row['daily_limit'],
+                'total_limit': row['total_limit'],
+                'completed_count': row['completed_count'],
+                'days_remaining': row['days_remaining'],
+                'is_completed': bool(row['is_completed'])
+            })
+        return jsonify({'success': True, 'tasks': tasks})
+
+
+@app.route('/api/check_task_subscription', methods=['POST'])
+def api_check_task_subscription():
+    data = request.json
+    if not data:
+        return jsonify({'success': False, 'error': 'No data'}), 400
+
+    user_id = data.get('user_id')
+    task_id = data.get('task_id')
+
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({'success': False, 'error': 'Invalid user_id'}), 400
+
+    with db.get_cursor() as cursor:
+        cursor.execute('SELECT * FROM tasks WHERE id = ? AND is_active = 1', (task_id,))
+        task = cursor.fetchone()
+        if not task:
+            return jsonify({'success': False, 'error': 'Задание не найдено'}), 404
+
+        if task['completed_count'] >= task['total_limit']:
+            return jsonify({'success': False, 'error': 'Задание больше недоступно'})
+
+        cursor.execute('SELECT * FROM user_tasks WHERE user_id = ? AND task_id = ?', (user_id, task_id))
+        if cursor.fetchone():
+            return jsonify({'success': False, 'error': 'Вы уже получили награду за это задание'})
+
+        channel_username = task['channel_username'].replace('@', '')
+        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/getChatMember"
+
+        try:
+            response = requests.get(url, params={
+                'chat_id': f'@{channel_username}',
+                'user_id': user_id
+            }, timeout=10)
+            data = response.json()
+
+            if data.get('ok'):
+                status = data.get('result', {}).get('status', '')
+                if status in ['member', 'administrator', 'creator']:
+                    user = get_user(user_id)
+                    old_value = None
+                    new_value = None
+
+                    if task['reward_type'] == 'wg':
+                        old_value = user['wg']
+                        new_value = old_value + task['reward_amount']
+                        safe_update_user(user_id, wg=new_value)
+                        add_log(f"📋 Выполнил задание '{task['title']}' | +{task['reward_amount']} WG", user_id,
+                                user['username'])
+                    elif task['reward_type'] == 'lp':
+                        old_value = user['lp']
+                        new_value = old_value + task['reward_amount']
+                        safe_update_user(user_id, lp=new_value)
+                        add_log(f"📋 Выполнил задание '{task['title']}' | +{task['reward_amount']} LP", user_id,
+                                user['username'])
+                    elif task['reward_type'] == 'usdt':
+                        old_value = user['usdt']
+                        new_value = old_value + task['reward_amount']
+                        safe_update_user(user_id, usdt=new_value)
+                        add_log(f"📋 Выполнил задание '{task['title']}' | +{task['reward_amount']} USDT", user_id,
+                                user['username'])
+                    elif task['reward_type'] == 'energy':
+                        current_energy, _ = calculate_energy(user)
+                        new_energy = min(user['max_energy'], current_energy + task['reward_amount'])
+                        update_energy_in_db(user_id, user, new_energy)
+                        add_log(f"📋 Выполнил задание '{task['title']}' | +{task['reward_amount']} энергии", user_id,
+                                user['username'])
+
+                    cursor.execute('INSERT INTO user_tasks (user_id, task_id) VALUES (?, ?)', (user_id, task_id))
+                    cursor.execute('UPDATE tasks SET completed_count = completed_count + 1 WHERE id = ?', (task_id,))
+
+                    return jsonify({
+                        'success': True,
+                        'message': f'✅ Вы получили +{task["reward_amount"]} {task["reward_type"].upper()}!',
+                        'reward': {'type': task['reward_type'], 'amount': task['reward_amount']}
+                    })
+                else:
+                    return jsonify({'success': False, 'error': 'Вы не подписаны на канал'})
+            else:
+                return jsonify({'success': False, 'error': 'Не удалось проверить подписку'})
+        except Exception as e:
+            logger.error(f"Ошибка проверки подписки: {e}")
+            return jsonify({'success': False, 'error': 'Ошибка при проверке'}), 500
+
+
+@app.route('/api/admin/tasks', methods=['GET'])
+@require_admin
+def api_admin_get_tasks():
+    with db.get_cursor() as cursor:
+        cursor.execute('SELECT * FROM tasks ORDER BY created_at DESC')
+        rows = cursor.fetchall()
+        tasks = []
+        for row in rows:
+            tasks.append({
+                'id': row['id'],
+                'title': row['title'],
+                'channel_link': row['channel_link'],
+                'channel_username': row['channel_username'],
+                'channel_avatar': row['channel_avatar'],
+                'reward_amount': row['reward_amount'],
+                'reward_type': row['reward_type'],
+                'daily_limit': row['daily_limit'],
+                'total_limit': row['total_limit'],
+                'completed_count': row['completed_count'],
+                'days_remaining': row['days_remaining'],
+                'is_active': bool(row['is_active'])
+            })
+        return jsonify({'success': True, 'tasks': tasks})
+
+
+@app.route('/api/admin/create_task', methods=['POST'])
+@require_admin
+def api_admin_create_task():
+    data = request.json
+    title = data.get('title', '').strip()
+    channel_link = data.get('channel_link', '').strip()
+    channel_username = data.get('channel_username', '').strip()
+    channel_avatar = data.get('channel_avatar', '').strip()
+    reward_amount = int(data.get('reward_amount', 10))
+    reward_type = data.get('reward_type', 'wg')
+    daily_limit = int(data.get('daily_limit', 1))
+    total_limit = int(data.get('total_limit', 100))
+    days_remaining = int(data.get('days_remaining', 7))
+
+    if not title or not channel_link or not channel_username:
+        return jsonify({'success': False, 'error': 'Заполните все поля'}), 400
+
+    if reward_amount <= 0:
+        return jsonify({'success': False, 'error': 'Сумма награды должна быть больше 0'}), 400
+
+    admin_id = request.args.get('user_id', 'Admin')
+    admin_name = "Admin"
+
+    with db.get_cursor() as cursor:
+        cursor.execute('''
+            INSERT INTO tasks (title, channel_link, channel_username, channel_avatar, 
+                              reward_amount, reward_type, daily_limit, total_limit, days_remaining)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (title, channel_link, channel_username, channel_avatar,
+              reward_amount, reward_type, daily_limit, total_limit, days_remaining))
+        task_id = cursor.lastrowid
+
+    add_admin_log(f"📋 Создал задание '{title}' (ID: {task_id})", admin_id, admin_name)
+    return jsonify({'success': True, 'task_id': task_id})
+
+
+@app.route('/api/admin/update_task', methods=['POST'])
+@require_admin
+def api_admin_update_task():
+    data = request.json
+    task_id = data.get('task_id')
+    title = data.get('title', '').strip()
+    channel_link = data.get('channel_link', '').strip()
+    channel_username = data.get('channel_username', '').strip()
+    channel_avatar = data.get('channel_avatar', '').strip()
+    reward_amount = int(data.get('reward_amount', 10))
+    reward_type = data.get('reward_type', 'wg')
+    daily_limit = int(data.get('daily_limit', 1))
+    total_limit = int(data.get('total_limit', 100))
+    days_remaining = int(data.get('days_remaining', 7))
+    is_active = data.get('is_active', True)
+
+    if not task_id:
+        return jsonify({'success': False, 'error': 'task_id required'}), 400
+
+    admin_id = request.args.get('user_id', 'Admin')
+    admin_name = "Admin"
+
+    with db.get_cursor() as cursor:
+        cursor.execute('''
+            UPDATE tasks SET 
+                title = ?, channel_link = ?, channel_username = ?, channel_avatar = ?,
+                reward_amount = ?, reward_type = ?, daily_limit = ?, total_limit = ?,
+                days_remaining = ?, is_active = ?
+            WHERE id = ?
+        ''', (title, channel_link, channel_username, channel_avatar,
+              reward_amount, reward_type, daily_limit, total_limit,
+              days_remaining, is_active, task_id))
+
+    add_admin_log(f"📋 Обновил задание ID: {task_id}", admin_id, admin_name)
+    return jsonify({'success': True})
+
+
+@app.route('/api/admin/delete_task', methods=['POST'])
+@require_admin
+def api_admin_delete_task():
+    data = request.json
+    task_id = data.get('task_id')
+
+    if not task_id:
+        return jsonify({'success': False, 'error': 'task_id required'}), 400
+
+    admin_id = request.args.get('user_id', 'Admin')
+    admin_name = "Admin"
+
+    with db.get_cursor() as cursor:
+        cursor.execute('DELETE FROM user_tasks WHERE task_id = ?', (task_id,))
+        cursor.execute('DELETE FROM tasks WHERE id = ?', (task_id,))
+
+    add_admin_log(f"📋 Удалил задание ID: {task_id}", admin_id, admin_name)
+    return jsonify({'success': True})
+
+
 # ========== ПРОМОКОДЫ API ==========
 @app.route('/api/admin/promo_codes', methods=['GET'])
 @require_admin
@@ -3382,7 +3670,6 @@ def api_admin_chart_data():
         {"success": True, "labels": result["labels"], "data": result["data"], "metric": metric, "period": period})
 
 
-# ========== TELEGRAM БОТ (POLLING) ==========
 def handle_telegram_updates():
     last_update_id = 0
     verify_ssl = not DEBUG_MODE
@@ -3464,7 +3751,6 @@ def handle_telegram_updates():
             time.sleep(5)
 
 
-# ========== ЗАПУСК ==========
 if __name__ == '__main__':
     threading.Thread(target=handle_telegram_updates, daemon=True).start()
     print("\n" + "=" * 60)
@@ -3483,6 +3769,7 @@ if __name__ == '__main__':
     print("     • +200 энергии: 5 мин кулдаун, 40 раз в день")
     print("     • +1 к макс. энергии: 10 мин кулдаун, 15 раз в день")
     print("   • Энергия: отображение в минутах")
+    print("   • ЗАДАНИЯ: подписка на каналы за награду")
     print("=" * 60)
     print(f"🌐 Игра: http://0.0.0.0:5000")
     print(f"👑 Админ-панель: http://0.0.0.0:5000/admin?key={ADMIN_SECRET}")

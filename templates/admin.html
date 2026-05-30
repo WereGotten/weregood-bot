@@ -296,6 +296,68 @@
             font-weight: 600;
         }
 
+        .task-card-inline {
+            background: linear-gradient(145deg, #1a1a2e, #0f0f20);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 12px;
+            border: 1px solid rgba(255,215,0,0.1);
+        }
+
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .task-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #FFD700;
+        }
+
+        .task-status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .task-status.active {
+            background: rgba(34,197,94,0.15);
+            color: #22c55e;
+        }
+
+        .task-status.inactive {
+            background: rgba(244,67,54,0.15);
+            color: #f44336;
+        }
+
+        .task-details {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 12px;
+            font-size: 0.75rem;
+        }
+
+        .task-detail-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .task-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+
         .modal {
             display: none;
             position: fixed;
@@ -317,7 +379,7 @@
             background: linear-gradient(145deg, #1a1a2e, #0f0f20);
             border-radius: 24px;
             width: 90%;
-            max-width: 750px;
+            max-width: 600px;
             max-height: 85vh;
             overflow-y: auto;
             padding: 24px;
@@ -359,7 +421,7 @@
             margin-bottom: 5px;
         }
 
-        .form-input, .form-select {
+        .form-input, .form-select, .form-textarea {
             width: 100%;
             background: rgba(255,255,255,0.05);
             border: 1px solid rgba(255,255,255,0.1);
@@ -367,6 +429,12 @@
             padding: 8px 12px;
             color: white;
             font-size: 0.8rem;
+            outline: none;
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 60px;
         }
 
         .form-row {
@@ -374,6 +442,12 @@
             grid-template-columns: 1fr auto;
             gap: 10px;
             align-items: center;
+        }
+
+        .form-grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
         }
 
         .profile-tabs {
@@ -649,7 +723,6 @@
             color: #4caf50;
         }
 
-        /* Пагинация логов */
         .pagination {
             display: flex;
             justify-content: center;
@@ -722,6 +795,10 @@
             <div class="nav-item" data-page="lottery">
                 <span class="nav-icon">🎲</span>
                 <span class="nav-label">Лотерея</span>
+            </div>
+            <div class="nav-item" data-page="tasks">
+                <span class="nav-icon">📋</span>
+                <span class="nav-label">Задания</span>
             </div>
             <div class="nav-item" data-page="promocodes">
                 <span class="nav-icon">🎫</span>
@@ -815,6 +892,17 @@
                 </div>
             </div>
 
+            <div id="page-tasks" class="page-content" style="display: none;">
+                <div class="search-box">
+                    <button class="btn" id="createTaskBtn">➕ Создать задание</button>
+                    <button class="btn refresh-btn" onclick="loadTasks()">🔄 Обновить</button>
+                </div>
+                <div class="chart-card">
+                    <h3>📋 Список заданий</h3>
+                    <div id="tasksList"></div>
+                </div>
+            </div>
+
             <div id="page-promocodes" class="page-content" style="display: none;">
                 <div class="search-box">
                     <button class="btn" id="createPromoBtn">➕ Создать промокод</button>
@@ -895,6 +983,69 @@
                 <button class="modal-close" onclick="closePlayerModal()">✕</button>
             </div>
             <div id="playerModalContent"></div>
+        </div>
+    </div>
+
+    <div id="taskModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="taskModalTitle">➕ Создать задание</h2>
+                <button class="modal-close" onclick="closeTaskModal()">✕</button>
+            </div>
+            <input type="hidden" id="taskEditId">
+            <div class="form-group">
+                <label>Название задания *</label>
+                <input type="text" class="form-input" id="taskTitle" placeholder="Например: Подпишись на наш канал">
+            </div>
+            <div class="form-group">
+                <label>Ссылка на канал *</label>
+                <input type="text" class="form-input" id="taskChannelLink" placeholder="https://t.me/example">
+            </div>
+            <div class="form-group">
+                <label>Username канала *</label>
+                <input type="text" class="form-input" id="taskChannelUsername" placeholder="@example (без @)">
+            </div>
+            <div class="form-group">
+                <label>URL аватарки канала (опционально)</label>
+                <input type="text" class="form-input" id="taskChannelAvatar" placeholder="https://...">
+            </div>
+            <div class="form-grid-2">
+                <div class="form-group">
+                    <label>Сумма награды *</label>
+                    <input type="number" class="form-input" id="taskRewardAmount" value="10" min="1">
+                </div>
+                <div class="form-group">
+                    <label>Тип награды</label>
+                    <select class="form-select" id="taskRewardType">
+                        <option value="wg">💰 WG Coin</option>
+                        <option value="lp">💎 LP Coin</option>
+                        <option value="usdt">💵 USDT</option>
+                        <option value="energy">⚡ Энергия</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-grid-2">
+                <div class="form-group">
+                    <label>Дневной лимит</label>
+                    <input type="number" class="form-input" id="taskDailyLimit" value="1" min="1">
+                </div>
+                <div class="form-group">
+                    <label>Общий лимит</label>
+                    <input type="number" class="form-input" id="taskTotalLimit" value="100" min="1">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Дней до окончания</label>
+                <input type="number" class="form-input" id="taskDaysRemaining" value="7" min="1">
+            </div>
+            <div class="form-group">
+                <label>Статус</label>
+                <select class="form-select" id="taskIsActive">
+                    <option value="true">✅ Активно</option>
+                    <option value="false">❌ Неактивно</option>
+                </select>
+            </div>
+            <button class="btn" style="width: 100%; margin-top: 10px;" onclick="saveTask()">💾 Сохранить</button>
         </div>
     </div>
 
@@ -1038,6 +1189,7 @@
             }
         }
 
+        // ========== СТАТИСТИКА ==========
         async function loadStats() {
             const statsGrid = document.getElementById('statsGrid');
             if (!statsGrid) return;
@@ -1076,6 +1228,7 @@
             window.lotteryPool = data.lottery_pool;
         }
 
+        // ========== ГРАФИКИ ==========
         async function loadChart() {
             const canvas = document.getElementById('activityChart');
             if (!canvas) return;
@@ -1126,6 +1279,7 @@
             });
         }
 
+        // ========== ЛОТЕРЕЯ ==========
         async function loadLotteryStats() {
             const data = await apiRequest('lottery_participants');
             if (!data.success) return;
@@ -1184,6 +1338,7 @@
             loadLotteryStats();
         }
 
+        // ========== ВЫВОД СРЕДСТВ ==========
         async function loadWithdrawals() {
             const data = await apiRequest('withdrawals');
             if (!data.success) {
@@ -1300,6 +1455,142 @@
             closeWithdrawalDetailModal();
         }
 
+        // ========== ЗАДАНИЯ ==========
+        let currentTaskEditId = null;
+
+        async function loadTasks() {
+            const data = await apiRequest('tasks');
+            if (!data.success) {
+                document.getElementById('tasksList').innerHTML = '<div class="error-message">❌ Ошибка загрузки заданий</div>';
+                return;
+            }
+            const container = document.getElementById('tasksList');
+            if (!container) return;
+            if (data.tasks.length === 0) {
+                container.innerHTML = '<div class="loading">📭 Нет заданий</div>';
+                return;
+            }
+            container.innerHTML = data.tasks.map(task => `
+                <div class="task-card-inline">
+                    <div class="task-header">
+                        <div class="task-title">📋 ${escapeHtml(task.title)}</div>
+                        <div class="task-status ${task.is_active ? 'active' : 'inactive'}">${task.is_active ? '✅ Активно' : '❌ Неактивно'}</div>
+                    </div>
+                    <div class="task-details">
+                        <div class="task-detail-item">🔗 Канал: ${escapeHtml(task.channel_username)}</div>
+                        <div class="task-detail-item">🎁 Награда: ${task.reward_amount} ${task.reward_type.toUpperCase()}</div>
+                        <div class="task-detail-item">📊 Выполнено: ${task.completed_count}/${task.total_limit}</div>
+                        <div class="task-detail-item">⏱️ Дней: ${task.days_remaining}</div>
+                    </div>
+                    <div class="task-actions">
+                        <button class="btn-sm" onclick="editTask(${JSON.stringify(task).replace(/"/g, '&quot;')})">✏️ Редактировать</button>
+                        <button class="btn-sm btn-danger" onclick="deleteTask(${task.id})">🗑️ Удалить</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openCreateTaskModal() {
+            currentTaskEditId = null;
+            document.getElementById('taskModalTitle').innerText = '➕ Создать задание';
+            document.getElementById('taskEditId').value = '';
+            document.getElementById('taskTitle').value = '';
+            document.getElementById('taskChannelLink').value = '';
+            document.getElementById('taskChannelUsername').value = '';
+            document.getElementById('taskChannelAvatar').value = '';
+            document.getElementById('taskRewardAmount').value = '10';
+            document.getElementById('taskRewardType').value = 'wg';
+            document.getElementById('taskDailyLimit').value = '1';
+            document.getElementById('taskTotalLimit').value = '100';
+            document.getElementById('taskDaysRemaining').value = '7';
+            document.getElementById('taskIsActive').value = 'true';
+            document.getElementById('taskModal').classList.add('active');
+        }
+
+        function editTask(task) {
+            currentTaskEditId = task.id;
+            document.getElementById('taskModalTitle').innerText = '✏️ Редактировать задание';
+            document.getElementById('taskEditId').value = task.id;
+            document.getElementById('taskTitle').value = task.title;
+            document.getElementById('taskChannelLink').value = task.channel_link;
+            document.getElementById('taskChannelUsername').value = task.channel_username;
+            document.getElementById('taskChannelAvatar').value = task.channel_avatar || '';
+            document.getElementById('taskRewardAmount').value = task.reward_amount;
+            document.getElementById('taskRewardType').value = task.reward_type;
+            document.getElementById('taskDailyLimit').value = task.daily_limit;
+            document.getElementById('taskTotalLimit').value = task.total_limit;
+            document.getElementById('taskDaysRemaining').value = task.days_remaining;
+            document.getElementById('taskIsActive').value = task.is_active ? 'true' : 'false';
+            document.getElementById('taskModal').classList.add('active');
+        }
+
+        function closeTaskModal() {
+            document.getElementById('taskModal').classList.remove('active');
+        }
+
+        async function saveTask() {
+            const title = document.getElementById('taskTitle').value.trim();
+            const channel_link = document.getElementById('taskChannelLink').value.trim();
+            const channel_username = document.getElementById('taskChannelUsername').value.trim();
+            const channel_avatar = document.getElementById('taskChannelAvatar').value.trim();
+            const reward_amount = parseInt(document.getElementById('taskRewardAmount').value);
+            const reward_type = document.getElementById('taskRewardType').value;
+            const daily_limit = parseInt(document.getElementById('taskDailyLimit').value);
+            const total_limit = parseInt(document.getElementById('taskTotalLimit').value);
+            const days_remaining = parseInt(document.getElementById('taskDaysRemaining').value);
+            const is_active = document.getElementById('taskIsActive').value === 'true';
+
+            if (!title || !channel_link || !channel_username) {
+                alert('Заполните обязательные поля (Название, Ссылка на канал, Username канала)');
+                return;
+            }
+
+            const taskId = document.getElementById('taskEditId').value;
+            let result;
+
+            if (taskId) {
+                result = await apiRequest('update_task', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        task_id: parseInt(taskId),
+                        title, channel_link, channel_username, channel_avatar,
+                        reward_amount, reward_type, daily_limit, total_limit, days_remaining, is_active
+                    })
+                });
+            } else {
+                result = await apiRequest('create_task', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        title, channel_link, channel_username, channel_avatar,
+                        reward_amount, reward_type, daily_limit, total_limit, days_remaining
+                    })
+                });
+            }
+
+            if (result.success) {
+                alert(taskId ? '✅ Задание обновлено!' : '✅ Задание создано!');
+                closeTaskModal();
+                loadTasks();
+            } else {
+                alert('❌ Ошибка: ' + (result.error || result.msg));
+            }
+        }
+
+        async function deleteTask(taskId) {
+            if (!confirm('Удалить это задание?')) return;
+            const result = await apiRequest('delete_task', {
+                method: 'POST',
+                body: JSON.stringify({ task_id: taskId })
+            });
+            if (result.success) {
+                alert('✅ Задание удалено');
+                loadTasks();
+            } else {
+                alert('❌ Ошибка: ' + (result.error || result.msg));
+            }
+        }
+
+        // ========== ПРОМОКОДЫ ==========
         async function loadPromoCodes() {
             const data = await apiRequest('promo_codes');
             const tbody = document.getElementById('promoCodesList');
@@ -1330,7 +1621,7 @@
                             <span class="clickable-value" onclick='showPromoDetail(${JSON.stringify(p).replace(/'/g, "&#39;")})'>📋 ${p.activations.length} активаций</span>
                             <br>
                             <span class="promo-link" onclick="copyToClipboard('${promoUrl}')">🔗 Скопировать ссылку</span>
-                         </td>
+                        </td>
                         <td><button class="btn-sm" onclick="deletePromoCode(${p.id}, '${p.code}')">🗑️ Удалить</button></td>
                     </tr>
                 `;
@@ -1441,6 +1732,7 @@
             }
         }
 
+        // ========== ЛОГИ ==========
         async function loadLogs(page = 1) {
             currentLogPage = page;
             const search = document.getElementById('logSearch')?.value || '';
@@ -1513,6 +1805,7 @@
             loadLogs(1);
         }
 
+        // ========== ПОИСК ИГРОКОВ ==========
         async function searchPlayers() {
             const query = document.getElementById('playerSearch')?.value || '';
             if (!query.trim()) {
@@ -1543,6 +1836,7 @@
             `).join('') || '<tr><td colspan="8" class="loading">Ничего не найдено</td></tr>';
         }
 
+        // ========== РЕДАКТИРОВАНИЕ ИГРОКА ==========
         function openEditModal(userId, field, currentValue) {
             currentEditField = { userId, field, currentValue };
             const titles = { wg: '💰 Изменить WG', lp: '🎯 Изменить LP', usdt: '💎 Изменить USDT', stars: '⭐ Изменить Stars', energy: '⚡ Изменить энергию', max_energy: '⚡ Изменить макс. энергию' };
@@ -1669,7 +1963,7 @@
             modalContent.innerHTML = `
                 <div style="text-align:center; margin-bottom:20px;">
                     <div style="font-size:3rem;">👤</div>
-                    <h3>${currentUserData.username || 'Игрок'}</h3>
+                    <h3>${escapeHtml(currentUserData.username || 'Игрок')}</h3>
                     <p style="opacity:0.5;">ID: ${currentUserData.user_id} | Роль: <span style="color:#FFD700;">${currentUserData.role}</span></p>
                     ${currentUserData.is_banned ? `<p style="color:#f44336;">🔨 ЗАБЛОКИРОВАН до: ${currentUserData.ban_info?.until_date}<br>Причина: ${currentUserData.ban_info?.reason}</p>` : ''}
                 </div>
@@ -1714,12 +2008,12 @@
                 </div>
                 <div id="profileTabReferrals" class="profile-tab-content">
                     ${currentUserData.referrals && currentUserData.referrals.length ?
-                        currentUserData.referrals.map(r => `<div class="log-entry">👥 ${r.username} | Потрачено LP: ${r.spent_lp} | Заработано: ${r.earned} LP | ${r.date}</div>`).join('') :
+                        currentUserData.referrals.map(r => `<div class="log-entry">👥 ${escapeHtml(r.username)} | Потрачено LP: ${r.spent_lp} | Заработано: ${r.earned} LP | ${r.date}</div>`).join('') :
                         '<div class="loading">📭 Нет рефералов</div>'}
                 </div>
                 <div id="profileTabLogs" class="profile-tab-content" style="max-height:300px; overflow-y:auto;">
                     ${currentUserData.personal_logs && currentUserData.personal_logs.length ?
-                        currentUserData.personal_logs.map(l => `<div class="log-entry"><span class="log-time">[${l.timestamp}]</span> ${l.action}</div>`).join('') :
+                        currentUserData.personal_logs.map(l => `<div class="log-entry"><span class="log-time">[${l.timestamp}]</span> ${escapeHtml(l.action)}</div>`).join('') :
                         '<div class="loading">📭 Нет логов</div>'}
                 </div>
             `;
@@ -1782,11 +2076,24 @@
             if (playerModal) playerModal.classList.remove('active');
         }
 
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             const setPoolBtn = document.getElementById('setPoolBtn');
             if (setPoolBtn) setPoolBtn.onclick = openPoolModal;
             const createPromoBtn = document.getElementById('createPromoBtn');
             if (createPromoBtn) createPromoBtn.onclick = openPromoModal;
+            const createTaskBtn = document.getElementById('createTaskBtn');
+            if (createTaskBtn) createTaskBtn.onclick = openCreateTaskModal;
+
             document.querySelectorAll('.period-btn').forEach(btn => {
                 btn.onclick = () => {
                     if (btn.dataset.period) {
@@ -1803,6 +2110,7 @@
                     }
                 };
             });
+
             document.querySelectorAll('.nav-item').forEach(item => {
                 item.onclick = () => {
                     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -1815,6 +2123,7 @@
                         dashboard: '📊 Статистика сервера',
                         charts: '📈 Графики и аналитика',
                         lottery: '🎲 Управление лотереей',
+                        tasks: '📋 Управление заданиями',
                         promocodes: '🎫 Управление промокодами',
                         withdrawals: '💸 Заявки на вывод USDT',
                         logs: '📋 Системные логи',
@@ -1823,22 +2132,27 @@
                     const pageTitle = document.getElementById('pageTitle');
                     if (pageTitle) pageTitle.innerText = titles[page];
                     if (page === 'lottery') loadLotteryStats();
+                    if (page === 'tasks') loadTasks();
                     if (page === 'logs') loadLogs(1);
                     if (page === 'charts') loadChart();
                     if (page === 'withdrawals') loadWithdrawals();
                     if (page === 'promocodes') loadPromoCodes();
                 };
             });
+
             loadStats();
             loadChart();
+            loadTasks();
             setInterval(loadStats, 30000);
             setInterval(() => {
                 const pageLogs = document.getElementById('page-logs');
                 const pageWithdrawals = document.getElementById('page-withdrawals');
                 const pagePromocodes = document.getElementById('page-promocodes');
+                const pageTasks = document.getElementById('page-tasks');
                 if (pageLogs && pageLogs.style.display !== 'none') loadLogs(currentLogPage);
                 if (pageWithdrawals && pageWithdrawals.style.display !== 'none') loadWithdrawals();
                 if (pagePromocodes && pagePromocodes.style.display !== 'none') loadPromoCodes();
+                if (pageTasks && pageTasks.style.display !== 'none') loadTasks();
             }, 10000);
         });
     </script>

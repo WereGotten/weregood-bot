@@ -1999,3 +1999,18 @@ body.light-theme .leaderboard-tab {
 body.light-theme .leaderboard-item {
     background: rgba(0,0,0,0.04);
 }
+.tasks-icon {
+    background: rgba(255,215,0,0.15);
+    border-radius: 50%;
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.tasks-icon:active {
+    transform: scale(0.95);
+}
