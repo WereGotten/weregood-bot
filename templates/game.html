@@ -101,6 +101,22 @@
             gap: 10px;
         }
 
+        .tasks-icon {
+            background: rgba(255,215,0,0.15);
+            border-radius: 50%;
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .tasks-icon:active {
+            transform: scale(0.95);
+        }
+
         .daily-icon {
             background: rgba(255,215,0,0.15);
             border-radius: 50%;
@@ -290,7 +306,6 @@
             align-items: center;
             margin-bottom: 8px;
             font-size: 0.8rem;
-            color: var(--text-secondary);
         }
 
         .energy-header span:first-child {
@@ -3155,118 +3170,288 @@
         }
 
         .reveal-ticket-btn {
-    width: 100%;
-    background: linear-gradient(135deg, #9C27B0, #7B1FA2);
-    border: none;
-    border-radius: 40px;
-    padding: 10px;
-    font-weight: 700;
-    font-size: 0.8rem;
-    color: white;
-    cursor: pointer;
-    margin-top: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    transition: transform 0.1s ease;
-}
+            width: 100%;
+            background: linear-gradient(135deg, #9C27B0, #7B1FA2);
+            border: none;
+            border-radius: 40px;
+            padding: 10px;
+            font-weight: 700;
+            font-size: 0.8rem;
+            color: white;
+            cursor: pointer;
+            margin-top: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: transform 0.1s ease;
+        }
 
-.reveal-ticket-btn:active {
-    transform: scale(0.97);
-}
+        .reveal-ticket-btn:active {
+            transform: scale(0.97);
+        }
 
+        /* Полноэкранное модальное окно заданий */
+        .tasks-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(145deg, #0a0a1a, #0d0d20);
+            z-index: 2000;
+            overflow-y: auto;
+        }
 
-        /* Полноэкранная вкладка заданий */
-.tasks-list-full {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-top: 16px;
-    padding-bottom: 80px;
-}
+        .tasks-modal.active {
+            display: block;
+        }
 
-.tasks-header {
-    margin-bottom: 20px;
-}
+        .tasks-modal-content {
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+        }
 
-.task-card-full {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    background: linear-gradient(145deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
-    border-radius: 20px;
-    padding: 16px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    border: 1px solid rgba(255,215,0,0.1);
-}
+        .tasks-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(255,215,0,0.15);
+            position: sticky;
+            top: 0;
+            background: linear-gradient(145deg, #0a0a1a, #0d0d20);
+            z-index: 10;
+        }
 
-.task-card-full:hover {
-    transform: translateX(5px);
-    background: rgba(255,215,0,0.08);
-    border-color: rgba(255,215,0,0.3);
-}
+        .tasks-modal-header h2 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
 
-.task-card-full.completed {
-    opacity: 0.6;
-    background: rgba(34,197,94,0.05);
-}
+        .tasks-modal-close {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            color: white;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
-.task-avatar-full {
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    background: rgba(255,215,0,0.1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.8rem;
-    overflow: hidden;
-    flex-shrink: 0;
-}
+        /* Список заданий в полноэкранном режиме */
+        .tasks-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding-bottom: 40px;
+        }
 
-.task-avatar-full img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
+        /* Карточки заданий */
+        .task-card {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid rgba(255,215,0,0.1);
+        }
 
-.task-info-full {
-    flex: 1;
-}
+        .task-card:hover {
+            transform: translateX(5px);
+            background: rgba(255,215,0,0.08);
+            border-color: rgba(255,215,0,0.3);
+        }
 
-.task-channel-full {
-    font-size: 0.7rem;
-    opacity: 0.6;
-}
+        .task-card.completed {
+            opacity: 0.6;
+            background: rgba(34,197,94,0.05);
+        }
 
-.task-title-full {
-    font-size: 0.9rem;
-    font-weight: 600;
-    margin-top: 4px;
-}
+        .task-avatar {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: rgba(255,215,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
 
-.task-status-full {
-    font-size: 0.7rem;
-    padding: 4px 12px;
-    border-radius: 20px;
-    background: rgba(255,215,0,0.15);
-    color: #FFD700;
-    white-space: nowrap;
-}
+        .task-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
 
-.task-card-full.completed .task-status-full {
-    background: rgba(34,197,94,0.15);
-    color: #22c55e;
-}
+        .task-info {
+            flex: 1;
+        }
 
-.task-reward-full {
-    font-size: 0.9rem;
-    font-weight: 700;
-    white-space: nowrap;
-    color: #FFD700;
-}
+        .task-channel {
+            font-size: 0.7rem;
+            opacity: 0.6;
+        }
+
+        .task-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+
+        .task-status {
+            font-size: 0.7rem;
+            padding: 4px 12px;
+            border-radius: 20px;
+            background: rgba(255,215,0,0.15);
+            color: #FFD700;
+            white-space: nowrap;
+        }
+
+        .task-card.completed .task-status {
+            background: rgba(34,197,94,0.15);
+            color: #22c55e;
+        }
+
+        .task-reward {
+            font-size: 0.9rem;
+            font-weight: 700;
+            white-space: nowrap;
+            color: #FFD700;
+        }
+
+        /* Детальное окно задания */
+        .task-detail-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 2100;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .task-detail-modal.active {
+            display: flex;
+        }
+
+        .task-detail-modal-content {
+            background: linear-gradient(145deg, #1a1a2e, #0f0f20);
+            border-radius: 32px;
+            width: 85%;
+            max-width: 380px;
+            padding: 24px;
+            text-align: center;
+            border: 1px solid rgba(255,215,0,0.3);
+        }
+
+        .task-detail-header {
+            margin-bottom: 20px;
+        }
+
+        .task-detail-avatar {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 12px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            overflow: hidden;
+        }
+
+        .task-detail-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .task-detail-header h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .task-detail-info {
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            padding: 16px;
+            margin-bottom: 24px;
+        }
+
+        .task-detail-reward, .task-detail-limit {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+        }
+
+        .task-detail-reward strong {
+            color: #FFD700;
+        }
+
+        .task-detail-buttons {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .task-detail-btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: transform 0.1s ease;
+            border: none;
+        }
+
+        .task-link-btn {
+            background: linear-gradient(135deg, #0098ea, #0077be);
+            color: white;
+        }
+
+        .task-check-btn {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: #0a0a1a;
+        }
+
+        .task-detail-btn:active {
+            transform: scale(0.97);
+        }
+
+        .task-detail-close {
+            width: 100%;
+            background: rgba(255,255,255,0.08);
+            border: none;
+            border-radius: 40px;
+            padding: 10px;
+            font-weight: 500;
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.6);
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -3280,6 +3465,9 @@
                 <span class="logo-badge">BETA</span>
             </div>
             <div class="user-stats">
+                <div class="tasks-icon" onclick="openTasksModal()">
+                    <img src="/static/tasks.png" alt="Задания" style="width: 36px; height: 36px;">
+                </div>
                 <div class="daily-icon">
                     <img src="/static/gift.png" alt="Ежедневные награды" style="width: 36px; height: 36px;">
                 </div>
@@ -3599,10 +3787,6 @@
                         <img src="/static/ticket.png" alt="Мои билеты">
                         Мои билеты
                     </button>
-                    <button class="reveal-all-btn" id="revealAllTicketsBtn" style="display: none;">
-                        <img src="/static/magic.png" alt="Открыть всё" style="width: 20px; height: 20px;">
-                        Открыть все билеты сразу
-                    </button>
                 </div>
                 <div id="drawStatus" class="draw-status">
                     <img src="/static/hourglass.png" alt="Ожидание" style="width: 18px; height: 18px;">
@@ -3633,18 +3817,6 @@
                     </div>
                 </div>
             </div>
-
-            <div id="tabTasks" class="tab-pane">
-    <div class="tasks-header">
-        <h2 class="section-title">
-            <img src="/static/tasks.png" alt="Задания" style="width: 30px; height: 30px;">
-            <span>Доступные задания</span>
-        </h2>
-    </div>
-    <div class="tasks-list-full" id="tasksListFull">
-        <div class="loading">Загрузка...</div>
-    </div>
-</div>?
 
             <div id="tabProfile" class="tab-pane">
                 <div class="profile-header">
@@ -3778,28 +3950,24 @@
         </main>
 
         <nav class="bottom-nav" id="bottomNav">
-    <div class="nav-item active" data-tab="home">
-        <div class="nav-icon"><img src="/static/home_normal.png" alt="Главная" class="nav-icon-img" id="homeIcon" style="width: 24px; height: 24px;"></div>
-        <div class="nav-label">Главная</div>
+            <div class="nav-item active" data-tab="home">
+                <div class="nav-icon"><img src="/static/home_normal.png" alt="Главная" class="nav-icon-img" id="homeIcon" style="width: 24px; height: 24px;"></div>
+                <div class="nav-label">Главная</div>
+            </div>
+            <div class="nav-item" data-tab="shop">
+                <div class="nav-icon"><img src="/static/shop_normal.png" alt="Магазин" class="nav-icon-img" id="shopIcon" style="width: 24px; height: 24px;"></div>
+                <div class="nav-label">Магазин</div>
+            </div>
+            <div class="nav-item" data-tab="lottery">
+                <div class="nav-icon"><img src="/static/fire_normal.png" alt="Вызов" class="nav-icon-img" id="lotteryIcon" style="width: 24px; height: 24px;"></div>
+                <div class="nav-label">Вызов</div>
+            </div>
+            <div class="nav-item" data-tab="profile">
+                <div class="nav-icon"><img src="/static/profile_normal.png" alt="Профиль" class="nav-icon-img" id="profileIcon" style="width: 24px; height: 24px;"></div>
+                <div class="nav-label">Профиль</div>
+            </div>
+        </nav>
     </div>
-    <div class="nav-item" data-tab="shop">
-        <div class="nav-icon"><img src="/static/shop_normal.png" alt="Магазин" class="nav-icon-img" id="shopIcon" style="width: 24px; height: 24px;"></div>
-        <div class="nav-label">Магазин</div>
-    </div>
-    <div class="nav-item" data-tab="lottery">
-        <div class="nav-icon"><img src="/static/fire_normal.png" alt="Вызов" class="nav-icon-img" id="lotteryIcon" style="width: 24px; height: 24px;"></div>
-        <div class="nav-label">Вызов</div>
-    </div>
-    <div class="nav-item" data-tab="tasks">
-        <div class="nav-icon"><img src="/static/tasks.png" alt="Задания" class="nav-icon-img" style="width: 24px; height: 24px;"></div>
-        <div class="nav-label">Задания</div>
-    </div>
-    <div class="nav-item" data-tab="profile">
-        <div class="nav-icon"><img src="/static/profile_normal.png" alt="Профиль" class="nav-icon-img" id="profileIcon" style="width: 24px; height: 24px;"></div>
-        <div class="nav-label">Профиль</div>
-    </div>
-</nav>
-        </div>
 
     <div id="ticketsPage" class="tickets-page">
         <div class="tickets-header">
@@ -3903,34 +4071,47 @@
 
     <div id="toast" class="toast"></div>
 
-<!-- Модальное окно деталей задания -->
-<div id="taskDetailModal" class="task-detail-modal">
-    <div class="task-detail-modal-content">
-        <div class="task-detail-header">
-            <div class="task-detail-avatar" id="taskDetailAvatar">📢</div>
-            <h3 id="taskDetailTitle"></h3>
-        </div>
-        <div class="task-detail-info">
-            <div class="task-detail-reward">
-                <span>🎁 Награда:</span>
-                <strong id="taskDetailReward"></strong>
+    <!-- Модальное окно заданий (полноэкранное) -->
+    <div id="tasksModal" class="tasks-modal">
+        <div class="tasks-modal-content">
+            <div class="tasks-modal-header">
+                <h2>📋 Доступные задания</h2>
+                <button class="tasks-modal-close" onclick="closeTasksModal()">✕</button>
             </div>
-            <div class="task-detail-limit">
-                <span>📊 Осталось:</span>
-                <span id="taskDetailRemaining"></span>
+            <div class="tasks-list" id="tasksList">
+                <div class="loading">Загрузка...</div>
             </div>
         </div>
-        <div class="task-detail-buttons">
-            <button class="task-detail-btn task-link-btn" id="taskLinkBtn" onclick="openTaskChannel()">
-                🔗 Перейти по ссылке
-            </button>
-            <button class="task-detail-btn task-check-btn" id="taskCheckBtn" onclick="checkTaskCompletion()">
-                ✅ Проверить выполнение
-            </button>
-        </div>
-        <button class="task-detail-close" onclick="closeTaskDetailModal()">Закрыть</button>
     </div>
-</div>
+
+    <!-- Модальное окно деталей задания -->
+    <div id="taskDetailModal" class="task-detail-modal">
+        <div class="task-detail-modal-content">
+            <div class="task-detail-header">
+                <div class="task-detail-avatar" id="taskDetailAvatar">📢</div>
+                <h3 id="taskDetailTitle"></h3>
+            </div>
+            <div class="task-detail-info">
+                <div class="task-detail-reward">
+                    <span>🎁 Награда:</span>
+                    <strong id="taskDetailReward"></strong>
+                </div>
+                <div class="task-detail-limit">
+                    <span>📊 Осталось:</span>
+                    <span id="taskDetailRemaining"></span>
+                </div>
+            </div>
+            <div class="task-detail-buttons">
+                <button class="task-detail-btn task-link-btn" id="taskLinkBtn" onclick="openTaskChannel()">
+                    🔗 Перейти по ссылке
+                </button>
+                <button class="task-detail-btn task-check-btn" id="taskCheckBtn" onclick="checkTaskCompletion()">
+                    ✅ Проверить выполнение
+                </button>
+            </div>
+            <button class="task-detail-close" onclick="closeTaskDetailModal()">Закрыть</button>
+        </div>
+    </div>
 
     <audio id="errorSound" preload="auto"><source src="/static/error.mp3" type="audio/mpeg"></audio>
     <audio id="clickSound" preload="auto"><source src="/static/click.mp3" type="audio/mpeg"></audio>
@@ -4428,22 +4609,21 @@
         });
 
         document.querySelectorAll('.nav-item').forEach(item => {
-    const oldOnClick = item.onclick;
-    item.onclick = (e) => {
-        playNavSound();
-        const tab = item.dataset.tab;
-        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        item.classList.add('active');
-        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-        document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`).classList.add('active');
-        document.querySelector('.main-content').scrollTop = 0;
-        if (tab === 'lottery') { updateLottery(); loadRecentPlayers(); }
-        if (tab === 'profile' || tab === 'shop' || tab === 'home') updateStatus();
-        if (tab === 'home') updateLeaderboard();
-        if (tab === 'tasks') { loadTasks(); }  // ← ЭТУ СТРОКУ ДОБАВИТЬ
-        if (oldOnClick) oldOnClick(e);
-    };
-});
+            const oldOnClick = item.onclick;
+            item.onclick = (e) => {
+                playNavSound();
+                const tab = item.dataset.tab;
+                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                item.classList.add('active');
+                document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+                document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`).classList.add('active');
+                document.querySelector('.main-content').scrollTop = 0;
+                if (tab === 'lottery') { updateLottery(); loadRecentPlayers(); }
+                if (tab === 'profile' || tab === 'shop' || tab === 'home') updateStatus();
+                if (tab === 'home') updateLeaderboard();
+                if (oldOnClick) oldOnClick(e);
+            };
+        });
 
         let lastClickTime = 0;
         const CLICK_DEBOUNCE = 40;
@@ -4526,34 +4706,6 @@
             document.getElementById('ticketsPage').classList.add('active');
             document.getElementById('bottomNav').style.display = 'none';
             document.body.style.overflow = 'hidden';
-        };
-
-        // Новая кнопка: открыть все билеты сразу
-        document.getElementById('revealAllTicketsBtn').onclick = async () => {
-            if (!isDrawn) {
-                showToast('Розыгрыш ещё не начался!', 'error');
-                return;
-            }
-            try {
-                let res = await fetch('/api/reveal_all_tickets_fast', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({user_id: userId})
-                });
-                let data = await res.json();
-                if (data.success) {
-                    showToast(data.msg, 'success');
-                    await loadUserTickets();
-                    updateTopPlayers();
-                    if (socket && socket.connected) {
-                        socket.emit('reveal_all_tickets', {user_id: userId});
-                    }
-                } else {
-                    showToast(data.msg, 'error');
-                }
-            } catch(e) {
-                showToast('Ошибка при открытии билетов', 'error');
-            }
         };
 
         window.closeTicketsPage = function() {
@@ -4896,38 +5048,67 @@
         }
 
         function renderTicketForCarousel(ticket) {
-    const revealed = ticket.revealed || new Array(12).fill(false);
-    const numbers = ticket.numbers;
-    const ticketNumber = ticket.number;
-    const cellSize = 70;
-    let cellsHtml = '';
-    for (let i = 0; i < 12; i++) {
-        const isRevealed = revealed[i];
-        const number = numbers[i];
-        const isWin = isDrawn && winningNumbers.includes(number);
-        const canvasId = `scratch_${ticketNumber}_${i}`;
-        const bgClass = (isRevealed && isWin) ? 'win' : 'normal';
-        cellsHtml += `<div class="scratch-cell"><div class="scratch-number-layer ${bgClass}" style="display: flex;">${number}</div><canvas id="${canvasId}" class="scratch-canvas" width="${cellSize}" height="${cellSize}"></canvas></div>`;
-    }
-    let matches = 0, revealedCount = 0;
-    for (let i = 0; i < 12; i++) { if (revealed[i]) { revealedCount++; if (isDrawn && winningNumbers.includes(numbers[i])) matches++; } }
-    let winningComboHtml = '';
-    if (isDrawn && winningNumbers.length > 0) {
-        winningComboHtml = `<div class="winning-combo-ticket"><div class="winning-combo-title">🎲 ВЫИГРЫШНАЯ КОМБИНАЦИЯ 🎲</div><div class="winning-combo-numbers">${winningNumbers.map(num => `<div class="winning-combo-number">${num}</div>`).join('')}</div></div>`;
-    }
+            const revealed = ticket.revealed || new Array(12).fill(false);
+            const numbers = ticket.numbers;
+            const ticketNumber = ticket.number;
+            const cellSize = 70;
+            let cellsHtml = '';
+            for (let i = 0; i < 12; i++) {
+                const isRevealed = revealed[i];
+                const number = numbers[i];
+                const isWin = isDrawn && winningNumbers.includes(number);
+                const canvasId = `scratch_${ticketNumber}_${i}`;
+                const bgClass = (isRevealed && isWin) ? 'win' : 'normal';
+                cellsHtml += `<div class="scratch-cell"><div class="scratch-number-layer ${bgClass}" style="display: flex;">${number}</div><canvas id="${canvasId}" class="scratch-canvas" width="${cellSize}" height="${cellSize}"></canvas></div>`;
+            }
+            let matches = 0, revealedCount = 0;
+            for (let i = 0; i < 12; i++) { if (revealed[i]) { revealedCount++; if (isDrawn && winningNumbers.includes(numbers[i])) matches++; } }
+            let winningComboHtml = '';
+            if (isDrawn && winningNumbers.length > 0) {
+                winningComboHtml = `<div class="winning-combo-ticket"><div class="winning-combo-title">🎲 ВЫИГРЫШНАЯ КОМБИНАЦИЯ 🎲</div><div class="winning-combo-numbers">${winningNumbers.map(num => `<div class="winning-combo-number">${num}</div>`).join('')}</div></div>`;
+            }
 
-    // Кнопка "Открыть все клетки" для ЭТОГО билета (только если розыгрыш идёт)
-    const revealAllCellsBtn = isDrawn ? `<button class="reveal-ticket-btn" onclick="revealAllCellsForTicket(${ticketNumber})">🔓 Открыть все клетки этого билета</button>` : '';
+            // Кнопка "Открыть все клетки" для ЭТОГО билета (только если розыгрыш идёт)
+            const revealAllCellsBtn = isDrawn ? `<button class="reveal-ticket-btn" onclick="revealAllCellsForTicket(${ticketNumber})">🔓 Открыть все клетки этого билета</button>` : '';
 
-    return `<div class="ticket-container" data-ticket-number="${ticketNumber}">
-        <div class="ticket-number"> Билет #${ticketNumber}</div>
-        <div class="ticket-purchase-num">Покупка #${ticket.purchase_number}</div>
-        <div class="scratch-grid">${cellsHtml}</div>
-        <div class="matches-counter">🏆 Совпадений: <span>${matches}/${revealedCount}</span></div>
-        ${revealAllCellsBtn}
-        ${winningComboHtml}
-    </div>`;
-}
+            return `<div class="ticket-container" data-ticket-number="${ticketNumber}">
+                <div class="ticket-number"> Билет #${ticketNumber}</div>
+                <div class="ticket-purchase-num">Покупка #${ticket.purchase_number}</div>
+                <div class="scratch-grid">${cellsHtml}</div>
+                <div class="matches-counter">🏆 Совпадений: <span>${matches}/${revealedCount}</span></div>
+                ${revealAllCellsBtn}
+                ${winningComboHtml}
+            </div>`;
+        }
+
+        // Открыть все клетки для конкретного билета
+        window.revealAllCellsForTicket = async function(ticketNumber) {
+            if (!isDrawn) {
+                showToast('Розыгрыш ещё не начался!', 'error');
+                return;
+            }
+
+            try {
+                let res = await fetch('/api/reveal_ticket_cells', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({user_id: userId, ticket_number: ticketNumber})
+                });
+                let data = await res.json();
+                if (data.success) {
+                    showToast(data.msg, 'success');
+                    await loadUserTickets();
+                    updateTopPlayers();
+                    if (socket && socket.connected) {
+                        socket.emit('reveal_ticket_cells', {user_id: userId, ticket_number: ticketNumber});
+                    }
+                } else {
+                    showToast(data.msg, 'error');
+                }
+            } catch(e) {
+                showToast('Ошибка при открытии клеток', 'error');
+            }
+        };
 
         function initSlideCanvases(slideElement, ticket) {
             if (!slideElement) return;
@@ -5003,16 +5184,6 @@
                 else { currentTickets = []; updateCarousel(); }
                 document.getElementById('totalTickets').innerText = currentTickets.length;
                 document.getElementById('totalTicketsMini').innerText = currentTickets.length;
-
-                // Показываем/скрываем кнопку "Открыть все билеты"
-                const revealAllBtn = document.getElementById('revealAllTicketsBtn');
-                if (revealAllBtn) {
-                    if (isDrawn && currentTickets.length > 0) {
-                        revealAllBtn.style.display = 'flex';
-                    } else {
-                        revealAllBtn.style.display = 'none';
-                    }
-                }
             } catch(e) { console.error('Error loading tickets:', e); }
         }
 
@@ -5082,8 +5253,6 @@
                 statusDiv.classList.add('active');
                 ticketBtn.disabled = true;
                 ticketBtn.classList.add('disabled');
-                const btnImg = ticketBtn.querySelector('img');
-                if (btnImg) btnImg.style.opacity = '0.5';
                 ticketBtn.textContent = '⏳ Идёт розыгрыш...';
                 topPlayersBlock.style.display = 'block';
                 recentSection.style.display = 'none';
@@ -5139,108 +5308,108 @@
         }
 
         window.watchAd = async () => {
-    // Сначала проверяем на сервере можно ли смотреть
-    try {
-        const checkRes = await fetch('/api/can_watch_ad', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({user_id: userId, ad_type: 'energy_200'})
-        });
-        const checkData = await checkRes.json();
+            // Сначала проверяем на сервере можно ли смотреть
+            try {
+                const checkRes = await fetch('/api/can_watch_ad', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({user_id: userId, ad_type: 'energy_200'})
+                });
+                const checkData = await checkRes.json();
 
-        if (!checkData.can) {
-            showToast(checkData.message, 'error');
-            return;
-        }
-    } catch(e) {
-        console.log('Check error:', e);
-    }
-
-    if (!adController) {
-        initAds();
-        await new Promise(resolve => setTimeout(resolve, 500));
-    }
-
-    if (!adController) {
-        showToast('❌ Реклама недоступна, попробуйте позже или включите VPN', 'error');
-        return;
-    }
-
-    try {
-        const result = await adController.show();
-        if (result.done && !result.error) {
-            let resp = await fetch('/api/watch_ad', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({user_id: userId})
-            });
-            let data = await resp.json();
-            if (data.success) {
-                showToast(`+200 энергии! Спасибо! 🎬`, 'success');
-                updateStatus();
-            } else if (data.msg) {
-                showToast(data.msg, 'error');
+                if (!checkData.can) {
+                    showToast(checkData.message, 'error');
+                    return;
+                }
+            } catch(e) {
+                console.log('Check error:', e);
             }
-        } else {
-            showToast('Реклама не загружена, попробуйте позже', 'error');
-        }
-    } catch (error) {
-        console.error('Ad error:', error);
-        showToast('Ошибка рекламы, попробуйте через VPN', 'error');
-    }
-};
 
-window.watchAdLimit = async () => {
-    // Сначала проверяем на сервере можно ли смотреть
-    try {
-        const checkRes = await fetch('/api/can_watch_ad', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({user_id: userId, ad_type: 'energy_limit'})
-        });
-        const checkData = await checkRes.json();
-
-        if (!checkData.can) {
-            showToast(checkData.message, 'error');
-            return;
-        }
-    } catch(e) {
-        console.log('Check error:', e);
-    }
-
-    if (!adLimitController) {
-        initAds();
-        await new Promise(resolve => setTimeout(resolve, 500));
-    }
-
-    if (!adLimitController) {
-        showToast('❌ Реклама недоступна, попробуйте позже или включите VPN', 'error');
-        return;
-    }
-
-    try {
-        const result = await adLimitController.show();
-        if (result.done && !result.error) {
-            let resp = await fetch('/api/watch_ad_limit', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({user_id: userId})
-            });
-            let data = await resp.json();
-            if (data.success) {
-                showToast(`⚡ +1 к макс. энергии! Теперь лимит: ${data.max_energy}`, 'success');
-                updateStatus();
-            } else if (data.msg) {
-                showToast(data.msg, 'error');
+            if (!adController) {
+                initAds();
+                await new Promise(resolve => setTimeout(resolve, 500));
             }
-        } else {
-            showToast('Реклама не загружена', 'error');
-        }
-    } catch (error) {
-        console.error('Ad limit error:', error);
-        showToast('Ошибка рекламы', 'error');
-    }
-};
+
+            if (!adController) {
+                showToast('❌ Реклама недоступна, попробуйте позже или включите VPN', 'error');
+                return;
+            }
+
+            try {
+                const result = await adController.show();
+                if (result.done && !result.error) {
+                    let resp = await fetch('/api/watch_ad', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({user_id: userId})
+                    });
+                    let data = await resp.json();
+                    if (data.success) {
+                        showToast(`+200 энергии! Спасибо! 🎬`, 'success');
+                        updateStatus();
+                    } else if (data.msg) {
+                        showToast(data.msg, 'error');
+                    }
+                } else {
+                    showToast('Реклама не загружена, попробуйте позже', 'error');
+                }
+            } catch (error) {
+                console.error('Ad error:', error);
+                showToast('Ошибка рекламы, попробуйте через VPN', 'error');
+            }
+        };
+
+        window.watchAdLimit = async () => {
+            // Сначала проверяем на сервере можно ли смотреть
+            try {
+                const checkRes = await fetch('/api/can_watch_ad', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({user_id: userId, ad_type: 'energy_limit'})
+                });
+                const checkData = await checkRes.json();
+
+                if (!checkData.can) {
+                    showToast(checkData.message, 'error');
+                    return;
+                }
+            } catch(e) {
+                console.log('Check error:', e);
+            }
+
+            if (!adLimitController) {
+                initAds();
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+
+            if (!adLimitController) {
+                showToast('❌ Реклама недоступна, попробуйте позже или включите VPN', 'error');
+                return;
+            }
+
+            try {
+                const result = await adLimitController.show();
+                if (result.done && !result.error) {
+                    let resp = await fetch('/api/watch_ad_limit', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({user_id: userId})
+                    });
+                    let data = await resp.json();
+                    if (data.success) {
+                        showToast(`⚡ +1 к макс. энергии! Теперь лимит: ${data.max_energy}`, 'success');
+                        updateStatus();
+                    } else if (data.msg) {
+                        showToast(data.msg, 'error');
+                    }
+                } else {
+                    showToast('Реклама не загружена', 'error');
+                }
+            } catch (error) {
+                console.error('Ad limit error:', error);
+                showToast('Ошибка рекламы', 'error');
+            }
+        };
 
         window.donate = function() { window.open('https://t.me/WereGoodSupport', '_blank'); };
 
@@ -5742,178 +5911,140 @@ window.watchAdLimit = async () => {
             }
         }
 
-        // ========== ЗАДАНИЯ (ПОЛНОЭКРАННАЯ ВКЛАДКА) ==========
-let currentTasks = [];
-let selectedTask = null;
+        // ========== ЗАДАНИЯ ==========
+        let currentTasks = [];
+        let selectedTask = null;
 
-async function loadTasks() {
-    try {
-        const res = await fetch(`/api/tasks?user_id=${userId}`);
-        const data = await res.json();
-        if (data.success) {
-            currentTasks = data.tasks;
-            renderTasksFullList();
+        async function loadTasks() {
+            try {
+                const res = await fetch(`/api/tasks?user_id=${userId}`);
+                const data = await res.json();
+                if (data.success) {
+                    currentTasks = data.tasks;
+                    renderTasksList();
+                }
+            } catch(e) {
+                console.error('Error loading tasks:', e);
+            }
         }
-    } catch(e) {
-        console.error('Error loading tasks:', e);
-    }
-}
 
-function renderTasksFullList() {
-    const container = document.getElementById('tasksListFull');
-    if (!container) return;
+        function renderTasksList() {
+            const container = document.getElementById('tasksList');
+            if (!container) return;
 
-    if (currentTasks.length === 0) {
-        container.innerHTML = '<div class="empty-state">📭 Пока нет доступных заданий</div>';
-        return;
-    }
+            if (currentTasks.length === 0) {
+                container.innerHTML = '<div class="empty-state">📭 Пока нет доступных заданий</div>';
+                return;
+            }
 
-    let html = '';
-    for (const task of currentTasks) {
-        const statusClass = task.is_completed ? 'completed' : '';
-        const statusText = task.is_completed ? '✅ Выполнено' : '🟢 Доступно';
-        const rewardIcon = task.reward_type === 'wg' ? '💰' : (task.reward_type === 'lp' ? '💎' : (task.reward_type === 'usdt' ? '💵' : '⚡'));
+            let html = '';
+            for (const task of currentTasks) {
+                const statusClass = task.is_completed ? 'completed' : '';
+                const statusText = task.is_completed ? '✅ Выполнено' : '🟢 Доступно';
+                const rewardIcon = task.reward_type === 'wg' ? '💰' : (task.reward_type === 'lp' ? '💎' : (task.reward_type === 'usdt' ? '💵' : '⚡'));
 
-        html += `
-            <div class="task-card-full ${statusClass}" onclick="openTaskDetail(${task.id})">
-                <div class="task-avatar-full">
-                    ${task.channel_avatar ? `<img src="${task.channel_avatar}" alt="">` : '📢'}
-                </div>
-                <div class="task-info-full">
-                    <div class="task-channel-full">${escapeHtml(task.channel_username)}</div>
-                    <div class="task-title-full">${escapeHtml(task.title)}</div>
-                </div>
-                <div class="task-status-full">${statusText}</div>
-                <div class="task-reward-full">${rewardIcon} ${task.reward_amount}</div>
-            </div>
-        `;
-    }
-    container.innerHTML = html;
-}
-
-function openTaskDetail(taskId) {
-    selectedTask = currentTasks.find(t => t.id === taskId);
-    if (!selectedTask) return;
-
-    const rewardIcon = selectedTask.reward_type === 'wg' ? '💰' : (selectedTask.reward_type === 'lp' ? '💎' : (selectedTask.reward_type === 'usdt' ? '💵' : '⚡'));
-
-    document.getElementById('taskDetailTitle').innerText = selectedTask.title;
-    document.getElementById('taskDetailReward').innerHTML = `${rewardIcon} ${selectedTask.reward_amount} ${selectedTask.reward_type.toUpperCase()}`;
-    document.getElementById('taskDetailRemaining').innerHTML = `${selectedTask.completed_count}/${selectedTask.total_limit}`;
-    document.getElementById('taskDetailAvatar').innerHTML = selectedTask.channel_avatar ? `<img src="${selectedTask.channel_avatar}" style="width:100%;height:100%;object-fit:cover;">` : '📢';
-
-    document.getElementById('taskDetailModal').classList.add('active');
-}
-
-function closeTaskDetailModal() {
-    document.getElementById('taskDetailModal').classList.remove('active');
-    selectedTask = null;
-}
-
-function openTaskChannel() {
-    if (selectedTask) {
-        window.open(selectedTask.channel_link, '_blank');
-    }
-}
-
-async function checkTaskCompletion() {
-    if (!selectedTask) return;
-    if (selectedTask.is_completed) {
-        showToast('Вы уже выполнили это задание', 'error');
-        return;
-    }
-
-    const btn = document.getElementById('taskCheckBtn');
-    btn.disabled = true;
-    btn.textContent = '⏳ Проверка...';
-
-    try {
-        const res = await fetch('/api/check_task_subscription', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                user_id: userId,
-                task_id: selectedTask.id
-            })
-        });
-        const data = await res.json();
-
-        if (data.success) {
-            showToast(data.message, 'success');
-            selectedTask.is_completed = true;
-            renderTasksFullList();
-            closeTaskDetailModal();
-            updateStatus();
-        } else {
-            showToast(data.error, 'error');
+                html += `
+                    <div class="task-card ${statusClass}" onclick="openTaskDetail(${task.id})">
+                        <div class="task-avatar">
+                            ${task.channel_avatar ? `<img src="${task.channel_avatar}" alt="">` : '📢'}
+                        </div>
+                        <div class="task-info">
+                            <div class="task-channel">${escapeHtml(task.channel_username)}</div>
+                            <div class="task-title">${escapeHtml(task.title)}</div>
+                        </div>
+                        <div class="task-status">${statusText}</div>
+                        <div class="task-reward">${rewardIcon} ${task.reward_amount}</div>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
         }
-    } catch(e) {
-        console.error('Error checking task:', e);
-        showToast('Ошибка при проверке', 'error');
-    } finally {
-        btn.disabled = false;
-        btn.textContent = '✅ Проверить выполнение';
-    }
-}
 
-    document.getElementById('taskDetailTitle').innerText = selectedTask.title;
-    document.getElementById('taskDetailReward').innerHTML = `${rewardIcon} ${selectedTask.reward_amount} ${selectedTask.reward_type.toUpperCase()}`;
-    document.getElementById('taskDetailRemaining').innerHTML = `${selectedTask.completed_count}/${selectedTask.total_limit}`;
-    document.getElementById('taskDetailAvatar').innerHTML = selectedTask.channel_avatar ? `<img src="${selectedTask.channel_avatar}" style="width:100%;height:100%;object-fit:cover;">` : '📢';
-
-    document.getElementById('taskDetailModal').classList.add('active');
-}
-
-function closeTaskDetailModal() {
-    document.getElementById('taskDetailModal').classList.remove('active');
-    selectedTask = null;
-}
-
-function openTaskChannel() {
-    if (selectedTask) {
-        window.open(selectedTask.channel_link, '_blank');
-    }
-}
-
-async function checkTaskCompletion() {
-    if (!selectedTask) return;
-    if (selectedTask.is_completed) {
-        showToast('Вы уже выполнили это задание', 'error');
-        return;
-    }
-
-    const btn = document.getElementById('taskCheckBtn');
-    btn.disabled = true;
-    btn.textContent = '⏳ Проверка...';
-
-    try {
-        const res = await fetch('/api/check_task_subscription', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                user_id: userId,
-                task_id: selectedTask.id
-            })
-        });
-        const data = await res.json();
-
-        if (data.success) {
-            showToast(data.message, 'success');
-            selectedTask.is_completed = true;
-            renderTasksList();
-            closeTaskDetailModal();
-            updateStatus();
-        } else {
-            showToast(data.error, 'error');
+        function openTasksModal() {
+            loadTasks();
+            document.getElementById('tasksModal').classList.add('active');
+            document.body.style.overflow = 'hidden';
         }
-    } catch(e) {
-        console.error('Error checking task:', e);
-        showToast('Ошибка при проверке', 'error');
-    } finally {
-        btn.disabled = false;
-        btn.textContent = '✅ Проверить выполнение';
-    }
-}
+
+        function closeTasksModal() {
+            document.getElementById('tasksModal').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        function openTaskDetail(taskId) {
+            selectedTask = currentTasks.find(t => t.id === taskId);
+            if (!selectedTask) return;
+
+            const rewardIcon = selectedTask.reward_type === 'wg' ? '💰' : (selectedTask.reward_type === 'lp' ? '💎' : (selectedTask.reward_type === 'usdt' ? '💵' : '⚡'));
+
+            document.getElementById('taskDetailTitle').innerText = selectedTask.title;
+            document.getElementById('taskDetailReward').innerHTML = `${rewardIcon} ${selectedTask.reward_amount} ${selectedTask.reward_type.toUpperCase()}`;
+            document.getElementById('taskDetailRemaining').innerHTML = `${selectedTask.completed_count}/${selectedTask.total_limit}`;
+            document.getElementById('taskDetailAvatar').innerHTML = selectedTask.channel_avatar ? `<img src="${selectedTask.channel_avatar}" style="width:100%;height:100%;object-fit:cover;">` : '📢';
+
+            document.getElementById('taskDetailModal').classList.add('active');
+        }
+
+        function closeTaskDetailModal() {
+            document.getElementById('taskDetailModal').classList.remove('active');
+            selectedTask = null;
+        }
+
+        function openTaskChannel() {
+            if (selectedTask) {
+                window.open(selectedTask.channel_link, '_blank');
+            }
+        }
+
+        async function checkTaskCompletion() {
+            if (!selectedTask) return;
+            if (selectedTask.is_completed) {
+                showToast('Вы уже выполнили это задание', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('taskCheckBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Проверка...';
+
+            try {
+                const res = await fetch('/api/check_task_subscription', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        user_id: userId,
+                        task_id: selectedTask.id
+                    })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    selectedTask.is_completed = true;
+                    renderTasksList();
+                    closeTaskDetailModal();
+                    updateStatus();
+                } else {
+                    showToast(data.error, 'error');
+                }
+            } catch(e) {
+                console.error('Error checking task:', e);
+                showToast('Ошибка при проверке', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '✅ Проверить выполнение';
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
 
         document.addEventListener("DOMContentLoaded", () => {
             initTonConnect();
@@ -5933,7 +6064,7 @@ async function checkTaskCompletion() {
             setInterval(updateStatus, 10000);
             setInterval(updateLottery, 30000);
             setInterval(loadRecentPlayers, 15000);
-            setInterval(() => updateLeaderboard(), 8000); // Моментальное обновление лидерборда
+            setInterval(() => updateLeaderboard(), 8000);
 
             // Обработчики промокодов
             const activateBtn = document.getElementById('activatePromoBtn');
