@@ -6008,26 +6008,25 @@
     const closeBtn = document.querySelector('#taskDetailModal .task-detail-close');
 
     if (selectedTask.is_completed) {
-        buttonsContainer.innerHTML = `
-            <div style="text-align: center; padding: 12px; background: rgba(34,197,94,0.15); border-radius: 40px; width: 100%;">
-                ✅ Задание выполнено! Награда получена.
-            </div>
-        `;
-        if (closeBtn) closeBtn.style.display = 'block';
-    } else {
-        buttonsContainer.innerHTML = `
-            <button class="task-detail-btn task-link-btn" onclick="openTaskChannel()">
-                🔗 Перейти по ссылке
-            </button>
-            <button class="task-detail-btn task-check-btn" onclick="checkTaskCompletion()">
-                ✅ Проверить выполнение
-            </button>
-        `;
-        if (closeBtn) closeBtn.style.display = 'block';
-    }
-
-    document.getElementById('taskDetailModal').classList.add('active');
+    buttonsContainer.innerHTML = `
+        <div style="text-align: center; padding: 12px; background: rgba(34,197,94,0.15); border-radius: 40px; width: 100%;">
+            ✅ Задание выполнено! Награда получена.
+        </div>
+    `;
+    if (closeBtn) closeBtn.style.display = 'block';
+} else {
+    buttonsContainer.innerHTML = `
+        <button class="task-detail-btn task-link-btn" onclick="openTaskChannel()">
+            🔗 Перейти по ссылке
+        </button>
+        <button class="task-detail-btn task-check-btn" id="taskCheckBtn" onclick="checkTaskCompletion()">
+            ✅ Проверить выполнение
+        </button>
+    `;
+    if (closeBtn) closeBtn.style.display = 'block';
 }
+
+document.getElementById('taskDetailModal').classList.add('active');
 
         function closeTaskDetailModal() {
             document.getElementById('taskDetailModal').classList.remove('active');
@@ -6041,18 +6040,31 @@
         }
 
         async function checkTaskCompletion() {
-    if (!selectedTask) return;
+    console.log('✅ checkTaskCompletion вызвана');
+
+    if (!selectedTask) {
+        console.log('❌ selectedTask = null');
+        showToast('Ошибка: задание не выбрано', 'error');
+        return;
+    }
+
     if (selectedTask.is_completed) {
         showToast('Вы уже выполнили это задание', 'error');
         return;
     }
 
+    // Находим кнопку с проверкой
     const btn = document.getElementById('taskCheckBtn');
+    if (!btn) {
+        console.log('❌ Кнопка taskCheckBtn не найдена в DOM');
+        showToast('Ошибка интерфейса, перезагрузите страницу', 'error');
+        return;
+    }
+
     const originalText = btn.textContent;
     btn.disabled = true;
     btn.textContent = '⏳ Проверка...';
 
-    // Функция проверки с повторными попытками
     async function checkWithRetry(attempt = 1, maxAttempts = 5) {
         try {
             const res = await fetch('/api/check_task_subscription', {
@@ -6064,18 +6076,18 @@
                 })
             });
             const data = await res.json();
+            console.log('📡 Ответ сервера:', data);
 
             if (data.success) {
                 showToast(data.message, 'success');
                 selectedTask.is_completed = true;
-                renderTasksList(); // Обновляем список заданий
+                renderTasksList();
                 closeTaskDetailModal();
                 updateStatus();
                 return true;
             } else if (data.error === 'Вы не подписаны на канал' && attempt < maxAttempts) {
-                // Если не подписан, ждём и проверяем снова (максимум 5 раз)
                 showToast(`Проверяем подписку... попытка ${attempt + 1}/${maxAttempts}`, 'info');
-                await new Promise(resolve => setTimeout(resolve, 2000)); // Ждём 2 секунды
+                await new Promise(resolve => setTimeout(resolve, 2000));
                 return checkWithRetry(attempt + 1, maxAttempts);
             } else {
                 showToast(data.error, 'error');
@@ -6084,7 +6096,7 @@
         } catch(e) {
             console.error('Error checking task:', e);
             if (attempt < maxAttempts) {
-                showToast(`Ошибка, повторная проверка через 2 сек... (${attempt + 1}/${maxAttempts})`, 'info');
+                showToast(`Ошибка, повторная проверка... (${attempt + 1}/${maxAttempts})`, 'info');
                 await new Promise(resolve => setTimeout(resolve, 2000));
                 return checkWithRetry(attempt + 1, maxAttempts);
             } else {
@@ -6096,8 +6108,10 @@
 
     await checkWithRetry();
 
-    btn.disabled = false;
-    btn.textContent = originalText;
+    if (btn) {
+        btn.disabled = false;
+        btn.textContent = originalText;
+    }
 }
 
         function escapeHtml(text) {
