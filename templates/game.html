@@ -4167,6 +4167,28 @@
 
         const dailyRewardsList = { 1: { reward: "15 WG" }, 2: { reward: "50 WG" }, 3: { reward: "+10 ⚡" }, 4: { reward: "10 LP" }, 5: { reward: "+15 ⚡" }, 6: { reward: "150 WG" }, 7: { reward: "20 LP" } };
 
+         // Функция для получения правильной ссылки на аватар
+        function getAvatarUrl(avatar) {
+            // Если поле с аватаркой пустое - показываем эмодзи
+            if (!avatar) return '📢';
+
+            // Проверяем, является ли ссылка ссылкой на Telegram канал
+            const tgMatch = avatar.match(/t\.me\/([a-zA-Z0-9_]+)/);
+            if (tgMatch) {
+                const username = tgMatch[1];
+                return `<img src="https://tg.i-c-a.su/${username}/photo" style="width:100%;height:100%;object-fit:cover;" onerror="this.onerror=null; this.parentElement.innerHTML='📢';">`;
+            }
+
+            // Если это обычная ссылка на картинку - показываем её
+            if (avatar.startsWith('http')) {
+                return `<img src="${avatar}" style="width:100%;height:100%;object-fit:cover;" onerror="this.onerror=null; this.parentElement.innerHTML='📢';">`;
+            }
+
+            // Если ничего не подошло - показываем эмодзи
+            return '📢';
+        }
+
+
         function getUpgradeCost(upgradeId, currentCount) {
             const config = { 1: { baseCost: 1.5, bonus: 0.01, name: "Новичок" }, 2: { baseCost: 10, bonus: 0.03, name: "Профессионал" }, 3: { baseCost: 70, bonus: 0.07, name: "Мастер" } };
             const baseCost = config[upgradeId].baseCost;
@@ -5946,8 +5968,8 @@
                 html += `
                     <div class="task-card ${statusClass}" onclick="openTaskDetail(${task.id})">
                         <div class="task-avatar">
-                            ${task.channel_avatar ? `<img src="${task.channel_avatar}" alt="">` : '📢'}
-                        </div>
+    ${getAvatarUrl(task.channel_avatar)}
+</div>
                         <div class="task-info">
                             <div class="task-channel">${escapeHtml(task.channel_username)}</div>
                             <div class="task-title">${escapeHtml(task.title)}</div>
