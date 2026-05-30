@@ -6038,44 +6038,64 @@
         }
 
         async function checkTaskCompletion() {
-            if (!selectedTask) return;
-            if (selectedTask.is_completed) {
-                showToast('Вы уже выполнили это задание', 'error');
-                return;
+    if (!selectedTask) return;
+    if (selectedTask.is_completed) {
+        showToast('Вы уже выполнили это задание', 'error');
+        return;
+    }
+
+    const btn = document.getElementById('taskCheckBtn');
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '⏳ Проверка...';
+
+    // Функция проверки с повторными попытками
+    async function checkWithRetry(attempt = 1, maxAttempts = 5) {
+        try {
+            const res = await fetch('/api/check_task_subscription', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    user_id: userId,
+                    task_id: selectedTask.id
+                })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                showToast(data.message, 'success');
+                selectedTask.is_completed = true;
+                renderTasksList(); // Обновляем список заданий
+                closeTaskDetailModal();
+                updateStatus();
+                return true;
+            } else if (data.error === 'Вы не подписаны на канал' && attempt < maxAttempts) {
+                // Если не подписан, ждём и проверяем снова (максимум 5 раз)
+                showToast(`Проверяем подписку... попытка ${attempt + 1}/${maxAttempts}`, 'info');
+                await new Promise(resolve => setTimeout(resolve, 2000)); // Ждём 2 секунды
+                return checkWithRetry(attempt + 1, maxAttempts);
+            } else {
+                showToast(data.error, 'error');
+                return false;
             }
-
-            const btn = document.getElementById('taskCheckBtn');
-            btn.disabled = true;
-            btn.textContent = '⏳ Проверка...';
-
-            try {
-                const res = await fetch('/api/check_task_subscription', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        user_id: userId,
-                        task_id: selectedTask.id
-                    })
-                });
-                const data = await res.json();
-
-                if (data.success) {
-                    showToast(data.message, 'success');
-                    selectedTask.is_completed = true;
-                    renderTasksList();
-                    closeTaskDetailModal();
-                    updateStatus();
-                } else {
-                    showToast(data.error, 'error');
-                }
-            } catch(e) {
-                console.error('Error checking task:', e);
-                showToast('Ошибка при проверке', 'error');
-            } finally {
-                btn.disabled = false;
-                btn.textContent = '✅ Проверить выполнение';
+        } catch(e) {
+            console.error('Error checking task:', e);
+            if (attempt < maxAttempts) {
+                showToast(`Ошибка, повторная проверка через 2 сек... (${attempt + 1}/${maxAttempts})`, 'info');
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                return checkWithRetry(attempt + 1, maxAttempts);
+            } else {
+                showToast('Ошибка при проверке, попробуйте позже', 'error');
+                return false;
             }
         }
+    }
+
+    await checkWithRetry();
+
+    btn.disabled = false;
+    btn.textContent = originalText;
+}
 
         function escapeHtml(text) {
             if (!text) return '';
