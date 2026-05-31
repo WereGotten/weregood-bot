@@ -413,7 +413,7 @@ ALLOWED_UPDATE_FIELDS = {
     'referral_code', 'referrer_id', 'likes', 'dislikes', 'settings',
     'avatar_url', 'usdt', 'wins', 'role', 'stars', 'max_energy',
     'energy_upgrades', 'energy_limit_upgrades', 'unlocked_prefixes',
-    'tutorial_completed', 'ton_wallet', 'banned_until', 'ban_reason', 'banned_by'
+    'tutorial_completed', 'ton_wallet', 'banned_until', 'ban_reason', 'banned_by', 'completed_achievements'
 }
 
 MAX_USER_CACHE = 5000
@@ -449,9 +449,9 @@ def get_user(user_id, force_refresh=False):
                     upgrade_counts, ticket_counter, referral_code, referrer_id, likes, dislikes, settings,
                     username, first_name, last_name, avatar_url, usdt, wins, role, stars,
                     max_energy, energy_upgrades, energy_limit_upgrades, unlocked_prefixes, tutorial_completed, ton_wallet,
-                    banned_until, ban_reason, banned_by)
+                    banned_until, ban_reason, banned_by, completed_achievements)
                     VALUES (?, 0, 0, 500, ?, '[]', 0, '{"1":0,"2":0,"3":0}', 0, ?, 0, 0, 0,
-                    '{"theme":"dark"}', ?, ?, ?, ?, 0, 0, ?, 0, 500, 0, 0, ?, 0, '', 0, '', 0)
+                    '{"theme":"dark"}', ?, ?, ?, ?, 0, 0, ?, 0, 500, 0, 0, ?, 0, '', 0, '', 0, 0)
                 ''', (user_id, now_time, ref_code, "", "", "", "", role, unlocked))
                 cursor.execute("SELECT * FROM users WHERE user_id=?", (user_id,))
                 row = cursor.fetchone()
@@ -466,7 +466,8 @@ def get_user(user_id, force_refresh=False):
                 "first_name": "", "last_name": "", "ticket_counter": 0, "referral_code": "", "referrer_id": 0,
                 "likes": 0, "dislikes": 0, "settings": {"theme": "dark"}, "avatar_url": "", "usdt": 0, "wins": 0,
                 "role": "player", "stars": 0, "max_energy": 500, "energy_upgrades": 0, "energy_limit_upgrades": 0,
-                "unlocked_prefixes": ["player"], "ton_wallet": "", "banned_until": 0, "ban_reason": "", "banned_by": 0
+                "unlocked_prefixes": ["player"], "ton_wallet": "", "banned_until": 0, "ban_reason": "", "banned_by": 0,
+                "completed_achievements": 0
             }
             user_cache[user_id] = default_user
             user_cache_time[user_id] = now
@@ -515,7 +516,8 @@ def get_user(user_id, force_refresh=False):
             "ton_wallet": row['ton_wallet'] if 'ton_wallet' in row.keys() else '',
             "banned_until": row['banned_until'] if 'banned_until' in row.keys() else 0,
             "ban_reason": row['ban_reason'] if 'ban_reason' in row.keys() else '',
-            "banned_by": row['banned_by'] if 'banned_by' in row.keys() else 0
+            "banned_by": row['banned_by'] if 'banned_by' in row.keys() else 0,
+            "completed_achievements": row['completed_achievements'] if 'completed_achievements' in row.keys() else 0
         }
 
         user_cache[user_id] = user_data
@@ -566,6 +568,194 @@ def escape_html(text: str) -> str:
     return "".join(html_escape_table.get(c, c) for c in text)
 
 
+# ========== ДОСТИЖЕНИЯ ФУНКЦИИ ==========
+def get_achievements_list():
+    """Получить список всех достижений"""
+    with db.get_cursor() as cursor:
+        cursor.execute('SELECT * FROM achievements ORDER BY id')
+        return [dict(row) for row in cursor.fetchall()]
+
+
+def get_user_achievements(user_id):
+    """Получить прогресс пользователя по всем достижениям"""
+    with db.get_cursor() as cursor:
+        cursor.execute('''
+            SELECT a.*, ua.current_count, ua.is_completed, ua.completed_at
+            FROM achievements a
+            LEFT JOIN user_achievements ua ON a.id = ua.achievement_id AND ua.user_id = ?
+            ORDER BY a.id
+        ''', (user_id,))
+        rows = cursor.fetchall()
+
+        result = []
+        completed_count = 0
+        for row in rows:
+            ach = dict(row)
+            ach['current_count'] = ach.get('current_count') or 0
+            ach['is_completed'] = ach.get('is_completed') or 0
+            if ach['is_completed']:
+                completed_count += 1
+            result.append(ach)
+
+        return result, completed_count
+
+
+def update_achievement_progress(user_id, achievement_name, increment=1, set_value=None):
+    """Обновить прогресс достижения"""
+    with db.get_cursor() as cursor:
+        cursor.execute('SELECT id, target_count FROM achievements WHERE name = ?', (achievement_name,))
+        ach = cursor.fetchone()
+        if not ach:
+            return False
+
+        ach_id = ach['id']
+        target = ach['target_count']
+
+        cursor.execute('''
+            SELECT id, current_count, is_completed FROM user_achievements 
+            WHERE user_id = ? AND achievement_id = ?
+        ''', (user_id, ach_id))
+        existing = cursor.fetchone()
+
+        if existing and existing['is_completed']:
+            return True
+
+        if set_value is not None:
+            new_count = set_value
+        else:
+            new_count = (existing['current_count'] if existing else 0) + increment
+
+        new_count = min(new_count, target)
+        is_completed = new_count >= target
+
+        if existing:
+            cursor.execute('''
+                UPDATE user_achievements 
+                SET current_count = ?, is_completed = ?, completed_at = ?
+                WHERE user_id = ? AND achievement_id = ?
+            ''', (new_count, is_completed, datetime.datetime.now().isoformat() if is_completed else None, user_id,
+                  ach_id))
+        else:
+            cursor.execute('''
+                INSERT INTO user_achievements (user_id, achievement_id, current_count, is_completed, completed_at)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (user_id, ach_id, new_count, is_completed,
+                  datetime.datetime.now().isoformat() if is_completed else None))
+
+        if is_completed:
+            cursor.execute('''
+                UPDATE users SET completed_achievements = (
+                    SELECT COUNT(*) FROM user_achievements 
+                    WHERE user_id = ? AND is_completed = 1
+                ) WHERE user_id = ?
+            ''', (user_id, user_id))
+            invalidate_cache(user_id)
+            update_legend_prefixes()
+            user = get_user(user_id)
+            add_log(f"🏆 ВЫПОЛНИЛ ДОСТИЖЕНИЕ: {achievement_name}!", user_id, user['username'])
+
+            ach_display = get_achievement_display_name(achievement_name)
+            send_telegram_message(user_id,
+                                  f"🏆 ПОЗДРАВЛЯЕМ!\n\nВы выполнили достижение: {ach_display}!\n\nПродолжайте в том же духе! 🎉")
+
+        return True
+
+
+def get_achievement_display_name(achievement_name):
+    names = {
+        'autoclicker': 'Автокликер',
+        'investor': 'Инвестор',
+        'social': 'Общительный',
+        'gambler': 'Азартный',
+        'lucky': 'Счастливчик',
+        'liker': 'Подписчик',
+        'hater': 'Хейтер',
+        'ad_lover': 'Любитель TV',
+        'spender': 'Транжира',
+        'task_master': 'Выполнитель'
+    }
+    return names.get(achievement_name, achievement_name)
+
+
+def update_legend_prefixes():
+    """Обновить префиксы Легенда для топ-5 игроков по достижениям"""
+    with db.get_cursor() as cursor:
+        cursor.execute('''
+            SELECT user_id, completed_achievements
+            FROM users
+            WHERE completed_achievements > 0
+            ORDER BY completed_achievements DESC, user_id
+            LIMIT 50
+        ''')
+        top_players = cursor.fetchall()
+
+        top_5_ids = [row['user_id'] for row in top_players[:5]]
+
+        if top_5_ids:
+            placeholders = ','.join(['?'] * len(top_5_ids))
+            cursor.execute(f'''
+                UPDATE users SET role = 'player' 
+                WHERE role = 'legend' AND user_id NOT IN ({placeholders})
+            ''', top_5_ids)
+        else:
+            cursor.execute("UPDATE users SET role = 'player' WHERE role = 'legend'")
+
+        for user_id in top_5_ids:
+            cursor.execute('''
+                UPDATE users SET role = 'legend' WHERE user_id = ? AND role != 'legend'
+            ''', (user_id,))
+            invalidate_cache(user_id)
+
+        for user_id in top_5_ids:
+            cursor.execute('SELECT unlocked_prefixes FROM users WHERE user_id = ?', (user_id,))
+            row = cursor.fetchone()
+            if row:
+                unlocked = json.loads(row['unlocked_prefixes']) if row['unlocked_prefixes'] else ["player"]
+                if 'legend' not in unlocked:
+                    unlocked.append('legend')
+                    cursor.execute('UPDATE users SET unlocked_prefixes = ? WHERE user_id = ?',
+                                   (json.dumps(unlocked), user_id))
+                    invalidate_cache(user_id)
+
+
+def get_achievements_top(limit=50):
+    """Получить топ игроков по выполненным достижениям"""
+    with db.get_cursor() as cursor:
+        cursor.execute('''
+            SELECT user_id, username, first_name, avatar_url, completed_achievements, role
+            FROM users
+            ORDER BY completed_achievements DESC, user_id
+            LIMIT ?
+        ''', (limit,))
+        rows = cursor.fetchall()
+
+        result = []
+        for i, row in enumerate(rows):
+            if row['username'] and row['username'] != '':
+                display_name = '@' + row['username']
+            elif row['first_name'] and row['first_name'] != '':
+                display_name = row['first_name']
+            else:
+                display_name = f"Player_{row['user_id']}"
+
+            result.append({
+                'rank': i + 1,
+                'user_id': row['user_id'],
+                'username': display_name,
+                'avatar_url': row['avatar_url'],
+                'completed': row['completed_achievements'],
+                'role': row['role']
+            })
+        return result
+
+
+def get_user_referrals_count(user_id):
+    with db.get_cursor() as cursor:
+        cursor.execute("SELECT COUNT(*) FROM referrals WHERE referrer_id = ?", (user_id,))
+        return cursor.fetchone()[0]
+
+
+# ========== ИНИЦИАЛИЗАЦИЯ БД ==========
 def init_db():
     with db.get_cursor() as cursor:
         cursor.execute('''
@@ -600,7 +790,8 @@ def init_db():
                 ton_wallet TEXT DEFAULT '',
                 banned_until REAL DEFAULT 0,
                 ban_reason TEXT DEFAULT '',
-                banned_by INTEGER DEFAULT 0
+                banned_by INTEGER DEFAULT 0,
+                completed_achievements INTEGER DEFAULT 0
             )
         ''')
 
@@ -755,7 +946,6 @@ def init_db():
             )
         ''')
 
-        # ========== НОВЫЕ ТАБЛИЦЫ ДЛЯ ЗАДАНИЙ ==========
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS tasks (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -785,6 +975,32 @@ def init_db():
             )
         ''')
 
+        # ========== ТАБЛИЦЫ ДЛЯ ДОСТИЖЕНИЙ ==========
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS achievements (
+                id INTEGER PRIMARY KEY,
+                name TEXT UNIQUE NOT NULL,
+                display_name TEXT NOT NULL,
+                description TEXT NOT NULL,
+                icon TEXT NOT NULL,
+                target_count INTEGER NOT NULL
+            )
+        ''')
+
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS user_achievements (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                achievement_id INTEGER NOT NULL,
+                current_count INTEGER DEFAULT 0,
+                is_completed BOOLEAN DEFAULT 0,
+                completed_at TIMESTAMP,
+                UNIQUE(user_id, achievement_id)
+            )
+        ''')
+
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_achievements_user ON user_achievements(user_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_achievements_completed ON user_achievements(is_completed)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_ad_watch_user_type ON ad_watch_history(user_id, ad_type)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_ad_watch_date ON ad_watch_history(watched_at)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_logs_timestamp ON system_logs(timestamp DESC)')
@@ -801,6 +1017,30 @@ def init_db():
                 cursor.execute(f"ALTER TABLE lottery ADD COLUMN {col} DEFAULT 0")
             except:
                 pass
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN completed_achievements INTEGER DEFAULT 0")
+        except:
+            pass
+
+        # ========== ДОБАВЛЯЕМ ДОСТИЖЕНИЯ ==========
+        achievements_list = [
+            ('autoclicker', '🏆 Автокликер', 'Сделать 100 000 кликов по монете', '🖱️', 100000),
+            ('investor', '💰 Инвестор', 'Купить 100 улучшений в магазине', '📈', 100),
+            ('social', '👥 Общительный', 'Пригласить 10 рефералов', '🤝', 10),
+            ('gambler', '🎲 Азартный', 'Купить 100 билетов в Вызове', '🎫', 100),
+            ('lucky', '🍀 Счастливчик', 'Выиграть Вызов 5 раз', '🏆', 5),
+            ('liker', '👍 Подписчик', 'Поставить 200 лайков', '❤️', 200),
+            ('hater', '👎 Хейтер', 'Поставить 200 дизлайков', '💔', 200),
+            ('ad_lover', '📺 Любитель TV', 'Просмотреть 100 реклам', '🎬', 100),
+            ('spender', '💸 Транжира', 'Потратить 100 000 WG Coin', '💎', 100000),
+            ('task_master', '📋 Выполнитель', 'Выполнить 15 заданий', '✅', 15)
+        ]
+
+        for ach in achievements_list:
+            cursor.execute('''
+                INSERT OR IGNORE INTO achievements (name, display_name, description, icon, target_count)
+                VALUES (?, ?, ?, ?, ?)
+            ''', ach)
 
         cursor.execute("SELECT * FROM lottery LIMIT 1")
         if not cursor.fetchone():
@@ -1130,6 +1370,7 @@ def add_referral_earning(referrer_id, referred_id, spent_lp):
             referrer = get_user(referrer_id)
             add_log(f"👥 Получил 5% от трат реферала (+{earning:.2f} LP)", referrer_id, referrer['username'],
                     old_value=old_lp, new_value=new_lp, currency="lp")
+            update_achievement_progress(referrer_id, 'social', 1)
             return True
     return False
 
@@ -1392,6 +1633,7 @@ def buy_ticket(user_id, user_data):
                 new_value=user_data['lp'], currency="lp")
         today = datetime.datetime.now().strftime("%Y-%m-%d")
         update_stats_history(today, tickets=1)
+        update_achievement_progress(user_id, 'gambler', 1)
         return True, f"Билет #{ticket_num} куплен!"
 
 
@@ -1477,6 +1719,7 @@ def distribute_prizes():
                     winner["user_id"], user['username'], old_value=old_usdt, new_value=user['usdt'], currency="usdt")
             send_telegram_message(winner["user_id"],
                                   f"🎉 ПОБЕДА! +{prize_per_winner} USDT! Совпадений: {winner['matches']}/12")
+            update_achievement_progress(winner["user_id"], 'lucky', 1)
     save_lottery()
     add_log(f"🎰 Завершение розыгрыша. Призовой фонд {lottery_pool} USDT распределён между {len(winners)} победителями",
             0, "System")
@@ -2084,7 +2327,7 @@ def api_register():
                     add_log(f"👥 Новый реферал! {username or first_name} зарегистрировался по вашей ссылке", referrer_id,
                             get_user(referrer_id)['username'])
             cursor.execute(
-                '''INSERT INTO users (user_id, wg, lp, energy, last_energy_update, tickets, total_clicks, upgrade_counts, ticket_counter, referral_code, referrer_id, likes, dislikes, settings, username, first_name, last_name, avatar_url, usdt, wins, role, stars, max_energy, energy_upgrades, energy_limit_upgrades, unlocked_prefixes, tutorial_completed, ton_wallet, banned_until, ban_reason, banned_by) VALUES (?, 0, 0, 500, ?, '[]', 0, '{"1":0,"2":0,"3":0}', 0, ?, ?, 0, 0, '{"theme":"dark"}', ?, ?, ?, ?, 0, 0, ?, 0, 500, 0, 0, ?, 0, '', 0, '', 0)''',
+                '''INSERT INTO users (user_id, wg, lp, energy, last_energy_update, tickets, total_clicks, upgrade_counts, ticket_counter, referral_code, referrer_id, likes, dislikes, settings, username, first_name, last_name, avatar_url, usdt, wins, role, stars, max_energy, energy_upgrades, energy_limit_upgrades, unlocked_prefixes, tutorial_completed, ton_wallet, banned_until, ban_reason, banned_by, completed_achievements) VALUES (?, 0, 0, 500, ?, '[]', 0, '{"1":0,"2":0,"3":0}', 0, ?, ?, 0, 0, '{"theme":"dark"}', ?, ?, ?, ?, 0, 0, ?, 0, 500, 0, 0, ?, 0, '', 0, '', 0, 0)''',
                 (user_id, now, ref_code_new, referrer_id, username, first_name, last_name, avatar_url, role, unlocked))
             add_log(f"✨ Новая регистрация! Добро пожаловать!", user_id, username or first_name or str(user_id))
             today = datetime.datetime.now().strftime("%Y-%m-%d")
@@ -2118,6 +2361,8 @@ def api_click():
     safe_update_user(user_id, wg=new_wg, total_clicks=new_clicks)
     today = datetime.datetime.now().strftime("%Y-%m-%d")
     update_stats_history(today, clicks=1)
+    update_achievement_progress(user_id, 'autoclicker', 1)
+    update_achievement_progress(user_id, 'spender', int(earning))
     if user["total_clicks"] == 0:
         add_log(f"🆕👆 ПЕРВЫЙ КЛИК в игре! +{earning:.4f} WG", user_id, user['username'], old_value=old_wg,
                 new_value=new_wg, currency="wg")
@@ -2197,6 +2442,7 @@ def api_buy_upgrade():
     new_count = current_count + 1
     user["upgrade_counts"][upgrade_id] = new_count
     safe_update_user(user_id, wg=new_wg, upgrade_counts=user["upgrade_counts"])
+    update_achievement_progress(user_id, 'investor', 1)
     if current_count == 0:
         add_log(f"🆕⭐ ПЕРВАЯ ПОКУПКА улучшения! {UPGRADE_CONFIG[upgrade_id]['name']} за {cost:.2f} WG", user_id,
                 user['username'], old_value=old_wg, new_value=new_wg, currency="wg")
@@ -2233,6 +2479,7 @@ def api_watch_ad():
     update_energy_in_db(user_id, user, new_energy)
 
     record_ad_watch(user_id, "energy_200")
+    update_achievement_progress(user_id, 'ad_lover', 1)
 
     today = datetime.datetime.now().strftime("%Y-%m-%d")
     update_stats_history(today, ad_views=1)
@@ -2263,6 +2510,7 @@ def api_watch_ad_fallback():
     update_energy_in_db(user_id, user, new_energy)
 
     record_ad_watch(user_id, "energy_50")
+    update_achievement_progress(user_id, 'ad_lover', 1)
 
     add_log(f"🎬 Просмотрел рекламу (резервная, +50 энергии)", user_id, user['username'], old_value=old_energy,
             new_value=new_energy, currency="energy")
@@ -2296,6 +2544,7 @@ def api_watch_ad_limit():
     safe_update_user(user_id, max_energy=new_max_energy, energy_limit_upgrades=new_upgrades)
 
     record_ad_watch(user_id, "energy_limit")
+    update_achievement_progress(user_id, 'ad_lover', 1)
 
     add_log(f"🎬 Просмотрел рекламу (+1 к макс. энергии, теперь {new_max_energy})", user_id, user['username'],
             old_value=old_max_energy, new_value=new_max_energy, currency="energy")
@@ -2625,10 +2874,12 @@ def api_vote():
             cursor.execute("UPDATE users SET likes = likes + 1 WHERE user_id=?", (target_id,))
             invalidate_cache(target_id)
             add_log(f"👍 Поставил лайк игроку {target['username']}", voter_id, voter['username'])
+            update_achievement_progress(voter_id, 'liker', 1)
         else:
             cursor.execute("UPDATE users SET dislikes = dislikes + 1 WHERE user_id=?", (target_id,))
             invalidate_cache(target_id)
             add_log(f"👎 Поставил дизлайк игроку {target['username']}", voter_id, voter['username'])
+            update_achievement_progress(voter_id, 'hater', 1)
     return jsonify({"success": True, "msg": "Голос учтён!"})
 
 
@@ -2774,7 +3025,9 @@ def api_get_available_prefixes():
         "player": {"name": "Игрок", "icon": "🎮", "desc": "Выдаётся абсолютно всем игрокам", "color": "player"},
         "pioneer": {"name": "Первооткрыватель", "icon": "⭐", "desc": "За регистрацию в первый день",
                     "color": "pioneer"},
-        "founder": {"name": "Основатель", "icon": "👑", "desc": "Основатель проекта", "color": "founder"}}
+        "founder": {"name": "Основатель", "icon": "👑", "desc": "Основатель проекта", "color": "founder"},
+        "legend": {"name": "Легенда", "icon": "👑", "desc": "Топ-5 по достижениям", "color": "legend"}
+    }
     prefixes = [{"id": pid, **all_prefixes[pid]} for pid in unlocked if pid in all_prefixes]
     return jsonify({"success": True, "prefixes": prefixes, "current": user['role']})
 
@@ -3031,6 +3284,8 @@ def api_check_task_subscription():
                     cursor.execute('INSERT INTO user_tasks (user_id, task_id) VALUES (?, ?)', (user_id, task_id))
                     cursor.execute('UPDATE tasks SET completed_count = completed_count + 1 WHERE id = ?', (task_id,))
 
+                    update_achievement_progress(user_id, 'task_master', 1)
+
                     return jsonify({
                         'success': True,
                         'message': f'✅ Вы получили +{task["reward_amount"]} {task["reward_type"].upper()}!',
@@ -3045,302 +3300,31 @@ def api_check_task_subscription():
             return jsonify({'success': False, 'error': 'Ошибка при проверке'}), 500
 
 
-@app.route('/api/admin/tasks', methods=['GET'])
-@require_admin
-def api_admin_get_tasks():
-    with db.get_cursor() as cursor:
-        cursor.execute('SELECT * FROM tasks ORDER BY created_at DESC')
-        rows = cursor.fetchall()
-        tasks = []
-        for row in rows:
-            tasks.append({
-                'id': row['id'],
-                'title': row['title'],
-                'channel_link': row['channel_link'],
-                'channel_username': row['channel_username'],
-                'channel_avatar': row['channel_avatar'],
-                'reward_amount': row['reward_amount'],
-                'reward_type': row['reward_type'],
-                'daily_limit': row['daily_limit'],
-                'total_limit': row['total_limit'],
-                'completed_count': row['completed_count'],
-                'days_remaining': row['days_remaining'],
-                'is_active': bool(row['is_active'])
-            })
-        return jsonify({'success': True, 'tasks': tasks})
-
-
-@app.route('/api/admin/create_task', methods=['POST'])
-@require_admin
-def api_admin_create_task():
-    data = request.json
-    title = data.get('title', '').strip()
-    channel_link = data.get('channel_link', '').strip()
-    channel_username = data.get('channel_username', '').strip()
-    channel_avatar = data.get('channel_avatar', '').strip()
-    reward_amount = int(data.get('reward_amount', 10))
-    reward_type = data.get('reward_type', 'wg')
-    daily_limit = int(data.get('daily_limit', 1))
-    total_limit = int(data.get('total_limit', 100))
-    days_remaining = int(data.get('days_remaining', 7))
-
-    if not title or not channel_link or not channel_username:
-        return jsonify({'success': False, 'error': 'Заполните все поля'}), 400
-
-    if reward_amount <= 0:
-        return jsonify({'success': False, 'error': 'Сумма награды должна быть больше 0'}), 400
-
-    admin_id = request.args.get('user_id', 'Admin')
-    admin_name = "Admin"
-
-    with db.get_cursor() as cursor:
-        cursor.execute('''
-            INSERT INTO tasks (title, channel_link, channel_username, channel_avatar, 
-                              reward_amount, reward_type, daily_limit, total_limit, days_remaining)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (title, channel_link, channel_username, channel_avatar,
-              reward_amount, reward_type, daily_limit, total_limit, days_remaining))
-        task_id = cursor.lastrowid
-
-    add_admin_log(f"📋 Создал задание '{title}' (ID: {task_id})", admin_id, admin_name)
-    return jsonify({'success': True, 'task_id': task_id})
-
-
-@app.route('/api/admin/update_task', methods=['POST'])
-@require_admin
-def api_admin_update_task():
-    data = request.json
-    task_id = data.get('task_id')
-    title = data.get('title', '').strip()
-    channel_link = data.get('channel_link', '').strip()
-    channel_username = data.get('channel_username', '').strip()
-    channel_avatar = data.get('channel_avatar', '').strip()
-    reward_amount = int(data.get('reward_amount', 10))
-    reward_type = data.get('reward_type', 'wg')
-    daily_limit = int(data.get('daily_limit', 1))
-    total_limit = int(data.get('total_limit', 100))
-    days_remaining = int(data.get('days_remaining', 7))
-    is_active = data.get('is_active', True)
-
-    if not task_id:
-        return jsonify({'success': False, 'error': 'task_id required'}), 400
-
-    admin_id = request.args.get('user_id', 'Admin')
-    admin_name = "Admin"
-
-    with db.get_cursor() as cursor:
-        cursor.execute('''
-            UPDATE tasks SET 
-                title = ?, channel_link = ?, channel_username = ?, channel_avatar = ?,
-                reward_amount = ?, reward_type = ?, daily_limit = ?, total_limit = ?,
-                days_remaining = ?, is_active = ?
-            WHERE id = ?
-        ''', (title, channel_link, channel_username, channel_avatar,
-              reward_amount, reward_type, daily_limit, total_limit,
-              days_remaining, is_active, task_id))
-
-    add_admin_log(f"📋 Обновил задание ID: {task_id}", admin_id, admin_name)
-    return jsonify({'success': True})
-
-
-@app.route('/api/admin/delete_task', methods=['POST'])
-@require_admin
-def api_admin_delete_task():
-    data = request.json
-    task_id = data.get('task_id')
-
-    if not task_id:
-        return jsonify({'success': False, 'error': 'task_id required'}), 400
-
-    admin_id = request.args.get('user_id', 'Admin')
-    admin_name = "Admin"
-
-    with db.get_cursor() as cursor:
-        cursor.execute('DELETE FROM user_tasks WHERE task_id = ?', (task_id,))
-        cursor.execute('DELETE FROM tasks WHERE id = ?', (task_id,))
-
-    add_admin_log(f"📋 Удалил задание ID: {task_id}", admin_id, admin_name)
-    return jsonify({'success': True})
-
-
-# ========== ПРОМОКОДЫ API ==========
-@app.route('/api/admin/promo_codes', methods=['GET'])
-@require_admin
-def api_admin_get_promo_codes():
-    with db.get_cursor() as cursor:
-        cursor.execute('''
-            SELECT p.*, COUNT(a.id) as used_count, GROUP_CONCAT(a.user_id || ':' || a.activated_at) as activations
-            FROM promo_codes p
-            LEFT JOIN promo_activations a ON p.id = a.promo_id
-            GROUP BY p.id
-            ORDER BY p.created_at DESC
-        ''')
-        rows = cursor.fetchall()
-        promos = []
-        for row in rows:
-            activations_list = []
-            if row['activations']:
-                for act in row['activations'].split(','):
-                    parts = act.split(':')
-                    if len(parts) >= 2:
-                        activations_list.append({"user_id": int(parts[0]), "activated_at": parts[1]})
-            promos.append({"id": row['id'], "code": row['code'], "reward_type": row['reward_type'],
-                           "reward_amount": row['reward_amount'], "max_uses": row['max_uses'],
-                           "used_count": row['used_count'] or 0, "has_password": bool(row['password']),
-                           "created_by": row['created_by'], "created_at": row['created_at'],
-                           "expires_at": row['expires_at'], "is_active": row['is_active'],
-                           "activations": activations_list})
-        return jsonify({"success": True, "promo_codes": promos})
-
-
-@app.route('/api/admin/create_promo', methods=['POST'])
-@require_admin
-def api_admin_create_promo():
-    data = request.json
-    code = data.get('code', '').upper().strip()
-    reward_type = data.get('reward_type')
-    reward_amount = int(data.get('reward_amount', 0))
-    max_uses = int(data.get('max_uses', 1))
-    password = data.get('password', '').strip() or None
-    admin_id = request.args.get('user_id', 'Admin')
-    admin_name = "Admin"
-    if not code or not reward_type or reward_amount <= 0 or max_uses <= 0:
-        return jsonify({"success": False, "error": "Invalid parameters"}), 400
-    if reward_type not in ['wg', 'lp', 'energy_limit']:
-        return jsonify({"success": False, "error": "Invalid reward type"}), 400
-    with db.get_cursor() as cursor:
-        cursor.execute(
-            'INSERT INTO promo_codes (code, reward_type, reward_amount, max_uses, password, created_by) VALUES (?, ?, ?, ?, ?, ?)',
-            (code, reward_type, reward_amount, max_uses, password, admin_id))
-        promo_id = cursor.lastrowid
-    add_admin_log(
-        f"🎫 Создал промокод {code} | {reward_type}: {reward_amount} | Макс: {max_uses} | Пароль: {'Да' if password else 'Нет'}",
-        admin_id, admin_name, details=f"ID: {promo_id}")
-    telegram_url = f"https://t.me/WereGooodbot/WereGood?startapp=claim_{code}"
-    web_url = f"https://weregood.ru/claim?code={code}"
-    return jsonify({"success": True, "promo_id": promo_id, "code": code, "promo_url": telegram_url, "web_url": web_url})
-
-
-@app.route('/api/admin/delete_promo', methods=['POST'])
-@require_admin
-def api_admin_delete_promo():
-    data = request.json
-    promo_id = data.get('promo_id')
-    admin_id = request.args.get('user_id', 'Admin')
-    admin_name = "Admin"
-    with db.get_cursor() as cursor:
-        cursor.execute("SELECT code FROM promo_codes WHERE id = ?", (promo_id,))
-        row = cursor.fetchone()
-        if not row:
-            return jsonify({"success": False, "error": "Promo code not found"}), 404
-        cursor.execute("DELETE FROM promo_activations WHERE promo_id = ?", (promo_id,))
-        cursor.execute("DELETE FROM promo_codes WHERE id = ?", (promo_id,))
-    add_admin_log(f"🗑️ Удалил промокод {row['code']}", admin_id, admin_name)
-    return jsonify({"success": True})
-
-
-@app.route('/api/activate_promo', methods=['POST'])
-def api_activate_promo():
+# ========== ДОСТИЖЕНИЯ API ==========
+@app.route('/api/achievements/list', methods=['POST'])
+def api_achievements_list():
     data = request.json
     user_id = data.get('user_id')
-    code = data.get('code', '').upper().strip()
-    password = data.get('password', '').strip()
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid:
         return jsonify({"success": False, "error": "Invalid user_id"}), 400
-    with db.get_cursor() as cursor:
-        cursor.execute('SELECT * FROM promo_codes WHERE code = ? AND is_active = 1', (code,))
-        promo = cursor.fetchone()
-        if not promo:
-            return jsonify({"success": False, "error": "Промокод не найден"}), 404
-        if promo['expires_at']:
-            expires = datetime.datetime.fromisoformat(promo['expires_at'])
-            if datetime.datetime.now() > expires:
-                return jsonify({"success": False, "error": "Срок действия промокода истёк"}), 400
-        used_count = promo['used_count'] or 0
-        if used_count >= promo['max_uses']:
-            return jsonify({"success": False, "error": "Промокод больше не активен"}), 400
-        if promo['password'] and promo['password'] != password:
-            return jsonify({"success": False, "error": "Неверный пароль промокода"}), 400
-        cursor.execute("SELECT id FROM promo_activations WHERE promo_id = ? AND user_id = ?", (promo['id'], user_id))
-        if cursor.fetchone():
-            return jsonify({"success": False, "error": "Вы уже активировали этот промокод"}), 400
-        user = get_user(user_id)
-        old_value = None
-        new_value = None
-        if promo['reward_type'] == 'wg':
-            old_value = user['wg']
-            new_value = old_value + promo['reward_amount']
-            safe_update_user(user_id, wg=new_value)
-        elif promo['reward_type'] == 'lp':
-            old_value = user['lp']
-            new_value = old_value + promo['reward_amount']
-            safe_update_user(user_id, lp=new_value)
-        elif promo['reward_type'] == 'energy_limit':
-            old_value = user['max_energy']
-            new_value = old_value + promo['reward_amount']
-            safe_update_user(user_id, max_energy=new_value)
-        new_used_count = used_count + 1
-        cursor.execute("UPDATE promo_codes SET used_count = ? WHERE id = ?", (new_used_count, promo['id']))
-        cursor.execute('INSERT INTO promo_activations (promo_id, user_id) VALUES (?, ?)', (promo['id'], user_id))
-        add_log(f"🎁 Активировал промокод {code} | +{promo['reward_amount']} {promo['reward_type'].upper()}", user_id,
-                user['username'], old_value=old_value, new_value=new_value, currency=promo['reward_type'])
-        return jsonify(
-            {"success": True, "message": f"Вы получили +{promo['reward_amount']} {promo['reward_type'].upper()}!",
-             "reward_type": promo['reward_type'], "reward_amount": promo['reward_amount']})
+
+    achievements, completed_count = get_user_achievements(user_id)
+    all_achievements = get_achievements_list()
+
+    return jsonify({
+        "success": True,
+        "achievements": achievements,
+        "completed_count": completed_count,
+        "total_count": len(all_achievements)
+    })
 
 
-@app.route('/api/promo/info', methods=['GET'])
-def api_promo_info():
-    code = request.args.get('code', '').upper().strip()
-    if not code:
-        return jsonify({"success": False, "error": "No code provided"}), 400
-    with db.get_cursor() as cursor:
-        cursor.execute('SELECT * FROM promo_codes WHERE code = ? AND is_active = 1', (code,))
-        promo = cursor.fetchone()
-        if not promo:
-            return jsonify({"success": False, "error": "Promo code not found"}), 404
-        if promo['expires_at']:
-            expires = datetime.datetime.fromisoformat(promo['expires_at'])
-            if datetime.datetime.now() > expires:
-                return jsonify({"success": False, "error": "Promo code expired"}), 400
-        used_count = promo['used_count'] or 0
-        remaining = promo['max_uses'] - used_count
-        if remaining <= 0:
-            return jsonify({"success": False, "error": "Promo code is no longer active"}), 400
-        return jsonify({"success": True, "code": promo['code'], "reward_type": promo['reward_type'],
-                        "reward_amount": promo['reward_amount'], "remaining": remaining, "max_uses": promo['max_uses'],
-                        "has_password": bool(promo['password'])})
-
-
-@app.route('/api/set_referral', methods=['POST'])
-def api_set_referral():
-    data = request.json
-    user_id = data.get('user_id')
-    referral_code = data.get('referral_code', '').strip()
-    is_valid, user_id = validate_user_id(user_id)
-    if not is_valid:
-        return jsonify({"success": False, "error": "Invalid user_id"}), 400
-    if not referral_code:
-        return jsonify({"success": False, "error": "No referral code"}), 400
-    with db.get_cursor() as cursor:
-        cursor.execute("SELECT referrer_id FROM users WHERE user_id = ?", (user_id,))
-        user = cursor.fetchone()
-        if not user:
-            return jsonify({"success": False, "error": "User not found"}), 404
-        if user['referrer_id'] and user['referrer_id'] != 0:
-            return jsonify({"success": True, "message": "Referrer already set"}), 200
-        cursor.execute("SELECT user_id FROM users WHERE referral_code = ?", (referral_code,))
-        referrer = cursor.fetchone()
-        if referrer and referrer['user_id'] != user_id:
-            cursor.execute("UPDATE users SET referrer_id = ? WHERE user_id = ?", (referrer['user_id'], user_id))
-            cursor.execute(
-                'INSERT INTO referrals (referrer_id, referred_id, username, first_name) SELECT ?, ?, username, first_name FROM users WHERE user_id = ?',
-                (referrer['user_id'], user_id, user_id))
-            add_log(f"👥 Реферал привязан! Код: {referral_code}", user_id, str(user_id))
-            send_telegram_message(referrer['user_id'], f"🎉 Новый реферал присоединился по вашей ссылке!")
-            return jsonify({"success": True, "message": "Referral attached"}), 200
-    return jsonify({"success": False, "error": "Referrer not found"}), 404
+@app.route('/api/achievements/top', methods=['GET'])
+def api_achievements_top():
+    limit = int(request.args.get('limit', 50))
+    top = get_achievements_top(limit)
+    return jsonify({"success": True, "top": top})
 
 
 # ========== АДМИН-ЭНДПОИНТЫ ==========
@@ -3670,6 +3654,303 @@ def api_admin_chart_data():
         {"success": True, "labels": result["labels"], "data": result["data"], "metric": metric, "period": period})
 
 
+@app.route('/api/admin/tasks', methods=['GET'])
+@require_admin
+def api_admin_get_tasks():
+    with db.get_cursor() as cursor:
+        cursor.execute('SELECT * FROM tasks ORDER BY created_at DESC')
+        rows = cursor.fetchall()
+        tasks = []
+        for row in rows:
+            tasks.append({
+                'id': row['id'],
+                'title': row['title'],
+                'channel_link': row['channel_link'],
+                'channel_username': row['channel_username'],
+                'channel_avatar': row['channel_avatar'],
+                'reward_amount': row['reward_amount'],
+                'reward_type': row['reward_type'],
+                'daily_limit': row['daily_limit'],
+                'total_limit': row['total_limit'],
+                'completed_count': row['completed_count'],
+                'days_remaining': row['days_remaining'],
+                'is_active': bool(row['is_active'])
+            })
+        return jsonify({'success': True, 'tasks': tasks})
+
+
+@app.route('/api/admin/create_task', methods=['POST'])
+@require_admin
+def api_admin_create_task():
+    data = request.json
+    title = data.get('title', '').strip()
+    channel_link = data.get('channel_link', '').strip()
+    channel_username = data.get('channel_username', '').strip()
+    channel_avatar = data.get('channel_avatar', '').strip()
+    reward_amount = int(data.get('reward_amount', 10))
+    reward_type = data.get('reward_type', 'wg')
+    daily_limit = int(data.get('daily_limit', 1))
+    total_limit = int(data.get('total_limit', 100))
+    days_remaining = int(data.get('days_remaining', 7))
+
+    if not title or not channel_link or not channel_username:
+        return jsonify({'success': False, 'error': 'Заполните все поля'}), 400
+
+    if reward_amount <= 0:
+        return jsonify({'success': False, 'error': 'Сумма награды должна быть больше 0'}), 400
+
+    admin_id = request.args.get('user_id', 'Admin')
+    admin_name = "Admin"
+
+    with db.get_cursor() as cursor:
+        cursor.execute('''
+            INSERT INTO tasks (title, channel_link, channel_username, channel_avatar, 
+                              reward_amount, reward_type, daily_limit, total_limit, days_remaining)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (title, channel_link, channel_username, channel_avatar,
+              reward_amount, reward_type, daily_limit, total_limit, days_remaining))
+        task_id = cursor.lastrowid
+
+    add_admin_log(f"📋 Создал задание '{title}' (ID: {task_id})", admin_id, admin_name)
+    return jsonify({'success': True, 'task_id': task_id})
+
+
+@app.route('/api/admin/update_task', methods=['POST'])
+@require_admin
+def api_admin_update_task():
+    data = request.json
+    task_id = data.get('task_id')
+    title = data.get('title', '').strip()
+    channel_link = data.get('channel_link', '').strip()
+    channel_username = data.get('channel_username', '').strip()
+    channel_avatar = data.get('channel_avatar', '').strip()
+    reward_amount = int(data.get('reward_amount', 10))
+    reward_type = data.get('reward_type', 'wg')
+    daily_limit = int(data.get('daily_limit', 1))
+    total_limit = int(data.get('total_limit', 100))
+    days_remaining = int(data.get('days_remaining', 7))
+    is_active = data.get('is_active', True)
+
+    if not task_id:
+        return jsonify({'success': False, 'error': 'task_id required'}), 400
+
+    admin_id = request.args.get('user_id', 'Admin')
+    admin_name = "Admin"
+
+    with db.get_cursor() as cursor:
+        cursor.execute('''
+            UPDATE tasks SET 
+                title = ?, channel_link = ?, channel_username = ?, channel_avatar = ?,
+                reward_amount = ?, reward_type = ?, daily_limit = ?, total_limit = ?,
+                days_remaining = ?, is_active = ?
+            WHERE id = ?
+        ''', (title, channel_link, channel_username, channel_avatar,
+              reward_amount, reward_type, daily_limit, total_limit,
+              days_remaining, is_active, task_id))
+
+    add_admin_log(f"📋 Обновил задание ID: {task_id}", admin_id, admin_name)
+    return jsonify({'success': True})
+
+
+@app.route('/api/admin/delete_task', methods=['POST'])
+@require_admin
+def api_admin_delete_task():
+    data = request.json
+    task_id = data.get('task_id')
+
+    if not task_id:
+        return jsonify({'success': False, 'error': 'task_id required'}), 400
+
+    admin_id = request.args.get('user_id', 'Admin')
+    admin_name = "Admin"
+
+    with db.get_cursor() as cursor:
+        cursor.execute('DELETE FROM user_tasks WHERE task_id = ?', (task_id,))
+        cursor.execute('DELETE FROM tasks WHERE id = ?', (task_id,))
+
+    add_admin_log(f"📋 Удалил задание ID: {task_id}", admin_id, admin_name)
+    return jsonify({'success': True})
+
+
+@app.route('/api/admin/promo_codes', methods=['GET'])
+@require_admin
+def api_admin_get_promo_codes():
+    with db.get_cursor() as cursor:
+        cursor.execute('''
+            SELECT p.*, COUNT(a.id) as used_count, GROUP_CONCAT(a.user_id || ':' || a.activated_at) as activations
+            FROM promo_codes p
+            LEFT JOIN promo_activations a ON p.id = a.promo_id
+            GROUP BY p.id
+            ORDER BY p.created_at DESC
+        ''')
+        rows = cursor.fetchall()
+        promos = []
+        for row in rows:
+            activations_list = []
+            if row['activations']:
+                for act in row['activations'].split(','):
+                    parts = act.split(':')
+                    if len(parts) >= 2:
+                        activations_list.append({"user_id": int(parts[0]), "activated_at": parts[1]})
+            promos.append({"id": row['id'], "code": row['code'], "reward_type": row['reward_type'],
+                           "reward_amount": row['reward_amount'], "max_uses": row['max_uses'],
+                           "used_count": row['used_count'] or 0, "has_password": bool(row['password']),
+                           "created_by": row['created_by'], "created_at": row['created_at'],
+                           "expires_at": row['expires_at'], "is_active": row['is_active'],
+                           "activations": activations_list})
+        return jsonify({"success": True, "promo_codes": promos})
+
+
+@app.route('/api/admin/create_promo', methods=['POST'])
+@require_admin
+def api_admin_create_promo():
+    data = request.json
+    code = data.get('code', '').upper().strip()
+    reward_type = data.get('reward_type')
+    reward_amount = int(data.get('reward_amount', 0))
+    max_uses = int(data.get('max_uses', 1))
+    password = data.get('password', '').strip() or None
+    admin_id = request.args.get('user_id', 'Admin')
+    admin_name = "Admin"
+    if not code or not reward_type or reward_amount <= 0 or max_uses <= 0:
+        return jsonify({"success": False, "error": "Invalid parameters"}), 400
+    if reward_type not in ['wg', 'lp', 'energy_limit']:
+        return jsonify({"success": False, "error": "Invalid reward type"}), 400
+    with db.get_cursor() as cursor:
+        cursor.execute(
+            'INSERT INTO promo_codes (code, reward_type, reward_amount, max_uses, password, created_by) VALUES (?, ?, ?, ?, ?, ?)',
+            (code, reward_type, reward_amount, max_uses, password, admin_id))
+        promo_id = cursor.lastrowid
+    add_admin_log(
+        f"🎫 Создал промокод {code} | {reward_type}: {reward_amount} | Макс: {max_uses} | Пароль: {'Да' if password else 'Нет'}",
+        admin_id, admin_name, details=f"ID: {promo_id}")
+    telegram_url = f"https://t.me/WereGooodbot/WereGood?startapp=claim_{code}"
+    web_url = f"https://weregood.ru/claim?code={code}"
+    return jsonify({"success": True, "promo_id": promo_id, "code": code, "promo_url": telegram_url, "web_url": web_url})
+
+
+@app.route('/api/admin/delete_promo', methods=['POST'])
+@require_admin
+def api_admin_delete_promo():
+    data = request.json
+    promo_id = data.get('promo_id')
+    admin_id = request.args.get('user_id', 'Admin')
+    admin_name = "Admin"
+    with db.get_cursor() as cursor:
+        cursor.execute("SELECT code FROM promo_codes WHERE id = ?", (promo_id,))
+        row = cursor.fetchone()
+        if not row:
+            return jsonify({"success": False, "error": "Promo code not found"}), 404
+        cursor.execute("DELETE FROM promo_activations WHERE promo_id = ?", (promo_id,))
+        cursor.execute("DELETE FROM promo_codes WHERE id = ?", (promo_id,))
+    add_admin_log(f"🗑️ Удалил промокод {row['code']}", admin_id, admin_name)
+    return jsonify({"success": True})
+
+
+@app.route('/api/activate_promo', methods=['POST'])
+def api_activate_promo():
+    data = request.json
+    user_id = data.get('user_id')
+    code = data.get('code', '').upper().strip()
+    password = data.get('password', '').strip()
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"success": False, "error": "Invalid user_id"}), 400
+    with db.get_cursor() as cursor:
+        cursor.execute('SELECT * FROM promo_codes WHERE code = ? AND is_active = 1', (code,))
+        promo = cursor.fetchone()
+        if not promo:
+            return jsonify({"success": False, "error": "Промокод не найден"}), 404
+        if promo['expires_at']:
+            expires = datetime.datetime.fromisoformat(promo['expires_at'])
+            if datetime.datetime.now() > expires:
+                return jsonify({"success": False, "error": "Срок действия промокода истёк"}), 400
+        used_count = promo['used_count'] or 0
+        if used_count >= promo['max_uses']:
+            return jsonify({"success": False, "error": "Промокод больше не активен"}), 400
+        if promo['password'] and promo['password'] != password:
+            return jsonify({"success": False, "error": "Неверный пароль промокода"}), 400
+        cursor.execute("SELECT id FROM promo_activations WHERE promo_id = ? AND user_id = ?", (promo['id'], user_id))
+        if cursor.fetchone():
+            return jsonify({"success": False, "error": "Вы уже активировали этот промокод"}), 400
+        user = get_user(user_id)
+        old_value = None
+        new_value = None
+        if promo['reward_type'] == 'wg':
+            old_value = user['wg']
+            new_value = old_value + promo['reward_amount']
+            safe_update_user(user_id, wg=new_value)
+        elif promo['reward_type'] == 'lp':
+            old_value = user['lp']
+            new_value = old_value + promo['reward_amount']
+            safe_update_user(user_id, lp=new_value)
+        elif promo['reward_type'] == 'energy_limit':
+            old_value = user['max_energy']
+            new_value = old_value + promo['reward_amount']
+            safe_update_user(user_id, max_energy=new_value)
+        new_used_count = used_count + 1
+        cursor.execute("UPDATE promo_codes SET used_count = ? WHERE id = ?", (new_used_count, promo['id']))
+        cursor.execute('INSERT INTO promo_activations (promo_id, user_id) VALUES (?, ?)', (promo['id'], user_id))
+        add_log(f"🎁 Активировал промокод {code} | +{promo['reward_amount']} {promo['reward_type'].upper()}", user_id,
+                user['username'], old_value=old_value, new_value=new_value, currency=promo['reward_type'])
+        return jsonify(
+            {"success": True, "message": f"Вы получили +{promo['reward_amount']} {promo['reward_type'].upper()}!",
+             "reward_type": promo['reward_type'], "reward_amount": promo['reward_amount']})
+
+
+@app.route('/api/promo/info', methods=['GET'])
+def api_promo_info():
+    code = request.args.get('code', '').upper().strip()
+    if not code:
+        return jsonify({"success": False, "error": "No code provided"}), 400
+    with db.get_cursor() as cursor:
+        cursor.execute('SELECT * FROM promo_codes WHERE code = ? AND is_active = 1', (code,))
+        promo = cursor.fetchone()
+        if not promo:
+            return jsonify({"success": False, "error": "Promo code not found"}), 404
+        if promo['expires_at']:
+            expires = datetime.datetime.fromisoformat(promo['expires_at'])
+            if datetime.datetime.now() > expires:
+                return jsonify({"success": False, "error": "Promo code expired"}), 400
+        used_count = promo['used_count'] or 0
+        remaining = promo['max_uses'] - used_count
+        if remaining <= 0:
+            return jsonify({"success": False, "error": "Promo code is no longer active"}), 400
+        return jsonify({"success": True, "code": promo['code'], "reward_type": promo['reward_type'],
+                        "reward_amount": promo['reward_amount'], "remaining": remaining, "max_uses": promo['max_uses'],
+                        "has_password": bool(promo['password'])})
+
+
+@app.route('/api/set_referral', methods=['POST'])
+def api_set_referral():
+    data = request.json
+    user_id = data.get('user_id')
+    referral_code = data.get('referral_code', '').strip()
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"success": False, "error": "Invalid user_id"}), 400
+    if not referral_code:
+        return jsonify({"success": False, "error": "No referral code"}), 400
+    with db.get_cursor() as cursor:
+        cursor.execute("SELECT referrer_id FROM users WHERE user_id = ?", (user_id,))
+        user = cursor.fetchone()
+        if not user:
+            return jsonify({"success": False, "error": "User not found"}), 404
+        if user['referrer_id'] and user['referrer_id'] != 0:
+            return jsonify({"success": True, "message": "Referrer already set"}), 200
+        cursor.execute("SELECT user_id FROM users WHERE referral_code = ?", (referral_code,))
+        referrer = cursor.fetchone()
+        if referrer and referrer['user_id'] != user_id:
+            cursor.execute("UPDATE users SET referrer_id = ? WHERE user_id = ?", (referrer['user_id'], user_id))
+            cursor.execute(
+                'INSERT INTO referrals (referrer_id, referred_id, username, first_name) SELECT ?, ?, username, first_name FROM users WHERE user_id = ?',
+                (referrer['user_id'], user_id, user_id))
+            add_log(f"👥 Реферал привязан! Код: {referral_code}", user_id, str(user_id))
+            send_telegram_message(referrer['user_id'], f"🎉 Новый реферал присоединился по вашей ссылке!")
+            return jsonify({"success": True, "message": "Referral attached"}), 200
+    return jsonify({"success": False, "error": "Referrer not found"}), 404
+
+
 def handle_telegram_updates():
     last_update_id = 0
     verify_ssl = not DEBUG_MODE
@@ -3713,7 +3994,7 @@ def handle_telegram_updates():
                                             send_telegram_message(referrer_id,
                                                                   f"🎉 Новый реферал! {first_name or username} присоединился по вашей ссылке!")
                                     cursor.execute(
-                                        '''INSERT INTO users (user_id, wg, lp, energy, last_energy_update, tickets, total_clicks, upgrade_counts, ticket_counter, referral_code, referrer_id, likes, dislikes, settings, username, first_name, last_name, avatar_url, usdt, wins, role, stars, max_energy, energy_upgrades, energy_limit_upgrades, unlocked_prefixes, tutorial_completed, ton_wallet, banned_until, ban_reason, banned_by) VALUES (?, 0, 0, 500, ?, '[]', 0, '{"1":0,"2":0,"3":0}', 0, ?, ?, 0, 0, '{"theme":"dark"}', ?, ?, ?, ?, 0, 0, ?, 0, 500, 0, 0, ?, 0, '', 0, '', 0)''',
+                                        '''INSERT INTO users (user_id, wg, lp, energy, last_energy_update, tickets, total_clicks, upgrade_counts, ticket_counter, referral_code, referrer_id, likes, dislikes, settings, username, first_name, last_name, avatar_url, usdt, wins, role, stars, max_energy, energy_upgrades, energy_limit_upgrades, unlocked_prefixes, tutorial_completed, ton_wallet, banned_until, ban_reason, banned_by, completed_achievements) VALUES (?, 0, 0, 500, ?, '[]', 0, '{"1":0,"2":0,"3":0}', 0, ?, ?, 0, 0, '{"theme":"dark"}', ?, ?, ?, ?, 0, 0, ?, 0, 500, 0, 0, ?, 0, '', 0, '', 0, 0)''',
                                         (chat_id, now, ref_code_new, referrer_id, username, first_name, last_name, "",
                                          role, unlocked))
                             keyboard = {
@@ -3754,7 +4035,7 @@ def handle_telegram_updates():
 if __name__ == '__main__':
     threading.Thread(target=handle_telegram_updates, daemon=True).start()
     print("\n" + "=" * 60)
-    print("🔧 WereGood Bot - ПОЛНАЯ ВЕРСИЯ С ПРОМОКОДАМИ И КУЛДАУНАМИ")
+    print("🔧 WereGood Bot - ПОЛНАЯ ВЕРСИЯ С ДОСТИЖЕНИЯМИ")
     print("=" * 60)
     print("✅ ВСЕ ФУНКЦИИ СОХРАНЕНЫ:")
     print("   • Лотерея с розыгрышами и новой логикой")
@@ -3762,8 +4043,11 @@ if __name__ == '__main__':
     print("   • Ежедневные награды (24 часа)")
     print("   • TON Connect 2.0")
     print("   • Stars оплата")
-    print("   • Промокоды (НОВАЯ СИСТЕМА)")
+    print("   • Промокоды")
     print("   • Полная админ-панель")
+    print("   • Система достижений с топом и префиксом ЛЕГЕНДА!")
+    print("   • 10 достижений с авто-отслеживанием")
+    print("   • Топ-50 по достижениям")
     print("   • Бесконечные логи с пагинацией (по 100 записей)")
     print("   • КУЛДАУН НА РЕКЛАМУ:")
     print("     • +200 энергии: 5 мин кулдаун, 40 раз в день")

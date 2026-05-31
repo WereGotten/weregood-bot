@@ -3452,6 +3452,310 @@
             color: rgba(255,255,255,0.6);
             cursor: pointer;
         }
+        /* ========== ПРЕФИКС ЛЕГЕНДА ========== */
+.role-badge.legend {
+    background: linear-gradient(135deg, #FFD700, #FFA500, #FFD700);
+    background-size: 200% 200%;
+    animation: legendShine 2s ease infinite;
+    color: #1a1a2e;
+    text-shadow: 0 0 5px rgba(255,215,0,0.5);
+    box-shadow: 0 0 15px rgba(255,215,0,0.5);
+    font-weight: 800;
+    letter-spacing: 1px;
+}
+
+@keyframes legendShine {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+.role-badge.legend::before {
+    content: "👑 ";
+    font-size: 0.8rem;
+}
+
+/* ========== ДОСТИЖЕНИЯ ========== */
+.achievements-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.95);
+    z-index: 2500;
+    overflow-y: auto;
+}
+
+.achievements-modal.active {
+    display: block;
+}
+
+.achievements-modal-content {
+    min-height: 100vh;
+    padding: 20px;
+    position: relative;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.achievements-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(255,215,0,0.2);
+    position: sticky;
+    top: 0;
+    background: #0a0a1a;
+    z-index: 10;
+}
+
+.achievements-header h2 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.achievements-close {
+    background: rgba(255,255,255,0.1);
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    color: white;
+    font-size: 1.2rem;
+}
+
+.achievements-stats {
+    background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,165,0,0.08));
+    border-radius: 20px;
+    padding: 15px 20px;
+    margin-bottom: 20px;
+    text-align: center;
+    border: 1px solid rgba(255,215,0,0.2);
+}
+
+.achievements-stats-value {
+    font-size: 2rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.achievements-stats-label {
+    font-size: 0.7rem;
+    color: rgba(255,255,255,0.6);
+    margin-top: 5px;
+}
+
+.achievements-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    background: rgba(255,255,255,0.05);
+    padding: 5px;
+    border-radius: 50px;
+}
+
+.achievements-tab {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 10px;
+    border-radius: 40px;
+    color: rgba(255,255,255,0.6);
+    font-weight: 600;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.achievements-tab.active {
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    color: #0a0a1a;
+}
+
+.achievements-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.achievement-card {
+    background: rgba(255,255,255,0.05);
+    border-radius: 20px;
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    border: 1px solid rgba(255,215,0,0.1);
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+
+.achievement-card.completed {
+    opacity: 0.7;
+    background: rgba(34,197,94,0.08);
+    border-color: rgba(34,197,94,0.3);
+}
+
+.achievement-card.completed::after {
+    content: "✓ ВЫПОЛНЕНО";
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(34,197,94,0.9);
+    color: white;
+    font-size: 0.6rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+}
+
+.achievement-icon {
+    width: 55px;
+    height: 55px;
+    background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,165,0,0.08));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    flex-shrink: 0;
+}
+
+.achievement-info {
+    flex: 1;
+}
+
+.achievement-name {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #FFD700;
+    margin-bottom: 4px;
+}
+
+.achievement-desc {
+    font-size: 0.65rem;
+    color: rgba(255,255,255,0.5);
+    margin-bottom: 8px;
+}
+
+.achievement-progress-bar {
+    background: rgba(255,255,255,0.1);
+    border-radius: 10px;
+    height: 6px;
+    overflow: hidden;
+}
+
+.achievement-progress-fill {
+    background: linear-gradient(90deg, #FFD700, #FFA500);
+    height: 100%;
+    width: 0%;
+    border-radius: 10px;
+    transition: width 0.3s;
+}
+
+.achievement-progress-text {
+    font-size: 0.55rem;
+    color: rgba(255,255,255,0.4);
+    margin-top: 4px;
+    text-align: right;
+}
+
+.achievement-card.completed .achievement-progress-fill {
+    background: linear-gradient(90deg, #22c55e, #16a34a);
+}
+
+/* Топ игроков */
+.achievements-top-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.achievements-top-item {
+    background: rgba(255,255,255,0.05);
+    border-radius: 16px;
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.achievements-top-item:hover {
+    background: rgba(255,215,0,0.1);
+    transform: translateX(5px);
+}
+
+.top-rank {
+    width: 35px;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #FFD700;
+}
+
+.top-rank.rank-1 { color: #FFD700; text-shadow: 0 0 5px #FFD700; }
+.top-rank.rank-2 { color: #C0C0C0; }
+.top-rank.rank-3 { color: #CD7F32; }
+
+.top-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255,215,0,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.top-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.top-info {
+    flex: 1;
+}
+
+.top-name {
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.top-completed {
+    font-size: 0.65rem;
+    color: #FFD700;
+    margin-top: 2px;
+}
+
+.top-badge {
+    background: rgba(255,215,0,0.15);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: #FFD700;
+}
     </style>
 </head>
 <body>
@@ -3867,6 +4171,10 @@
                     <img src="/static/withdraw.png" alt="Вывести" style="width: 24px; height: 24px;">
                     Вывести USDT
                 </button>
+                <button class="withdrawal-btn" onclick="openAchievementsModal()">
+                    <img src="/static/trophy.png" alt="Достижения" style="width: 24px; height: 24px;">
+                    🏆 Достижения
+                </button>
 
                 <div class="referral-section">
                     <div class="referral-header">
@@ -4120,6 +4428,35 @@
     <audio id="settingsSound" preload="auto"><source src="/static/settings.mp3" type="audio/mpeg"></audio>
     <audio id="purchaseSound" preload="auto"><source src="/static/purchase.mp3" type="audio/mpeg"></audio>
 
+    <!-- Модальное окно достижений -->
+<div id="achievementsModal" class="achievements-modal">
+    <div class="achievements-modal-content">
+        <div class="achievements-header">
+            <h2>🏆 Достижения</h2>
+            <button class="achievements-close" onclick="closeAchievementsModal()">✕</button>
+        </div>
+
+        <div class="achievements-stats" id="achievementsStats">
+            <div class="achievements-stats-value" id="completedAchievementsCount">0</div>
+            <div class="achievements-stats-label">выполнено из <span id="totalAchievementsCount">10</span></div>
+        </div>
+
+        <div class="achievements-tabs">
+            <button class="achievements-tab active" data-achievements-tab="list">📋 Список достижений</button>
+            <button class="achievements-tab" data-achievements-tab="top">🏆 Топ игроков</button>
+        </div>
+
+        <div id="achievementsListTab" class="achievements-tab-content active">
+            <div class="achievements-list" id="achievementsList"></div>
+        </div>
+
+        <div id="achievementsTopTab" class="achievements-tab-content" style="display: none;">
+            <div class="achievements-top-list" id="achievementsTopList"></div>
+        </div>
+    </div>
+</div>
+
+
     <script>
         let tg = window.Telegram?.WebApp;
         let user = tg?.initDataUnsafe?.user;
@@ -4302,14 +4639,15 @@
         }
 
         function updateModalBadges(role) {
-            const badgesContainer = document.getElementById('playerModalBadges');
-            if (!badgesContainer) return;
-            let badgesHtml = '';
-            if (role === 'founder') badgesHtml += '<span class="role-badge founder">👑 ОСНОВАТЕЛЬ</span>';
-            else if (role === 'pioneer') badgesHtml += '<span class="role-badge pioneer">⭐ ПЕРВООТКРЫВАТЕЛЬ</span>';
-            else badgesHtml += '<span class="role-badge player">🎮 Игрок</span>';
-            badgesContainer.innerHTML = badgesHtml;
-        }
+    const badgesContainer = document.getElementById('playerModalBadges');
+    if (!badgesContainer) return;
+    let badgesHtml = '';
+    if (role === 'founder') badgesHtml += '<span class="role-badge founder">👑 ОСНОВАТЕЛЬ</span>';
+    else if (role === 'pioneer') badgesHtml += '<span class="role-badge pioneer">⭐ ПЕРВООТКРЫВАТЕЛЬ</span>';
+    else if (role === 'legend') badgesHtml += '<span class="role-badge legend">👑 ЛЕГЕНДА</span>';
+    else badgesHtml += '<span class="role-badge player">🎮 Игрок</span>';
+    badgesContainer.innerHTML = badgesHtml;
+}
 
         function animateClick() {
             let coin = document.getElementById('coin');
@@ -6213,6 +6551,134 @@ document.getElementById('taskDetailModal').classList.add('active');
                 tg.expand();
             }
         });
+
+        // ========== ДОСТИЖЕНИЯ ==========
+async function loadAchievements() {
+    try {
+        const res = await fetch('/api/achievements/list', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({user_id: userId})
+        });
+        const data = await res.json();
+        if (data.success) {
+            renderAchievementsList(data.achievements);
+            document.getElementById('completedAchievementsCount').innerText = data.completed_count;
+            document.getElementById('totalAchievementsCount').innerText = data.total_count;
+        }
+    } catch(e) {
+        console.error('Error loading achievements:', e);
+    }
+}
+
+function renderAchievementsList(achievements) {
+    const container = document.getElementById('achievementsList');
+    if (!container) return;
+
+    if (achievements.length === 0) {
+        container.innerHTML = '<div class="empty-state">Нет достижений</div>';
+        return;
+    }
+
+    let html = '';
+    for (const ach of achievements) {
+        const percent = (ach.current_count / ach.target_count) * 100;
+        const isCompleted = ach.is_completed;
+        const statusClass = isCompleted ? 'completed' : '';
+
+        html += `
+            <div class="achievement-card ${statusClass}">
+                <div class="achievement-icon">${ach.icon}</div>
+                <div class="achievement-info">
+                    <div class="achievement-name">${ach.display_name}</div>
+                    <div class="achievement-desc">${ach.description}</div>
+                    <div class="achievement-progress">
+                        <div class="achievement-progress-bar">
+                            <div class="achievement-progress-fill" style="width: ${percent}%"></div>
+                        </div>
+                        <div class="achievement-progress-text">${ach.current_count} / ${ach.target_count}</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    container.innerHTML = html;
+}
+
+async function loadAchievementsTop() {
+    try {
+        const res = await fetch('/api/achievements/top?limit=50');
+        const data = await res.json();
+        if (data.success) {
+            renderAchievementsTop(data.top);
+        }
+    } catch(e) {
+        console.error('Error loading achievements top:', e);
+    }
+}
+
+function renderAchievementsTop(players) {
+    const container = document.getElementById('achievementsTopList');
+    if (!container) return;
+
+    if (players.length === 0) {
+        container.innerHTML = '<div class="empty-state">Нет игроков с достижениями</div>';
+        return;
+    }
+
+    let html = '';
+    for (const player of players) {
+        let rankClass = '';
+        if (player.rank === 1) rankClass = 'rank-1';
+        else if (player.rank === 2) rankClass = 'rank-2';
+        else if (player.rank === 3) rankClass = 'rank-3';
+
+        let avatarHtml = player.avatar_url && player.avatar_url !== '👤'
+            ? `<img src="${player.avatar_url}" onerror="this.parentElement.innerHTML='👤'">`
+            : '👤';
+
+        html += `
+            <div class="achievements-top-item" onclick="openPlayerProfile(${player.user_id}, 0)">
+                <div class="top-rank ${rankClass}">${player.rank}</div>
+                <div class="top-avatar">${avatarHtml}</div>
+                <div class="top-info">
+                    <div class="top-name">${escapeHtml(player.username)}</div>
+                    <div class="top-completed">🏆 ${player.completed} достижений</div>
+                </div>
+                ${player.role === 'legend' ? '<div class="top-badge">👑 ЛЕГЕНДА</div>' : ''}
+            </div>
+        `;
+    }
+    container.innerHTML = html;
+}
+
+function openAchievementsModal() {
+    document.getElementById('achievementsModal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+    loadAchievements();
+    loadAchievementsTop();
+}
+
+function closeAchievementsModal() {
+    document.getElementById('achievementsModal').classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+// Переключение табов
+document.querySelectorAll('.achievements-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        const target = tab.dataset.achievementsTab;
+        document.querySelectorAll('.achievements-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        document.querySelectorAll('.achievements-tab-content').forEach(c => c.style.display = 'none');
+        if (target === 'list') {
+            document.getElementById('achievementsListTab').style.display = 'block';
+        } else {
+            document.getElementById('achievementsTopTab').style.display = 'block';
+            loadAchievementsTop();
+        }
+    });
+});
     </script>
 </body>
 </html>
