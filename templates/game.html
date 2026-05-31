@@ -4823,8 +4823,8 @@
                             let userName = user.username;
                             let roleBadge = '';
                             if (user.role === 'founder' && !user.hide_from_top) roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#ef4444;">👑</span>';
-                            else if (user.role === 'legend' && !user.hide_from_top) roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#FFD700;">👑⭐</span>';
-                            else if (user.role === 'pioneer' && !user.hide_from_top) roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#00b4d8;">⭐</span>';
+else if (user.role === 'legend' && !user.hide_from_top) roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#FFD700;">👑</span>';
+else if (user.role === 'pioneer' && !user.hide_from_top) roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#00b4d8;">⭐</span>';
                             html += `<div class="leaderboard-mini-item"><span class="rank">${user.rank}</span><span class="avatar-mini">${avatar}</span><span class="name">${userName}${roleBadge}</span><span class="clicks">${user.total_clicks} кликов</span></div>`;
                         }
                         document.getElementById('leaderboardMini').innerHTML = html || '<div>Нет данных</div>';
@@ -5106,8 +5106,8 @@
                     let userName = userItem.username;
                     let roleBadge = '';
                     if (userItem.role === 'founder' && !userItem.hide_from_top) roleBadge = '<span class="role-badge founder" style="font-size:0.6rem;padding:2px 6px;margin-left:6px;">👑</span>';
-                    else if (userItem.role === 'legend' && !userItem.hide_from_top) roleBadge = '<span class="role-badge legend" style="font-size:0.6rem;padding:2px 6px;margin-left:6px;">👑 ЛЕГЕНДА</span>';
-                    else if (userItem.role === 'pioneer' && !userItem.hide_from_top) roleBadge = '<span class="role-badge pioneer" style="font-size:0.6rem;padding:2px 6px;margin-left:6px;">⭐</span>';
+else if (userItem.role === 'legend' && !userItem.hide_from_top) roleBadge = '<span class="role-badge legend" style="font-size:0.6rem;padding:2px 6px;margin-left:6px;">👑</span>';
+else if (userItem.role === 'pioneer' && !userItem.hide_from_top) roleBadge = '<span class="role-badge pioneer" style="font-size:0.6rem;padding:2px 6px;margin-left:6px;">⭐</span>';
                     let reward = userItem.rank === 1 ? '<span class="reward">🏆 +1000 WG</span>' : (userItem.rank < 4 ? '<span class="reward">🥈 +500 WG</span>' : (userItem.rank <= 10 ? '<span class="reward">🎁 +100 WG</span>' : ''));
                     html += `<div class="leaderboard-item" onclick="openPlayerProfile(${userItem.user_id}, ${userItem.rank})">
                         <div class="rank">${userItem.rank}</div>
