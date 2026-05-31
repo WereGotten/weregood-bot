@@ -3483,7 +3483,7 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0,0,0,0.95);
+    background: linear-gradient(145deg, #0a0a1a 0%, #0d0d20 100%);
     z-index: 2500;
     overflow-y: auto;
 }
@@ -3755,6 +3755,9 @@
     font-size: 0.65rem;
     font-weight: 600;
     color: #FFD700;
+}
+        body.achievements-open {
+    overflow: hidden;
 }
     </style>
 </head>
@@ -4432,7 +4435,7 @@
 <div id="achievementsModal" class="achievements-modal">
     <div class="achievements-modal-content">
         <div class="achievements-header">
-            <h2>🏆 Достижения</h2>
+            <h2> Достижения</h2>
             <button class="achievements-close" onclick="closeAchievementsModal()">✕</button>
         </div>
 
@@ -4629,14 +4632,14 @@
                 }
             }
             const badgesContainer = document.getElementById('profileBadges');
-            if (badgesContainer) {
-                let badgesHtml = '';
-                if (localRole === 'founder') badgesHtml += '<span class="role-badge founder">👑 ОСНОВАТЕЛЬ</span>';
-                else if (localRole === 'pioneer') badgesHtml += '<span class="role-badge pioneer">⭐️ ПЕРВООТКРЫВАТЕЛЬ</span>';
-                else badgesHtml += '<span class="role-badge player">🎮 Игрок</span>';
-                badgesContainer.innerHTML = badgesHtml;
-            }
-        }
+if (badgesContainer) {
+    let badgesHtml = '';
+    if (localRole === 'founder') badgesHtml += '<span class="role-badge founder">👑 ОСНОВАТЕЛЬ</span>';
+    else if (localRole === 'legend') badgesHtml += '<span class="role-badge legend"> ЛЕГЕНДА</span>';
+    else if (localRole === 'pioneer') badgesHtml += '<span class="role-badge pioneer">⭐️ ПЕРВООТКРЫВАТЕЛЬ</span>';
+    else badgesHtml += '<span class="role-badge player">🎮 Игрок</span>';
+    badgesContainer.innerHTML = badgesHtml;
+}
 
         function updateModalBadges(role) {
     const badgesContainer = document.getElementById('playerModalBadges');
@@ -4644,7 +4647,7 @@
     let badgesHtml = '';
     if (role === 'founder') badgesHtml += '<span class="role-badge founder">👑 ОСНОВАТЕЛЬ</span>';
     else if (role === 'pioneer') badgesHtml += '<span class="role-badge pioneer">⭐ ПЕРВООТКРЫВАТЕЛЬ</span>';
-    else if (role === 'legend') badgesHtml += '<span class="role-badge legend">👑 ЛЕГЕНДА</span>';
+    else if (role === 'legend') badgesHtml += '<span class="role-badge legend"> ЛЕГЕНДА</span>';
     else badgesHtml += '<span class="role-badge player">🎮 Игрок</span>';
     badgesContainer.innerHTML = badgesHtml;
 }
@@ -4823,9 +4826,10 @@
                             let avatar = user.avatar && user.avatar !== '👤' ? `<img src="${user.avatar}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;">` : '👤';
                             let userName = user.username;
                             let roleBadge = '';
-                            if (user.role === 'founder' && !user.hide_from_top) roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#ef4444;">👑</span>';
-                            else if (user.role === 'pioneer' && !user.hide_from_top) roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#00b4d8;">⭐</span>';
-                            html += `<div class="leaderboard-mini-item"><span class="rank">${user.rank}</span><span class="avatar-mini">${avatar}</span><span class="name">${userName}${roleBadge}</span><span class="clicks">${user.total_clicks} кликов</span></div>`;
+                            let roleBadge = '';
+if (user.role === 'founder' && !user.hide_from_top) roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#ef4444;">👑</span>';
+else if (user.role === 'legend' && !user.hide_from_top) roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#FFD700;">👑⭐</span>';
+else if (user.role === 'pioneer' && !user.hide_from_top) roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#00b4d8;">⭐</span>';
                         }
                         document.getElementById('leaderboardMini').innerHTML = html || '<div>Нет данных</div>';
                         resolve(true);
@@ -5106,10 +5110,9 @@
                     let avatar = userItem.avatar && userItem.avatar !== '👤' ? `<img src="${userItem.avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">` : '👤';
                     let userName = userItem.username;
                     let roleBadge = '';
-                    if (userItem.role === 'founder' && !userItem.hide_from_top) roleBadge = '<span class="role-badge founder" style="font-size:0.6rem;padding:2px 6px;margin-left:6px;">👑</span>';
-                    else if (userItem.role === 'pioneer' && !userItem.hide_from_top) roleBadge = '<span class="role-badge pioneer" style="font-size:0.6rem;padding:2px 6px;margin-left:6px;">⭐</span>';
-                    let reward = userItem.rank === 1 ? '<span class="reward">🏆 +1000 WG</span>' : (userItem.rank < 4 ? '<span class="reward">🥈 +500 WG</span>' : (userItem.rank <= 10 ? '<span class="reward">🎁 +100 WG</span>' : ''));
-                    html += `<div class="leaderboard-item" onclick="openPlayerProfile(${userItem.user_id}, ${userItem.rank})"><div class="rank">${userItem.rank}</div><div class="avatar">${avatar}</div><div class="info"><div class="name">${userName}${roleBadge}</div><div class="clicks">${userItem.total_clicks} кликов</div></div>${reward}</div>`;
+if (userItem.role === 'founder' && !userItem.hide_from_top) roleBadge = '<span class="role-badge founder" style="font-size:0.6rem;padding:2px 6px;margin-left:6px;">👑</span>';
+else if (userItem.role === 'legend' && !userItem.hide_from_top) roleBadge = '<span class="role-badge legend" style="font-size:0.6rem;padding:2px 6px;margin-left:6px;">👑 ЛЕГЕНДА</span>';
+else if (userItem.role === 'pioneer' && !userItem.hide_from_top) roleBadge = '<span class="role-badge pioneer" style="font-size:0.6rem;padding:2px 6px;margin-left:6px;">⭐</span>';
                 }
                 listDiv.innerHTML = html || '<div class="empty-state">Нет данных</div>';
             } catch(e) { listDiv.innerHTML = '<div class="empty-state">Ошибка</div>'; }
@@ -6654,14 +6657,14 @@ function renderAchievementsTop(players) {
 
 function openAchievementsModal() {
     document.getElementById('achievementsModal').classList.add('active');
-    document.body.style.overflow = 'hidden';
+    document.body.classList.add('achievements-open');
     loadAchievements();
     loadAchievementsTop();
 }
 
 function closeAchievementsModal() {
     document.getElementById('achievementsModal').classList.remove('active');
-    document.body.style.overflow = '';
+    document.body.classList.remove('achievements-open');
 }
 
 // Переключение табов

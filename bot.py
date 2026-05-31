@@ -2362,7 +2362,6 @@ def api_click():
     today = datetime.datetime.now().strftime("%Y-%m-%d")
     update_stats_history(today, clicks=1)
     update_achievement_progress(user_id, 'autoclicker', 1)
-    update_achievement_progress(user_id, 'spender', int(earning))
     if user["total_clicks"] == 0:
         add_log(f"🆕👆 ПЕРВЫЙ КЛИК в игре! +{earning:.4f} WG", user_id, user['username'], old_value=old_wg,
                 new_value=new_wg, currency="wg")
@@ -2442,7 +2441,11 @@ def api_buy_upgrade():
     new_count = current_count + 1
     user["upgrade_counts"][upgrade_id] = new_count
     safe_update_user(user_id, wg=new_wg, upgrade_counts=user["upgrade_counts"])
-    update_achievement_progress(user_id, 'investor', 1)
+
+    # Обновление достижений
+    update_achievement_progress(user_id, 'investor', 1)  # Инвестор (количество покупок)
+    update_achievement_progress(user_id, 'spender', int(cost))  # Транжира (сумма потраченных WG)
+
     if current_count == 0:
         add_log(f"🆕⭐ ПЕРВАЯ ПОКУПКА улучшения! {UPGRADE_CONFIG[upgrade_id]['name']} за {cost:.2f} WG", user_id,
                 user['username'], old_value=old_wg, new_value=new_wg, currency="wg")
