@@ -4667,7 +4667,7 @@
 if (badgesContainer) {
     let badgesHtml = '';
     if (localRole === 'founder') badgesHtml += '<span class="role-badge founder">👑 ОСНОВАТЕЛЬ</span>';
-    else if (localRole === 'legend') badgesHtml += '<span class="role-badge legend">👑 ЛЕГЕНДА</span>';
+    else if (localRole === 'legend') badgesHtml += '<span class="role-badge legend"> ЛЕГЕНДА</span>';
     else if (localRole === 'pioneer') badgesHtml += '<span class="role-badge pioneer">⭐️ ПЕРВООТКРЫВАТЕЛЬ</span>';
     else badgesHtml += '<span class="role-badge player">🎮 Игрок</span>';
     badgesContainer.innerHTML = badgesHtml;
@@ -4680,7 +4680,7 @@ if (badgesContainer) {
     let badgesHtml = '';
     if (role === 'founder') badgesHtml += '<span class="role-badge founder">👑 ОСНОВАТЕЛЬ</span>';
     else if (role === 'pioneer') badgesHtml += '<span class="role-badge pioneer">⭐ ПЕРВООТКРЫВАТЕЛЬ</span>';
-    else if (role === 'legend') badgesHtml += '<span class="role-badge legend">👑 ЛЕГЕНДА</span>';
+    else if (role === 'legend') badgesHtml += '<span class="role-badge legend"> ЛЕГЕНДА</span>';
     else badgesHtml += '<span class="role-badge player">🎮 Игрок</span>';
     badgesContainer.innerHTML = badgesHtml;
 }
