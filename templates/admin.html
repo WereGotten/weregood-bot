@@ -1150,6 +1150,16 @@
         </div>
     </div>
 
+    <div id="deleteUserModal" class="modal">
+        <div class="modal-content" style="max-width: 450px;">
+            <div class="modal-header">
+                <h2>🗑️ Удаление игрока</h2>
+                <button class="modal-close" onclick="closeDeleteUserModal()">✕</button>
+            </div>
+            <div id="deleteUserContent"></div>
+        </div>
+    </div>
+
     <script>
         const adminKey = new URLSearchParams(window.location.search).get('key');
         let currentUserData = null;
@@ -1948,6 +1958,87 @@
             }
         }
 
+        // ========== УДАЛЕНИЕ ИГРОКА ==========
+        function openDeleteUserModal() {
+            if (!currentUserData) return;
+            const modal = document.getElementById('deleteUserModal');
+            const content = document.getElementById('deleteUserContent');
+            if (!modal || !content) return;
+
+            const userName = currentUserData.username || currentUserData.first_name || `ID: ${currentUserData.user_id}`;
+
+            content.innerHTML = `
+                <div style="margin-bottom: 20px;">
+                    <div style="background: rgba(244,67,54,0.1); border-radius: 16px; padding: 16px; margin-bottom: 16px; border: 1px solid rgba(244,67,54,0.3);">
+                        <div style="color: #f44336; font-weight: 700; margin-bottom: 12px;">⚠️ ВНИМАНИЕ! Это действие необратимо!</div>
+                        <div style="margin-bottom: 8px;">👤 Игрок: <strong>${escapeHtml(userName)}</strong> (ID: ${currentUserData.user_id})</div>
+                        <div style="margin-bottom: 8px;">📊 Достижений: ${currentUserData.completed_achievements || 0}</div>
+                        <div style="margin-bottom: 8px;">💰 Баланс: ${formatNumber(currentUserData.wg)} WG, ${currentUserData.lp} LP, ${formatNumber(currentUserData.usdt)} USDT</div>
+                    </div>
+                    <div style="background: rgba(0,0,0,0.3); border-radius: 16px; padding: 16px; margin-bottom: 16px;">
+                        <div style="font-weight: 600; margin-bottom: 8px;">🗑️ Будут удалены:</div>
+                        <ul style="margin-left: 20px; font-size: 0.75rem; opacity: 0.8;">
+                            <li>Все ресурсы игрока (WG, LP, USDT, Stars, энергия)</li>
+                            <li>Достижения и прогресс</li>
+                            <li>Билеты в лотерее</li>
+                            <li>Рефералы и связи</li>
+                            <li>История выводов средств</li>
+                            <li>Активированные промокоды</li>
+                            <li>История просмотра рекламы</li>
+                            <li>Все логи активности</li>
+                        </ul>
+                    </div>
+                    <div class="form-group">
+                        <label>Для подтверждения введите <strong style="color: #f44336;">УДАЛИТЬ</strong></label>
+                        <input type="text" class="form-input" id="deleteConfirmText" placeholder="Введите УДАЛИТЬ" style="border-color: rgba(244,67,54,0.3);">
+                    </div>
+                    <div style="display: flex; gap: 12px; margin-top: 20px;">
+                        <button class="btn btn-secondary" onclick="closeDeleteUserModal()" style="flex:1;">Отмена</button>
+                        <button class="btn btn-danger" onclick="confirmDeleteUser()" style="flex:1;">🗑️ УДАЛИТЬ НАВСЕГДА</button>
+                    </div>
+                </div>
+            `;
+            modal.classList.add('active');
+        }
+
+        function closeDeleteUserModal() {
+            const modal = document.getElementById('deleteUserModal');
+            if (modal) modal.classList.remove('active');
+            document.getElementById('deleteConfirmText').value = '';
+        }
+
+        async function confirmDeleteUser() {
+            const confirmText = document.getElementById('deleteConfirmText')?.value.trim();
+            if (confirmText !== "УДАЛИТЬ") {
+                alert('❌ Для подтверждения удаления введите "УДАЛИТЬ"');
+                return;
+            }
+
+            if (!currentUserData) return;
+
+            try {
+                const result = await apiRequest('delete_user', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        user_id: currentUserData.user_id,
+                        confirm: true
+                    })
+                });
+
+                if (result.success) {
+                    alert(`✅ ${result.message}`);
+                    closeDeleteUserModal();
+                    closePlayerModal();
+                    searchPlayers();
+                    loadStats();
+                } else {
+                    alert(`❌ Ошибка: ${result.error}`);
+                }
+            } catch(e) {
+                alert('❌ Ошибка при удалении');
+            }
+        }
+
         async function openPlayerProfile(userId) {
             const data = await apiRequest('get_user', {
                 method: 'POST',
@@ -2005,6 +2096,7 @@
                     <div class="form-group"><label>🔨 Блокировка</label><button class="btn btn-danger" onclick="openBanModal(${currentUserData.user_id})">🔨 Заблокировать</button></div>
                     ${currentUserData.is_banned ? `<div class="form-group"><label>🔓 Разблокировка</label><button class="btn btn-secondary" onclick="adminAction('unban')">🔓 Разблокировать</button></div>` : ''}
                     <div class="form-group"><label>🗑️ TON кошелёк</label><button class="btn btn-danger" onclick="clearUserWallet(${currentUserData.user_id})" style="width:100%;">🗑️ Отвязать кошелёк</button></div>
+                    <div class="form-group"><label style="color: #f44336;">⚠️ ОПАСНАЯ ЗОНА</label><button class="btn btn-danger" onclick="openDeleteUserModal()" style="width:100%; background: rgba(244,67,54,0.2); border: 1px solid #f44336; color: #f44336;">🗑️ ПОЛНОСТЬЮ УДАЛИТЬ ИГРОКА</button><p style="font-size:0.6rem; opacity:0.5; margin-top:5px;">ВНИМАНИЕ! Это действие нельзя отменить. Будут удалены: прогресс, достижения, билеты, рефералы, заявки на вывод и вся история.</p></div>
                 </div>
                 <div id="profileTabReferrals" class="profile-tab-content">
                     ${currentUserData.referrals && currentUserData.referrals.length ?
@@ -2074,6 +2166,7 @@
         function closePlayerModal() {
             const playerModal = document.getElementById('playerModal');
             if (playerModal) playerModal.classList.remove('active');
+            currentUserData = null;
         }
 
         function escapeHtml(text) {

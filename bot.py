@@ -1082,6 +1082,33 @@ def unban_user(user_id):
     add_log(f"🔓 РАЗБАНИЛ пользователя", user_id, "Admin")
 
 
+def delete_user(user_id):
+    """Полное удаление пользователя из базы данных"""
+    with db.get_cursor() as cursor:
+        # Удаляем из всех связанных таблиц
+        cursor.execute("DELETE FROM users WHERE user_id = ?", (user_id,))
+        cursor.execute("DELETE FROM user_achievements WHERE user_id = ?", (user_id,))
+        cursor.execute("DELETE FROM user_tasks WHERE user_id = ?", (user_id,))
+        cursor.execute("DELETE FROM votes WHERE voter_id = ? OR target_id = ?", (user_id, user_id))
+        cursor.execute("DELETE FROM referrals WHERE referrer_id = ? OR referred_id = ?", (user_id, user_id))
+        cursor.execute("DELETE FROM withdrawal_requests WHERE user_id = ?", (user_id,))
+        cursor.execute("DELETE FROM daily_rewards WHERE user_id = ?", (user_id,))
+        cursor.execute("DELETE FROM promo_activations WHERE user_id = ?", (user_id,))
+        cursor.execute("DELETE FROM ad_watch_history WHERE user_id = ?", (user_id,))
+        cursor.execute("DELETE FROM successful_payments WHERE user_id = ?", (user_id,))
+        cursor.execute("DELETE FROM used_ton_transactions WHERE user_id = ?", (user_id,))
+        cursor.execute("DELETE FROM lottery_tickets_history WHERE user_id = ?", (user_id,))
+
+        # Также удаляем билеты пользователя из текущей лотереи
+        global lottery_tickets
+        lottery_tickets = [t for t in lottery_tickets if t.get("user_id") != user_id]
+        save_lottery()
+
+    invalidate_cache(user_id)
+    logger.info(f"Пользователь {user_id} полностью удалён из БД")
+    add_log(f"🗑️ ПОЛНОСТЬЮ УДАЛИЛ пользователя из БД", user_id, "Admin")
+    return True
+
 def add_log(action, user_id, username, old_value=None, new_value=None, currency="", details=""):
     log_message = action
     if old_value is not None and new_value is not None:
@@ -3619,6 +3646,39 @@ def api_clear_user_wallet():
         logger.error(f"Ошибка очистки кошелька: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
+
+@app.route('/api/admin/delete_user', methods=['POST'])
+@require_admin
+def api_admin_delete_user():
+    data = request.get_json()
+    if not data:
+        return jsonify({"success": False, "error": "No JSON"}), 400
+
+    user_id = data.get('user_id')
+    if not user_id:
+        return jsonify({"success": False, "error": "user_id required"}), 400
+
+    # Подтверждение (чтобы случайно не удалить)
+    confirm = data.get('confirm', False)
+    if not confirm:
+        return jsonify({"success": False, "error": "Подтвердите удаление (confirm=true)"}), 400
+
+    try:
+        # Получаем информацию о пользователе для лога
+        user = get_user(user_id)
+        username = user.get('username') or user.get('first_name') or str(user_id)
+
+        # Удаляем пользователя
+        delete_user(user_id)
+
+        admin_id = request.args.get('user_id', 'Admin')
+        admin_name = "Admin"
+        add_admin_log(f"🗑️ ПОЛНОСТЬЮ УДАЛИЛ пользователя {username} (ID: {user_id}) из БД", admin_id, admin_name)
+
+        return jsonify({"success": True, "message": f"Пользователь {username} удалён"})
+    except Exception as e:
+        logger.error(f"Ошибка удаления пользователя: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/api/admin/lottery_action', methods=['POST'])
 @require_admin
