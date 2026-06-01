@@ -4269,7 +4269,7 @@
                         <img src="/static/settings.png" alt="Настройки" style="width: 28px; height: 28px;">
                         Настройки
                     </div>
-                    <div class="setting-item">
+                                        <div class="setting-item">
                         <span>
                             <img src="/static/notification.png" alt="Уведомления" style="width: 22px; height: 22px;">
                             Уведомления
@@ -4303,6 +4303,22 @@
                             Скрыть из топа
                         </span>
                         <label class="switch"><input type="checkbox" id="hideFromTopToggle"><span class="slider"></span></label>
+                    </div>
+                    <div class="setting-item">
+                        <span>
+                            <img src="/static/ton_icon.png" alt="TON" style="width: 22px; height: 22px;">
+                            TON Кошелёк
+                        </span>
+                        <span id="tonWalletStatus" style="font-size:0.7rem; color:#FFD700;">Не подключён</span>
+                    </div>
+                    <div class="setting-item">
+                        <span>
+                            <img src="/static/disconnect.png" alt="Отвязать" style="width: 22px; height: 22px;">
+                            Отвязать TON кошелёк
+                        </span>
+                        <button class="btn-sm" onclick="disconnectTonWallet()" style="background: rgba(244,67,54,0.2); color: #f44336; border: 1px solid rgba(244,67,54,0.3);">
+                            Отвязать
+                        </button>
                     </div>
                 </div>
             </div>
@@ -5945,17 +5961,46 @@ else if (user.role === 'pioneer' && !user.hide_from_top) roleBadge = '<span clas
         function closeDailyModal() { document.getElementById('dailyModal').classList.remove('active'); if (dailyTimerInterval) clearInterval(dailyTimerInterval); }
 
         let tonConnectUI = null, paymentCheckInterval = null, tonInitAttempts = 0;
-        async function initTonConnect() {
-            try {
-                if (typeof window.TonConnectUI === 'undefined' && typeof window.TON_CONNECT_UI === 'undefined') { tonInitAttempts++; if (tonInitAttempts < 20) { setTimeout(() => initTonConnect(), 500); return; } return; }
-                const TonConnectClass = window.TonConnectUI || window.TON_CONNECT_UI?.TonConnectUI;
-                if (!TonConnectClass) return;
-                const manifestUrl = `${window.location.origin}/tonconnect-manifest.json`;
-                tonConnectUI = new TonConnectClass({ manifestUrl: manifestUrl, actionsConfiguration: { twaReturnUrl: window.location.origin + '/' } });
-                if (tonConnectUI.wallet) { const address = tonConnectUI.wallet.account.address; await saveWalletToBackend(address); showToast(`✅ Кошелёк подключён: ${address.slice(0, 6)}...${address.slice(-4)}`, 'success'); }
-                tonConnectUI.onStatusChange(async (wallet) => { if (wallet) { const address = wallet.account.address; await saveWalletToBackend(address); showToast(`✅ Кошелёк привязан: ${address.slice(0, 6)}...${address.slice(-4)}`, 'success'); } else await saveWalletToBackend(''); });
-            } catch(e) { console.error('Ошибка инициализации TON Connect:', e); }
+async function initTonConnect() {
+    try {
+        if (typeof window.TonConnectUI === 'undefined' && typeof window.TON_CONNECT_UI === 'undefined') {
+            tonInitAttempts++;
+            if (tonInitAttempts < 20) {
+                setTimeout(() => initTonConnect(), 500);
+                return;
+            }
+            return;
         }
+        const TonConnectClass = window.TonConnectUI || window.TON_CONNECT_UI?.TonConnectUI;
+        if (!TonConnectClass) return;
+        const manifestUrl = `${window.location.origin}/tonconnect-manifest.json`;
+        tonConnectUI = new TonConnectClass({
+            manifestUrl: manifestUrl,
+            actionsConfiguration: {
+                twaReturnUrl: window.location.origin + '/'
+            }
+        });
+        if (tonConnectUI.wallet) {
+            const address = tonConnectUI.wallet.account.address;
+            await saveWalletToBackend(address);
+            showToast(`✅ Кошелёк подключён: ${address.slice(0, 6)}...${address.slice(-4)}`, 'success');
+            updateTonWalletStatus();
+        }
+        tonConnectUI.onStatusChange(async (wallet) => {
+            if (wallet) {
+                const address = wallet.account.address;
+                await saveWalletToBackend(address);
+                showToast(`✅ Кошелёк привязан: ${address.slice(0, 6)}...${address.slice(-4)}`, 'success');
+                updateTonWalletStatus();
+            } else {
+                await saveWalletToBackend('');
+                updateTonWalletStatus();
+            }
+        });
+    } catch(e) {
+        console.error('Ошибка инициализации TON Connect:', e);
+    }
+}
 
         async function saveWalletToBackend(address) { try { await fetch('/api/ton/save_wallet', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ user_id: userId, wallet_address: address }) }); } catch(e) { console.error('Ошибка сохранения кошелька:', e); } }
 
@@ -6595,6 +6640,66 @@ else if (user.role === 'pioneer' && !user.hide_from_top) roleBadge = '<span clas
             });
         });
 
+        async function disconnectTonWallet() {
+    if (!confirm('⚠️ Вы уверены, что хотите отвязать TON кошелёк?\n\nПосле отвязки вы не сможете оплачивать через TON Connect, пока не подключите кошелёк снова.')) {
+        return;
+    }
+
+    try {
+        // Отключаем кошелёк через TON Connect
+        if (tonConnectUI) {
+            await tonConnectUI.disconnect();
+        }
+
+        // Очищаем кошелёк в базе данных
+        const response = await fetch('/api/ton/disconnect_wallet', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showToast('✅ TON кошелёк отвязан', 'success');
+            updateTonWalletStatus();
+            // Обновляем статус в настройках
+            const walletStatus = document.getElementById('tonWalletStatus');
+            if (walletStatus) walletStatus.innerText = 'Не подключён';
+        } else {
+            showToast('❌ Ошибка: ' + (data.error || 'Не удалось отвязать кошелёк'), 'error');
+        }
+    } catch(e) {
+        console.error('Disconnect error:', e);
+        showToast('❌ Ошибка при отвязке кошелька', 'error');
+    }
+}
+
+async function updateTonWalletStatus() {
+    try {
+        const response = await fetch('/api/ton/get_wallet', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId })
+        });
+        const data = await response.json();
+
+        const walletStatus = document.getElementById('tonWalletStatus');
+        if (walletStatus) {
+            if (data.success && data.wallet) {
+                const shortAddress = data.wallet.slice(0, 6) + '...' + data.wallet.slice(-4);
+                walletStatus.innerText = shortAddress;
+                walletStatus.style.color = '#22c55e';
+            } else {
+                walletStatus.innerText = 'Не подключён';
+                walletStatus.style.color = '#FFD700';
+            }
+        }
+    } catch(e) {
+        console.error('Error fetching wallet status:', e);
+    }
+}
+
         document.addEventListener("DOMContentLoaded", () => {
             initTonConnect();
             initSocket();
@@ -6609,6 +6714,7 @@ else if (user.role === 'pioneer' && !user.hide_from_top) roleBadge = '<span clas
             loadRecentPlayers();
             loadSettings();
             loadDailyStatus();
+            updateTonWalletStatus();
             setTimeout(checkAndStartTutorial, 2000);
             setInterval(updateStatus, 10000);
             setInterval(updateLottery, 30000);

@@ -2267,6 +2267,27 @@ def api_ton_check_payment():
     return jsonify({"success": True, "confirmed": False})
 
 
+@app.route('/api/ton/disconnect_wallet', methods=['POST'])
+def api_ton_disconnect_wallet():
+    data = request.json or {}
+    user_id = data.get('user_id')
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"success": False, "error": "Invalid user_id"}), 400
+
+    try:
+        with db.get_cursor() as cursor:
+            cursor.execute("UPDATE users SET ton_wallet = '' WHERE user_id = ?", (user_id,))
+        invalidate_cache(user_id)
+
+        user = get_user(user_id)
+        add_log(f"🔗 Отвязал TON кошелёк", user_id, user.get('username', 'Unknown'))
+
+        return jsonify({"success": True, "message": "Кошелёк отвязан"})
+    except Exception as e:
+        logger.error(f"Ошибка отвязки кошелька: {e}")
+        return jsonify({"success": False, "error": "Database error"}), 500
+
 @app.route('/api/log_game_entry', methods=['POST'])
 def api_log_game_entry():
     data = request.json
