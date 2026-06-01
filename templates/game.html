@@ -6083,13 +6083,19 @@ else if (user.role === 'pioneer' && !user.hide_from_top) roleBadge = '<span clas
         }
     }
 
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Даём время на отрисовку вкладки
+    await new Promise(resolve => setTimeout(resolve, 150));
 
     let element = getElementByStepId(step.elementId);
     if (element) {
-        // Плавно прокручиваем к элементу
-        element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Плавно скроллим к элементу
+        element.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+            inline: 'center'
+        });
+        // Ждём завершения скролла
+        await new Promise(resolve => setTimeout(resolve, 600));
         highlightElement(element, step.text, step.position);
     } else {
         console.warn(`Элемент ${step.elementId} не найден`);
