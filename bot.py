@@ -1024,16 +1024,16 @@ def init_db():
 
         # ========== ДОБАВЛЯЕМ ДОСТИЖЕНИЯ ==========
         achievements_list = [
-            ('autoclicker', '🏆 Автокликер', 'Сделать 100 000 кликов по монете', '🖱️', 100000),
-            ('investor', '💰 Инвестор', 'Купить 100 улучшений в магазине', '📈', 100),
+            ('autoclicker', '🏆 Автокликер', 'Сделать 50 000 кликов по монете', '🖱️', 50000),
+            ('investor', '💰 Инвестор', 'Купить 30 улучшений в магазине', '📈', 30),
             ('social', '👥 Общительный', 'Пригласить 10 рефералов', '🤝', 10),
             ('gambler', '🎲 Азартный', 'Купить 100 билетов в Вызове', '🎫', 100),
             ('lucky', '🍀 Счастливчик', 'Выиграть Вызов 5 раз', '🏆', 5),
             ('liker', '👍 Подписчик', 'Поставить 200 лайков', '❤️', 200),
             ('hater', '👎 Хейтер', 'Поставить 200 дизлайков', '💔', 200),
             ('ad_lover', '📺 Любитель TV', 'Просмотреть 100 реклам', '🎬', 100),
-            ('spender', '💸 Транжира', 'Потратить 100 000 WG Coin', '💎', 100000),
-            ('task_master', '📋 Выполнитель', 'Выполнить 15 заданий', '✅', 15)
+            ('spender', '💸 Транжира', 'Потратить 50 000 WG Coin', '💎', 50000),
+            ('task_master', '📋 Выполнитель', 'Выполнить 10 заданий', '✅', 10)
         ]
 
         for ach in achievements_list:
@@ -1397,7 +1397,6 @@ def add_referral_earning(referrer_id, referred_id, spent_lp):
             referrer = get_user(referrer_id)
             add_log(f"👥 Получил 5% от трат реферала (+{earning:.2f} LP)", referrer_id, referrer['username'],
                     old_value=old_lp, new_value=new_lp, currency="lp")
-            update_achievement_progress(referrer_id, 'social', 1)
             return True
     return False
 
@@ -2353,6 +2352,8 @@ def api_register():
                         (referrer_id, user_id, username, first_name))
                     add_log(f"👥 Новый реферал! {username or first_name} зарегистрировался по вашей ссылке", referrer_id,
                             get_user(referrer_id)['username'])
+                    # Обновляем достижение "Общительный" у реферера
+                    update_achievement_progress(referrer_id, 'social', 1)
             cursor.execute(
                 '''INSERT INTO users (user_id, wg, lp, energy, last_energy_update, tickets, total_clicks, upgrade_counts, ticket_counter, referral_code, referrer_id, likes, dislikes, settings, username, first_name, last_name, avatar_url, usdt, wins, role, stars, max_energy, energy_upgrades, energy_limit_upgrades, unlocked_prefixes, tutorial_completed, ton_wallet, banned_until, ban_reason, banned_by, completed_achievements) VALUES (?, 0, 0, 500, ?, '[]', 0, '{"1":0,"2":0,"3":0}', 0, ?, ?, 0, 0, '{"theme":"dark"}', ?, ?, ?, ?, 0, 0, ?, 0, 500, 0, 0, ?, 0, '', 0, '', 0, 0)''',
                 (user_id, now, ref_code_new, referrer_id, username, first_name, last_name, avatar_url, role, unlocked))
