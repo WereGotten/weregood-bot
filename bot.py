@@ -293,6 +293,24 @@ def validate_ton_address(address: str) -> bool:
     return False
 
 
+def convert_ton_address_to_raw(address: str) -> str:
+    """Конвертирует user-friendly TON адрес (UQ/EQ) в raw формат (0:hex)"""
+    if not address:
+        return address
+    if address.startswith('0:'):
+        return address
+    try:
+        import base64
+        # Убираем первый символ (U или E) и декодируем
+        decoded = base64.urlsafe_b64decode(address[1:] + '=' * (4 - len(address[1:]) % 4))
+        # Берём первые 32 байта как хеш
+        hash_part = decoded[:32]
+        return f"0:{hash_part.hex()}"
+    except Exception as e:
+        logger.error(f"Ошибка конвертации адреса {address}: {e}")
+        return address
+
+
 def check_origin():
     origin = request.headers.get('Origin', '')
     allowed_origins = [
@@ -1106,8 +1124,9 @@ def delete_user(user_id):
 
     invalidate_cache(user_id)
     logger.info(f"Пользователь {user_id} полностью удалён из БД")
-    add_log(f"🗑️ ПОЛНОСТЬЮ УДАЛИЛ пользователя из БД", user_id, "Admin")
+    add_log(f"🗑️ ПОЛНОСТЬЮ УДАЛИЛ пользователя из БД", 0, "System")
     return True
+
 
 def add_log(action, user_id, username, old_value=None, new_value=None, currency="", details=""):
     log_message = action
@@ -1474,13 +1493,22 @@ def handle_successful_payment(chat_id, payment_info):
 
 
 def check_ton_transaction(sender_wallet, expected_amount, user_id):
+    """Проверка TON платежа через toncenter API с RAW адресом"""
     try:
-        url = f"https://toncenter.com/api/v2/getTransactions?address={PROJECT_WALLET_ADDRESS}&limit=20"
+        # Конвертируем адрес проекта в RAW формат (0:...)
+        raw_address = convert_ton_address_to_raw(PROJECT_WALLET_ADDRESS)
+
+        url = f"https://toncenter.com/api/v2/getTransactions?address={raw_address}&limit=20"
         if TONCENTER_API_KEY:
             url += f"&api_key={TONCENTER_API_KEY}"
+
+        print(f"🔍 Проверяем транзакции для RAW адреса: {raw_address}")
+        print(f"📡 Исходный адрес: {PROJECT_WALLET_ADDRESS}")
+
         verify_ssl = not DEBUG_MODE
         response = requests.get(url, timeout=15, verify=verify_ssl)
         data = response.json()
+
         if data.get('ok'):
             for tx in data.get('result', []):
                 in_msg = tx.get('in_msg', {})
@@ -1494,14 +1522,17 @@ def check_ton_transaction(sender_wallet, expected_amount, user_id):
                             with db.get_cursor() as cursor:
                                 cursor.execute("SELECT id FROM used_ton_transactions WHERE tx_hash = ?", (tx_hash,))
                                 if cursor.fetchone():
-                                    logger.warning(f"Повторное использование транзакции {tx_hash} от {sender_wallet}")
+                                    print(f"⚠️ Транзакция {tx_hash} уже использована")
                                     return False, 0, None
                                 cursor.execute("INSERT INTO used_ton_transactions (tx_hash, user_id) VALUES (?, ?)",
                                                (tx_hash, user_id))
+                        print(f"✅ Транзакция подтверждена! {amount_ton} TON")
                         return True, amount_ton, tx_hash
+        else:
+            print(f"❌ Ошибка API: {data.get('error')}")
         return False, 0, None
     except Exception as e:
-        logger.error(f"Ошибка проверки TON платежа: {e}")
+        print(f"🔥 Ошибка проверки TON платежа: {e}")
         return False, 0, None
 
 
@@ -2288,6 +2319,7 @@ def api_ton_disconnect_wallet():
         logger.error(f"Ошибка отвязки кошелька: {e}")
         return jsonify({"success": False, "error": "Database error"}), 500
 
+
 @app.route('/api/log_game_entry', methods=['POST'])
 def api_log_game_entry():
     data = request.json
@@ -2373,7 +2405,6 @@ def api_register():
                         (referrer_id, user_id, username, first_name))
                     add_log(f"👥 Новый реферал! {username or first_name} зарегистрировался по вашей ссылке", referrer_id,
                             get_user(referrer_id)['username'])
-                    # Обновляем достижение "Общительный" у реферера
                     update_achievement_progress(referrer_id, 'social', 1)
             cursor.execute(
                 '''INSERT INTO users (user_id, wg, lp, energy, last_energy_update, tickets, total_clicks, upgrade_counts, ticket_counter, referral_code, referrer_id, likes, dislikes, settings, username, first_name, last_name, avatar_url, usdt, wins, role, stars, max_energy, energy_upgrades, energy_limit_upgrades, unlocked_prefixes, tutorial_completed, ton_wallet, banned_until, ban_reason, banned_by, completed_achievements) VALUES (?, 0, 0, 500, ?, '[]', 0, '{"1":0,"2":0,"3":0}', 0, ?, ?, 0, 0, '{"theme":"dark"}', ?, ?, ?, ?, 0, 0, ?, 0, 500, 0, 0, ?, 0, '', 0, '', 0, 0)''',
@@ -2811,15 +2842,13 @@ def api_leaderboard():
     global leaderboard_cache, leaderboard_cache_time
     now = time.time()
 
-    # Получаем параметр force_refresh для принудительного обновления
     force_refresh = request.args.get('force', 'false').lower() == 'true'
 
-    # Увеличим TTL до 10 секунд, но добавим принудительное обновление
     if not force_refresh and now - leaderboard_cache_time < LEADERBOARD_CACHE_TTL:
         return jsonify(leaderboard_cache)
 
     limit = int(request.args.get('limit', 50))
-    limit = min(limit, 100)  # максимум 100
+    limit = min(limit, 100)
 
     with db.get_cursor() as cursor:
         cursor.execute(
@@ -3688,17 +3717,13 @@ def api_admin_delete_user():
     if not user_id:
         return jsonify({"success": False, "error": "user_id required"}), 400
 
-    # Подтверждение (чтобы случайно не удалить)
     confirm = data.get('confirm', False)
     if not confirm:
         return jsonify({"success": False, "error": "Подтвердите удаление (confirm=true)"}), 400
 
     try:
-        # Получаем информацию о пользователе для лога
         user = get_user(user_id)
         username = user.get('username') or user.get('first_name') or str(user_id)
-
-        # Удаляем пользователя
         delete_user(user_id)
 
         admin_id = request.args.get('user_id', 'Admin')
@@ -3709,6 +3734,7 @@ def api_admin_delete_user():
     except Exception as e:
         logger.error(f"Ошибка удаления пользователя: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
+
 
 @app.route('/api/admin/lottery_action', methods=['POST'])
 @require_admin
