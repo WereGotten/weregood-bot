@@ -2789,10 +2789,17 @@ def api_get_referrals():
 def api_leaderboard():
     global leaderboard_cache, leaderboard_cache_time
     now = time.time()
-    if now - leaderboard_cache_time < LEADERBOARD_CACHE_TTL:
+
+    # Получаем параметр force_refresh для принудительного обновления
+    force_refresh = request.args.get('force', 'false').lower() == 'true'
+
+    # Увеличим TTL до 10 секунд, но добавим принудительное обновление
+    if not force_refresh and now - leaderboard_cache_time < LEADERBOARD_CACHE_TTL:
         return jsonify(leaderboard_cache)
-    limit = int(request.args.get('limit', 100))
-    limit = min(limit, 100)
+
+    limit = int(request.args.get('limit', 50))
+    limit = min(limit, 100)  # максимум 100
+
     with db.get_cursor() as cursor:
         cursor.execute(
             "SELECT user_id, total_clicks, username, first_name, avatar_url, role, settings FROM users ORDER BY total_clicks DESC LIMIT ?",
@@ -2821,6 +2828,7 @@ def api_leaderboard():
             result.append({"rank": i + 1, "user_id": row['user_id'], "username": escape_html(display_name),
                            "total_clicks": row['total_clicks'], "avatar": avatar,
                            "role": row['role'] if row['role'] else 'player', "hide_from_top": hide_from_top})
+
     leaderboard_cache = result
     leaderboard_cache_time = now
     return jsonify(result)

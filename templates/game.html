@@ -5121,46 +5121,50 @@ else if (user.role === 'pioneer' && !user.hide_from_top) roleBadge = '<span clas
         };
 
         window.openLeaderboard = async function() {
-            document.getElementById('leaderboardPage').classList.add('active');
-            document.getElementById('bottomNav').style.display = 'none';
-            await loadLeaderboardData('day');
-        };
+    document.getElementById('leaderboardPage').classList.add('active');
+    document.getElementById('bottomNav').style.display = 'none';
+    // force=true — принудительно обновляем кэш
+    await loadLeaderboardData('day', true);
+};
 
         window.closeLeaderboard = function() {
             document.getElementById('leaderboardPage').classList.remove('active');
             document.getElementById('bottomNav').style.display = 'flex';
         };
 
-        async function loadLeaderboardData(period) {
-            let listDiv = document.getElementById('leaderboardList');
-            listDiv.innerHTML = '<div class="loading">Загрузка...</div>';
-            try {
-                let res = await fetch(`/api/leaderboard?limit=50`);
-                let data = await res.json();
-                let html = '';
-                for (let userItem of data) {
-                    let avatar = userItem.avatar && userItem.avatar !== '👤' ? `<img src="${userItem.avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">` : '👤';
-                    let userName = userItem.username;
-                   let roleBadge = '';
-if (userItem.role === 'founder' && !userItem.hide_from_top) roleBadge = '<span class="leaderboard-founder-badge">👑</span>';
-else if (userItem.role === 'legend' && !userItem.hide_from_top) roleBadge = '<span class="leaderboard-legend-badge">👑</span>';
-else if (userItem.role === 'pioneer' && !userItem.hide_from_top) roleBadge = '<span class="leaderboard-pioneer-badge">⭐</span>';
-                    let reward = userItem.rank === 1 ? '<span class="reward">🏆 +1000 WG</span>' : (userItem.rank < 4 ? '<span class="reward">🥈 +500 WG</span>' : (userItem.rank <= 10 ? '<span class="reward">🎁 +100 WG</span>' : ''));
-                    html += `<div class="leaderboard-item" onclick="openPlayerProfile(${userItem.user_id}, ${userItem.rank})">
-                        <div class="rank">${userItem.rank}</div>
-                        <div class="avatar">${avatar}</div>
-                        <div class="info">
-                            <div class="name">${userName}${roleBadge}</div>
-                            <div class="clicks">${userItem.total_clicks} кликов</div>
-                        </div>
-                        ${reward}
-                    </div>`;
-                }
-                listDiv.innerHTML = html || '<div class="empty-state">Нет данных</div>';
-            } catch(e) {
-                listDiv.innerHTML = '<div class="empty-state">Ошибка</div>';
-            }
+        async function loadLeaderboardData(period, forceRefresh = false) {
+    let listDiv = document.getElementById('leaderboardList');
+    listDiv.innerHTML = '<div class="loading">Загрузка...</div>';
+    try {
+        // Добавляем параметр force для обновления кэша
+        let res = await fetch(`/api/leaderboard?limit=50${forceRefresh ? '&force=true' : ''}`);
+        let data = await res.json();
+        let html = '';
+        for (let userItem of data) {
+            let avatar = userItem.avatar && userItem.avatar !== '👤' ? `<img src="${userItem.avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">` : '👤';
+            let userName = userItem.username;
+            let roleBadge = '';
+            if (userItem.role === 'founder' && !userItem.hide_from_top) roleBadge = '<span class="leaderboard-founder-badge">👑</span>';
+            else if (userItem.role === 'legend' && !userItem.hide_from_top) roleBadge = '<span class="leaderboard-legend-badge">👑</span>';
+            else if (userItem.role === 'pioneer' && !userItem.hide_from_top) roleBadge = '<span class="leaderboard-pioneer-badge">⭐</span>';
+
+            let reward = userItem.rank === 1 ? '<span class="reward">🏆 +1000 WG</span>' : (userItem.rank < 4 ? '<span class="reward">🥈 +500 WG</span>' : (userItem.rank <= 10 ? '<span class="reward">🎁 +100 WG</span>' : ''));
+
+            html += `<div class="leaderboard-item" onclick="openPlayerProfile(${userItem.user_id}, ${userItem.rank})">
+                <div class="rank">${userItem.rank}</div>
+                <div class="avatar">${avatar}</div>
+                <div class="info">
+                    <div class="name">${userName}${roleBadge}</div>
+                    <div class="clicks">${userItem.total_clicks} кликов</div>
+                </div>
+                ${reward}
+            </div>`;
         }
+        listDiv.innerHTML = html || '<div class="empty-state">Нет данных</div>';
+    } catch(e) {
+        listDiv.innerHTML = '<div class="empty-state">Ошибка</div>';
+    }
+}
 
         document.querySelectorAll('.leaderboard-tab').forEach(tab => {
             tab.onclick = () => {
