@@ -3804,6 +3804,9 @@
     font-weight: 600;
     color: white;
 }
+        html {
+    scroll-behavior: smooth;
+}
     </style>
 </head>
 <body>
@@ -6049,24 +6052,50 @@ else if (user.role === 'pioneer' && !user.hide_from_top) roleBadge = '<span clas
         }
 
         async function showTutorialStep() {
-            if (currentTutorialStep >= tutorialSteps.length) { finishTutorial(); return; }
-            const step = tutorialSteps[currentTutorialStep];
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            const targetNav = document.querySelector(`[data-tab="${step.tab}"]`);
-            if (targetNav) targetNav.classList.add('active');
-            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-            const targetPane = document.getElementById(`tab${step.tab.charAt(0).toUpperCase() + step.tab.slice(1)}`);
-            if (targetPane) targetPane.classList.add('active');
-            if (step.subTab) {
-                document.querySelectorAll('.shop-tab').forEach(t => t.classList.remove('active'));
-                if (step.subTab === 'stars') { const starsTab = document.querySelector('[data-shop-tab="stars"]'); if (starsTab) starsTab.classList.add('active'); const shopNormal = document.getElementById('shopNormal'); const shopStars = document.getElementById('shopStars'); if (shopNormal) shopNormal.classList.remove('active'); if (shopStars) shopStars.classList.add('active'); }
-                else { const normalTab = document.querySelector('[data-shop-tab="normal"]'); if (normalTab) normalTab.classList.add('active'); const shopStars = document.getElementById('shopStars'); const shopNormal = document.getElementById('shopNormal'); if (shopStars) shopStars.classList.remove('active'); if (shopNormal) shopNormal.classList.add('active'); }
-            }
-            await new Promise(resolve => setTimeout(resolve, 50));
-            let element = getElementByStepId(step.elementId);
-            if (element) { element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' }); await new Promise(resolve => setTimeout(resolve, 500)); highlightElement(element, step.text, step.position); }
-            else { console.warn(`Элемент ${step.elementId} не найден`); nextTutorialStep(); }
+    if (currentTutorialStep >= tutorialSteps.length) { finishTutorial(); return; }
+    const step = tutorialSteps[currentTutorialStep];
+
+    // Переключаем вкладку
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    const targetNav = document.querySelector(`[data-tab="${step.tab}"]`);
+    if (targetNav) targetNav.classList.add('active');
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    const targetPane = document.getElementById(`tab${step.tab.charAt(0).toUpperCase() + step.tab.slice(1)}`);
+    if (targetPane) targetPane.classList.add('active');
+
+    // Переключаем подвкладку магазина если нужно
+    if (step.subTab) {
+        document.querySelectorAll('.shop-tab').forEach(t => t.classList.remove('active'));
+        if (step.subTab === 'stars') {
+            const starsTab = document.querySelector('[data-shop-tab="stars"]');
+            if (starsTab) starsTab.classList.add('active');
+            const shopNormal = document.getElementById('shopNormal');
+            const shopStars = document.getElementById('shopStars');
+            if (shopNormal) shopNormal.classList.remove('active');
+            if (shopStars) shopStars.classList.add('active');
+        } else {
+            const normalTab = document.querySelector('[data-shop-tab="normal"]');
+            if (normalTab) normalTab.classList.add('active');
+            const shopStars = document.getElementById('shopStars');
+            const shopNormal = document.getElementById('shopNormal');
+            if (shopStars) shopStars.classList.remove('active');
+            if (shopNormal) shopNormal.classList.add('active');
         }
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    let element = getElementByStepId(step.elementId);
+    if (element) {
+        // Плавно прокручиваем к элементу
+        element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+        await new Promise(resolve => setTimeout(resolve, 500));
+        highlightElement(element, step.text, step.position);
+    } else {
+        console.warn(`Элемент ${step.elementId} не найден`);
+        nextTutorialStep();
+    }
+}
 
         function getElementByStepId(elementId) {
             let element = document.getElementById(elementId);
@@ -6078,36 +6107,43 @@ else if (user.role === 'pioneer' && !user.hide_from_top) roleBadge = '<span clas
         }
 
         function highlightElement(element, text, position = 'bottom') {
-            if (!element) { nextTutorialStep(); return; }
-            const rect = element.getBoundingClientRect();
-            const overlay = document.getElementById('tutorialOverlay');
-            const highlight = document.getElementById('tutorialHighlight');
-            const tooltip = document.getElementById('tutorialTooltip');
-            const tooltipText = document.getElementById('tutorialText');
-            overlay.style.backgroundColor = 'transparent';
-            overlay.classList.add('active');
-            highlight.style.display = 'block';
-            highlight.style.top = rect.top - 8 + 'px';
-            highlight.style.left = rect.left - 8 + 'px';
-            highlight.style.width = rect.width + 16 + 'px';
-            highlight.style.height = rect.height + 16 + 'px';
-            tooltipText.innerHTML = text;
-            const tooltipHeight = 180;
-            let tooltipTop, tooltipLeft;
-            if (position === 'top' || (rect.top < tooltipHeight + 20 && rect.bottom + tooltipHeight > window.innerHeight)) {
-                if (rect.top - tooltipHeight > 20) tooltipTop = rect.top - tooltipHeight - 10;
-                else tooltipTop = rect.bottom + 15;
-            }
-            else {
-                if (rect.bottom + tooltipHeight < window.innerHeight - 20) tooltipTop = rect.bottom + 15;
-                else tooltipTop = rect.top - tooltipHeight - 10;
-            }
-            tooltipLeft = Math.max(10, Math.min(rect.left + (rect.width / 2) - 140, window.innerWidth - 290));
-            tooltip.style.top = tooltipTop + 'px';
-            tooltip.style.left = tooltipLeft + 'px';
-            tooltip.style.display = 'block';
-            if (window.tutorialClickListener) document.removeEventListener('click', window.tutorialClickListener);
-        }
+    if (!element) { nextTutorialStep(); return; }
+    const rect = element.getBoundingClientRect();
+    const overlay = document.getElementById('tutorialOverlay');
+    const highlight = document.getElementById('tutorialHighlight');
+    const tooltip = document.getElementById('tutorialTooltip');
+    const tooltipText = document.getElementById('tutorialText');
+
+    overlay.style.backgroundColor = 'transparent';
+    overlay.classList.add('active');
+
+    highlight.style.display = 'block';
+    highlight.style.top = rect.top - 8 + 'px';
+    highlight.style.left = rect.left - 8 + 'px';
+    highlight.style.width = rect.width + 16 + 'px';
+    highlight.style.height = rect.height + 16 + 'px';
+    tooltipText.innerHTML = text;
+
+    const tooltipHeight = 160;
+    const viewportHeight = window.innerHeight;
+    let tooltipTop, tooltipLeft;
+
+    // Позиционируем тултип
+    if (position === 'top' || (rect.top < tooltipHeight + 20 && rect.bottom + tooltipHeight > viewportHeight)) {
+        if (rect.top - tooltipHeight > 20) tooltipTop = rect.top - tooltipHeight - 10;
+        else tooltipTop = rect.bottom + 15;
+    } else {
+        if (rect.bottom + tooltipHeight < viewportHeight - 20) tooltipTop = rect.bottom + 15;
+        else tooltipTop = rect.top - tooltipHeight - 10;
+    }
+
+    tooltipLeft = Math.max(10, Math.min(rect.left + (rect.width / 2) - 140, window.innerWidth - 290));
+    tooltip.style.top = tooltipTop + 'px';
+    tooltip.style.left = tooltipLeft + 'px';
+    tooltip.style.display = 'block';
+
+    if (window.tutorialClickListener) document.removeEventListener('click', window.tutorialClickListener);
+}
 
         document.getElementById('tutorialNextBtn').onclick = () => nextTutorialStep();
         document.getElementById('tutorialSkipBtn').onclick = () => skipTutorial();
