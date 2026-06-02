@@ -89,7 +89,6 @@ CORS(app, resources={
             "https://t.me",
             "http://weregood.ru",
             "http://80.90.185.16:5000"
-            "https://80.90.185.16"
         ],
         "supports_credentials": True,
         "allow_headers": ["Content-Type", "Authorization"],
@@ -192,7 +191,7 @@ admin_failures = defaultdict(int)
 
 def check_rate_limit(key: str, limit: int = 30, window_seconds: int = 10) -> bool:
     if key.startswith("click_"):
-        limit = 60
+        limit = 250
     elif key.startswith("ticket_"):
         limit = 10
         window_seconds = 60
@@ -295,24 +294,18 @@ def validate_ton_address(address: str) -> bool:
 
 
 def convert_ton_address_to_raw(address: str) -> str:
-    """Конвертирует user-friendly TON адрес (UQ/EQ/kQ) в raw формат (0:hex)"""
+    """Конвертирует user-friendly TON адрес (UQ/EQ) в raw формат (0:hex)"""
     if not address:
         return address
     if address.startswith('0:'):
         return address
-
     try:
         import base64
-
-        # Поддержка разных форматов: UQ, EQ, kQ
-        if address[0] in ['U', 'E', 'k']:
-            address_b64 = address[1:]
-            decoded = base64.urlsafe_b64decode(address_b64 + '=' * (4 - len(address_b64) % 4))
-            hash_part = decoded[:32]
-            return f"0:{hash_part.hex()}"
-        else:
-            return address
-
+        # Убираем первый символ (U или E) и декодируем
+        decoded = base64.urlsafe_b64decode(address[1:] + '=' * (4 - len(address[1:]) % 4))
+        # Берём первые 32 байта как хеш
+        hash_part = decoded[:32]
+        return f"0:{hash_part.hex()}"
     except Exception as e:
         logger.error(f"Ошибка конвертации адреса {address}: {e}")
         return address
@@ -325,8 +318,6 @@ def check_origin():
         "https://www.weregood.ru",
         "https://web.telegram.org",
         "https://t.me"
-        "http://80.90.185.16:5000",  # 👈 ДОБАВЬ ЭТО
-        "https://80.90.185.16"
     ]
     if DEBUG_MODE:
         return True
@@ -597,12 +588,14 @@ def escape_html(text: str) -> str:
 
 # ========== ДОСТИЖЕНИЯ ФУНКЦИИ ==========
 def get_achievements_list():
+    """Получить список всех достижений"""
     with db.get_cursor() as cursor:
         cursor.execute('SELECT * FROM achievements ORDER BY id')
         return [dict(row) for row in cursor.fetchall()]
 
 
 def get_user_achievements(user_id):
+    """Получить прогресс пользователя по всем достижениям"""
     with db.get_cursor() as cursor:
         cursor.execute('''
             SELECT a.*, ua.current_count, ua.is_completed, ua.completed_at
@@ -626,6 +619,7 @@ def get_user_achievements(user_id):
 
 
 def update_achievement_progress(user_id, achievement_name, increment=1, set_value=None):
+    """Обновить прогресс достижения"""
     with db.get_cursor() as cursor:
         cursor.execute('SELECT id, target_count FROM achievements WHERE name = ?', (achievement_name,))
         ach = cursor.fetchone()
@@ -702,6 +696,7 @@ def get_achievement_display_name(achievement_name):
 
 
 def update_legend_prefixes():
+    """Обновить префиксы Легенда для топ-5 игроков по достижениям"""
     with db.get_cursor() as cursor:
         cursor.execute('''
             SELECT user_id, completed_achievements
@@ -742,6 +737,7 @@ def update_legend_prefixes():
 
 
 def get_achievements_top(limit=50):
+    """Получить топ игроков по выполненным достижениям"""
     with db.get_cursor() as cursor:
         cursor.execute('''
             SELECT user_id, username, first_name, avatar_url, completed_achievements, role
@@ -997,6 +993,7 @@ def init_db():
             )
         ''')
 
+        # ========== ТАБЛИЦЫ ДЛЯ ДОСТИЖЕНИЙ ==========
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS achievements (
                 id INTEGER PRIMARY KEY,
@@ -1043,6 +1040,7 @@ def init_db():
         except:
             pass
 
+        # ========== ДОБАВЛЯЕМ ДОСТИЖЕНИЯ ==========
         achievements_list = [
             ('autoclicker', '🏆 Автокликер', 'Сделать 50 000 кликов по монете', '🖱️', 50000),
             ('investor', '💰 Инвестор', 'Купить 30 улучшений в магазине', '📈', 30),
@@ -1103,7 +1101,9 @@ def unban_user(user_id):
 
 
 def delete_user(user_id):
+    """Полное удаление пользователя из базы данных"""
     with db.get_cursor() as cursor:
+        # Удаляем из всех связанных таблиц
         cursor.execute("DELETE FROM users WHERE user_id = ?", (user_id,))
         cursor.execute("DELETE FROM user_achievements WHERE user_id = ?", (user_id,))
         cursor.execute("DELETE FROM user_tasks WHERE user_id = ?", (user_id,))
@@ -1117,6 +1117,7 @@ def delete_user(user_id):
         cursor.execute("DELETE FROM used_ton_transactions WHERE user_id = ?", (user_id,))
         cursor.execute("DELETE FROM lottery_tickets_history WHERE user_id = ?", (user_id,))
 
+        # Также удаляем билеты пользователя из текущей лотереи
         global lottery_tickets
         lottery_tickets = [t for t in lottery_tickets if t.get("user_id") != user_id]
         save_lottery()
@@ -1370,16 +1371,12 @@ def get_energy_regen_text(max_energy, current_energy):
 
 def update_energy_in_db(user_id, user_data, new_energy):
     now = time.time()
-    with energy_lock:
-        with db.get_cursor() as cursor:
-            cursor.execute("UPDATE users SET energy=?, last_energy_update=? WHERE user_id=? AND energy=?",
-                           (new_energy, now, user_id, user_data["energy"]))
-            if cursor.rowcount == 0:
-                return False
+    with db.get_cursor() as cursor:
+        cursor.execute("UPDATE users SET energy=?, last_energy_update=? WHERE user_id=?", (new_energy, now, user_id))
     user_data["energy"] = new_energy
     user_data["last_energy_update"] = now
     invalidate_cache(user_id)
-    return True
+    return new_energy
 
 
 def spend_energy(user_id, user_data, amount=1):
@@ -1388,9 +1385,7 @@ def spend_energy(user_id, user_data, amount=1):
         if current_energy < amount:
             return False, current_energy
         new_energy = current_energy - amount
-        success = update_energy_in_db(user_id, user_data, new_energy)
-        if not success:
-            return False, current_energy
+        update_energy_in_db(user_id, user_data, new_energy)
         return True, new_energy
 
 
@@ -1500,47 +1495,29 @@ def handle_successful_payment(chat_id, payment_info):
 def check_ton_transaction(sender_wallet, expected_amount, user_id):
     """Проверка TON платежа через toncenter API с RAW адресом"""
     try:
+        # Конвертируем адрес проекта в RAW формат (0:...)
         raw_address = convert_ton_address_to_raw(PROJECT_WALLET_ADDRESS)
-
-        print(f"🔍 Проверяем транзакции для RAW адреса: {raw_address}")
-        print(f"📡 Исходный адрес проекта: {PROJECT_WALLET_ADDRESS}")
-        print(f"👤 Кошелёк пользователя: {sender_wallet}")
-        print(f"💰 Ожидаемая сумма: {expected_amount} TON")
 
         url = f"https://toncenter.com/api/v2/getTransactions?address={raw_address}&limit=20"
         if TONCENTER_API_KEY:
             url += f"&api_key={TONCENTER_API_KEY}"
-            print(f"🔑 Используем API ключ")
+
+        print(f"🔍 Проверяем транзакции для RAW адреса: {raw_address}")
+        print(f"📡 Исходный адрес: {PROJECT_WALLET_ADDRESS}")
 
         verify_ssl = not DEBUG_MODE
         response = requests.get(url, timeout=15, verify=verify_ssl)
         data = response.json()
 
-        if not data.get('ok'):
-            print(f"❌ Ошибка API: {data.get('error')}")
-            return False, 0, None
-
-        expected_comment = f"WereGood:{user_id}"
-        print(f"📝 Ожидаемый комментарий: {expected_comment}")
-
-        for tx in data.get('result', []):
-            tx_hash = tx.get('transaction_id', {}).get('hash')
-            print(f"🔎 Проверяем транзакцию: {tx_hash}")
-
-            in_msg = tx.get('in_msg', {})
-            source = in_msg.get('source', '')
-            comment = in_msg.get('message', '')
-            value_nano = int(in_msg.get('value', '0'))
-
-            print(f"  📥 In_msg: source={source}, value={value_nano}, comment={comment[:50] if comment else 'Нет'}")
-
-            if source and source.lower() == sender_wallet.lower():
-                amount_ton = value_nano / 1e9
-                print(f"  ✅ Найдена транзакция от кошелька пользователя! Сумма: {amount_ton} TON")
-
-                if amount_ton >= expected_amount:
-                    if expected_comment in comment:
-                        print(f"  ✅ Комментарий верный!")
+        if data.get('ok'):
+            for tx in data.get('result', []):
+                in_msg = tx.get('in_msg', {})
+                source = in_msg.get('source', '')
+                if source and source.lower() == sender_wallet.lower():
+                    amount_nano = int(in_msg.get('value', '0'))
+                    amount_ton = amount_nano / 1e9
+                    if amount_ton >= expected_amount:
+                        tx_hash = tx.get('transaction_id', {}).get('hash')
                         with used_transaction_lock:
                             with db.get_cursor() as cursor:
                                 cursor.execute("SELECT id FROM used_ton_transactions WHERE tx_hash = ?", (tx_hash,))
@@ -1551,12 +1528,8 @@ def check_ton_transaction(sender_wallet, expected_amount, user_id):
                                                (tx_hash, user_id))
                         print(f"✅ Транзакция подтверждена! {amount_ton} TON")
                         return True, amount_ton, tx_hash
-                    else:
-                        print(f"  ❌ Неверный комментарий. Ожидалось: {expected_comment}, Получено: {comment}")
-                else:
-                    print(f"  ❌ Недостаточная сумма. Нужно: {expected_amount}, Получено: {amount_ton}")
-
-        print(f"❌ Подходящая транзакция не найдена")
+        else:
+            print(f"❌ Ошибка API: {data.get('error')}")
         return False, 0, None
     except Exception as e:
         print(f"🔥 Ошибка проверки TON платежа: {e}")
@@ -2451,7 +2424,7 @@ def api_click():
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid:
         return jsonify({"error": "Invalid user_id"}), 400
-    if not check_rate_limit(f"click_{user_id}", limit=60, window_seconds=10):
+    if not check_rate_limit(f"click_{user_id}", limit=30, window_seconds=10):
         return jsonify({"error": "Слишком много кликов! Подождите."}), 429
     banned, ban_info = is_banned(user_id)
     if banned:
@@ -2549,8 +2522,9 @@ def api_buy_upgrade():
     user["upgrade_counts"][upgrade_id] = new_count
     safe_update_user(user_id, wg=new_wg, upgrade_counts=user["upgrade_counts"])
 
-    update_achievement_progress(user_id, 'investor', 1)
-    update_achievement_progress(user_id, 'spender', int(cost))
+    # Обновление достижений
+    update_achievement_progress(user_id, 'investor', 1)  # Инвестор (количество покупок)
+    update_achievement_progress(user_id, 'spender', int(cost))  # Транжира (сумма потраченных WG)
 
     if current_count == 0:
         add_log(f"🆕⭐ ПЕРВАЯ ПОКУПКА улучшения! {UPGRADE_CONFIG[upgrade_id]['name']} за {cost:.2f} WG", user_id,
@@ -3290,6 +3264,7 @@ def api_complete_tutorial():
     return jsonify({"success": True})
 
 
+# ========== ЗАДАНИЯ API ==========
 @app.route('/api/tasks', methods=['GET'])
 def api_get_tasks():
     user_id = request.args.get('user_id')
@@ -3414,6 +3389,7 @@ def api_check_task_subscription():
             return jsonify({'success': False, 'error': 'Ошибка при проверке'}), 500
 
 
+# ========== ДОСТИЖЕНИЯ API ==========
 @app.route('/api/achievements/list', methods=['POST'])
 def api_achievements_list():
     data = request.json
@@ -3440,6 +3416,7 @@ def api_achievements_top():
     return jsonify({"success": True, "top": top})
 
 
+# ========== АДМИН-ЭНДПОИНТЫ ==========
 @app.route('/api/admin/stats', methods=['GET'])
 @require_admin
 def api_admin_stats():
