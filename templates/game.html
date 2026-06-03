@@ -6038,55 +6038,56 @@
         let tonConnectUI = null, paymentCheckInterval = null, tonInitAttempts = 0;
 
         async function initTonConnect() {
-            try {
-                if (typeof window.TON_CONNECT_UI === 'undefined') {
-                    tonInitAttempts++;
-                    if (tonInitAttempts < 20) {
-                        setTimeout(() => initTonConnect(), 500);
-                        return;
-                    }
-                    console.error('TON Connect script not loaded');
-                    return;
-                }
-
-                const manifestUrl = `${window.location.origin}/tonconnect-manifest.json`;
-                console.log('🔧 Initializing TON Connect with manifest:', manifestUrl);
-
-                tonConnectUI = new window.TON_CONNECT_UI.TonConnectUI({
-                    manifestUrl: manifestUrl,
-                    actionsConfiguration: {
-                        twaReturnUrl: 'https://t.me/WereGooodbot/WereGood'
-                    }
-                });
-
-                await tonConnectUI.connectionRestored;
-
-                if (tonConnectUI.wallet) {
-                    const address = tonConnectUI.wallet.account.address;
-                    console.log('💰 Wallet already connected:', address);
-                    await saveWalletToBackend(address);
-                    updateTonWalletStatus();
-                }
-
-                tonConnectUI.onStatusChange(async (wallet) => {
-                    console.log('🔔 Wallet status changed:', wallet);
-                    if (wallet) {
-                        const address = wallet.account.address;
-                        console.log('🔗 Wallet connected:', address);
-                        await saveWalletToBackend(address);
-                        updateTonWalletStatus();
-                        showToast(`✅ Кошелёк привязан: ${address.slice(0, 6)}...${address.slice(-4)}`, 'success');
-                    } else {
-                        console.log('🔓 Wallet disconnected');
-                        await saveWalletToBackend('');
-                        updateTonWalletStatus();
-                    }
-                });
-
-            } catch(e) {
-                console.error('❌ TON Connect init error:', e);
+    try {
+        if (typeof window.TON_CONNECT_UI === 'undefined') {
+            tonInitAttempts++;
+            if (tonInitAttempts < 20) {
+                setTimeout(() => initTonConnect(), 500);
+                return;
             }
+            console.error('TON Connect script not loaded');
+            return;
         }
+
+        const manifestUrl = `${window.location.origin}/tonconnect-manifest.json`;
+        console.log('🔧 Initializing TON Connect with manifest:', manifestUrl);
+
+        // ВАЖНО: правильный twaReturnUrl для возврата в Telegram
+        tonConnectUI = new window.TON_CONNECT_UI.TonConnectUI({
+            manifestUrl: manifestUrl,
+            actionsConfiguration: {
+                twaReturnUrl: 'https://t.me/WereGooodbot/WereGood'
+            }
+        });
+
+        await tonConnectUI.connectionRestored;
+
+        if (tonConnectUI.wallet) {
+            const address = tonConnectUI.wallet.account.address;
+            console.log('💰 Wallet already connected:', address);
+            await saveWalletToBackend(address);
+            updateTonWalletStatus();
+        }
+
+        tonConnectUI.onStatusChange(async (wallet) => {
+            console.log('🔔 Wallet status changed:', wallet);
+            if (wallet) {
+                const address = wallet.account.address;
+                console.log('🔗 Wallet connected:', address);
+                await saveWalletToBackend(address);
+                updateTonWalletStatus();
+                showToast(`✅ Кошелёк привязан: ${address.slice(0, 6)}...${address.slice(-4)}`, 'success');
+            } else {
+                console.log('🔓 Wallet disconnected');
+                await saveWalletToBackend('');
+                updateTonWalletStatus();
+            }
+        });
+
+    } catch(e) {
+        console.error('❌ TON Connect init error:', e);
+    }
+}
 
         async function saveWalletToBackend(address) {
             if (!address) {
