@@ -309,8 +309,7 @@ def string_to_hex_payload(text: str) -> str:
 # ========== ИСПРАВЛЕННАЯ ФУНКЦИЯ ПРОВЕРКИ TON ТРАНЗАКЦИЙ ==========
 def check_ton_transaction(sender_wallet, expected_amount, user_id):
     """
-    Всеядная проверка транзакций. Проверяет историю по исходному адресу,
-    его альтернативным форматам записи и RAW-хэшу, чтобы исключить пропуски.
+    Всеядная проверка транзакций. Работает напрямую с текстовым адресом UQ... из .env
     """
     try:
         if not PROJECT_WALLET_ADDRESS:
@@ -318,85 +317,71 @@ def check_ton_transaction(sender_wallet, expected_amount, user_id):
             return False, 0, None
 
         expected_comment = f"WereGood:{user_id}"
-        logger.info(f"🔍 Запуск проверки для игрока {user_id}. Ищем коммент: '{expected_comment}'")
+        logger.info(f"🔍 Ищем транзакцию для игрока {user_id}. Комментарий: '{expected_comment}'")
 
-        # Собираем список адресов для проверки (исходный + известные блокчейн-копии твоего кошелька)
-        addresses_to_check = [
-            PROJECT_WALLET_ADDRESS.strip(),
-            "0:9aee71b713b92ea1232763ec73da9bb22605e0f109fbb0443af97c44fd07be3f",  # Твой RAW
-            "UQCa7xhdvDiaKuH6SFLgzLQFH8oRwwS2ElN1s283WnGM4fYB",  # Твой W5/v4 альтернативный
-            "UQCa7xhdvDiaKuH6SFLgzLQFH8oRwwS2ElN1s283WnGM4fYB"  # Твой Bounceable
-        ]
+        # Берем адрес из .env как есть (например, UQBp-n23E...)
+        addr = PROJECT_WALLET_ADDRESS.strip()
 
-        # Убираем дубликаты, если они есть
-        addresses_to_check = list(set(addresses_to_check))
+        # API Toncenter v2 идеально принимает текстовые адреса напрямую
+        url = f"https://toncenter.com/api/v2/getTransactions?address={addr}&limit=30"
+        if TONCENTER_API_KEY:
+            url += f"&api_key={TONCENTER_API_KEY}"
 
-        for addr in addresses_to_check:
-            logger.info(f"📡 Проверяем историю через Toncenter для адреса: {addr}")
-            url = f"https://toncenter.com/api/v2/getTransactions?address={addr}&limit=30"
-            if TONCENTER_API_KEY:
-                url += f"&api_key={TONCENTER_API_KEY}"
+        logger.info(f"📡 Запрос к API TON: {url}")
+        response = requests.get(url, timeout=12)
+        if response.status_code != 200:
+            logger.error(f"❌ API вернул статус {response.status_code}")
+            return False, 0, None
 
-            try:
-                response = requests.get(url, timeout=12)
-                if response.status_code != 200:
-                    continue
+        data = response.json()
+        transactions = data.get('result', [])
+        logger.info(f"📦 Найдено {len(transactions)} транзакций в ленте адреса {addr}")
 
-                data = response.json()
-                if not data.get('ok'):
-                    continue
-
-                transactions = data.get('result', [])
-                for tx in transactions:
-                    in_msg = tx.get('in_msg', {})
-                    if not in_msg:
-                        continue
-
-                    value_nano = int(in_msg.get('value', '0'))
-                    amount_ton = value_nano / 1e9
-
-                    # Читаем комментарий всеми доступными способами парсинга API v2
-                    comment = in_msg.get('message', '').strip()
-                    if not comment and in_msg.get('msg_data', {}).get('@type') == 'msg.dataText':
-                        comment = in_msg.get('msg_data', {}).get('text', '').strip()
-
-                    if not comment and in_msg.get('msg_data', {}).get('@type') == 'msg.dataRaw':
-                        try:
-                            raw_hex = in_msg.get('msg_data', {}).get('body', '').strip()
-                            decoded = bytes.fromhex(raw_hex).decode('utf-8', errors='ignore').strip()
-                            if expected_comment in decoded:
-                                comment = decoded
-                            elif raw_hex.startswith('00000000'):
-                                comment = bytes.fromhex(raw_hex[8:]).decode('utf-8', errors='ignore').strip()
-                        except Exception:
-                            pass
-
-                    # Если нашли наш комментарий
-                    if expected_comment in comment or expected_comment in in_msg.get('message', ''):
-                        logger.info(
-                            f"🎯 Найдено совпадение! Сумма в сети: {amount_ton} TON. Требуется: {expected_amount}")
-
-                        if amount_ton >= (expected_amount - 0.01):
-                            tx_hash = tx.get('transaction_id', {}).get('hash')
-
-                            # Проверка на Double Spend
-                            with used_transaction_lock:
-                                with db.get_cursor() as cursor:
-                                    cursor.execute("SELECT id FROM used_ton_transactions WHERE tx_hash = ?", (tx_hash,))
-                                    if cursor.fetchone():
-                                        logger.warning(f"⚠️ Транзакция {tx_hash} уже обрабатывалась.")
-                                        return False, 0, None
-
-                                    cursor.execute("INSERT INTO used_ton_transactions (tx_hash, user_id) VALUES (?, ?)",
-                                                   (tx_hash, user_id))
-
-                            logger.info(f"✅💎 НАЧИСЛЕНИЕ УСПЕШНО! Хэш транзакции: {tx_hash}")
-                            return True, amount_ton, tx_hash
-            except Exception as req_err:
-                logger.error(f"Ошибка запроса к адресу {addr}: {req_err}")
+        for tx in transactions:
+            in_msg = tx.get('in_msg', {})
+            if not in_msg:
                 continue
 
-        logger.warning(f"❌ Ни на одном из адресов транзакция для {user_id} не найдена.")
+            value_nano = int(in_msg.get('value', '0'))
+            amount_ton = value_nano / 1e9
+
+            # Извлекаем текст комментария из транзакции
+            comment = in_msg.get('message', '').strip()
+            if not comment and in_msg.get('msg_data', {}).get('@type') == 'msg.dataText':
+                comment = in_msg.get('msg_data', {}).get('text', '').strip()
+
+            if not comment and in_msg.get('msg_data', {}).get('@type') == 'msg.dataRaw':
+                try:
+                    raw_hex = in_msg.get('msg_data', {}).get('body', '').strip()
+                    comment = bytes.fromhex(raw_hex).decode('utf-8', errors='ignore').strip()
+                    if raw_hex.startswith('00000000'):
+                        comment = bytes.fromhex(raw_hex[8:]).decode('utf-8', errors='ignore').strip()
+                except Exception:
+                    pass
+
+            # Проверяем, совпадает ли комментарий
+            if expected_comment in comment or expected_comment in in_msg.get('message', ''):
+                logger.info(f"🎯 СОВПАДЕНИЕ НАЙДЕНО! Сумма: {amount_ton} TON")
+
+                # Допускаем небольшую погрешность на комиссии сети
+                if amount_ton >= (expected_amount - 0.02):
+                    tx_hash = tx.get('transaction_id', {}).get('hash')
+
+                    # Защита от повторного зачисления (Double Spending)
+                    with used_transaction_lock:
+                        with db.get_cursor() as cursor:
+                            cursor.execute("SELECT id FROM used_ton_transactions WHERE tx_hash = ?", (tx_hash,))
+                            if cursor.fetchone():
+                                logger.warning(f"⚠️ Транзакция {tx_hash} уже была зачислена ранее")
+                                return False, 0, None
+
+                            cursor.execute("INSERT INTO used_ton_transactions (tx_hash, user_id) VALUES (?, ?)",
+                                           (tx_hash, user_id))
+
+                    logger.info(f"✅ Успешное начисление игроку {user_id}!")
+                    return True, amount_ton, tx_hash
+
+        logger.warning(f"❌ Транзакция с комментарием '{expected_comment}' пока не найдена в блокчейне.")
         return False, 0, None
     except Exception as e:
         logger.error(f"❌ Ошибка в check_ton_transaction: {e}", exc_info=True)
