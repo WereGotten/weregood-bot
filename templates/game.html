@@ -6027,7 +6027,6 @@ async function initTonConnect() {
         return;
     }
 
-    // 🔥 ПОЛУЧАЕМ АДРЕС ИЗ API, А НЕ ХАРДКОДИМ!
     try {
         showToast('💎 Создаём платёж...', 'info');
 
@@ -6045,18 +6044,18 @@ async function initTonConnect() {
             return;
         }
 
+        // Конвертируем комментарий в HEX формат
+        const comment = data.comment;
+        const payloadHex = "0x" + Array.from(comment).map(c => c.charCodeAt(0).toString(16)).join('');
+
         const transaction = {
             validUntil: Math.floor(Date.now() / 1000) + 300,
             messages: [{
-                address: data.wallet_address,  // ← БЕРЁМ ИЗ API!
-                amount: data.amount_nano.toString()
+                address: data.wallet_address,
+                amount: data.amount_nano.toString(),
+                payload: payloadHex  // ← HEX формат!
             }]
         };
-
-        // Добавляем комментарий если есть
-        if (data.comment) {
-            transaction.messages[0].payload = data.comment;
-        }
 
         console.log('Transaction:', transaction);
 
