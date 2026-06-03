@@ -6187,26 +6187,38 @@ window.buyWithTon = async function() {
             return;
         }
 
-        // Шаг 2: Упаковываем комментарий в HEX (стандарт блокчейна TON для текстовых сообщений)
+        // Шаг 2: Безопасное формирование Base64 BoC для текстового комментария
+        // Это необходимо, чтобы новые кошельки (v2.x) корректно читали payload
         const commentText = String(data.comment || '').trim();
-        const encoder = new TextEncoder();
-        const bytes = encoder.encode(commentText);
-        let hexPayload = '00000000'; // 4 нулевых байта — префикс обычного нешифрованного текста в TON
-        for (let i = 0; i < bytes.length; i++) {
-            hexPayload += bytes[i].toString(16).padStart(2, '0');
+
+        function buildTextCommentBocBase64(text) {
+            const bytes = new TextEncoder().encode(text);
+            // Префикс текстового сообщения в TON состоит из 4 нулевых байт
+            const textMessageBuffer = new Uint8Array(4 + bytes.length);
+            textMessageBuffer.set([0, 0, 0, 0], 0);
+            textMessageBuffer.set(bytes, 4);
+
+            // Конвертируем бинарный буфер в строку Base64
+            let binaryString = '';
+            for (let i = 0; i < textMessageBuffer.byteLength; i++) {
+                binaryString += String.fromCharCode(textMessageBuffer[i]);
+            }
+            return window.btoa(binaryString);
         }
 
-        // Шаг 3: Собираем транзакцию по спецификации TON Connect SDK
+        const base64Payload = buildTextCommentBocBase64(commentText);
+
+        // Шаг 3: Собираем транзакцию по спецификации TON Connect SDK v2
         const transaction = {
             validUntil: Math.floor(Date.now() / 1000) + 300, // 5 минут на оплату
             messages: [{
-                address: data.wallet_address,
-                amount: data.amount_nano.toString(),
-                payload: hexPayload // Передаем комментарий строго как бинарный payload
+                address: data.wallet_address, // Наш RAW-адрес 0:a7c678... из .env
+                amount: data.amount_nano.toString(), // Сумма в нанотонах (строкой)
+                payload: base64Payload // Передаем корректно упакованный Base64 комментарий
             }]
         };
 
-        console.log('📡 Отправка транзакции в кошелек SDK:', transaction);
+        console.log('📡 Отправка транзакции в кошелек SDK (с Base64 payload):', transaction);
 
         // Шаг 4: Вызываем окно кошелька (например, Tonkeeper) для подписи
         const result = await tonConnectUI.sendTransaction(transaction);
