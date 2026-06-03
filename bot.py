@@ -2276,17 +2276,14 @@ def api_ton_create_payment():
     if not user_wallet:
         return jsonify({"success": False, "error": "Кошелёк не подключён", "need_wallet": True})
 
-    # Конвертируем адрес в RAW формат для TON Connect SDK
-    raw_address = convert_ton_address_to_raw(PROJECT_WALLET_ADDRESS)
-
+    # ✅ Оставляем адрес как есть (UQ... формат) - TON Connect SDK принимает такой формат
     return jsonify({
         "success": True,
-        "wallet_address": raw_address,
+        "wallet_address": PROJECT_WALLET_ADDRESS,  # ← UQCa7xhdvDiaKuH6SFLgzLQFH8oRwwS2ElN1s283WnGM4fYB
         "amount": amount,
         "amount_nano": int(amount * 1e9),
         "comment": f"WereGood:{user_id}"
     })
-
 
 @app.route('/api/ton/check_payment', methods=['POST'])
 def api_ton_check_payment():
