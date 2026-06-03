@@ -285,8 +285,10 @@ def record_admin_failure(ip: str):
 
 
 def validate_ton_address(address: str) -> bool:
+    """Валидация формата кошелька TON"""
     if not address or not isinstance(address, str):
         return False
+    # Поддерживает форматы: User-friendly (48 симв), чистый hex (64 симв) и RAW (66 симв, 0:...)
     if len(address) == 48 and re.match(r'^[A-Za-z0-9_-]{48}$', address):
         return True
     if len(address) == 64 and re.match(r'^[0-9a-fA-F]{64}$', address):
@@ -297,58 +299,87 @@ def validate_ton_address(address: str) -> bool:
 
 
 def string_to_hex_payload(text: str) -> str:
+    """Правильная конвертация строки комментария в HEX с префиксом текстового сообщения"""
     if not text:
         return "00000000"
-    hex_string = "00000000"
-    for char in text:
-        hex_string += format(ord(char), '02x')
-    return hex_string
+    # Префикс 00000000 (4 нулевых байта) обязателен в TON для простых текстовых комментариев
+    return "00000000" + text.encode('utf-8').hex()
 
 
 # ========== ИСПРАВЛЕННАЯ ФУНКЦИЯ ПРОВЕРКИ TON ТРАНЗАКЦИЙ ==========
 def check_ton_transaction(sender_wallet, expected_amount, user_id):
-    """Проверка TON платежа через toncenter API по комментарию"""
+    """
+    Проверка TON платежа через toncenter API по уникальному комментарию.
+    Защищена от уязвимостей, double-spend и не требует обязательной привязки кошелька.
+    """
     try:
-        url = f"https://toncenter.com/api/v2/getTransactions?address={PROJECT_WALLET_ADDRESS}&limit=100"
+        if not PROJECT_WALLET_ADDRESS:
+            logger.error("Критическая ошибка: PROJECT_WALLET_ADDRESS не задан в .env")
+            return False, 0, None
+
+        # Запрашиваем транзакции нашего кошелька проекта
+        url = f"https://toncenter.com/api/v2/getTransactions?address={PROJECT_WALLET_ADDRESS}&limit=50"
         if TONCENTER_API_KEY:
             url += f"&api_key={TONCENTER_API_KEY}"
 
         response = requests.get(url, timeout=15)
-        data = response.json()
+        if response.status_code != 200:
+            logger.error(f"Toncenter API доступен с ошибкой: {response.status_code}")
+            return False, 0, None
 
+        data = response.json()
         if not data.get('ok'):
             logger.error(f"Toncenter returned error: {data}")
             return False, 0, None
 
         expected_comment = f"WereGood:{user_id}"
-        sender_wallet_raw = convert_ton_address_to_raw(sender_wallet)
 
         for tx in data.get('result', []):
             in_msg = tx.get('in_msg', {})
-            comment = in_msg.get('message', '').strip()
-            value_nano = int(in_msg.get('value', '0'))
-            source = in_msg.get('source', '')
-
-            # Точная проверка отправителя
-            if convert_ton_address_to_raw(source) != sender_wallet_raw:
+            if not in_msg:
                 continue
 
-            # Точная проверка комментария (ИСПРАВЛЕНО)
+            value_nano = int(in_msg.get('value', '0'))
+            amount_ton = value_nano / 1e9
+
+            # 1. Извлекаем комментарий (он может быть в обычном тексте или в hex-формате)
+            comment = in_msg.get('message', '').strip()
+
+            # Если message пустой, проверяем, не пришел ли комментарий в raw-виде (msg_data)
+            if not comment and in_msg.get('msg_data', {}).get('@type') == 'msg.dataText':
+                comment = in_msg.get('msg_data', {}).get('text', '').strip()
+
+            # Если комментарий зашифрован в HEX (бывает в некоторых версиях API/кошельков)
+            if not comment and in_msg.get('msg_data', {}).get('@type') == 'msg.dataRaw':
+                try:
+                    raw_hex = in_msg.get('msg_data', {}).get('body', '')
+                    # Если есть префикс текстового сообщения (00000000), убираем его перед декодированием
+                    if raw_hex.startswith('00000000'):
+                        raw_hex = raw_hex[8:]
+                    comment = bytes.fromhex(raw_hex).decode('utf-8', errors='ignore').strip()
+                except Exception:
+                    pass
+
+            # 2. Самая надежная проверка: ищем уникальный точный комментарий игрока
             if comment != expected_comment:
                 continue
 
-            # Точная проверка суммы с допуском (ИСПРАВЛЕНО)
-            amount_ton = value_nano / 1e9
-            if abs(amount_ton - expected_amount) < 0.000001:
+            # 3. Проверка суммы с небольшим допуском на округление блокчейна
+            if amount_ton >= (expected_amount - 0.001):
                 tx_hash = tx.get('transaction_id', {}).get('hash')
 
+                # 4. Защита от повторного начисления (Double Spend)
                 with used_transaction_lock:
                     with db.get_cursor() as cursor:
                         cursor.execute("SELECT id FROM used_ton_transactions WHERE tx_hash = ?", (tx_hash,))
                         if cursor.fetchone():
+                            logger.warning(f"Попытка повторного использования транзакции: {tx_hash}")
                             return False, 0, None
+
                         cursor.execute("INSERT INTO used_ton_transactions (tx_hash, user_id) VALUES (?, ?)",
                                        (tx_hash, user_id))
+
+                logger.info(f"Успешный платеж найден! Игрок: {user_id}, Сумма: {amount_ton} TON")
                 return True, amount_ton, tx_hash
 
         return False, 0, None
@@ -2205,7 +2236,8 @@ def health_check():
 
 @app.route('/tonconnect-manifest.json', methods=['GET'])
 def serve_manifest():
-    current_origin = "https://weregood.ru"
+    """Динамический манифест, защищающий от ошибок Bad Manifest при смене доменов/тестовых туннелей"""
+    current_origin = f"{request.scheme}://{request.host}"
     manifest = {
         "url": current_origin,
         "name": "WereGood Game",
@@ -2236,24 +2268,28 @@ def api_ton_save_wallet():
     data = request.json or {}
     user_id = data.get('user_id')
     wallet_address = data.get('wallet_address')
+
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid or not wallet_address:
-        return jsonify({"success": False, "error": "Missing user_id or wallet_address"}), 400
+        return jsonify({"success": False, "error": "Неверный ID пользователя или адрес кошелька"}), 400
     if not validate_ton_address(wallet_address):
-        return jsonify({"success": False, "error": "Invalid TON wallet address format"}), 400
-    if not check_rate_limit(f"wallet_{user_id}", limit=10, window_seconds=60):
-        return jsonify({"success": False, "error": "Too many requests"}), 429
+        return jsonify({"success": False, "error": "Неверный формат TON кошелька"}), 400
+
     try:
         with db.get_cursor() as cursor:
             cursor.execute("UPDATE users SET ton_wallet = ? WHERE user_id = ?", (wallet_address, user_id))
-        invalidate_cache(user_id)
+
+        # Сбрасываем кэш, если у тебя подключена функция инвалидации кэша
+        if 'invalidate_cache' in globals():
+            invalidate_cache(user_id)
+
         user = get_user(user_id)
-        add_log(f"🔗 Подключил TON кошелёк: {wallet_address[:6]}...{wallet_address[-4:]}", user_id,
+        add_log(f"🔗 Привязал TON кошелёк: {wallet_address[:6]}...{wallet_address[-4:]}", user_id,
                 user.get('username', 'Unknown'))
         return jsonify({"success": True, "wallet": wallet_address})
     except Exception as e:
-        logger.error(f"Ошибка сохранения кошелька: {e}")
-        return jsonify({"success": False, "error": "Database error"}), 500
+        logger.error(f"❌ Ошибка при сохранении кошелька в БД: {e}")
+        return jsonify({"success": False, "error": "Ошибка базы данных"}), 500
 
 
 @app.route('/api/ton/get_wallet', methods=['POST'])
@@ -2263,6 +2299,7 @@ def api_ton_get_wallet():
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid:
         return jsonify({"success": False, "error": "Invalid user_id"}), 400
+
     with db.get_cursor() as cursor:
         cursor.execute("SELECT ton_wallet FROM users WHERE user_id = ?", (user_id,))
         row = cursor.fetchone()
@@ -2276,17 +2313,22 @@ def api_ton_create_payment():
     user_id = data.get('user_id')
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid:
-        return jsonify({"success": False, "error": "Invalid user_id"}), 400
+        return jsonify({"success": False, "error": "Неавторизованный запрос"}), 400
 
-    user_wallet = get_user_ton_wallet(user_id)
-    if not user_wallet:
-        return jsonify({"success": False, "error": "Кошелёк не подключён", "need_wallet": True})
+    # Проверяем, настроен ли кошелек проекта в файле .env
+    proj_wallet = globals().get('PROJECT_WALLET_ADDRESS') or os.getenv('PROJECT_WALLET_ADDRESS')
+    if not proj_wallet:
+        logger.critical("🚨 КРИТИЧЕСКАЯ ОШИБКА: PROJECT_WALLET_ADDRESS отсутствует в переменных сервера!")
+        return jsonify({"success": False, "error": "Ошибка конфигурации платежного шлюза на сервере"}), 500
+
+    payment_amount_ton = 0.1
+    payment_amount_nano = int(payment_amount_ton * 1e9)  # 100000000
 
     return jsonify({
         "success": True,
-        "wallet_address": PROJECT_WALLET_ADDRESS or "UQCa7xhdvDiaKuH6SFLgzLQFH8oRwwS2ElN1s283WnGM4fYB",
-        "amount": 0.1,
-        "amount_nano": 100000000,
+        "wallet_address": proj_wallet,
+        "amount": payment_amount_ton,
+        "amount_nano": payment_amount_nano,
         "comment": f"WereGood:{user_id}"
     })
 
@@ -2296,41 +2338,41 @@ def api_ton_check_payment():
     data = request.json or {}
     user_id = data.get('user_id')
     expected_amount = data.get('expected_amount', 0.1)
+
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid:
         return jsonify({"success": False, "error": "Invalid user_id"}), 400
 
-    user_wallet = get_user_ton_wallet(user_id) or ""
+    # Для проверки нам больше не нужен привязанный кошелек, так как проверка идет по уникальному комментарию
+    confirmed, amount, tx_hash = check_ton_transaction("", expected_amount, user_id)
 
-    with used_transaction_lock:
-        confirmed, amount, tx_hash = check_ton_transaction(user_wallet, expected_amount, user_id)
+    if confirmed:
+        try:
+            user = get_user(user_id)
+            old_lp = user.get('lp', 0)
+            old_stars = user.get('stars', 0)
+            old_max_energy = user.get('max_energy', 500)
 
-        if confirmed:
-            try:
-                user = get_user(user_id)
-                old_lp = user.get('lp', 0)
-                old_stars = user.get('stars', 0)
-                old_max_energy = user.get('max_energy', 500)
+            # Рассчитываем новые значения
+            new_lp = old_lp + 50
+            new_stars = old_stars + 25
+            new_max_energy = old_max_energy + 50
 
-                new_lp = old_lp + 50
-                new_stars = old_stars + 25
-                new_max_energy = old_max_energy + 50
+            # Начисляем награду в базу данных через безопасный метод обновления
+            safe_update_user(user_id, lp=new_lp, stars=new_stars, max_energy=new_max_energy)
 
-                safe_update_user(user_id, lp=new_lp, stars=new_stars, max_energy=new_max_energy)
+            add_log(f"💎 Успешная оплата TON: +50 LP, +25 Stars, +50 энергии ({amount} TON)", user_id,
+                    user.get('username', 'Unknown'))
 
-                add_log(f"💎 Оплата через TON: +50 LP, +25 Stars, +50 макс. энергии ({amount} TON)", user_id,
-                        user.get('username', 'Unknown'))
-
-                return jsonify({
-                    "success": True,
-                    "confirmed": True,
-                    "amount": amount,
-                    "tx_hash": tx_hash,
-                    "bonus": {"lp": 50, "stars": 25, "max_energy": 50}
-                })
-            except Exception as e:
-                logger.error(f"Ошибка начисления бонуса для {user_id}: {e}")
-                return jsonify({"success": False, "error": "Internal reward error"}), 500
+            return jsonify({
+                "success": True,
+                "confirmed": True,
+                "amount": amount,
+                "tx_hash": tx_hash
+            })
+        except Exception as e:
+            logger.error(f"❌ Ошибка при начислении игровых предметов: {e}")
+            return jsonify({"success": False, "error": "Ошибка начисления на сервере"}), 500
 
     return jsonify({"success": True, "confirmed": False})
 
@@ -2346,15 +2388,15 @@ def api_ton_disconnect_wallet():
     try:
         with db.get_cursor() as cursor:
             cursor.execute("UPDATE users SET ton_wallet = '' WHERE user_id = ?", (user_id,))
-        invalidate_cache(user_id)
+        if 'invalidate_cache' in globals():
+            invalidate_cache(user_id)
 
         user = get_user(user_id)
         add_log(f"🔗 Отвязал TON кошелёк", user_id, user.get('username', 'Unknown'))
-
         return jsonify({"success": True, "message": "Кошелёк отвязан"})
     except Exception as e:
-        logger.error(f"Ошибка отвязки кошелька: {e}")
-        return jsonify({"success": False, "error": "Database error"}), 500
+        logger.error(f"❌ Ошибка при отвязке кошелька в БД: {e}")
+        return jsonify({"success": False, "error": "Ошибка базы данных"}), 500
 
 
 @app.route('/api/log_game_entry', methods=['POST'])
