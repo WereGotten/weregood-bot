@@ -287,7 +287,6 @@ def record_admin_failure(ip: str):
 def validate_ton_address(address: str) -> bool:
     if not address or not isinstance(address, str):
         return False
-    # Учитываем: user-friendly (48 симв), чистый hex (64 симв), и RAW формат от TonConnect (66 симв, например 0:...)
     if len(address) == 48 and re.match(r'^[A-Za-z0-9_-]{48}$', address):
         return True
     if len(address) == 64 and re.match(r'^[0-9a-fA-F]{64}$', address):
@@ -297,11 +296,20 @@ def validate_ton_address(address: str) -> bool:
     return False
 
 
+def string_to_hex_payload(text: str) -> str:
+    """Конвертирует строку в HEX формат для TON payload"""
+    if not text:
+        return "00000000"
+    # 4 нулевых байта префикс для обычного текста в TON
+    hex_string = "00000000"
+    for char in text:
+        hex_string += format(ord(char), '02x')
+    return hex_string
+
+
 def check_ton_transaction(sender_wallet, expected_amount, user_id):
-    """Проверка TON платежа через toncenter API"""
+    """Проверка TON платежа через toncenter API по комментарию"""
     try:
-        # Toncenter v2 отлично принимает адреса в формате UQ... или EQ... напрямую!
-        # Убираем дефектную ручную конвертацию в raw_address
         url = f"https://toncenter.com/api/v2/getTransactions?address={PROJECT_WALLET_ADDRESS}&limit=20"
         if TONCENTER_API_KEY:
             url += f"&api_key={TONCENTER_API_KEY}"
@@ -315,26 +323,16 @@ def check_ton_transaction(sender_wallet, expected_amount, user_id):
 
         expected_comment = f"WereGood:{user_id}"
 
-        # Приводим адрес отправителя к чистому hex (убираем '0:' если он есть),
-        # чтобы сравнивать независимо от формата (Raw vs User-friendly)
-        sender_clean = sender_wallet.lower().replace('0:', '')
-
         for tx in data.get('result', []):
             in_msg = tx.get('in_msg', {})
-            source = in_msg.get('source', '')  # Из API обычно приходит user-friendly (EQ...) или raw
-            comment = in_msg.get('message', '')  # Комментарий (текст)
+            comment = in_msg.get('message', '')
             value_nano = int(in_msg.get('value', '0'))
 
-            # Проверяем совпадение комментария
             if expected_comment not in comment:
                 continue
 
-            # Безопасное сравнение адресов: проверяем, содержится ли hex отправителя в адресе источника
-            # или совпадает ли напрямую (на случай если оба в одном формате)
-            # Примечание: для идеального сравнения адресов рекомендуется использовать сторонние библиотеки,
-            # но поиск совпадения комментария конкретного user_id гарантирует уникальность платежа.
             amount_ton = value_nano / 1e9
-            if amount_ton >= expected_amount:
+            if amount_ton >= expected_amount - 0.000001:
                 tx_hash = tx.get('transaction_id', {}).get('hash')
 
                 with used_transaction_lock:
@@ -362,15 +360,10 @@ def convert_ton_address_to_raw(address: str) -> str:
     try:
         import base64
 
-        # Для TON адресов формата UQ... или EQ...
         if address[0] in ['U', 'E']:
-            # Убираем первый символ
             address_b64 = address[1:]
-            # Декодируем base64 (URL-safe)
             decoded = base64.urlsafe_b64decode(address_b64 + '==')
-            # Берем первые 32 байта как хеш
             hash_part = decoded[:32]
-            # Workchain определяется по первому символу (U=0, E=1)
             workchain = 0 if address[0] == 'U' else 1
             return f"{workchain}:{hash_part.hex()}"
         else:
@@ -660,14 +653,12 @@ def escape_html(text: str) -> str:
 
 # ========== ДОСТИЖЕНИЯ ФУНКЦИИ ==========
 def get_achievements_list():
-    """Получить список всех достижений"""
     with db.get_cursor() as cursor:
         cursor.execute('SELECT * FROM achievements ORDER BY id')
         return [dict(row) for row in cursor.fetchall()]
 
 
 def get_user_achievements(user_id):
-    """Получить прогресс пользователя по всем достижениям"""
     with db.get_cursor() as cursor:
         cursor.execute('''
             SELECT a.*, ua.current_count, ua.is_completed, ua.completed_at
@@ -691,7 +682,6 @@ def get_user_achievements(user_id):
 
 
 def update_achievement_progress(user_id, achievement_name, increment=1, set_value=None):
-    """Обновить прогресс достижения"""
     with db.get_cursor() as cursor:
         cursor.execute('SELECT id, target_count FROM achievements WHERE name = ?', (achievement_name,))
         ach = cursor.fetchone()
@@ -768,7 +758,6 @@ def get_achievement_display_name(achievement_name):
 
 
 def update_legend_prefixes():
-    """Обновить префиксы Легенда для топ-5 игроков по достижениям"""
     with db.get_cursor() as cursor:
         cursor.execute('''
             SELECT user_id, completed_achievements
@@ -809,7 +798,6 @@ def update_legend_prefixes():
 
 
 def get_achievements_top(limit=50):
-    """Получить топ игроков по выполненным достижениям"""
     with db.get_cursor() as cursor:
         cursor.execute('''
             SELECT user_id, username, first_name, avatar_url, completed_achievements, role
@@ -1065,7 +1053,6 @@ def init_db():
             )
         ''')
 
-        # ========== ТАБЛИЦЫ ДЛЯ ДОСТИЖЕНИЙ ==========
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS achievements (
                 id INTEGER PRIMARY KEY,
@@ -1112,7 +1099,6 @@ def init_db():
         except:
             pass
 
-        # ========== ДОБАВЛЯЕМ ДОСТИЖЕНИЯ ==========
         achievements_list = [
             ('autoclicker', '🏆 Автокликер', 'Сделать 50 000 кликов по монете', '🖱️', 50000),
             ('investor', '💰 Инвестор', 'Купить 30 улучшений в магазине', '📈', 30),
@@ -1173,9 +1159,7 @@ def unban_user(user_id):
 
 
 def delete_user(user_id):
-    """Полное удаление пользователя из базы данных"""
     with db.get_cursor() as cursor:
-        # Удаляем из всех связанных таблиц
         cursor.execute("DELETE FROM users WHERE user_id = ?", (user_id,))
         cursor.execute("DELETE FROM user_achievements WHERE user_id = ?", (user_id,))
         cursor.execute("DELETE FROM user_tasks WHERE user_id = ?", (user_id,))
@@ -1189,7 +1173,6 @@ def delete_user(user_id):
         cursor.execute("DELETE FROM used_ton_transactions WHERE user_id = ?", (user_id,))
         cursor.execute("DELETE FROM lottery_tickets_history WHERE user_id = ?", (user_id,))
 
-        # Также удаляем билеты пользователя из текущей лотереи
         global lottery_tickets
         lottery_tickets = [t for t in lottery_tickets if t.get("user_id") != user_id]
         save_lottery()
@@ -1562,47 +1545,6 @@ def handle_successful_payment(chat_id, payment_info):
     except Exception as e:
         logger.error(f"Ошибка в handle_successful_payment: {e}")
         return False
-
-
-def check_ton_transaction(sender_wallet, expected_amount, user_id):
-    """Проверка TON платежа через toncenter API"""
-    try:
-        raw_address = convert_ton_address_to_raw(PROJECT_WALLET_ADDRESS)
-        url = f"https://toncenter.com/api/v2/getTransactions?address={raw_address}&limit=20"
-        if TONCENTER_API_KEY:
-            url += f"&api_key={TONCENTER_API_KEY}"
-
-        response = requests.get(url, timeout=15)
-        data = response.json()
-
-        if not data.get('ok'):
-            return False, 0, None
-
-        # Проверяем с погрешностью 0.000001
-        tolerance = 0.000001
-
-        for tx in data.get('result', []):
-            in_msg = tx.get('in_msg', {})
-            source = in_msg.get('source', '')
-            value_nano = int(in_msg.get('value', '0'))
-            amount_ton = value_nano / 1e9
-
-            # Проверяем, что отправитель совпадает И сумма совпадает с ожидаемой (с погрешностью)
-            if source and source.lower() == sender_wallet.lower():
-                if abs(amount_ton - expected_amount) < tolerance:
-                    tx_hash = tx.get('transaction_id', {}).get('hash')
-                    with used_transaction_lock:
-                        with db.get_cursor() as cursor:
-                            cursor.execute("SELECT id FROM used_ton_transactions WHERE tx_hash = ?", (tx_hash,))
-                            if cursor.fetchone():
-                                return False, 0, None
-                            cursor.execute("INSERT INTO used_ton_transactions (tx_hash, user_id) VALUES (?, ?)",
-                                           (tx_hash, user_id))
-                    return True, amount_ton, tx_hash
-        return False, 0, None
-    except Exception as e:
-        print(f"Ошибка проверки TON платежа: {e}")
-        return False, 0, None
 
 
 def get_user_ton_wallet(user_id):
@@ -2259,7 +2201,6 @@ def health_check():
 
 @app.route('/tonconnect-manifest.json', methods=['GET'])
 def serve_manifest():
-    # Автоматически определяет текущий домен (сработает и на проде, и в туннеле локально)
     current_origin = f"{request.scheme}://{request.host}"
 
     manifest = {
@@ -2270,6 +2211,7 @@ def serve_manifest():
         "privacyPolicyUrl": f"{current_origin}/privacy"
     }
     return jsonify(manifest)
+
 
 @app.route('/terms')
 def terms_page():
@@ -2333,25 +2275,25 @@ def api_ton_create_payment():
     if not is_valid:
         return jsonify({"success": False, "error": "Invalid user_id"}), 400
 
-    # БЕЗОПАСНОСТЬ: Берем адрес кошелька ИЗ НАСТРОЕК (.env), а не хардкодим строкой!
     if not PROJECT_WALLET_ADDRESS:
         logger.error("Критическая ошибка: PROJECT_WALLET_ADDRESS не задан в .env")
         return jsonify({"success": False, "error": "Конфигурация сервера не завершена"}), 500
 
-    # УБРАНА ЖЕСТКАЯ ПРОВЕРКА НА ПРИВЯЗКУ КОШЕЛЬКА.
-    # Даже если кошелек не сохранен в профиле, пользователь СМОЖЕТ оплатить,
-    # а бэкенд начислит бонус по комментарию WereGood:user_id.
-
-    # Фиксированная стоимость (можно вынести в глобальные переменные в начале bot.py)
     payment_amount_ton = 0.1
-    payment_amount_nano = int(payment_amount_ton * 1e9)  # 100000000
+    payment_amount_nano = int(payment_amount_ton * 1e9)
+
+    comment = f"WereGood:{user_id}"
+
+    # Генерируем HEX payload для TON Connect 2.0
+    hex_payload = string_to_hex_payload(comment)
 
     return jsonify({
         "success": True,
-        "wallet_address": PROJECT_WALLET_ADDRESS,  # Берется динамически из .env
+        "wallet_address": PROJECT_WALLET_ADDRESS,
         "amount": payment_amount_ton,
         "amount_nano": payment_amount_nano,
-        "comment": f"WereGood:{user_id}"  # Уникальный идентификатор платежа
+        "payload": hex_payload,
+        "comment": comment
     })
 
 
@@ -2364,13 +2306,7 @@ def api_ton_check_payment():
     if not is_valid:
         return jsonify({"success": False, "error": "Invalid user_id"}), 400
 
-    # ОПРЕДЕЛЯЕМ КОШЕЛЕК ОТПРАВИТЕЛЯ (если он привязан)
     user_wallet = get_user_ton_wallet(user_id) or ""
-
-    # Вызываем измененную нами функцию check_ton_transaction.
-    # Теперь она ищет транзакцию по комментарию "WereGood:user_id".
-    # Мы передаем туда user_wallet, но внутри функции проверка идет по комментарию,
-    # так что платеж найдется в любом случае!
     confirmed, amount, tx_hash = check_ton_transaction(user_wallet, expected_amount, user_id)
 
     if confirmed:
@@ -2384,10 +2320,8 @@ def api_ton_check_payment():
             new_stars = old_stars + 25
             new_max_energy = old_max_energy + 50
 
-            # Начисляем награду в базу данных
             safe_update_user(user_id, lp=new_lp, stars=new_stars, max_energy=new_max_energy)
 
-            # Логируем действие для админки
             add_log(f"💎 Оплата через TON: +50 LP, +25 Stars, +50 макс. энергии ({amount} TON)", user_id,
                     user.get('username', 'Unknown'))
 
@@ -2629,9 +2563,8 @@ def api_buy_upgrade():
     user["upgrade_counts"][upgrade_id] = new_count
     safe_update_user(user_id, wg=new_wg, upgrade_counts=user["upgrade_counts"])
 
-    # Обновление достижений
-    update_achievement_progress(user_id, 'investor', 1)  # Инвестор (количество покупок)
-    update_achievement_progress(user_id, 'spender', int(cost))  # Транжира (сумма потраченных WG)
+    update_achievement_progress(user_id, 'investor', 1)
+    update_achievement_progress(user_id, 'spender', int(cost))
 
     if current_count == 0:
         add_log(f"🆕⭐ ПЕРВАЯ ПОКУПКА улучшения! {UPGRADE_CONFIG[upgrade_id]['name']} за {cost:.2f} WG", user_id,
@@ -4267,7 +4200,7 @@ if __name__ == '__main__':
     print("   • Лотерея с розыгрышами и новой логикой")
     print("   • Реферальная система")
     print("   • Ежедневные награды (24 часа)")
-    print("   • TON Connect 2.0")
+    print("   • TON Connect 2.0 с HEX payload")
     print("   • Stars оплата")
     print("   • Промокоды")
     print("   • Полная админ-панель")
