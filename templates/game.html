@@ -6111,78 +6111,82 @@
         }
 
         window.buyWithTon = async function() {
-            console.log('buyWithTon called');
+    console.log('buyWithTon called');
 
-            if (!tonConnectUI) {
-                showToast('🔄 Система оплаты загружается...', 'info');
-                await initTonConnect();
-                if (!tonConnectUI) {
-                    showToast('❌ Система оплаты недоступна', 'error');
-                    return;
-                }
-            }
+    if (!tonConnectUI) {
+        showToast('🔄 Система оплаты загружается...', 'info');
+        await initTonConnect();
+        if (!tonConnectUI) {
+            showToast('❌ Система оплаты недоступна', 'error');
+            return;
+        }
+    }
 
-            if (!tonConnectUI.wallet) {
-                showToast('🔗 Подключите TON кошелёк', 'info');
-                try {
-                    await tonConnectUI.openModal();
-                } catch(e) {
-                    console.error('Modal error:', e);
-                    showToast('❌ Не удалось открыть список кошельков', 'error');
-                }
-                return;
-            }
+    if (!tonConnectUI.wallet) {
+        showToast('🔗 Подключите TON кошелёк', 'info');
+        try {
+            await tonConnectUI.openModal();
+        } catch(e) {
+            console.error('Modal error:', e);
+            showToast('❌ Не удалось открыть список кошельков', 'error');
+        }
+        return;
+    }
 
-            try {
-                showToast('💎 Создаём платёж...', 'info');
+    try {
+        showToast('💎 Создаём платёж...', 'info');
 
-                const response = await fetch('/api/ton/create_payment', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: userId, amount: 0.1 })
-                });
+        const response = await fetch('/api/ton/create_payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId, amount: 0.1 })
+        });
 
-                const data = await response.json();
-                console.log('Payment data:', data);
+        const data = await response.json();
+        console.log('Payment data:', data);
 
-                if (!data.success) {
-                    showToast(data.error || 'Ошибка создания платежа', 'error');
-                    return;
-                }
+        if (!data.success) {
+            showToast(data.error || 'Ошибка создания платежа', 'error');
+            return;
+        }
 
-                // Кодируем комментарий в base64 для безопасной передачи
-                const comment = data.comment;
-                const payload = btoa(comment);
-                console.log('Payload (base64):', payload);
+        // Кодируем комментарий в HEX (а не base64)
+        const comment = data.comment;
+        let hexPayload = '';
+        for (let i = 0; i < comment.length; i++) {
+            hexPayload += comment.charCodeAt(i).toString(16);
+        }
+        const payload = '0x' + hexPayload;
+        console.log('Payload (hex):', payload);
 
-                const transaction = {
-                    validUntil: Math.floor(Date.now() / 1000) + 300,
-                    messages: [{
-                        address: data.wallet_address,
-                        amount: data.amount_nano.toString(),
-                        payload: payload
-                    }]
-                };
-
-                console.log('Sending transaction:', transaction);
-
-                const result = await tonConnectUI.sendTransaction(transaction);
-                console.log('Transaction result:', result);
-
-                if (result) {
-                    showToast('💰 Платёж отправлен! Проверяем...', 'info');
-                    startPaymentCheck(0.1);
-                }
-
-            } catch(e) {
-                console.error('Payment error:', e);
-                if (e.message && e.message.includes('cancelled')) {
-                    showToast('❌ Платёж отменён', 'error');
-                } else {
-                    showToast('❌ Ошибка: ' + (e.message || 'Неизвестная ошибка'), 'error');
-                }
-            }
+        const transaction = {
+            validUntil: Math.floor(Date.now() / 1000) + 300,
+            messages: [{
+                address: data.wallet_address,
+                amount: data.amount_nano.toString(),
+                payload: payload
+            }]
         };
+
+        console.log('Sending transaction:', transaction);
+
+        const result = await tonConnectUI.sendTransaction(transaction);
+        console.log('Transaction result:', result);
+
+        if (result) {
+            showToast('💰 Платёж отправлен! Проверяем...', 'info');
+            startPaymentCheck(0.1);
+        }
+
+    } catch(e) {
+        console.error('Payment error:', e);
+        if (e.message && e.message.includes('cancelled')) {
+            showToast('❌ Платёж отменён', 'error');
+        } else {
+            showToast('❌ Ошибка: ' + (e.message || 'Неизвестная ошибка'), 'error');
+        }
+    }
+};
 
         function startPaymentCheck(expectedAmount) {
             let attempts = 0;
