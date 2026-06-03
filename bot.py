@@ -308,23 +308,15 @@ def string_to_hex_payload(text: str) -> str:
 
 def check_ton_transaction(sender_wallet, expected_amount, user_id):
     """
-    Продвинутая проверка транзакций с пагинацией и гибридным поиском.
+    Продвинутая проверка транзакций с правильным RAW адресом кошелька.
     """
     try:
         expected_comment = f"WereGood:{user_id}"
         logger.info(
             f"🔍 [TON] Сканируем сеть для {user_id}. Ищем коммент '{expected_comment}' или кошелек '{sender_wallet}'")
 
-        # Проверяем адрес кошелька проекта
-        project_wallet = globals().get('PROJECT_WALLET_ADDRESS') or os.getenv('PROJECT_WALLET_ADDRESS')
-        if project_wallet:
-            # Если адрес в обычном виде (EQ/UQ), API v2 лучше переваривает RAW формат (0:69fa7a...)
-            if project_wallet.startswith("UQ") or project_wallet.startswith("EQ"):
-                raw_address = "0:69fa7a77ddd3713b7a51c4f3b2e53ef9b39d1bdf38deef113ebd1795fa1cf8fe3"  # Твой точный RAW хэш
-            else:
-                raw_address = project_wallet
-        else:
-            raw_address = "0:69fa7a77ddd3713b7a51c4f3b2e53ef9b39d1bdf38deef113ebd1795fa1cf8fe3"
+        # ТВОЙ НАСТОЯЩИЙ ИСПРАВЛЕННЫЙ RAW АДРЕС:
+        raw_address = "0:69fa7db713b9158c72970e3d577b6b3c2605e0f109fbb0443af97c44fd07be3f"
 
         url = f"https://toncenter.com/api/v2/getTransactions?address={raw_address}&limit=40"
 
@@ -340,10 +332,11 @@ def check_ton_transaction(sender_wallet, expected_amount, user_id):
         transactions = response.json().get('result', [])
         clean_sender = str(sender_wallet).strip().lower() if sender_wallet else ""
 
-        # Сканируем историю (до 2 страниц вглубь для надежности)
+        # Сканируем историю
         for page in range(2):
-            for tx in transactions:
-                in_msg = tx.get('in_msg', {})
+            for tx in range(len(transactions)):
+                tx_data = transactions[tx]
+                in_msg = tx_data.get('in_msg', {})
                 if not in_msg:
                     continue
 
@@ -361,9 +354,9 @@ def check_ton_transaction(sender_wallet, expected_amount, user_id):
 
                 # Проверяем условия
                 if (is_comment_match or is_wallet_match) and (amount_ton >= (expected_amount - 0.02)):
-                    tx_hash = tx.get('transaction_id', {}).get('hash')
+                    tx_hash = tx_data.get('transaction_id', {}).get('hash')
 
-                    # Проверка дубликатов в таблице использованных транзакций
+                    # Проверка дубликатов
                     if 'used_transaction_lock' in globals() and 'db' in globals():
                         with used_transaction_lock:
                             with db.get_cursor() as cursor:
@@ -378,7 +371,7 @@ def check_ton_transaction(sender_wallet, expected_amount, user_id):
                     logger.info(f"✅ [TON] Транзакция НАЙДЕНА! Начисление разрешено. Хэш: {tx_hash}")
                     return True, amount_ton, tx_hash
 
-            # Пагинация на вторую страницу, если на первой не нашли
+            # Пагинация на вторую страницу
             if transactions and 'transaction_id' in transactions[-1] and page == 0:
                 lt = transactions[-1].get('lt')
                 last_hash = transactions[-1]['transaction_id'].get('hash')
