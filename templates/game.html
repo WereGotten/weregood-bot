@@ -6166,14 +6166,15 @@
 
         const hexPayload = stringToHexPayload(commentText);
 
+        // ИСПРАВЛЕНО: Передаем payload вместо comment, чтобы библиотека не крашилась
         const transaction = {
-    validUntil: Math.floor(Date.now() / 1000) + 300,
-    messages: [{
-        address: data.wallet_address,
-        amount: data.amount_nano.toString(),
-        comment: data.comment
-    }]
-};
+            validUntil: Math.floor(Date.now() / 1000) + 300,
+            messages: [{
+                address: data.wallet_address,
+                amount: data.amount_nano.toString(),
+                payload: hexPayload
+            }]
+        };
 
         console.log('Sending transaction with Hex Payload:', transaction);
 
@@ -6185,7 +6186,7 @@
             startPaymentCheck(0.1);
         }
 
-    // --- ВОТ ЭТОТ БЛОК CATCH, КУДА МЫ ВСЁ ВСТАВИЛИ ---
+    // --- БЛОК CATCH ДЛЯ ОТЛОВЛИ ДЕТАЛЬНЫХ ОШИБОК ---
     } catch(e) {
         console.error('=== ДЕТАЛЬНАЯ ОШИБКА TON CONNECT ===');
         console.error('Текст ошибки:', e.message);

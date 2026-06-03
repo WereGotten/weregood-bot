@@ -2259,12 +2259,15 @@ def health_check():
 
 @app.route('/tonconnect-manifest.json', methods=['GET'])
 def serve_manifest():
+    # Автоматически определяет текущий домен (сработает и на проде, и в туннеле локально)
+    current_origin = f"{request.scheme}://{request.host}"
+
     manifest = {
-        "url": "https://weregood.ru",
+        "url": current_origin,
         "name": "WereGood Game",
-        "iconUrl": "https://weregood.ru/static/coin.png",
-        "termsOfUseUrl": "https://weregood.ru/terms",
-        "privacyPolicyUrl": "https://weregood.ru/privacy"
+        "iconUrl": f"{current_origin}/static/coin.png",
+        "termsOfUseUrl": f"{current_origin}/terms",
+        "privacyPolicyUrl": f"{current_origin}/privacy"
     }
     return jsonify(manifest)
 
