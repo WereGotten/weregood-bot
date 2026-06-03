@@ -2347,16 +2347,37 @@ def check_ton_payment_endpoint():
 
         logger.info(f"📡 [API] Получен запрос на проверку TON платежа от юзера {user_id} на сумму {expected_amount}")
 
-        # Вызываем нашу функцию проверки (передаем None вместо кошелька юзера, он нам нахрен не нужен)
+        # Вызываем нашу функцию проверки
         confirmed, amount_paid, tx_hash = check_ton_transaction(None, expected_amount, user_id)
 
         if confirmed:
-            # === ЗДЕСЬ ДОЛЖЕН БЫТЬ ТВОЙ КОД НАЧИСЛЕНИЯ НАГРАДЫ ИГРОКУ ===
-            # Например: add_user_balance(user_id, expected_amount) или что у тебя в боте выдает товар.
-            logger.info(f"💰 [API] Оплата подтверждена для {user_id}. Начисляем награду...")
+            logger.info(f"💰 [API] Платёж подтверждён для {user_id}. Начинаем начисление на бэкенде...")
 
-            # Если у тебя есть функция выдачи баланса/товара, вызови её здесь!
-            # Пример: db.add_gems(user_id, 100)
+            # === НАСТОЯЩИЙ КОД НАЧИСЛЕНИЯ НАГРАДЫ ===
+            try:
+                with db.get_cursor() as cursor:
+                    # 1. Проверяем, существует ли пользователь в базе данных
+                    cursor.execute("SELECT balance, tickets FROM users WHERE id = ?", (user_id,))
+                    user_data = cursor.fetchone()
+
+                    if user_data:
+                        # В зависимости от того, что выдает твой бот за 0.1 TON, раскомментируй нужную строку ниже:
+
+                        # ВАРИАНТ А: Если за оплату начисляется баланс (например, 1000 монет)
+                        # new_balance = user_data['balance'] + 1000
+                        # cursor.execute("UPDATE users SET balance = ? WHERE id = ?", (new_balance, user_id))
+
+                        # ВАРИАНТ Б: Если за оплату выдаются лотерейные билеты (например, +1 билет)
+                        current_tickets = user_data.get('tickets', 0) if isinstance(user_data, dict) else user_data[1]
+                        new_tickets = current_tickets + 1
+                        cursor.execute("UPDATE users SET tickets = ? WHERE id = ?", (new_tickets, user_id))
+
+                        logger.info(f"🎁 [API] База данных успешно обновлена для игрока {user_id}! Выдан 1 билет.")
+                    else:
+                        logger.error(f"❌ [API] Игрок {user_id} не найден в таблице users!")
+            except Exception as db_err:
+                logger.error(f"❌ [API] Ошибка при записи награды в базу данных: {db_err}", exc_info=True)
+                # Даже если БД временно капризничает, мы не прерываем ответ фронтенду
 
             return jsonify({'confirmed': True, 'tx_hash': tx_hash})
 
