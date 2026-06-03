@@ -6112,7 +6112,7 @@
         }
 
         window.buyWithTon = async function() {
-    console.log('buyWithTon called');
+    console.log('💰 buyWithTon вызвана');
 
     if (!tonConnectUI) {
         showToast('🔄 Система оплаты загружается...', 'info');
@@ -6144,40 +6144,40 @@
         });
 
         const data = await response.json();
-        console.log('Payment data:', data);
+        console.log('📦 Payment data:', data);
 
         if (!data.success) {
             showToast(data.error || 'Ошибка создания платежа', 'error');
             return;
         }
 
-        // ✅ ПРАВИЛЬНАЯ сборка транзакции с payload (НЕ comment!)
         const transaction = {
             validUntil: Math.floor(Date.now() / 1000) + 300,
             messages: [{
                 address: data.wallet_address,
                 amount: data.amount_nano.toString(),
-                payload: data.payload  // ← ВОТ ТАК! Без payload библиотека крашится
+                payload: data.payload
             }]
         };
 
-        console.log('Sending transaction:', transaction);
+        console.log('📤 Sending transaction:', transaction);
 
         const result = await tonConnectUI.sendTransaction(transaction);
-        console.log('Transaction result:', result);
+        console.log('✅ Transaction result:', result);
 
         if (result) {
-            showToast('💰 Платёж отправлен в сеть! Начинаем проверку...', 'info');
+            showToast('💰 Платёж отправлен! Проверяем...', 'info');
             startPaymentCheck(0.1);
         }
 
     } catch(e) {
-        console.error('TON Connect error:', e);
+        console.error('❌ TON Connect error:', e);
 
-        // Улучшенная проверка на отмену пользователем
         const errorText = e.message || String(e);
         if (errorText.includes('User rejects') || errorText.includes('Reject') || errorText.includes('canceled')) {
-            showToast('❌ Транзакция отменена пользователем', 'error');
+            showToast('❌ Транзакция отменена', 'error');
+        } else if (errorText.includes('connect')) {
+            showToast('❌ Ошибка подключения кошелька', 'error');
         } else {
             showToast('❌ Ошибка: ' + (e.message || 'Неизвестная ошибка'), 'error');
         }
