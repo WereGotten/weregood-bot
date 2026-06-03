@@ -2257,19 +2257,24 @@ def api_ton_create_payment():
     data = request.json or {}
     user_id = data.get('user_id')
     amount = data.get('amount', 0.1)
-    if amount < 0.1 or amount > 10:
-        return jsonify({"success": False, "error": "Invalid amount. Min: 0.1 TON, Max: 10 TON"}), 400
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid:
         return jsonify({"success": False, "error": "Invalid user_id"}), 400
+
     user_wallet = get_user_ton_wallet(user_id)
     if not user_wallet:
         return jsonify({"success": False, "error": "Кошелёк не подключён", "need_wallet": True})
-    if not validate_ton_address(user_wallet):
-        return jsonify({"success": False, "error": "Invalid wallet address in database"}), 400
-    return jsonify(
-        {"success": True, "wallet_address": PROJECT_WALLET_ADDRESS, "amount": amount, "amount_nano": int(amount * 1e9),
-         "comment": f"WereGood:{user_id}"})
+
+    # ⚠️ ВАЖНО: конвертируем адрес в RAW формат для TON Connect SDK
+    raw_address = convert_ton_address_to_raw(PROJECT_WALLET_ADDRESS)
+
+    return jsonify({
+        "success": True,
+        "wallet_address": raw_address,  # ← Теперь в RAW формате!
+        "amount": amount,
+        "amount_nano": int(amount * 1e9),
+        "comment": f"WereGood:{user_id}"
+    })
 
 
 @app.route('/api/ton/check_payment', methods=['POST'])
