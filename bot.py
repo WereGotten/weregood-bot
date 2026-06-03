@@ -2257,12 +2257,6 @@ def terms_page():
 def privacy_page():
     return '<!DOCTYPE html><html><head><title>Политика конфиденциальности</title></head><body style="background:#0a0a1a; color:white; padding:20px; font-family:system-ui;"><h1>Политика конфиденциальности WereGood</h1><p>Мы собираем только ваш Telegram ID и данные профиля для работы игры.</p><p>Данные не передаются третьим лицам.</p><p>Вы можете удалить свои данные, обратившись к администратору.</p></body></html>'
 
-
-@app.route('/api/ton/init', methods=['POST'])
-def api_ton_init():
-    return jsonify({"success": True, "manifestUrl": f"{WEBHOOK_URL}/tonconnect-manifest.json"})
-
-
 @app.route('/api/ton/save_wallet', methods=['POST'])
 def api_ton_save_wallet():
     data = request.json or {}
