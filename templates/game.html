@@ -6041,8 +6041,8 @@ let tonInitAttempts = 0;
 
 async function initTonConnect() {
     try {
-        // Проверяем, что библиотека загрузилась
-        if (typeof window.TonConnectUI === 'undefined') {
+        // ✅ Правильная проверка - TON_CONNECT_UI, а не TonConnectUI
+        if (typeof window.TON_CONNECT_UI === 'undefined' || !window.TON_CONNECT_UI.TonConnectUI) {
             tonInitAttempts++;
             if (tonInitAttempts < 20) {
                 console.log('⏳ Ждём загрузку TON Connect, попытка', tonInitAttempts);
@@ -6057,7 +6057,8 @@ async function initTonConnect() {
 
         const manifestUrl = 'https://weregood.ru/tonconnect-manifest.json';
 
-        tonConnectUI = new window.TonConnectUI({
+        // ✅ Правильное создание экземпляра
+        tonConnectUI = new window.TON_CONNECT_UI.TonConnectUI({
             manifestUrl: manifestUrl,
             actionsConfiguration: {
                 twaReturnUrl: 'https://t.me/WereGooodbot/WereGood'
