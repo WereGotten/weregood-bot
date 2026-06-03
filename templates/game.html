@@ -6232,11 +6232,14 @@ window.buyWithTon = async function() {
 // Цикл проверки транзакции на бэкенде
 function startPaymentCheck(expectedAmount) {
     let attempts = 0;
-    const maxAttempts = 36; // Увеличим до 3 минут (36 * 5 сек), чтобы блокчейн точно успел обновиться
+    const maxAttempts = 36;
 
     if (paymentCheckInterval) clearInterval(paymentCheckInterval);
 
-    console.log(`⏱️ Запущен цикл startPaymentCheck для суммы ${expectedAmount} TON`);
+    // Берем адрес подключенного кошелька, если он есть
+    const userWalletAddress = tonConnectUI && tonConnectUI.wallet ? tonConnectUI.wallet.account.address : '';
+
+    console.log(`⏱️ Запущен цикл проверки для суммы ${expectedAmount} TON, кошелек: ${userWalletAddress}`);
 
     paymentCheckInterval = setInterval(async () => {
         attempts++;
@@ -6244,27 +6247,29 @@ function startPaymentCheck(expectedAmount) {
             const res = await fetch('/api/ton/check_payment', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: userId, expected_amount: expectedAmount })
+                body: JSON.stringify({
+                    user_id: userId,
+                    expected_amount: expectedAmount,
+                    sender_wallet: userWalletAddress // ДОБАВИЛИ АДРЕС КОШЕЛЬКА ЮЗЕРА!
+                })
             });
 
             const data = await res.json();
-            console.log(`📡 [Попытка ${attempts}/${maxAttempts}] Ответ проверки платежа:`, data);
+            console.log(`📡 [Попытка ${attempts}/${maxAttempts}] Ответ бэка:`, data);
 
             if (data && data.confirmed) {
                 clearInterval(paymentCheckInterval);
                 paymentCheckInterval = null;
                 showToast(`✅ Оплата подтверждена! Награды начислены!`, 'success');
-
-                // Перерисовываем балансы в игре
                 if (typeof updateStatus === 'function') await updateStatus();
                 if (typeof updateUI === 'function') updateUI();
             } else if (attempts >= maxAttempts) {
                 clearInterval(paymentCheckInterval);
                 paymentCheckInterval = null;
-                showToast('⏰ Время ожидания истекло. Если TON списались, награда начислится автоматически в течение пары минут.', 'info');
+                showToast('⏰ Время ожидания истекло.', 'info');
             }
         } catch(e) {
-            console.error('❌ Ошибка при запросе статуса платежа к бэкенду:', e);
+            console.error('❌ Ошибка при запросе статуса платежа:', e);
         }
     }, 5000);
 }

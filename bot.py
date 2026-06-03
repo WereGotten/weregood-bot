@@ -308,29 +308,26 @@ def string_to_hex_payload(text: str) -> str:
 
 def check_ton_transaction(sender_wallet, expected_amount, user_id):
     """
-    Абсолютно стабильная проверка транзакций по ОФИЦИАЛЬНОМУ RAW-адресу проекта и комментарию.
+    Супер-всеядная проверка: ищет совпадение по комментарию ИЛИ по адресу кошелька отправителя.
     """
     try:
         expected_comment = f"WereGood:{user_id}"
-        logger.info(f"🔍 [TON] Ищем транзакцию для игрока {user_id}. Ожидаемый комментарий: '{expected_comment}'")
+        logger.info(
+            f"🔍 [TON] Проверка платежа для {user_id}. Ищем коммент '{expected_comment}' или кошелек '{sender_wallet}'")
 
-        # Твой истинный, проверенный RAW-хэш кошелька UQBp-n23E7kVjHKXDj1Xe2s8JgXg8Qn7sEQ6-XxE_Qe-PynO
-        # По этому адресу API v2 со стопроцентной гарантией вернет всю историю платежей
         addr = "0:69fa7a77ddd3713b7a51c4f3b2e53ef9b39d1bdf38deef113ebd1795fa1cf8fe3"
-
         url = f"https://toncenter.com/api/v2/getTransactions?address={addr}&limit=40"
         if 'TONCENTER_API_KEY' in globals() and TONCENTER_API_KEY:
             url += f"&api_key={TONCENTER_API_KEY}"
 
-        logger.info(f"📡 [TON] Отправка запроса к API Toncenter: {url}")
         response = requests.get(url, timeout=12)
         if response.status_code != 200:
-            logger.error(f"❌ [TON] API вернул ошибку, статус-код: {response.status_code}")
             return False, 0, None
 
-        data = response.json()
-        transactions = data.get('result', [])
-        logger.info(f"📦 [TON] Успешно получено {len(transactions)} транзакций из блокчейна.")
+        transactions = response.json().get('result', [])
+
+        # Приводим адрес отправителя к общему виду для сравнения, если он передан
+        clean_sender = str(sender_wallet).strip().lower() if sender_wallet else ""
 
         for tx in transactions:
             in_msg = tx.get('in_msg', {})
@@ -340,54 +337,52 @@ def check_ton_transaction(sender_wallet, expected_amount, user_id):
             value_nano = int(in_msg.get('value', '0'))
             amount_ton = value_nano / 1e9
 
-            # Пошагово вытаскиваем комментарий из любых возможных форматов TON блокчейна
+            # Извлекаем адрес, откуда пришли деньги
+            source_address = str(in_msg.get('source', '')).strip().lower()
+
+            # Извлекаем комментарий
             comment = in_msg.get('message', '').strip()
             if not comment and in_msg.get('msg_data', {}).get('@type') == 'msg.dataText':
                 comment = in_msg.get('msg_data', {}).get('text', '').strip()
 
-            if not comment and in_msg.get('msg_data', {}).get('@type') == 'msg.dataRaw':
-                try:
-                    raw_hex = in_msg.get('msg_data', {}).get('body', '').strip()
-                    comment = bytes.fromhex(raw_hex).decode('utf-8', errors='ignore').strip()
-                    if raw_hex.startswith('00000000'):
-                        comment = bytes.fromhex(raw_hex[8:]).decode('utf-8', errors='ignore').strip()
-                except Exception:
-                    pass
+            # Условия совпадения:
+            is_comment_match = (expected_comment in comment) or (expected_comment in in_msg.get('message', ''))
 
-            # Если комментарий прочитан, выводим его в консоль для отладки
-            if comment:
-                logger.info(f"💬 [TON] Анализ транзакции: сумма={amount_ton} TON, текст комментария='{comment}'")
+            # Проверка по кошельку: если адрес источника совпадает с кошельком юзера (или содержит его хэш)
+            is_wallet_match = False
+            if clean_sender and (clean_sender in source_address or source_address in clean_sender):
+                is_wallet_match = True
 
-            # Сверяем комментарий транзакции с тем, что мы ждем от игрока
-            if expected_comment in comment or expected_comment in in_msg.get('message', ''):
-                logger.info(f"🎯 [TON] НАЙДЕНО СОВПАДЕНИЕ ПО КОММЕНТАРИЮ! Сумма в сети: {amount_ton} TON")
+            # Если подошло хоть что-то из этого, и сумма бьется
+            if (is_comment_match or is_wallet_match) and (amount_ton >= (expected_amount - 0.02)):
+                tx_hash = tx.get('transaction_id', {}).get('hash')
 
-                # Сверяем сумму (допускаем микро-погрешность на сетевые комиссии кошелька)
-                if amount_ton >= (expected_amount - 0.02):
-                    tx_hash = tx.get('transaction_id', {}).get('hash')
+                # Дополнительно проверим, что транзакция свежая (например, за последние 20 минут),
+                # чтобы старые платежи случайно не зачесть по кошельку
+                tx_time = int(tx.get('utime', 0))
+                if is_wallet_match and not is_comment_match:
+                    if time.time() - tx_time > 1200:
+                        continue  # Старее 20 минут по кошельку без коммента не берем
 
-                    # Блокировка базы данных для защиты от повторных начислений (Double Spending)
-                    if 'used_transaction_lock' in globals() and 'db' in globals():
-                        with used_transaction_lock:
-                            with db.get_cursor() as cursor:
-                                cursor.execute("SELECT id FROM used_ton_transactions WHERE tx_hash = ?", (tx_hash,))
-                                if cursor.fetchone():
-                                    logger.warning(
-                                        f"⚠️ [TON] Попытка повторного начисления! Сделка {tx_hash} уже обрабатывалась.")
-                                    return False, 0, None
+                # Проверка на дубликаты в БД
+                if 'used_transaction_lock' in globals() and 'db' in globals():
+                    with used_transaction_lock:
+                        with db.get_cursor() as cursor:
+                            cursor.execute("SELECT id FROM used_ton_transactions WHERE tx_hash = ?", (tx_hash,))
+                            if cursor.fetchone():
+                                logger.warning(f"⚠️ [TON] Дубликат транзакции {tx_hash}")
+                                return False, 0, None
 
-                                cursor.execute("INSERT INTO used_ton_transactions (tx_hash, user_id) VALUES (?, ?)",
-                                               (tx_hash, user_id))
+                            cursor.execute("INSERT INTO used_ton_transactions (tx_hash, user_id) VALUES (?, ?)",
+                                           (tx_hash, user_id))
 
-                    logger.info(f"✅ [TON] Проверка пройдена! Валидный платёж для {user_id} зафиксирован.")
-                    return True, amount_ton, tx_hash
+                logger.info(
+                    f"🎯 [TON] УСПЕХ! Найдено совпадение (Комментарий: {is_comment_match}, Кошелек: {is_wallet_match})")
+                return True, amount_ton, tx_hash
 
-        logger.warning(
-            f"❌ [TON] Транзакция с комментарием '{expected_comment}' в последних {len(transactions)} записях не найдена.")
         return False, 0, None
-
     except Exception as e:
-        logger.error(f"❌ [TON] Критическая ошибка внутри check_ton_transaction: {e}", exc_info=True)
+        logger.error(f"❌ Ошибка в check_ton_transaction: {e}", exc_info=True)
         return False, 0, None
 
 
@@ -2336,6 +2331,7 @@ def check_ton_payment_endpoint():
         data = request.json or {}
         user_id = data.get('user_id')
         expected_amount = data.get('expected_amount')
+        sender_wallet = data.get('sender_wallet')  # Принимаем адрес кошелька юзера от фронтенда
 
         if not user_id or not expected_amount:
             return jsonify({'confirmed': False, 'error': 'Missing parameters'}), 400
@@ -2345,46 +2341,45 @@ def check_ton_payment_endpoint():
         except ValueError:
             return jsonify({'confirmed': False, 'error': 'Invalid amount'}), 400
 
-        logger.info(f"📡 [API] Получен запрос на проверку TON платежа от юзера {user_id} на сумму {expected_amount}")
+        logger.info(f"📡 [API] Запрос проверки TON от {user_id}. Сумма: {expected_amount}, Кошелек: {sender_wallet}")
 
-        # Вызываем нашу функцию проверки
-        confirmed, amount_paid, tx_hash = check_ton_transaction(None, expected_amount, user_id)
+        # Вызываем нашу всеядную функцию проверки и передаем кошелек отправителя
+        confirmed, amount_paid, tx_hash = check_ton_transaction(sender_wallet, expected_amount, user_id)
 
         if confirmed:
-            logger.info(f"💰 [API] Платёж подтверждён для {user_id}. Начинаем начисление на бэкенде...")
+            logger.info(f"💰 [API] Платёж подтверждён для {user_id}. Начинаем начисление награды...")
 
-            # === НАСТОЯЩИЙ КОД НАЧИСЛЕНИЯ НАГРАДЫ ===
+            # === НАДЁЖНЫЙ КОД НАЧИСЛЕНИЯ НАГРАДЫ ===
             try:
                 with db.get_cursor() as cursor:
-                    # 1. Проверяем, существует ли пользователь в базе данных
-                    cursor.execute("SELECT balance, tickets FROM users WHERE id = ?", (user_id,))
+                    # Проверяем игрока в базе данных
+                    cursor.execute("SELECT tickets FROM users WHERE id = ?", (user_id,))
                     user_data = cursor.fetchone()
 
                     if user_data:
-                        # В зависимости от того, что выдает твой бот за 0.1 TON, раскомментируй нужную строку ниже:
+                        # Универсальный безопасный способ достать значение из кортежа или словаря
+                        if isinstance(user_data, dict):
+                            current_tickets = user_data.get('tickets', 0)
+                        else:
+                            current_tickets = user_data[0] if user_data[0] is not None else 0
 
-                        # ВАРИАНТ А: Если за оплату начисляется баланс (например, 1000 монет)
-                        # new_balance = user_data['balance'] + 1000
-                        # cursor.execute("UPDATE users SET balance = ? WHERE id = ?", (new_balance, user_id))
-
-                        # ВАРИАНТ Б: Если за оплату выдаются лотерейные билеты (например, +1 билет)
-                        current_tickets = user_data.get('tickets', 0) if isinstance(user_data, dict) else user_data[1]
                         new_tickets = current_tickets + 1
-                        cursor.execute("UPDATE users SET tickets = ? WHERE id = ?", (new_tickets, user_id))
 
-                        logger.info(f"🎁 [API] База данных успешно обновлена для игрока {user_id}! Выдан 1 билет.")
+                        # Записываем новые билеты в базу данных
+                        cursor.execute("UPDATE users SET tickets = ? WHERE id = ?", (new_tickets, user_id))
+                        logger.info(f"🎁 [API] Успех! Игроку {user_id} начислен 1 билет (Стало: {new_tickets}).")
                     else:
-                        logger.error(f"❌ [API] Игрок {user_id} не найден в таблице users!")
+                        logger.error(f"❌ [API] КРИТИЧЕСКАЯ ОШИБКА: Игрок {user_id} не найден в таблице users!")
             except Exception as db_err:
-                logger.error(f"❌ [API] Ошибка при записи награды в базу данных: {db_err}", exc_info=True)
-                # Даже если БД временно капризничает, мы не прерываем ответ фронтенду
+                logger.error(f"❌ [API] Сбой при записи билета в базу данных: {db_err}", exc_info=True)
+                # Позволяем коду вернуть true фронтенду, даже если в логах есть предупреждения БД
 
             return jsonify({'confirmed': True, 'tx_hash': tx_hash})
 
         return jsonify({'confirmed': False})
 
     except Exception as e:
-        logger.error(f"❌ Ошибка в роуте check_ton_payment_endpoint: {e}", exc_info=True)
+        logger.error(f"❌ Критическая ошибка в роуте check_ton_payment_endpoint: {e}", exc_info=True)
         return jsonify({'confirmed': False, 'error': str(e)}), 500
 
 
