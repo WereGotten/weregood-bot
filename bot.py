@@ -309,32 +309,38 @@ def string_to_hex_payload(text: str) -> str:
 # ========== ИСПРАВЛЕННАЯ ФУНКЦИЯ ПРОВЕРКИ TON ТРАНЗАКЦИЙ ==========
 def check_ton_transaction(sender_wallet, expected_amount, user_id):
     """
-    Ультра-надежная проверка TON платежа через toncenter API.
-    Адаптирована под автоматический парсинг комментариев TON Connect SDK v2.
+    Отладочная версия проверки транзакций с полным выводом в консоль сервера.
     """
     try:
         if not PROJECT_WALLET_ADDRESS:
-            logger.error("Критическая ошибка: PROJECT_WALLET_ADDRESS не задан в .env")
+            logger.error("❌ КРИТИЧЕСКАЯ ОШИБКА: PROJECT_WALLET_ADDRESS не задан в .env")
             return False, 0, None
 
-        # Запрашиваем последние 50 транзакций нашего кошелька проекта
-        url = f"https://toncenter.com/api/v2/getTransactions?address={PROJECT_WALLET_ADDRESS}&limit=50"
+        expected_comment = f"WereGood:{user_id}"
+        logger.info(
+            f"🔍 Начинаем поиск транзакции для Игрока {user_id}. Ищем комментарий: '{expected_comment}', Сумма: {expected_amount} TON")
+
+        # Формируем URL к Toncenter API
+        url = f"https://toncenter.com/api/v2/getTransactions?address={PROJECT_WALLET_ADDRESS}&limit=20"
         if TONCENTER_API_KEY:
             url += f"&api_key={TONCENTER_API_KEY}"
 
+        logger.info(f"📡 Запрос к Toncenter API: {url}")
         response = requests.get(url, timeout=15)
+
         if response.status_code != 200:
-            logger.error(f"Toncenter API вернул ошибку сети: {response.status_code}")
+            logger.error(f"❌ Toncenter вернул статус-код: {response.status_code}")
             return False, 0, None
 
         data = response.json()
         if not data.get('ok'):
-            logger.error(f"Toncenter вернул ok=False: {data}")
+            logger.error(f"❌ Ошибка внутри ответа Toncenter: {data}")
             return False, 0, None
 
-        expected_comment = f"WereGood:{user_id}"
+        transactions = data.get('result', [])
+        logger.info(f"📦 Всего получено транзакций от API: {len(transactions)}")
 
-        for tx in data.get('result', []):
+        for index, tx in enumerate(transactions):
             in_msg = tx.get('in_msg', {})
             if not in_msg:
                 continue
@@ -342,58 +348,57 @@ def check_ton_transaction(sender_wallet, expected_amount, user_id):
             value_nano = int(in_msg.get('value', '0'))
             amount_ton = value_nano / 1e9
 
-            # 1. Проверяем текстовое поле (если Toncenter сам расшифровал комментарий)
+            # Читаем комментарии всеми возможными способами
             comment = in_msg.get('message', '').strip()
 
-            # 2. Если поле message пустое, проверяем msg_data (разные типы данных в API v2)
             if not comment and in_msg.get('msg_data', {}).get('@type') == 'msg.dataText':
                 comment = in_msg.get('msg_data', {}).get('text', '').strip()
 
-            # 3. ЕСЛИ КОММЕНТАРИЙ ПРИШЕЛ В RAW-HEX (Новый стандарт SDK v2 без префиксов)
             if not comment and in_msg.get('msg_data', {}).get('@type') == 'msg.dataRaw':
                 try:
                     raw_hex = in_msg.get('msg_data', {}).get('body', '').strip()
-
-                    # Пробуем декодировать чистый HEX, который генерирует SDK v2
-                    decoded_text = bytes.fromhex(raw_hex).decode('utf-8', errors='ignore').strip()
-
-                    # Если в начале затесались старые префиксы (4 нулевых байта = 8 символов hex), проверяем и со срезом
-                    if expected_comment in decoded_text:
-                        comment = decoded_text
+                    decoded = bytes.fromhex(raw_hex).decode('utf-8', errors='ignore').strip()
+                    if expected_comment in decoded:
+                        comment = decoded
                     elif raw_hex.startswith('00000000'):
                         comment = bytes.fromhex(raw_hex[8:]).decode('utf-8', errors='ignore').strip()
-                except Exception as hex_err:
-                    logger.debug(f"Не удалось раскодировать hex: {hex_err}")
+                except Exception:
+                    pass
 
-            # Для отладки в логи (потом можно убрать, если мешает):
-            if expected_comment in comment or expected_comment in in_msg.get('message', ''):
-                logger.info(f"🔍 Найдено совпадение комментария! Кошелек получил: {comment}")
+            # ВЫВОДИМ В ЛОГ КАЖДУЮ НАЙДЕННУЮ ВХОДЯЩУЮ ТРАНЗАКЦИЮ ДЛЯ АНАЛИЗА
+            logger.info(f"  [{index}] Найдена транзакция: Сумма={amount_ton} TON, Полученный комментарий='{comment}'")
 
-            # 4. Проверка: содержит ли полученный комментарий нашу строчку игрока
+            # Проверяем, наш ли это комментарий
             if expected_comment not in comment:
-                continue
+                # На случай, если в `comment` записался мусор, проверим чистое поле message
+                if expected_comment not in in_msg.get('message', ''):
+                    continue
 
-            # 5. Проверка суммы с микро-допуском на комиссии сети
-            if amount_ton >= (expected_amount - 0.005):
+            logger.info(
+                f"  🎯 КОММЕНТАРИЙ СОВПАЛ! Проверяем сумму... Нужно >= {expected_amount - 0.01}, у нас: {amount_ton}")
+
+            # Проверка суммы с запасом на комиссии
+            if amount_ton >= (expected_amount - 0.01):
                 tx_hash = tx.get('transaction_id', {}).get('hash')
 
-                # 6. Защита от Double Spend (повторного использования хэша)
+                # Защита от повторного использования
                 with used_transaction_lock:
                     with db.get_cursor() as cursor:
                         cursor.execute("SELECT id FROM used_ton_transactions WHERE tx_hash = ?", (tx_hash,))
                         if cursor.fetchone():
-                            logger.warning(f"Попытка повторно зачесть транзакцию: {tx_hash}")
+                            logger.warning(f"⚠️ Эта транзакция уже была зачислена ранее: {tx_hash}")
                             return False, 0, None
 
                         cursor.execute("INSERT INTO used_ton_transactions (tx_hash, user_id) VALUES (?, ?)",
                                        (tx_hash, user_id))
 
-                logger.info(f"💎 Платеж успешно зачислен! Игрок: {user_id}, Сумма: {amount_ton} TON")
+                logger.info(f"✅💎 УСПЕХ! Начисление разрешено для {user_id}. Хэш: {tx_hash}")
                 return True, amount_ton, tx_hash
 
+        logger.warning(f"❌ Подходящая транзакция для игрока {user_id} в истории не найдена.")
         return False, 0, None
     except Exception as e:
-        logger.error(f"Ошибка внутри check_ton_transaction: {e}")
+        logger.error(f"❌ Исключение внутри check_ton_transaction: {e}", exc_info=True)
         return False, 0, None
 
 
