@@ -6150,33 +6150,28 @@
             return;
         }
 
-        // Возвращаем payload в текстовом формате (не hex, не base64)
         const transaction = {
             validUntil: Math.floor(Date.now() / 1000) + 300,
             messages: [{
                 address: data.wallet_address,
-                amount: data.amount_nano.toString(),
-                payload: data.comment  // просто строка "WereGood:5264622363"
+                amount: data.amount_nano.toString()
             }]
         };
 
         console.log('Sending transaction:', transaction);
+        console.log('Expected amount:', data.amount);
 
         const result = await tonConnectUI.sendTransaction(transaction);
         console.log('Transaction result:', result);
 
         if (result) {
             showToast('💰 Платёж отправлен! Проверяем...', 'info');
-            startPaymentCheck(0.1);
+            startPaymentCheck(data.amount);  // ← передаём уникальную сумму
         }
 
     } catch(e) {
         console.error('Payment error:', e);
-        if (e.message && e.message.includes('cancelled')) {
-            showToast('❌ Платёж отменён', 'error');
-        } else {
-            showToast('❌ Ошибка: ' + (e.message || 'Неизвестная ошибка'), 'error');
-        }
+        showToast('❌ Ошибка: ' + (e.message || 'Неизвестная ошибка'), 'error');
     }
 };
 

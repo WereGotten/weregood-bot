@@ -1507,46 +1507,43 @@ def handle_successful_payment(chat_id, payment_info):
 
 
 def check_ton_transaction(sender_wallet, expected_amount, user_id):
-    """Проверка TON платежа через toncenter API с RAW адресом"""
+    """Проверка TON платежа через toncenter API"""
     try:
-        # Конвертируем адрес проекта в RAW формат (0:...)
         raw_address = convert_ton_address_to_raw(PROJECT_WALLET_ADDRESS)
-
         url = f"https://toncenter.com/api/v2/getTransactions?address={raw_address}&limit=20"
         if TONCENTER_API_KEY:
             url += f"&api_key={TONCENTER_API_KEY}"
 
-        print(f"🔍 Проверяем транзакции для RAW адреса: {raw_address}")
-        print(f"📡 Исходный адрес: {PROJECT_WALLET_ADDRESS}")
-
-        verify_ssl = not DEBUG_MODE
-        response = requests.get(url, timeout=15, verify=verify_ssl)
+        response = requests.get(url, timeout=15)
         data = response.json()
 
-        if data.get('ok'):
-            for tx in data.get('result', []):
-                in_msg = tx.get('in_msg', {})
-                source = in_msg.get('source', '')
-                if source and source.lower() == sender_wallet.lower():
-                    amount_nano = int(in_msg.get('value', '0'))
-                    amount_ton = amount_nano / 1e9
-                    if amount_ton >= expected_amount:
-                        tx_hash = tx.get('transaction_id', {}).get('hash')
-                        with used_transaction_lock:
-                            with db.get_cursor() as cursor:
-                                cursor.execute("SELECT id FROM used_ton_transactions WHERE tx_hash = ?", (tx_hash,))
-                                if cursor.fetchone():
-                                    print(f"⚠️ Транзакция {tx_hash} уже использована")
-                                    return False, 0, None
-                                cursor.execute("INSERT INTO used_ton_transactions (tx_hash, user_id) VALUES (?, ?)",
-                                               (tx_hash, user_id))
-                        print(f"✅ Транзакция подтверждена! {amount_ton} TON")
-                        return True, amount_ton, tx_hash
-        else:
-            print(f"❌ Ошибка API: {data.get('error')}")
+        if not data.get('ok'):
+            return False, 0, None
+
+        # Проверяем с погрешностью 0.000001
+        tolerance = 0.000001
+
+        for tx in data.get('result', []):
+            in_msg = tx.get('in_msg', {})
+            source = in_msg.get('source', '')
+            value_nano = int(in_msg.get('value', '0'))
+            amount_ton = value_nano / 1e9
+
+            # Проверяем, что отправитель совпадает И сумма совпадает с ожидаемой (с погрешностью)
+            if source and source.lower() == sender_wallet.lower():
+                if abs(amount_ton - expected_amount) < tolerance:
+                    tx_hash = tx.get('transaction_id', {}).get('hash')
+                    with used_transaction_lock:
+                        with db.get_cursor() as cursor:
+                            cursor.execute("SELECT id FROM used_ton_transactions WHERE tx_hash = ?", (tx_hash,))
+                            if cursor.fetchone():
+                                return False, 0, None
+                            cursor.execute("INSERT INTO used_ton_transactions (tx_hash, user_id) VALUES (?, ?)",
+                                           (tx_hash, user_id))
+                    return True, amount_ton, tx_hash
         return False, 0, None
     except Exception as e:
-        print(f"🔥 Ошибка проверки TON платежа: {e}")
+        print(f"Ошибка проверки TON платежа: {e}")
         return False, 0, None
 
 
@@ -2271,7 +2268,6 @@ def api_ton_get_wallet():
 def api_ton_create_payment():
     data = request.json or {}
     user_id = data.get('user_id')
-    amount = data.get('amount', 0.1)
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid:
         return jsonify({"success": False, "error": "Invalid user_id"}), 400
@@ -2280,12 +2276,15 @@ def api_ton_create_payment():
     if not user_wallet:
         return jsonify({"success": False, "error": "Кошелёк не подключён", "need_wallet": True})
 
-    # ✅ Оставляем адрес как есть (UQ... формат) - TON Connect SDK принимает такой формат
+    # Уникальная сумма для каждого пользователя (0.1 + 0.000001 * (user_id % 10000))
+    unique_amount = 0.1 + (user_id % 10000) / 1000000
+    unique_amount = round(unique_amount, 6)
+
     return jsonify({
         "success": True,
-        "wallet_address": PROJECT_WALLET_ADDRESS,  # ← UQCa7xhdvDiaKuH6SFLgzLQFH8oRwwS2ElN1s283WnGM4fYB
-        "amount": amount,
-        "amount_nano": int(amount * 1e9),
+        "wallet_address": PROJECT_WALLET_ADDRESS,
+        "amount": unique_amount,
+        "amount_nano": int(unique_amount * 1e9),
         "comment": f"WereGood:{user_id}"
     })
 
