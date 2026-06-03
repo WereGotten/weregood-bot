@@ -285,12 +285,23 @@ def record_admin_failure(ip: str):
 
 
 def validate_ton_address(address: str) -> bool:
+    """Проверка TON адреса - поддерживает RAW (0:...) и user-friendly (UQ/EQ) форматы"""
     if not address or not isinstance(address, str):
         return False
+
+    # RAW формат (0:hex)
+    if address.startswith('0:'):
+        hex_part = address[2:]
+        return len(hex_part) == 64 and re.match(r'^[0-9a-fA-F]{64}$', hex_part) is not None
+
+    # User-friendly формат (48 символов base64)
     if len(address) == 48 and re.match(r'^[A-Za-z0-9_-]{48}$', address):
         return True
+
+    # Простой hex формат (64 символа)
     if len(address) == 64 and re.match(r'^[0-9a-fA-F]{64}$', address):
         return True
+
     return False
 
 
@@ -2265,12 +2276,12 @@ def api_ton_create_payment():
     if not user_wallet:
         return jsonify({"success": False, "error": "Кошелёк не подключён", "need_wallet": True})
 
-    # ⚠️ ВАЖНО: конвертируем адрес в RAW формат для TON Connect SDK
+    # Конвертируем адрес в RAW формат для TON Connect SDK
     raw_address = convert_ton_address_to_raw(PROJECT_WALLET_ADDRESS)
 
     return jsonify({
         "success": True,
-        "wallet_address": raw_address,  # ← Теперь в RAW формате!
+        "wallet_address": raw_address,
         "amount": amount,
         "amount_nano": int(amount * 1e9),
         "comment": f"WereGood:{user_id}"
