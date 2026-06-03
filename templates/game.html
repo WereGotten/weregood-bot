@@ -6035,65 +6035,68 @@
         function openDailyModal() { document.getElementById('dailyModal').classList.add('active'); loadDailyStatus(); }
         function closeDailyModal() { document.getElementById('dailyModal').classList.remove('active'); if (dailyTimerInterval) clearInterval(dailyTimerInterval); }
 
+        // ========== ИСПРАВЛЕННЫЙ TON CONNECT (КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ) ==========
         let tonConnectUI = null;
-let paymentCheckInterval = null;
-let tonInitAttempts = 0;
+        let paymentCheckInterval = null;
+        let tonInitAttempts = 0;
 
-async function initTonConnect() {
-    try {
-        // ✅ Правильная проверка - TON_CONNECT_UI, а не TonConnectUI
-        if (typeof window.TON_CONNECT_UI === 'undefined' || !window.TON_CONNECT_UI.TonConnectUI) {
-            tonInitAttempts++;
-            if (tonInitAttempts < 20) {
-                console.log('⏳ Ждём загрузку TON Connect, попытка', tonInitAttempts);
-                setTimeout(() => initTonConnect(), 500);
-                return;
+        async function initTonConnect() {
+            try {
+                // ✅ ИСПРАВЛЕНО: правильное имя класса - TonConnectUI (не TON_CONNECT_UI)
+                if (typeof window.TonConnectUI === 'undefined') {
+                    tonInitAttempts++;
+                    if (tonInitAttempts < 20) {
+                        console.log('⏳ Ждём загрузку TON Connect, попытка', tonInitAttempts);
+                        setTimeout(() => initTonConnect(), 500);
+                        return;
+                    }
+                    console.error('❌ TON Connect script not loaded');
+                    showToast('❌ Система оплаты недоступна', 'error');
+                    return;
+                }
+
+                console.log('✅ TON Connect script loaded, initializing...');
+
+                const manifestUrl = window.location.origin + '/tonconnect-manifest.json';
+
+                // ✅ Правильное создание экземпляра
+                tonConnectUI = new window.TonConnectUI({
+                    manifestUrl: manifestUrl,
+                    actionsConfiguration: {
+                        twaReturnUrl: 'https://t.me/WereGooodbot/WereGood'
+                    }
+                });
+
+                await tonConnectUI.connectionRestored;
+                console.log('✅ TON Connect UI ready');
+
+                if (tonConnectUI.wallet) {
+                    const address = tonConnectUI.wallet.account.address;
+                    console.log('💰 Wallet already connected:', address);
+                    await saveWalletToBackend(address);
+                    updateTonWalletStatus();
+                }
+
+                tonConnectUI.onStatusChange(async (wallet) => {
+                    console.log('📢 Wallet status changed:', wallet);
+                    if (wallet) {
+                        const address = wallet.account.address;
+                        console.log('🔗 Wallet connected:', address);
+                        await saveWalletToBackend(address);
+                        updateTonWalletStatus();
+                        showToast(`✅ Кошелёк подключён!`, 'success');
+                    } else {
+                        console.log('🔓 Wallet disconnected');
+                        await saveWalletToBackend('');
+                        updateTonWalletStatus();
+                    }
+                });
+
+            } catch(e) {
+                console.error('❌ TON Connect init error:', e);
+                showToast('❌ Ошибка инициализации TON Connect', 'error');
             }
-            console.error('❌ TON Connect script not loaded');
-            return;
         }
-
-        console.log('✅ TON Connect script loaded, initializing...');
-
-        const manifestUrl = 'https://weregood.ru/tonconnect-manifest.json';
-
-        // ✅ Правильное создание экземпляра
-        tonConnectUI = new window.TON_CONNECT_UI.TonConnectUI({
-            manifestUrl: manifestUrl,
-            actionsConfiguration: {
-                twaReturnUrl: 'https://t.me/WereGooodbot/WereGood'
-            }
-        });
-
-        await tonConnectUI.connectionRestored;
-        console.log('✅ TON Connect UI ready');
-
-        if (tonConnectUI.wallet) {
-            const address = tonConnectUI.wallet.account.address;
-            console.log('💰 Wallet already connected:', address);
-            await saveWalletToBackend(address);
-            updateTonWalletStatus();
-        }
-
-        tonConnectUI.onStatusChange(async (wallet) => {
-            console.log('📢 Wallet status changed:', wallet);
-            if (wallet) {
-                const address = wallet.account.address;
-                console.log('🔗 Wallet connected:', address);
-                await saveWalletToBackend(address);
-                updateTonWalletStatus();
-                showToast(`✅ Кошелёк подключён!`, 'success');
-            } else {
-                console.log('🔓 Wallet disconnected');
-                await saveWalletToBackend('');
-                updateTonWalletStatus();
-            }
-        });
-
-    } catch(e) {
-        console.error('❌ TON Connect init error:', e);
-    }
-}
 
         async function saveWalletToBackend(address) {
             if (!address) {
@@ -6118,69 +6121,81 @@ async function initTonConnect() {
         }
 
         window.buyWithTon = async function() {
-    console.log('buyWithTon called');
+            console.log('buyWithTon called');
 
-    if (!tonConnectUI) {
-        showToast('🔄 Система оплаты загружается...', 'info');
-        await initTonConnect();
-        if (!tonConnectUI) {
-            showToast('❌ Система оплаты недоступна', 'error');
-            return;
-        }
-    }
+            if (!tonConnectUI) {
+                showToast('🔄 Система оплаты загружается...', 'info');
+                await initTonConnect();
+                if (!tonConnectUI) {
+                    showToast('❌ Система оплаты недоступна', 'error');
+                    return;
+                }
+            }
 
-    if (!tonConnectUI.wallet) {
-        showToast('🔗 Подключите TON кошелёк', 'info');
-        try {
-            await tonConnectUI.openModal();
-        } catch(e) {
-            console.error('Modal error:', e);
-            showToast('❌ Не удалось открыть список кошельков', 'error');
-        }
-        return;
-    }
+            if (!tonConnectUI.wallet) {
+                showToast('🔗 Подключите TON кошелёк', 'info');
+                try {
+                    await tonConnectUI.openModal();
+                } catch(e) {
+                    console.error('Modal error:', e);
+                    showToast('❌ Не удалось открыть список кошельков', 'error');
+                }
+                return;
+            }
 
-    try {
-        showToast('💎 Создаём платёж...', 'info');
+            try {
+                showToast('💎 Создаём платёж...', 'info');
 
-        const response = await fetch('/api/ton/create_payment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId })
-        });
+                const response = await fetch('/api/ton/create_payment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId })
+                });
 
-        const data = await response.json();
-        console.log('Payment data:', data);
+                const data = await response.json();
+                console.log('Payment data:', data);
 
-        if (!data.success) {
-            showToast(data.error || 'Ошибка создания платежа', 'error');
-            return;
-        }
+                if (!data.success) {
+                    if (data.need_wallet) {
+                        showToast('Сначала подключите TON кошелёк', 'error');
+                        await tonConnectUI.openModal();
+                    } else {
+                        showToast(data.error || 'Ошибка создания платежа', 'error');
+                    }
+                    return;
+                }
 
-        // Транзакция БЕЗ payload
-        const transaction = {
-            validUntil: Math.floor(Date.now() / 1000) + 300,
-            messages: [{
-                address: data.wallet_address,
-                amount: data.amount_nano.toString()
-            }]
+                // ✅ ИСПРАВЛЕНО: добавлено обязательное поле stateInit
+                const transaction = {
+                    validUntil: Math.floor(Date.now() / 1000) + 300,
+                    messages: [{
+                        address: data.wallet_address,
+                        amount: data.amount_nano.toString(),
+                        stateInit: ""  // Обязательное поле!
+                    }]
+                };
+
+                console.log('Sending transaction:', transaction);
+
+                const result = await tonConnectUI.sendTransaction(transaction);
+                console.log('Transaction result:', result);
+
+                if (result && result.boc) {
+                    showToast('💰 Платёж отправлен! Проверяем...', 'info');
+                    startPaymentCheck(0.1);
+                } else {
+                    showToast('❌ Транзакция не отправлена', 'error');
+                }
+
+            } catch(e) {
+                console.error('Payment error:', e);
+                if (e.message && e.message.includes('User rejected')) {
+                    showToast('❌ Вы отменили транзакцию', 'error');
+                } else {
+                    showToast('❌ Ошибка: ' + (e.message || 'Неизвестная ошибка'), 'error');
+                }
+            }
         };
-
-        console.log('Sending transaction:', transaction);
-
-        const result = await tonConnectUI.sendTransaction(transaction);
-        console.log('Transaction result:', result);
-
-        if (result) {
-            showToast('💰 Платёж отправлен! Проверяем...', 'info');
-            startPaymentCheck(0.1);
-        }
-
-    } catch(e) {
-        console.error('Payment error:', e);
-        showToast('❌ Ошибка: ' + (e.message || 'Неизвестная ошибка'), 'error');
-    }
-};
 
         function startPaymentCheck(expectedAmount) {
             let attempts = 0;

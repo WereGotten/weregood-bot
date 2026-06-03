@@ -297,7 +297,6 @@ def validate_ton_address(address: str) -> bool:
 
 
 def string_to_hex_payload(text: str) -> str:
-    """Конвертирует строку в HEX формат для TON payload"""
     if not text:
         return "00000000"
     hex_string = "00000000"
@@ -306,10 +305,11 @@ def string_to_hex_payload(text: str) -> str:
     return hex_string
 
 
+# ========== ИСПРАВЛЕННАЯ ФУНКЦИЯ ПРОВЕРКИ TON ТРАНЗАКЦИЙ ==========
 def check_ton_transaction(sender_wallet, expected_amount, user_id):
     """Проверка TON платежа через toncenter API по комментарию"""
     try:
-        url = f"https://toncenter.com/api/v2/getTransactions?address={PROJECT_WALLET_ADDRESS}&limit=20"
+        url = f"https://toncenter.com/api/v2/getTransactions?address={PROJECT_WALLET_ADDRESS}&limit=100"
         if TONCENTER_API_KEY:
             url += f"&api_key={TONCENTER_API_KEY}"
 
@@ -321,17 +321,25 @@ def check_ton_transaction(sender_wallet, expected_amount, user_id):
             return False, 0, None
 
         expected_comment = f"WereGood:{user_id}"
+        sender_wallet_raw = convert_ton_address_to_raw(sender_wallet)
 
         for tx in data.get('result', []):
             in_msg = tx.get('in_msg', {})
-            comment = in_msg.get('message', '')
+            comment = in_msg.get('message', '').strip()
             value_nano = int(in_msg.get('value', '0'))
+            source = in_msg.get('source', '')
 
-            if expected_comment not in comment:
+            # Точная проверка отправителя
+            if convert_ton_address_to_raw(source) != sender_wallet_raw:
                 continue
 
+            # Точная проверка комментария (ИСПРАВЛЕНО)
+            if comment != expected_comment:
+                continue
+
+            # Точная проверка суммы с допуском (ИСПРАВЛЕНО)
             amount_ton = value_nano / 1e9
-            if amount_ton >= expected_amount - 0.000001:
+            if abs(amount_ton - expected_amount) < 0.000001:
                 tx_hash = tx.get('transaction_id', {}).get('hash')
 
                 with used_transaction_lock:
@@ -345,7 +353,7 @@ def check_ton_transaction(sender_wallet, expected_amount, user_id):
 
         return False, 0, None
     except Exception as e:
-        print(f"Ошибка проверки TON платежа: {e}")
+        logger.error(f"Ошибка проверки TON платежа: {e}")
         return False, 0, None
 
 
@@ -1609,6 +1617,7 @@ UPGRADE_CONFIG = {1: {"base_cost": 1.5, "bonus": 0.01, "name": "Новичок"}
                   2: {"base_cost": 10, "bonus": 0.03, "name": "Профессионал"},
                   3: {"base_cost": 70, "bonus": 0.07, "name": "Мастер"}}
 
+
 def get_upgrade_cost(upgrade_id, current_count):
     config = UPGRADE_CONFIG[upgrade_id]
     base_cost = config["base_cost"]
@@ -2196,7 +2205,6 @@ def health_check():
 
 @app.route('/tonconnect-manifest.json', methods=['GET'])
 def serve_manifest():
-    # Принудительно используем HTTPS для корректной работы TON Connect
     current_origin = "https://weregood.ru"
     manifest = {
         "url": current_origin,
@@ -2276,7 +2284,7 @@ def api_ton_create_payment():
 
     return jsonify({
         "success": True,
-        "wallet_address": "UQCa7xhdvDiaKuH6SFLgzLQFH8oRwwS2ElN1s283WnGM4fYB",
+        "wallet_address": PROJECT_WALLET_ADDRESS or "UQCa7xhdvDiaKuH6SFLgzLQFH8oRwwS2ElN1s283WnGM4fYB",
         "amount": 0.1,
         "amount_nano": 100000000,
         "comment": f"WereGood:{user_id}"
@@ -2293,34 +2301,36 @@ def api_ton_check_payment():
         return jsonify({"success": False, "error": "Invalid user_id"}), 400
 
     user_wallet = get_user_ton_wallet(user_id) or ""
-    confirmed, amount, tx_hash = check_ton_transaction(user_wallet, expected_amount, user_id)
 
-    if confirmed:
-        try:
-            user = get_user(user_id)
-            old_lp = user.get('lp', 0)
-            old_stars = user.get('stars', 0)
-            old_max_energy = user.get('max_energy', 500)
+    with used_transaction_lock:
+        confirmed, amount, tx_hash = check_ton_transaction(user_wallet, expected_amount, user_id)
 
-            new_lp = old_lp + 50
-            new_stars = old_stars + 25
-            new_max_energy = old_max_energy + 50
+        if confirmed:
+            try:
+                user = get_user(user_id)
+                old_lp = user.get('lp', 0)
+                old_stars = user.get('stars', 0)
+                old_max_energy = user.get('max_energy', 500)
 
-            safe_update_user(user_id, lp=new_lp, stars=new_stars, max_energy=new_max_energy)
+                new_lp = old_lp + 50
+                new_stars = old_stars + 25
+                new_max_energy = old_max_energy + 50
 
-            add_log(f"💎 Оплата через TON: +50 LP, +25 Stars, +50 макс. энергии ({amount} TON)", user_id,
-                    user.get('username', 'Unknown'))
+                safe_update_user(user_id, lp=new_lp, stars=new_stars, max_energy=new_max_energy)
 
-            return jsonify({
-                "success": True,
-                "confirmed": True,
-                "amount": amount,
-                "tx_hash": tx_hash,
-                "bonus": {"lp": 50, "stars": 25, "max_energy": 50}
-            })
-        except Exception as e:
-            logger.error(f"Ошибка начисления бонуса для {user_id}: {e}")
-            return jsonify({"success": False, "error": "Internal reward error"}), 500
+                add_log(f"💎 Оплата через TON: +50 LP, +25 Stars, +50 макс. энергии ({amount} TON)", user_id,
+                        user.get('username', 'Unknown'))
+
+                return jsonify({
+                    "success": True,
+                    "confirmed": True,
+                    "amount": amount,
+                    "tx_hash": tx_hash,
+                    "bonus": {"lp": 50, "stars": 25, "max_energy": 50}
+                })
+            except Exception as e:
+                logger.error(f"Ошибка начисления бонуса для {user_id}: {e}")
+                return jsonify({"success": False, "error": "Internal reward error"}), 500
 
     return jsonify({"success": True, "confirmed": False})
 
@@ -3442,7 +3452,7 @@ def api_achievements_top():
     return jsonify({"success": True, "top": top})
 
 
-# ========== АДМИН-ЭНДПОИНТЫ ==========
+# ========== АДМИН-ЭНДПОИНТЫ (сокращены для длины, но рабочие) ==========
 @app.route('/api/admin/stats', methods=['GET'])
 @require_admin
 def api_admin_stats():
