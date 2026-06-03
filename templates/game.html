@@ -6159,14 +6159,13 @@
         };
 
         console.log('Sending transaction:', transaction);
-        console.log('Expected amount:', data.amount);
 
         const result = await tonConnectUI.sendTransaction(transaction);
         console.log('Transaction result:', result);
 
         if (result) {
             showToast('💰 Платёж отправлен! Проверяем...', 'info');
-            startPaymentCheck(data.amount);  // ← передаём уникальную сумму
+            startPaymentCheck(data.amount);  // ← уникальная сумма!
         }
 
     } catch(e) {
