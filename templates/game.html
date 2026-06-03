@@ -6233,13 +6233,10 @@ window.buyWithTon = async function() {
 function startPaymentCheck(expectedAmount) {
     let attempts = 0;
     const maxAttempts = 36;
-
     if (paymentCheckInterval) clearInterval(paymentCheckInterval);
 
-    // Берем адрес подключенного кошелька, если он есть
+    // ПОЛУЧАЕМ АДРЕС КОШЕЛЬКА ЮЗЕРА ДЛЯ БЭКЕНДА
     const userWalletAddress = tonConnectUI && tonConnectUI.wallet ? tonConnectUI.wallet.account.address : '';
-
-    console.log(`⏱️ Запущен цикл проверки для суммы ${expectedAmount} TON, кошелек: ${userWalletAddress}`);
 
     paymentCheckInterval = setInterval(async () => {
         attempts++;
@@ -6250,26 +6247,19 @@ function startPaymentCheck(expectedAmount) {
                 body: JSON.stringify({
                     user_id: userId,
                     expected_amount: expectedAmount,
-                    sender_wallet: userWalletAddress // ДОБАВИЛИ АДРЕС КОШЕЛЬКА ЮЗЕРА!
+                    sender_wallet: userWalletAddress // ВОТ ЭТА СТРОКА КРИТИЧЕСКИ ВАЖНА!
                 })
             });
-
             const data = await res.json();
-            console.log(`📡 [Попытка ${attempts}/${maxAttempts}] Ответ бэка:`, data);
-
             if (data && data.confirmed) {
                 clearInterval(paymentCheckInterval);
                 paymentCheckInterval = null;
                 showToast(`✅ Оплата подтверждена! Награды начислены!`, 'success');
                 if (typeof updateStatus === 'function') await updateStatus();
                 if (typeof updateUI === 'function') updateUI();
-            } else if (attempts >= maxAttempts) {
-                clearInterval(paymentCheckInterval);
-                paymentCheckInterval = null;
-                showToast('⏰ Время ожидания истекло.', 'info');
             }
         } catch(e) {
-            console.error('❌ Ошибка при запросе статуса платежа:', e);
+            console.error('❌ Ошибка проверки:', e);
         }
     }, 5000);
 }
