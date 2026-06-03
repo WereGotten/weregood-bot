@@ -6150,12 +6150,13 @@
             return;
         }
 
-        // Транзакция БЕЗ payload (комментария)
+        // Возвращаем payload в текстовом формате (не hex, не base64)
         const transaction = {
             validUntil: Math.floor(Date.now() / 1000) + 300,
             messages: [{
                 address: data.wallet_address,
-                amount: data.amount_nano.toString()
+                amount: data.amount_nano.toString(),
+                payload: data.comment  // просто строка "WereGood:5264622363"
             }]
         };
 
@@ -6165,13 +6166,17 @@
         console.log('Transaction result:', result);
 
         if (result) {
-            showToast('💰 Платёж отправлен!', 'info');
+            showToast('💰 Платёж отправлен! Проверяем...', 'info');
             startPaymentCheck(0.1);
         }
 
     } catch(e) {
         console.error('Payment error:', e);
-        showToast('❌ Ошибка: ' + (e.message || 'Неизвестная ошибка'), 'error');
+        if (e.message && e.message.includes('cancelled')) {
+            showToast('❌ Платёж отменён', 'error');
+        } else {
+            showToast('❌ Ошибка: ' + (e.message || 'Неизвестная ошибка'), 'error');
+        }
     }
 };
 
