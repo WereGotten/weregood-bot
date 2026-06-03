@@ -88,7 +88,8 @@ CORS(app, resources={
             "https://web.telegram.org",
             "https://t.me",
             "http://weregood.ru",
-            "http://80.90.185.16:5000"
+            "http://80.90.185.16:5000",
+            "https://80.90.185.16"
         ],
         "supports_credentials": True,
         "allow_headers": ["Content-Type", "Authorization"],
@@ -317,7 +318,9 @@ def check_origin():
         "https://weregood.ru",
         "https://www.weregood.ru",
         "https://web.telegram.org",
-        "https://t.me"
+        "https://t.me",
+        "http://80.90.185.16:5000",
+        "https://80.90.185.16"
     ]
     if DEBUG_MODE:
         return True
