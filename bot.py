@@ -2356,86 +2356,42 @@ def check_ton_payment_endpoint():
 
         logger.info(f"📡 [API] Запрос проверки TON от {user_id}. Сумма: {expected_amount}")
 
-        # Вызываем функцию проверки блокчейна
+        # 1. Проверяем транзакцию в блокчейне
         confirmed, amount_paid, tx_hash = check_ton_transaction(sender_wallet, expected_amount, user_id)
 
         if confirmed:
-            logger.info(f"💰 [API] Платёж подтверждён для {user_id}. Начисляем лотерейный билет...")
+            logger.info(f"💰 [API] Платёж TON подтверждён для {user_id}. Вызываем grant_energy_upgrade...")
 
-            with db.get_cursor() as cursor:
-                # ИСПРАВЛЕНО: ищем строго по user_id
-                cursor.execute("SELECT tickets FROM users WHERE user_id = ?", (user_id,))
-                user_data = cursor.fetchone()
+            # 2. ВЫЗЫВАЕМ ТВОЮ РОДНУЮ ФУНКЦИЮ НАЧИСЛЕНИЯ УЛУЧШЕНИЯ
+            success, message, upgrade_data = grant_energy_upgrade(user_id)
 
-                if user_data:
-                    # Универсальное чтение (для словаря и для кортежа)
-                    if isinstance(user_data, dict):
-                        tickets_raw = user_data.get('tickets', '[]')
-                    else:
-                        tickets_raw = user_data[0] if user_data[0] is not None else '[]'
+            if success:
+                logger.info(f"🎁 [API] Успех! Игроку {user_id} начислено улучшение через TON!")
 
-                    # Парсим JSON-массив билетов игрока
+                # 3. Отправляем красивое уведомление в Telegram (если функция доступна)
+                if 'send_telegram_message' in globals():
                     try:
-                        current_tickets_list = json.loads(tickets_raw) if tickets_raw else []
-                    except Exception:
-                        current_tickets_list = []
+                        # Если upgrade_data пришла как словарь
+                        if isinstance(upgrade_data, dict):
+                            me = upgrade_data.get('max_energy', 'обновлено')
+                            lp_val = upgrade_data.get('lp', 'обновлено')
+                        else:
+                            me = "+50"
+                            lp_val = "+50"
 
-                    # Генерируем 12 скрытых полей для билета (раз в схеме прописано 'revealed': [False]*12)
-                    # Если у тебя есть функция generate_ticket_numbers(), бот её вызовет. Если нет — создаст массив по умолчанию.
-                    ticket_numbers = []
-                    if 'generate_ticket_numbers' in globals():
-                        try:
-                            ticket_numbers = generate_ticket_numbers()
-                        except:
-                            ticket_numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-                    else:
-                        ticket_numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+                        send_telegram_message(user_id,
+                                              f"✨ **Оплата через TON получена!**\n\n"
+                                              f"⚡️ +50 к максимальной энергии\n"
+                                              f"💎 +50 LP на баланс\n\n"
+                                              f"💪 Энергетический усилитель успешно активирован!"
+                                              )
+                    except Exception as tg_err:
+                        logger.error(f"⚠️ Не удалось отправить ТГ-сообщение: {tg_err}")
 
-                    # Структура билета, которую требовала твоя игра!
-                    ticket_data = {
-                        "user_id": user_id,
-                        "number": len(current_tickets_list) + 1,
-                        "numbers": ticket_numbers,
-                        "revealed": [False] * 12,
-                        "reward_claimed": False
-                    }
-
-                    current_tickets_list.append(ticket_data)
-
-                    # Сохраняем обновленный JSON-массив обратно в текстовое поле таблицы users
-                    cursor.execute(
-                        "UPDATE users SET tickets = ? WHERE user_id = ?",
-                        (json.dumps(current_tickets_list, ensure_ascii=False), user_id)
-                    )
-
-                    # Синхронизируем с глобальным банком лотереи проекта
-                    if 'lottery_tickets' in globals():
-                        try:
-                            global lottery_tickets
-                            lottery_tickets.append(ticket_data)
-                        except:
-                            pass
-
-                    if 'lottery_pool' in globals():
-                        try:
-                            global lottery_pool
-                            lottery_pool = round(lottery_pool + 0.40, 2)
-                        except:
-                            pass
-
-                    # Вызываем сохранение состояния лотереи, если функция существует
-                    if 'save_lottery' in globals():
-                        try:
-                            save_lottery()
-                        except Exception as e:
-                            logger.error(f"⚠️ Ошибка при save_lottery: {e}")
-
-                    logger.info(
-                        f"🎁 [API] УСПЕХ! Игроку {user_id} добавлен билет в JSON. Всего билетов: {len(current_tickets_list)}")
-                    return jsonify({'confirmed': True, 'tx_hash': tx_hash})
-                else:
-                    logger.error(f"❌ [API] Игрок {user_id} не найден в таблице users по этому user_id!")
-                    return jsonify({'confirmed': False, 'error': 'User not found'}), 404
+                return jsonify({'confirmed': True, 'tx_hash': tx_hash})
+            else:
+                logger.error(f"❌ [API] Ошибка внутри grant_energy_upgrade: {message}")
+                return jsonify({'confirmed': False, 'error': message}), 400
 
         return jsonify({'confirmed': False})
 
