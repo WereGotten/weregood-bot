@@ -2270,25 +2270,16 @@ def api_ton_create_payment():
     if not is_valid:
         return jsonify({"success": False, "error": "Invalid user_id"}), 400
 
-    if not PROJECT_WALLET_ADDRESS:
-        logger.error("Критическая ошибка: PROJECT_WALLET_ADDRESS не задан в .env")
-        return jsonify({"success": False, "error": "Конфигурация сервера не завершена"}), 500
-
-    payment_amount_ton = 0.1
-    payment_amount_nano = int(payment_amount_ton * 1e9)
-
-    comment = f"WereGood:{user_id}"
-
-    # Генерируем HEX payload для TON Connect 2.0
-    hex_payload = string_to_hex_payload(comment)
+    user_wallet = get_user_ton_wallet(user_id)
+    if not user_wallet:
+        return jsonify({"success": False, "error": "Кошелёк не подключён", "need_wallet": True})
 
     return jsonify({
         "success": True,
-        "wallet_address": PROJECT_WALLET_ADDRESS,
-        "amount": payment_amount_ton,
-        "amount_nano": payment_amount_nano,
-        "payload": hex_payload,
-        "comment": comment
+        "wallet_address": "UQCa7xhdvDiaKuH6SFLgzLQFH8oRwwS2ElN1s283WnGM4fYB",
+        "amount": 0.1,
+        "amount_nano": 100000000,
+        "comment": f"WereGood:{user_id}"
     })
 
 

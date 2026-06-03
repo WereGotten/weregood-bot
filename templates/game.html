@@ -6117,13 +6117,13 @@ async function initTonConnect() {
         }
 
         window.buyWithTon = async function() {
-    console.log('🟢 buyWithTon called');
+    console.log('buyWithTon called');
 
     if (!tonConnectUI) {
-        showToast('🔄 Загрузка платёжной системы...', 'info');
+        showToast('🔄 Система оплаты загружается...', 'info');
         await initTonConnect();
         if (!tonConnectUI) {
-            showToast('❌ Платёжная система не загрузилась. Обновите страницу', 'error');
+            showToast('❌ Система оплаты недоступна', 'error');
             return;
         }
     }
@@ -6134,13 +6134,13 @@ async function initTonConnect() {
             await tonConnectUI.openModal();
         } catch(e) {
             console.error('Modal error:', e);
-            showToast('❌ Не удалось открыть выбор кошелька', 'error');
+            showToast('❌ Не удалось открыть список кошельков', 'error');
         }
         return;
     }
 
     try {
-        showToast('💎 Создание платежа...', 'info');
+        showToast('💎 Создаём платёж...', 'info');
 
         const response = await fetch('/api/ton/create_payment', {
             method: 'POST',
@@ -6149,33 +6149,35 @@ async function initTonConnect() {
         });
 
         const data = await response.json();
-        console.log('📦 Payment data:', data);
+        console.log('Payment data:', data);
 
         if (!data.success) {
             showToast(data.error || 'Ошибка создания платежа', 'error');
             return;
         }
 
+        // Транзакция БЕЗ payload
         const transaction = {
-            validUntil: Math.floor(Date.now() / 1000) + 600,
+            validUntil: Math.floor(Date.now() / 1000) + 300,
             messages: [{
                 address: data.wallet_address,
-                amount: data.amount_nano.toString(),
-                payload: data.payload
+                amount: data.amount_nano.toString()
             }]
         };
 
-        console.log('📤 Sending transaction:', transaction);
+        console.log('Sending transaction:', transaction);
 
         const result = await tonConnectUI.sendTransaction(transaction);
-        console.log('✅ Transaction result:', result);
+        console.log('Transaction result:', result);
 
-        showToast('💰 Платёж отправлен! Проверка...', 'info');
-        startPaymentCheck(0.1);
+        if (result) {
+            showToast('💰 Платёж отправлен! Проверяем...', 'info');
+            startPaymentCheck(0.1);
+        }
 
     } catch(e) {
-        console.error('❌ TON Connect error:', e);
-        showToast('❌ Ошибка: ' + (e.message || 'Не удалось отправить платеж'), 'error');
+        console.error('Payment error:', e);
+        showToast('❌ Ошибка: ' + (e.message || 'Неизвестная ошибка'), 'error');
     }
 };
 
