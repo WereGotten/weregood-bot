@@ -6151,20 +6151,31 @@
             return;
         }
 
-        const transaction = {
-            validUntil: Math.floor(Date.now() / 1000) + 300,
-            messages: [{
-                address: data.wallet_address,
-                amount: data.amount_nano.toString(),
-                // Для новых версий SDK используется свойство payload с текстовым комментарием,
-                // либо обычный comment. Передаем оба варианта для максимальной совместимости,
-                // но в правильном формате, который не рушит внутренний валидатор.
-                payload: data.comment ? btoa(data.comment) : undefined, // если кошелек ждет base64
-                comment: data.comment // стандартный текстовый комментарий
-            }]
-        };
+        // --- БЕЗОПАСНАЯ СБОРКА ТРАНЗАКЦИИ ЧЕРЕЗ HEX ПЕЙЛОАД ---
+        const commentText = String(data.comment || '').trim();
 
-        console.log('Sending transaction:', transaction);
+        function stringToHexPayload(text) {
+            const encoder = new TextEncoder();
+            const bytes = encoder.encode(text);
+            let hex = '00000000'; // 4 нулевых байта — префикс обычного текста в TON
+            for (let i = 0; i < bytes.length; i++) {
+                hex += bytes[i].toString(16).padStart(2, '0');
+            }
+            return hex;
+        }
+
+        const hexPayload = stringToHexPayload(commentText);
+
+        const transaction = {
+    validUntil: Math.floor(Date.now() / 1000) + 300,
+    messages: [{
+        address: data.wallet_address,
+        amount: data.amount_nano.toString(),
+        comment: data.comment
+    }]
+};
+
+        console.log('Sending transaction with Hex Payload:', transaction);
 
         const result = await tonConnectUI.sendTransaction(transaction);
         console.log('Transaction result:', result);
@@ -6174,10 +6185,15 @@
             startPaymentCheck(0.1);
         }
 
+    // --- ВОТ ЭТОТ БЛОК CATCH, КУДА МЫ ВСЁ ВСТАВИЛИ ---
     } catch(e) {
-        console.error('Payment error:', e);
+        console.error('=== ДЕТАЛЬНАЯ ОШИБКА TON CONNECT ===');
+        console.error('Текст ошибки:', e.message);
+        console.error('Имя ошибки:', e.name);
+        console.error('Полный объект ошибки:', JSON.stringify(e, Object.getOwnPropertyNames(e), 2));
+        console.error('======================================');
 
-        // Улучшенная проверка на отмену транзакции пользователем (учитывает разные кошельки)
+        // Улучшенная проверка на отмену пользователем для UX
         const errorText = e.message || String(e);
         if (errorText.includes('User rejects') || errorText.includes('Reject') || errorText.includes('canceled')) {
             showToast('❌ Транзакция отменена пользователем', 'error');
