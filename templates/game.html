@@ -6156,7 +6156,11 @@
             messages: [{
                 address: data.wallet_address,
                 amount: data.amount_nano.toString(),
-                comment: data.comment // Отлично, бэкенд теперь увидит "WereGood:ID"
+                // Для новых версий SDK используется свойство payload с текстовым комментарием,
+                // либо обычный comment. Передаем оба варианта для максимальной совместимости,
+                // но в правильном формате, который не рушит внутренний валидатор.
+                payload: data.comment ? btoa(data.comment) : undefined, // если кошелек ждет base64
+                comment: data.comment // стандартный текстовый комментарий
             }]
         };
 
