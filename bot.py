@@ -2204,10 +2204,14 @@ def health_check():
 
 @app.route('/tonconnect-manifest.json', methods=['GET'])
 def serve_manifest():
-    manifest = {"url": "https://weregood.ru", "name": "WereGood Game", "iconUrl": "https://weregood.ru/static/coin.png",
-                "termsOfUseUrl": "https://weregood.ru/terms", "privacyPolicyUrl": "https://weregood.ru/privacy"}
+    manifest = {
+        "url": "https://weregood.ru",
+        "name": "WereGood Game",
+        "iconUrl": "https://weregood.ru/static/coin.png",
+        "termsOfUseUrl": "https://weregood.ru/terms",
+        "privacyPolicyUrl": "https://weregood.ru/privacy"
+    }
     return jsonify(manifest)
-
 
 @app.route('/terms')
 def terms_page():
