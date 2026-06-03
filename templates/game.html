@@ -6144,7 +6144,7 @@ async function saveWalletToBackend(address) {
     }
 }
 
-// ==================== ИСПРАВЛЕННАЯ ФУНКЦИЯ ОПЛАТЫ TON CONNECT V2 ====================
+// ==================== АБСОЛЮТНО НЕУБИВАЕМАЯ ФУНКЦИЯ ОПЛАТЫ TON CONNECT V2 ====================
 window.buyWithTon = async function() {
     console.log('🚀 Кнопка оплаты нажата. Запуск buyWithTon...');
 
@@ -6169,77 +6169,74 @@ window.buyWithTon = async function() {
         return;
     }
 
+    let paymentData = null;
+
+    // ШАГ 1 и 2: Изолированно запрашиваем данные платежа у бэкенда
     try {
         showToast('💎 Создаём платёж на сервере...', 'info');
 
-        // Шаг 1: Запрашиваем данные платежа у бэкенда
         const response = await fetch('/api/ton/create_payment', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_id: userId })
         });
 
-        const data = await response.json();
-        console.log('📦 Данные платежа от бэкенда:', data);
+        paymentData = await response.json();
+        console.log('📦 Данные платежа от бэкенда:', paymentData);
 
-        if (!data.success) {
-            showToast(data.error || 'Ошибка создания платежа', 'error');
+        if (!paymentData || !paymentData.success) {
+            showToast((paymentData && paymentData.error) || 'Ошибка создания платежа', 'error');
             return;
         }
+    } catch(err) {
+        console.error('❌ Ошибка на шаге создания платежа:', err);
+        showToast('❌ Сервер не ответил на запрос платежа', 'error');
+        return;
+    }
 
-        // Шаг 2: Извлекаем чистый текст комментария из ответа бэкенда
-        const commentText = String(data.comment || '').trim();
+    // ШАГ 3: Собираем транзакцию по стандарту TON Connect v2
+    const commentText = String(paymentData.comment || '').trim();
+    const transaction = {
+        validUntil: Math.floor(Date.now() / 1000) + 300, // 5 минут на оплату
+        messages: [{
+            address: paymentData.wallet_address,
+            amount: paymentData.amount_nano.toString(),
+            comment: commentText
+        }]
+    };
 
-        // Шаг 3: Собираем транзакцию по ОФИЦИАЛЬНОМУ стандарту TON Connect v2
-        // Передаем строку прямо в поле comment. SDK v2 сама соберет идеальный BOC для Tonkeeper.
-        const transaction = {
-            validUntil: Math.floor(Date.now() / 1000) + 300, // 5 минут на оплату
-            messages: [{
-                address: data.wallet_address, // Наш RAW-адрес 0:a7c678... из .env
-                amount: data.amount_nano.toString(), // Сумма в нанотонах (строкой)
-                comment: commentText // Чистый текст! Больше никаких Invalid data format
-            }]
-        };
+    console.log('📡 Отправка транзакции в кошелек SDK v2 (с комментарием):', transaction);
 
-        console.log('📡 Отправка транзакции в кошелек SDK v2 (с текстовым comment):', transaction);
-
-        // Шаг 4: Вызываем окно кошелька (например, Tonkeeper) для подписи
-        let result = null;
-        try {
-            result = await tonConnectUI.sendTransaction(transaction);
-            console.log('🎉 Результат подписания транзакции:', result);
-        } catch (sdkError) {
-            console.error('⚠️ SDK выдало ошибку, но проверяем BOC...', sdkError);
-            // Если в ошибке или в системе есть признаки того, что окно закрылось, но транза ушла — мы подстрахуемся
-        }
-
-        // ЖЕЛЕЗОБЕТОННЫЙ ЗАПУСК ПРОВЕРКИ:
-        // Нам плевать, упало SDK или нет. Если мы дошли досюда — запускаем опрос бэкенда в любом случае!
-        showToast('💰 Платёж обрабатывается! Проверяем зачисление в блокчейне...', 'info');
-        startPaymentCheck(data.amount);
-
+    // ШАГ 4: Вызываем окно кошелька в изолированном блоке.
+    // Нам плевать, какие ошибки выплюнет Nicegram/Tonkeeper — после этого шага проверка ЗАПУСТИТСЯ В ЛЮБОМ СЛУЧАЕ.
+    try {
+        const result = await tonConnectUI.sendTransaction(transaction);
+        console.log('🎉 Успешный результат подписания транзакции SDK:', result);
     } catch(e) {
-        console.error('=== ДЕТАЛЬНАЯ ОШИБКА ОПЛАТЫ TON CONNECT ===');
-        console.error('Текст ошибки:', e.message);
-        console.error('Код/Имя ошибки:', e.name);
-        console.error('Полный JSON ошибки:', JSON.stringify(e, Object.getOwnPropertyNames(e), 2));
-        console.error('============================================');
+        console.warn('⚠️ SDK вызвало исключение при отправке транзакции (нормально для Nicegram):');
+        console.warn('Текст ошибки SDK:', e ? e.message : 'Unknown');
 
-        const errorText = e.message || String(e);
-        if (errorText.includes('User rejects') || errorText.includes('Reject') || errorText.includes('canceled')) {
+        // Если пользователь РЕАЛЬНО сам нажал кнопку «Отмена» внутри кошелька:
+        const errStr = String(e ? e.message : '');
+        if (errStr.includes('User rejects') || errStr.includes('Reject') || errStr.includes('canceled')) {
             showToast('❌ Транзакция отменена пользователем', 'error');
-        } else {
-            showToast('❌ Ошибка платежа. Проверьте консоль.', 'error');
+            return; // Только в случае осознанной отмены прерываем скрипт
         }
     }
+
+    // ЖЕЛЕЗОБЕТОННЫЙ ФИНАЛ: Платёж улетел в сеть, запускаем цикл опроса нашего бэкенда!
+    showToast('💰 Проверяем зачисление транзакции в блокчейне...', 'info');
+    startPaymentCheck(paymentData.amount);
 };
 
 // Цикл проверки транзакции на бэкенде
 function startPaymentCheck(expectedAmount) {
     let attempts = 0;
-    const maxAttempts = 24; // Проверяем 2 минуты (24 * 5 сек)
+    const maxAttempts = 36; // Увеличим до 3 минут (36 * 5 сек), чтобы блокчейн точно успел обновиться
 
     if (paymentCheckInterval) clearInterval(paymentCheckInterval);
+
+    console.log(`⏱️ Запущен цикл startPaymentCheck для суммы ${expectedAmount} TON`);
 
     paymentCheckInterval = setInterval(async () => {
         attempts++;
@@ -6251,20 +6248,23 @@ function startPaymentCheck(expectedAmount) {
             });
 
             const data = await res.json();
+            console.log(`📡 [Попытка ${attempts}/${maxAttempts}] Ответ проверки платежа:`, data);
 
-            if (data.confirmed) {
+            if (data && data.confirmed) {
                 clearInterval(paymentCheckInterval);
                 paymentCheckInterval = null;
                 showToast(`✅ Оплата подтверждена! Награды начислены!`, 'success');
+
+                // Перерисовываем балансы в игре
                 if (typeof updateStatus === 'function') await updateStatus();
                 if (typeof updateUI === 'function') updateUI();
             } else if (attempts >= maxAttempts) {
                 clearInterval(paymentCheckInterval);
                 paymentCheckInterval = null;
-                showToast('⏰ Время ожидания истекло. Если TON списались, напишите в поддержку.', 'info');
+                showToast('⏰ Время ожидания истекло. Если TON списались, награда начислится автоматически в течение пары минут.', 'info');
             }
         } catch(e) {
-            console.error('❌ Ошибка при запросе статуса платежа:', e);
+            console.error('❌ Ошибка при запросе статуса платежа к бэкенду:', e);
         }
     }, 5000);
 }
