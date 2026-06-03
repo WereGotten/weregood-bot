@@ -300,7 +300,6 @@ def string_to_hex_payload(text: str) -> str:
     """Конвертирует строку в HEX формат для TON payload"""
     if not text:
         return "00000000"
-    # 4 нулевых байта префикс для обычного текста в TON
     hex_string = "00000000"
     for char in text:
         hex_string += format(ord(char), '02x')
@@ -351,7 +350,6 @@ def check_ton_transaction(sender_wallet, expected_amount, user_id):
 
 
 def convert_ton_address_to_raw(address: str) -> str:
-    """Конвертирует user-friendly TON адрес (UQ/EQ) в raw формат (0:hex)"""
     if not address:
         return address
     if address.startswith('0:'):
@@ -359,7 +357,6 @@ def convert_ton_address_to_raw(address: str) -> str:
 
     try:
         import base64
-
         if address[0] in ['U', 'E']:
             address_b64 = address[1:]
             decoded = base64.urlsafe_b64decode(address_b64 + '==')
@@ -368,7 +365,6 @@ def convert_ton_address_to_raw(address: str) -> str:
             return f"{workchain}:{hash_part.hex()}"
         else:
             return address
-
     except Exception as e:
         logger.error(f"Ошибка конвертации адреса {address}: {e}")
         return address
@@ -1613,7 +1609,6 @@ UPGRADE_CONFIG = {1: {"base_cost": 1.5, "bonus": 0.01, "name": "Новичок"}
                   2: {"base_cost": 10, "bonus": 0.03, "name": "Профессионал"},
                   3: {"base_cost": 70, "bonus": 0.07, "name": "Мастер"}}
 
-
 def get_upgrade_cost(upgrade_id, current_count):
     config = UPGRADE_CONFIG[upgrade_id]
     base_cost = config["base_cost"]
@@ -2201,8 +2196,8 @@ def health_check():
 
 @app.route('/tonconnect-manifest.json', methods=['GET'])
 def serve_manifest():
-    current_origin = f"{request.scheme}://{request.host}"
-
+    # Принудительно используем HTTPS для корректной работы TON Connect
+    current_origin = "https://weregood.ru"
     manifest = {
         "url": current_origin,
         "name": "WereGood Game",
