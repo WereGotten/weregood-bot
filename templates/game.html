@@ -9,27 +9,30 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
-   <!-- TON Connect - принудительная загрузка -->
-<script>
-    // Сначала создаём заглушку
-    window.TonConnectUI = null;
+   <script>
+    // Инициализируем глобальные объекты
+    window.TON_CONNECT_UI = null;
 
-    // Загружаем скрипт вручную
+    // Загружаем актуальную стабильную версию TON Connect UI
     const tonScript = document.createElement('script');
-    tonScript.src = 'https://cdn.jsdelivr.net/npm/@tonconnect/ui@0.0.38/dist/tonconnect-ui.min.js';
+    tonScript.src = 'https://unpkg.com/@tonconnect/ui@2.0.9/dist/tonconnect-ui.min.js';
+
     tonScript.onload = function() {
-        console.log('✅ TON Connect script loaded');
-        if (window.tonconnect) {
-            window.TonConnectUI = window.tonconnect;
-            console.log('✅ TON Connect UI ready (adapted)');
-        } else if (window.TonConnectUI) {
+        console.log('✅ TON Connect script loaded (v2.0.9)');
+
+        // В современных версиях объект называется TON_CONNECT_UI
+        if (window.TON_CONNECT_UI) {
             console.log('✅ TON Connect UI ready');
+        } else if (window.tonconnect) {
+            window.TON_CONNECT_UI = window.tonconnect;
+            console.log('✅ TON Connect UI ready (legacy fallback)');
         }
         window.dispatchEvent(new Event('tonconnect-ready'));
     };
+
     tonScript.onerror = function() {
-        console.error('❌ Failed to load TON Connect');
-        // Показываем пользователю, что оплата недоступна
+        console.error('❌ Failed to load TON Connect SDK');
+        // Защита: деактивируем кнопку, если скрипт заблокирован сетью
         const btn = document.getElementById('tonDonateBtn');
         if (btn) {
             btn.style.opacity = '0.5';
@@ -37,6 +40,7 @@
             btn.title = 'TON Connect временно недоступен';
         }
     };
+
     document.head.appendChild(tonScript);
 </script>
 
