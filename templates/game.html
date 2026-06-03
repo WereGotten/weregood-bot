@@ -150,8 +150,14 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(8px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .balance-card {
@@ -267,8 +273,14 @@
         }
 
         @keyframes plusFloat {
-            0% { opacity: 1; transform: translate(-50%, -50%) scale(0.6); }
-            100% { opacity: 0; transform: translate(-50%, -100%) scale(1.2); }
+            0% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(0.6);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -100%) scale(1.2);
+            }
         }
 
         .earnings-info {
@@ -1067,9 +1079,15 @@
         }
 
         @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(34,197,94,0.4); }
-            70% { box-shadow: 0 0 0 8px rgba(34,197,94,0); }
-            100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+            0% {
+                box-shadow: 0 0 0 0 rgba(34,197,94,0.4);
+            }
+            70% {
+                box-shadow: 0 0 0 8px rgba(34,197,94,0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(34,197,94,0);
+            }
         }
 
         .draw-timer {
@@ -1387,9 +1405,15 @@
         }
 
         @keyframes legendShine {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
+            0% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+            100% {
+                background-position: 0% 50%;
+            }
         }
 
         .role-badge.legend::before {
@@ -2913,8 +2937,14 @@
         }
 
         @keyframes tutorialFadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .prefix-modal {
@@ -3037,15 +3067,27 @@
         }
 
         @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-5px); }
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-5px);
+            }
         }
 
         @keyframes bounceClick {
-            0% { transform: translateY(0); }
-            30% { transform: translateY(-8px); }
-            70% { transform: translateY(2px); }
-            100% { transform: translateY(0); }
+            0% {
+                transform: translateY(0);
+            }
+            30% {
+                transform: translateY(-8px);
+            }
+            70% {
+                transform: translateY(2px);
+            }
+            100% {
+                transform: translateY(0);
+            }
         }
 
         .daily-icon, .stat-badge {
@@ -3718,9 +3760,18 @@
             color: #FFD700;
         }
 
-        .top-rank.rank-1 { color: #FFD700; text-shadow: 0 0 5px #FFD700; }
-        .top-rank.rank-2 { color: #C0C0C0; }
-        .top-rank.rank-3 { color: #CD7F32; }
+        .top-rank.rank-1 {
+            color: #FFD700;
+            text-shadow: 0 0 5px #FFD700;
+        }
+
+        .top-rank.rank-2 {
+            color: #C0C0C0;
+        }
+
+        .top-rank.rank-3 {
+            color: #CD7F32;
+        }
 
         .top-avatar {
             width: 40px;
@@ -3767,46 +3818,45 @@
         body.achievements-open {
             overflow: hidden;
         }
-        /* Стиль для префикса Легенда в лидерборде */
-.leaderboard-legend-badge {
-    display: inline-block;
-    background: linear-gradient(135deg, #FFD700, #FFA500);
-    border-radius: 20px;
-    padding: 2px 6px;
-    margin-left: 6px;
-    font-size: 0.6rem;
-    font-weight: 600;
-    color: #1a1a2e;
-    box-shadow: 0 0 5px rgba(255,215,0,0.5);
-}
 
-/* Стиль для префикса Основатель в лидерборде */
-.leaderboard-founder-badge {
-    display: inline-block;
-    background: linear-gradient(135deg, #dc2626, #b91c1c);
-    border-radius: 20px;
-    padding: 2px 6px;
-    margin-left: 6px;
-    font-size: 0.6rem;
-    font-weight: 600;
-    color: white;
-    box-shadow: 0 0 5px rgba(220,38,38,0.5);
-}
+        .leaderboard-legend-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            border-radius: 20px;
+            padding: 2px 6px;
+            margin-left: 6px;
+            font-size: 0.6rem;
+            font-weight: 600;
+            color: #1a1a2e;
+            box-shadow: 0 0 5px rgba(255,215,0,0.5);
+        }
 
-/* Стиль для префикса Первооткрыватель в лидерборде */
-.leaderboard-pioneer-badge {
-    display: inline-block;
-    background: linear-gradient(135deg, #00b4d8, #0077b6);
-    border-radius: 20px;
-    padding: 2px 6px;
-    margin-left: 6px;
-    font-size: 0.6rem;
-    font-weight: 600;
-    color: white;
-}
+        .leaderboard-founder-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            border-radius: 20px;
+            padding: 2px 6px;
+            margin-left: 6px;
+            font-size: 0.6rem;
+            font-weight: 600;
+            color: white;
+            box-shadow: 0 0 5px rgba(220,38,38,0.5);
+        }
+
+        .leaderboard-pioneer-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #00b4d8, #0077b6);
+            border-radius: 20px;
+            padding: 2px 6px;
+            margin-left: 6px;
+            font-size: 0.6rem;
+            font-weight: 600;
+            color: white;
+        }
+
         html {
-    scroll-behavior: smooth;
-}
+            scroll-behavior: smooth;
+        }
     </style>
 </head>
 <body>
@@ -3823,7 +3873,7 @@
                 <div class="tasks-icon" onclick="openTasksModal()">
                     <img src="/static/tasks.png" alt="Задания" style="width: 36px; height: 36px;">
                 </div>
-                <div class="daily-icon">
+                <div class="daily-icon" onclick="openDailyModal()">
                     <img src="/static/gift.png" alt="Ежедневные награды" style="width: 36px; height: 36px;">
                 </div>
                 <div class="stat-badge">
@@ -4224,7 +4274,7 @@
                 </button>
                 <button class="withdrawal-btn" onclick="openAchievementsModal()">
                     <img src="/static/trophy.png" alt="Достижения" style="width: 24px; height: 24px;">
-                     Достижения
+                    Достижения
                 </button>
 
                 <div class="referral-section">
@@ -4269,7 +4319,7 @@
                         <img src="/static/settings.png" alt="Настройки" style="width: 28px; height: 28px;">
                         Настройки
                     </div>
-                                        <div class="setting-item">
+                    <div class="setting-item">
                         <span>
                             <img src="/static/notification.png" alt="Уведомления" style="width: 22px; height: 22px;">
                             Уведомления
@@ -4352,13 +4402,22 @@
                 Мои билеты
             </h2>
         </div>
-        <div class="tickets-carousel"><div class="carousel-dots" id="carouselDots"></div><div class="tickets-container" id="ticketsContainer"></div></div>
+        <div class="tickets-carousel">
+            <div class="carousel-dots" id="carouselDots"></div>
+            <div class="tickets-container" id="ticketsContainer"></div>
+        </div>
     </div>
 
     <div id="playerModal" class="player-modal">
         <div class="player-modal-content">
             <div class="player-modal-close" onclick="closePlayerModal()">✕</div>
-            <div class="player-profile-header"><div class="player-avatar" id="playerModalAvatar">👤</div><div class="player-info"><div class="player-username" id="playerModalUsername"></div><div class="player-badges" id="playerModalBadges"></div></div></div>
+            <div class="player-profile-header">
+                <div class="player-avatar" id="playerModalAvatar">👤</div>
+                <div class="player-info">
+                    <div class="player-username" id="playerModalUsername"></div>
+                    <div class="player-badges" id="playerModalBadges"></div>
+                </div>
+            </div>
             <div class="player-stats">
                 <div class="player-stat"><div class="player-stat-value" id="playerModalClicks">0</div><div class="player-stat-label">Кликов</div></div>
                 <div class="player-stat"><div class="player-stat-value" id="playerModalWG">0</div><div class="player-stat-label">WG</div></div>
@@ -4366,7 +4425,10 @@
                 <div class="player-stat"><div class="player-stat-value usdt" id="playerModalUSDT">💰 0</div><div class="player-stat-label">USDT</div></div>
                 <div class="player-stat"><div class="player-stat-value" id="playerModalWins">0</div><div class="player-stat-label">Побед</div></div>
             </div>
-            <div class="player-votes"><button class="vote-btn like-btn" onclick="voteForPlayer('like')">👍 <span id="playerModalLikes">0</span></button><button class="vote-btn dislike-btn" onclick="voteForPlayer('dislike')">👎 <span id="playerModalDislikes">0</span></button></div>
+            <div class="player-votes">
+                <button class="vote-btn like-btn" onclick="voteForPlayer('like')">👍 <span id="playerModalLikes">0</span></button>
+                <button class="vote-btn dislike-btn" onclick="voteForPlayer('dislike')">👎 <span id="playerModalDislikes">0</span></button>
+            </div>
             <div id="voteMessage" class="vote-message"></div>
         </div>
     </div>
@@ -4380,17 +4442,33 @@
     </div>
 
     <div id="leaderboardPage" class="leaderboard-page">
-        <div class="leaderboard-header"><button class="back-btn" onclick="closeLeaderboard()">←</button><h2>🏆 Таблица лидеров</h2></div>
-        <div class="leaderboard-tabs"><button class="leaderboard-tab active" data-period="day">Топ дня</button><button class="leaderboard-tab" data-period="week">Топ недели</button><button class="leaderboard-tab" data-period="month">Топ месяца</button></div>
+        <div class="leaderboard-header">
+            <button class="back-btn" onclick="closeLeaderboard()">←</button>
+            <h2>🏆 Таблица лидеров</h2>
+        </div>
+        <div class="leaderboard-tabs">
+            <button class="leaderboard-tab active" data-period="day">Топ дня</button>
+            <button class="leaderboard-tab" data-period="week">Топ недели</button>
+            <button class="leaderboard-tab" data-period="month">Топ месяца</button>
+        </div>
         <div class="leaderboard-list" id="leaderboardList">Загрузка...</div>
     </div>
 
     <div id="withdrawalModal" class="withdrawal-modal">
         <div class="withdrawal-modal-content">
-            <div class="withdrawal-header"><h2>💸 Вывод USDT</h2><button class="modal-close" onclick="closeWithdrawalModal()">✕</button></div>
-            <div class="withdrawal-tabs"><div class="withdrawal-tab active" data-withdrawal-tab="new">📤 Новый вывод</div><div class="withdrawal-tab" data-withdrawal-tab="history">📋 История</div></div>
+            <div class="withdrawal-header">
+                <h2>💸 Вывод USDT</h2>
+                <button class="modal-close" onclick="closeWithdrawalModal()">✕</button>
+            </div>
+            <div class="withdrawal-tabs">
+                <div class="withdrawal-tab active" data-withdrawal-tab="new">📤 Новый вывод</div>
+                <div class="withdrawal-tab" data-withdrawal-tab="history">📋 История</div>
+            </div>
             <div id="withdrawalNew" class="withdrawal-tab-content active">
-                <div class="withdrawal-balance-card"><div class="withdrawal-balance-label"><img src="/static/usdt_icon.png" alt="Баланс" style="width: 14px; height: 14px;">Ваш баланс USDT</div><div class="withdrawal-balance-value" id="withdrawalBalance">0</div></div>
+                <div class="withdrawal-balance-card">
+                    <div class="withdrawal-balance-label"><img src="/static/usdt_icon.png" alt="Баланс" style="width: 14px; height: 14px;">Ваш баланс USDT</div>
+                    <div class="withdrawal-balance-value" id="withdrawalBalance">0</div>
+                </div>
                 <div class="form-group"><label><img src="/static/withdraw.png" alt="Сумма" style="width: 17px; height: 17px;">Сумма вывода</label><input type="number" class="form-input" id="withdrawalAmount" step="0.01" placeholder="Минимум 2 USDT"></div>
                 <div class="form-group"><label>🏦 Адрес кошелька</label><input type="text" class="form-input" id="withdrawalAddress" placeholder="TRC20 / ERC20 / BEP20 адрес"></div>
                 <div class="form-group"><label>🌐 Сеть</label><select class="form-select" id="withdrawalNetwork"><option value="TRC20">TRC20 (TRON) - рекомендуем</option><option value="ERC20">ERC20 (Ethereum)</option><option value="BEP20">BEP20 (BSC)</option></select></div>
@@ -4400,13 +4478,18 @@
                 </div>
                 <button class="withdrawal-submit-btn" onclick="createWithdrawal()"><img src="/static/withdraw.png" alt="Отправить" style="width: 18px; height: 18px;">Отправить заявку</button>
             </div>
-            <div id="withdrawalHistory" class="withdrawal-tab-content" style="display: none;"><div id="withdrawalHistoryList" style="max-height: 450px; overflow-y: auto;"></div></div>
+            <div id="withdrawalHistory" class="withdrawal-tab-content" style="display: none;">
+                <div id="withdrawalHistoryList" style="max-height: 450px; overflow-y: auto;"></div>
+            </div>
         </div>
     </div>
 
     <div id="dailyModal" class="daily-modal">
         <div class="daily-modal-content">
-            <div class="daily-modal-header"><h2>📅 Ежедневные награды</h2><button class="daily-modal-close" onclick="closeDailyModal()">✕</button></div>
+            <div class="daily-modal-header">
+                <h2>📅 Ежедневные награды</h2>
+                <button class="daily-modal-close" onclick="closeDailyModal()">✕</button>
+            </div>
             <div class="daily-timer" id="dailyTimer">⏳ Следующая награда через: <span id="dailyTimerValue">--:--:--</span></div>
             <div class="daily-rewards-grid" id="dailyRewardsGrid"></div>
             <div class="daily-recover" id="dailyRecover" style="display: none;"><button class="daily-recover-btn" onclick="recoverDailyStreak()">⭐ Восстановить прогресс за 20 Stars</button></div>
@@ -4475,12 +4558,8 @@
                 </div>
             </div>
             <div class="task-detail-buttons">
-                <button class="task-detail-btn task-link-btn" id="taskLinkBtn" onclick="openTaskChannel()">
-                    🔗 Перейти по ссылке
-                </button>
-                <button class="task-detail-btn task-check-btn" id="taskCheckBtn" onclick="checkTaskCompletion()">
-                    ✅ Проверить выполнение
-                </button>
+                <button class="task-detail-btn task-link-btn" id="taskLinkBtn" onclick="openTaskChannel()">🔗 Перейти по ссылке</button>
+                <button class="task-detail-btn task-check-btn" id="taskCheckBtn" onclick="checkTaskCompletion()">✅ Проверить выполнение</button>
             </div>
             <button class="task-detail-close" onclick="closeTaskDetailModal()">Закрыть</button>
         </div>
@@ -4517,7 +4596,7 @@
     </div>
 
     <script>
-                let tg = window.Telegram?.WebApp;
+        let tg = window.Telegram?.WebApp;
         let user = tg?.initDataUnsafe?.user;
         let userId = user ? user.id : 12345678;
         let username = user ? (user.username || user.first_name || 'Игрок') : 'Игрок';
@@ -4560,7 +4639,6 @@
         const LOTTERY_UPDATE_DELAY = 5000;
 
         let dataCache = { status: null, lottery: null, leaderboard: null };
-
         const dailyRewardsList = { 1: { reward: "15 WG" }, 2: { reward: "50 WG" }, 3: { reward: "+10 ⚡" }, 4: { reward: "10 LP" }, 5: { reward: "+15 ⚡" }, 6: { reward: "150 WG" }, 7: { reward: "20 LP" } };
 
         function getAvatarUrl(avatar) {
@@ -4683,26 +4761,26 @@
                 }
             }
             const badgesContainer = document.getElementById('profileBadges');
-if (badgesContainer) {
-    let badgesHtml = '';
-    if (localRole === 'founder') badgesHtml += '<span class="role-badge founder">👑 ОСНОВАТЕЛЬ</span>';
-    else if (localRole === 'legend') badgesHtml += '<span class="role-badge legend"> ЛЕГЕНДА</span>';
-    else if (localRole === 'pioneer') badgesHtml += '<span class="role-badge pioneer">⭐️ ПЕРВООТКРЫВАТЕЛЬ</span>';
-    else badgesHtml += '<span class="role-badge player">🎮 Игрок</span>';
-    badgesContainer.innerHTML = badgesHtml;
-}
+            if (badgesContainer) {
+                let badgesHtml = '';
+                if (localRole === 'founder') badgesHtml += '<span class="role-badge founder">👑 ОСНОВАТЕЛЬ</span>';
+                else if (localRole === 'legend') badgesHtml += '<span class="role-badge legend">ЛЕГЕНДА</span>';
+                else if (localRole === 'pioneer') badgesHtml += '<span class="role-badge pioneer">⭐️ ПЕРВООТКРЫВАТЕЛЬ</span>';
+                else badgesHtml += '<span class="role-badge player">🎮 Игрок</span>';
+                badgesContainer.innerHTML = badgesHtml;
+            }
         }
 
         function updateModalBadges(role) {
-    const badgesContainer = document.getElementById('playerModalBadges');
-    if (!badgesContainer) return;
-    let badgesHtml = '';
-    if (role === 'founder') badgesHtml += '<span class="role-badge founder">👑 ОСНОВАТЕЛЬ</span>';
-    else if (role === 'pioneer') badgesHtml += '<span class="role-badge pioneer">⭐ ПЕРВООТКРЫВАТЕЛЬ</span>';
-    else if (role === 'legend') badgesHtml += '<span class="role-badge legend"> ЛЕГЕНДА</span>';
-    else badgesHtml += '<span class="role-badge player">🎮 Игрок</span>';
-    badgesContainer.innerHTML = badgesHtml;
-}
+            const badgesContainer = document.getElementById('playerModalBadges');
+            if (!badgesContainer) return;
+            let badgesHtml = '';
+            if (role === 'founder') badgesHtml += '<span class="role-badge founder">👑 ОСНОВАТЕЛЬ</span>';
+            else if (role === 'pioneer') badgesHtml += '<span class="role-badge pioneer">⭐ ПЕРВООТКРЫВАТЕЛЬ</span>';
+            else if (role === 'legend') badgesHtml += '<span class="role-badge legend">ЛЕГЕНДА</span>';
+            else badgesHtml += '<span class="role-badge player">🎮 Игрок</span>';
+            badgesContainer.innerHTML = badgesHtml;
+        }
 
         function animateClick() {
             let coin = document.getElementById('coin');
@@ -4878,9 +4956,9 @@ if (badgesContainer) {
                             let avatar = user.avatar && user.avatar !== '👤' ? `<img src="${user.avatar}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;">` : '👤';
                             let userName = user.username;
                             let roleBadge = '';
-if (user.role === 'founder' && !user.hide_from_top) roleBadge = '<span class="leaderboard-founder-badge">👑</span>';
-else if (user.role === 'legend' && !user.hide_from_top) roleBadge = '<span class="leaderboard-legend-badge">👑</span>';
-else if (user.role === 'pioneer' && !user.hide_from_top) roleBadge = '<span class="leaderboard-pioneer-badge">⭐</span>';
+                            if (user.role === 'founder' && !user.hide_from_top) roleBadge = '<span class="leaderboard-founder-badge">👑</span>';
+                            else if (user.role === 'legend' && !user.hide_from_top) roleBadge = '<span class="leaderboard-legend-badge">👑</span>';
+                            else if (user.role === 'pioneer' && !user.hide_from_top) roleBadge = '<span class="leaderboard-pioneer-badge">⭐</span>';
                             html += `<div class="leaderboard-mini-item"><span class="rank">${user.rank}</span><span class="avatar-mini">${avatar}</span><span class="name">${userName}${roleBadge}</span><span class="clicks">${user.total_clicks} кликов</span></div>`;
                         }
                         document.getElementById('leaderboardMini').innerHTML = html || '<div>Нет данных</div>';
@@ -5017,7 +5095,8 @@ else if (user.role === 'pioneer' && !user.hide_from_top) roleBadge = '<span clas
                 else { document.getElementById('shopStars').classList.add('active'); updateStatus(); }
             };
         });
-                document.querySelectorAll('.nav-item').forEach(item => {
+
+        document.querySelectorAll('.nav-item').forEach(item => {
             const oldOnClick = item.onclick;
             item.onclick = (e) => {
                 playNavSound();
@@ -5140,10 +5219,10 @@ else if (user.role === 'pioneer' && !user.hide_from_top) roleBadge = '<span clas
         };
 
         window.openLeaderboard = async function() {
-    document.getElementById('leaderboardPage').classList.add('active');
-    document.getElementById('bottomNav').style.display = 'none';
-    await loadLeaderboardData('day', true);
-};
+            document.getElementById('leaderboardPage').classList.add('active');
+            document.getElementById('bottomNav').style.display = 'none';
+            await loadLeaderboardData('day', true);
+        };
 
         window.closeLeaderboard = function() {
             document.getElementById('leaderboardPage').classList.remove('active');
@@ -5151,37 +5230,35 @@ else if (user.role === 'pioneer' && !user.hide_from_top) roleBadge = '<span clas
         };
 
         async function loadLeaderboardData(period, forceRefresh = false) {
-    let listDiv = document.getElementById('leaderboardList');
-    listDiv.innerHTML = '<div class="loading">Загрузка...</div>';
-    try {
-        let res = await fetch(`/api/leaderboard?limit=50${forceRefresh ? '&force=true' : ''}`);
-        let data = await res.json();
-        let html = '';
-        for (let userItem of data) {
-            let avatar = userItem.avatar && userItem.avatar !== '👤' ? `<img src="${userItem.avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">` : '👤';
-            let userName = userItem.username;
-            let roleBadge = '';
-            if (userItem.role === 'founder' && !userItem.hide_from_top) roleBadge = '<span class="leaderboard-founder-badge">👑</span>';
-            else if (userItem.role === 'legend' && !userItem.hide_from_top) roleBadge = '<span class="leaderboard-legend-badge">👑</span>';
-            else if (userItem.role === 'pioneer' && !userItem.hide_from_top) roleBadge = '<span class="leaderboard-pioneer-badge">⭐</span>';
-
-            let reward = userItem.rank === 1 ? '<span class="reward">🏆 +1000 WG</span>' : (userItem.rank < 4 ? '<span class="reward">🥈 +500 WG</span>' : (userItem.rank <= 10 ? '<span class="reward">🎁 +100 WG</span>' : ''));
-
-            html += `<div class="leaderboard-item" onclick="openPlayerProfile(${userItem.user_id}, ${userItem.rank})">
-                <div class="rank">${userItem.rank}</div>
-                <div class="avatar">${avatar}</div>
-                <div class="info">
-                    <div class="name">${userName}${roleBadge}</div>
-                    <div class="clicks">${userItem.total_clicks} кликов</div>
-                </div>
-                ${reward}
-            </div>`;
+            let listDiv = document.getElementById('leaderboardList');
+            listDiv.innerHTML = '<div class="loading">Загрузка...</div>';
+            try {
+                let res = await fetch(`/api/leaderboard?limit=50${forceRefresh ? '&force=true' : ''}`);
+                let data = await res.json();
+                let html = '';
+                for (let userItem of data) {
+                    let avatar = userItem.avatar && userItem.avatar !== '👤' ? `<img src="${userItem.avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">` : '👤';
+                    let userName = userItem.username;
+                    let roleBadge = '';
+                    if (userItem.role === 'founder' && !userItem.hide_from_top) roleBadge = '<span class="leaderboard-founder-badge">👑</span>';
+                    else if (userItem.role === 'legend' && !userItem.hide_from_top) roleBadge = '<span class="leaderboard-legend-badge">👑</span>';
+                    else if (userItem.role === 'pioneer' && !userItem.hide_from_top) roleBadge = '<span class="leaderboard-pioneer-badge">⭐</span>';
+                    let reward = userItem.rank === 1 ? '<span class="reward">🏆 +1000 WG</span>' : (userItem.rank < 4 ? '<span class="reward">🥈 +500 WG</span>' : (userItem.rank <= 10 ? '<span class="reward">🎁 +100 WG</span>' : ''));
+                    html += `<div class="leaderboard-item" onclick="openPlayerProfile(${userItem.user_id}, ${userItem.rank})">
+                        <div class="rank">${userItem.rank}</div>
+                        <div class="avatar">${avatar}</div>
+                        <div class="info">
+                            <div class="name">${userName}${roleBadge}</div>
+                            <div class="clicks">${userItem.total_clicks} кликов</div>
+                        </div>
+                        ${reward}
+                    </div>`;
+                }
+                listDiv.innerHTML = html || '<div class="empty-state">Нет данных</div>';
+            } catch(e) {
+                listDiv.innerHTML = '<div class="empty-state">Ошибка</div>';
+            }
         }
-        listDiv.innerHTML = html || '<div class="empty-state">Нет данных</div>';
-    } catch(e) {
-        listDiv.innerHTML = '<div class="empty-state">Ошибка</div>';
-    }
-}
 
         document.querySelectorAll('.leaderboard-tab').forEach(tab => {
             tab.onclick = () => {
@@ -5960,80 +6037,93 @@ else if (user.role === 'pioneer' && !user.hide_from_top) roleBadge = '<span clas
 
         let tonConnectUI = null, paymentCheckInterval = null, tonInitAttempts = 0;
 
-        // Функция конвертации строки в HEX
-        function stringToHex(str) {
-            let hex = '';
-            for (let i = 0; i < str.length; i++) {
-                const charCode = str.charCodeAt(i);
-                const hexByte = charCode.toString(16).padStart(2, '0');
-                hex += hexByte;
-            }
-            return hex;
-        }
-
         async function initTonConnect() {
             try {
-                if (typeof window.TonConnectUI === 'undefined') {
+                if (typeof window.TON_CONNECT_UI === 'undefined') {
                     tonInitAttempts++;
                     if (tonInitAttempts < 20) {
                         setTimeout(() => initTonConnect(), 500);
                         return;
                     }
+                    console.error('TON Connect script not loaded');
                     return;
                 }
+
                 const manifestUrl = `${window.location.origin}/tonconnect-manifest.json`;
-                tonConnectUI = new window.TonConnectUI({
+                console.log('🔧 Initializing TON Connect with manifest:', manifestUrl);
+
+                tonConnectUI = new window.TON_CONNECT_UI.TonConnectUI({
                     manifestUrl: manifestUrl,
                     actionsConfiguration: {
-                        twaReturnUrl: window.location.origin + '/'
+                        twaReturnUrl: 'https://t.me/WereGooodbot/WereGood'
                     }
                 });
 
+                await tonConnectUI.connectionRestored;
+
                 if (tonConnectUI.wallet) {
                     const address = tonConnectUI.wallet.account.address;
+                    console.log('💰 Wallet already connected:', address);
                     await saveWalletToBackend(address);
-                    showToast(`✅ Кошелёк подключён: ${address.slice(0, 6)}...${address.slice(-4)}`, 'success');
                     updateTonWalletStatus();
                 }
 
                 tonConnectUI.onStatusChange(async (wallet) => {
+                    console.log('🔔 Wallet status changed:', wallet);
                     if (wallet) {
                         const address = wallet.account.address;
+                        console.log('🔗 Wallet connected:', address);
                         await saveWalletToBackend(address);
-                        showToast(`✅ Кошелёк привязан: ${address.slice(0, 6)}...${address.slice(-4)}`, 'success');
                         updateTonWalletStatus();
+                        showToast(`✅ Кошелёк привязан: ${address.slice(0, 6)}...${address.slice(-4)}`, 'success');
                     } else {
+                        console.log('🔓 Wallet disconnected');
                         await saveWalletToBackend('');
                         updateTonWalletStatus();
                     }
                 });
+
             } catch(e) {
-                console.error('Ошибка инициализации TON Connect:', e);
+                console.error('❌ TON Connect init error:', e);
             }
         }
 
         async function saveWalletToBackend(address) {
+            if (!address) {
+                await fetch('/api/ton/disconnect_wallet', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId })
+                });
+                return;
+            }
+
             try {
-                await fetch('/api/ton/save_wallet', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ user_id: userId, wallet_address: address }) });
-            } catch(e) { console.error('Ошибка сохранения кошелька:', e); }
+                await fetch('/api/ton/save_wallet', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId, wallet_address: address })
+                });
+                console.log('✅ Wallet saved to backend');
+            } catch(e) {
+                console.error('Error saving wallet:', e);
+            }
         }
 
         window.buyWithTon = async function() {
             console.log('buyWithTon called');
 
             if (!tonConnectUI) {
-                showToast('🔄 Система оплаты загружается, подождите...', 'info');
+                showToast('🔄 Система оплаты загружается...', 'info');
                 await initTonConnect();
                 if (!tonConnectUI) {
-                    showToast('❌ Система оплаты недоступна, попробуйте позже', 'error');
+                    showToast('❌ Система оплаты недоступна', 'error');
                     return;
                 }
             }
 
-            const amount = 0.1;
-
             if (!tonConnectUI.wallet) {
-                showToast('🔗 Подключите TON кошелёк для оплаты', 'info');
+                showToast('🔗 Подключите TON кошелёк', 'info');
                 try {
                     await tonConnectUI.openModal();
                 } catch(e) {
@@ -6049,99 +6139,45 @@ else if (user.role === 'pioneer' && !user.hide_from_top) roleBadge = '<span clas
                 const response = await fetch('/api/ton/create_payment', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: userId, amount: amount })
+                    body: JSON.stringify({ user_id: userId, amount: 0.1 })
                 });
 
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-
                 const data = await response.json();
-                console.log('Payment data from API:', data);
+                console.log('Payment data:', data);
 
-                // Проверяем все необходимые поля
                 if (!data.success) {
                     showToast(data.error || 'Ошибка создания платежа', 'error');
                     return;
                 }
 
-                if (!data.wallet_address || typeof data.wallet_address !== 'string' || data.wallet_address.length < 40) {
-                    console.error('Invalid wallet_address:', data.wallet_address);
-                    showToast('❌ Ошибка: неверный адрес кошелька', 'error');
-                    return;
-                }
-
-                if (!data.amount_nano || typeof data.amount_nano !== 'string' || parseInt(data.amount_nano) <= 0) {
-                    console.error('Invalid amount_nano:', data.amount_nano);
-                    showToast('❌ Ошибка: неверная сумма платежа', 'error');
-                    return;
-                }
-
-                if (!data.comment || typeof data.comment !== 'string' || data.comment.length === 0) {
-                    console.error('Invalid comment:', data.comment);
-                    showToast('❌ Ошибка: неверный комментарий платежа', 'error');
-                    return;
-                }
-
-                const amountNanoNum = parseInt(data.amount_nano);
-                const hexPayload = stringToHex(data.comment);
-
-                if (!hexPayload || hexPayload.length === 0) {
-                    console.error('Failed to convert payload to hex:', data.comment);
-                    showToast('❌ Ошибка: не удалось сформировать платеж', 'error');
-                    return;
-                }
-
-                const validUntil = Math.floor(Date.now() / 1000) + 300;
+                // Кодируем комментарий в base64 для безопасной передачи
+                const comment = data.comment;
+                const payload = btoa(comment);
+                console.log('Payload (base64):', payload);
 
                 const transaction = {
-                    validUntil: validUntil,
+                    validUntil: Math.floor(Date.now() / 1000) + 300,
                     messages: [{
                         address: data.wallet_address,
-                        amount: amountNanoNum.toString(),
-                        payload: hexPayload
+                        amount: data.amount_nano.toString(),
+                        payload: payload
                     }]
                 };
 
-                console.log('Sending transaction:', {
-                    address: transaction.messages[0].address,
-                    amount: transaction.messages[0].amount,
-                    payloadLength: transaction.messages[0].payload.length,
-                    validUntil: transaction.validUntil
-                });
+                console.log('Sending transaction:', transaction);
 
-                try {
-                    const result = await tonConnectUI.sendTransaction(transaction);
-                    console.log('Transaction result:', result);
+                const result = await tonConnectUI.sendTransaction(transaction);
+                console.log('Transaction result:', result);
 
-                    if (result && result.boc) {
-                        showToast('💰 Платёж отправлен! Проверяем...', 'success');
-                        startPaymentCheck(amount);
-                    } else {
-                        console.error('No BOC in result:', result);
-                        showToast('⚠️ Платёж отправлен, но требуется проверка', 'info');
-                        startPaymentCheck(amount);
-                    }
-                } catch (txError) {
-                    console.error('Transaction send error:', txError);
-
-                    if (txError.message && (txError.message.includes('cancelled') || txError.message.includes('User rejected'))) {
-                        showToast('❌ Платёж отменён пользователем', 'error');
-                    } else if (txError.message && txError.message.includes('insufficient funds')) {
-                        showToast('❌ Недостаточно средств на кошельке', 'error');
-                    } else if (txError.message && txError.message.includes('timeout')) {
-                        showToast('❌ Время ожидания истекло', 'error');
-                    } else {
-                        showToast('❌ Ошибка: ' + (txError.message || 'Неизвестная ошибка'), 'error');
-                    }
+                if (result) {
+                    showToast('💰 Платёж отправлен! Проверяем...', 'info');
+                    startPaymentCheck(0.1);
                 }
-            } catch(e) {
-                console.error('Payment creation error:', e);
 
-                if (e.message && e.message.includes('HTTP')) {
-                    showToast('❌ Сервер временно недоступен, попробуйте позже', 'error');
-                } else if (e.message && e.message.includes('JSON')) {
-                    showToast('❌ Ошибка формата ответа сервера', 'error');
+            } catch(e) {
+                console.error('Payment error:', e);
+                if (e.message && e.message.includes('cancelled')) {
+                    showToast('❌ Платёж отменён', 'error');
                 } else {
                     showToast('❌ Ошибка: ' + (e.message || 'Неизвестная ошибка'), 'error');
                 }
@@ -6149,21 +6185,27 @@ else if (user.role === 'pioneer' && !user.hide_from_top) roleBadge = '<span clas
         };
 
         function startPaymentCheck(expectedAmount) {
-            let attempts = 0, maxAttempts = 30;
+            let attempts = 0;
+            const maxAttempts = 30;
+
             if (paymentCheckInterval) clearInterval(paymentCheckInterval);
+
             paymentCheckInterval = setInterval(async () => {
                 attempts++;
+
                 try {
                     const res = await fetch('/api/ton/check_payment', {
                         method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ user_id: userId, expected_amount: expectedAmount })
                     });
+
                     const data = await res.json();
+
                     if (data.confirmed) {
                         clearInterval(paymentCheckInterval);
                         paymentCheckInterval = null;
-                        showToast(`✅ Оплата подтверждена! +50 LP и +25 Stars!`, 'success');
+                        showToast(`✅ Оплата подтверждена! +50 LP, +25 Stars и +50 к макс. энергии!`, 'success');
                         await updateStatus();
                         updateUI();
                     } else if (attempts >= maxAttempts) {
@@ -6172,9 +6214,66 @@ else if (user.role === 'pioneer' && !user.hide_from_top) roleBadge = '<span clas
                         showToast('⏰ Время ожидания истекло. Если средства списались, обратитесь в поддержку.', 'info');
                     }
                 } catch(e) {
-                    console.error('Ошибка проверки платежа:', e);
+                    console.error('Error checking payment:', e);
                 }
             }, 5000);
+        }
+
+        async function updateTonWalletStatus() {
+            try {
+                const response = await fetch('/api/ton/get_wallet', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId })
+                });
+                const data = await response.json();
+
+                const walletStatus = document.getElementById('tonWalletStatus');
+                if (walletStatus) {
+                    if (data.success && data.wallet) {
+                        const shortAddress = data.wallet.slice(0, 6) + '...' + data.wallet.slice(-4);
+                        walletStatus.innerText = shortAddress;
+                        walletStatus.style.color = '#22c55e';
+                    } else {
+                        walletStatus.innerText = 'Не подключён';
+                        walletStatus.style.color = '#FFD700';
+                    }
+                }
+            } catch(e) {
+                console.error('Error fetching wallet status:', e);
+            }
+        }
+
+        async function disconnectTonWallet() {
+            if (!confirm('⚠️ Вы уверены, что хотите отвязать TON кошелёк?\n\nПосле отвязки вы не сможете оплачивать через TON Connect, пока не подключите кошелёк снова.')) {
+                return;
+            }
+
+            try {
+                if (tonConnectUI) {
+                    await tonConnectUI.disconnect();
+                }
+
+                const response = await fetch('/api/ton/disconnect_wallet', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast('✅ TON кошелёк отвязан', 'success');
+                    updateTonWalletStatus();
+                    const walletStatus = document.getElementById('tonWalletStatus');
+                    if (walletStatus) walletStatus.innerText = 'Не подключён';
+                } else {
+                    showToast('❌ Ошибка: ' + (data.error || 'Не удалось отвязать кошелёк'), 'error');
+                }
+            } catch(e) {
+                console.error('Disconnect error:', e);
+                showToast('❌ Ошибка при отвязке кошелька', 'error');
+            }
         }
 
         let tutorialSteps = [], currentTutorialStep = 0, tutorialActive = false, tutorialClickListener = null;
@@ -6213,51 +6312,47 @@ else if (user.role === 'pioneer' && !user.hide_from_top) roleBadge = '<span clas
         }
 
         async function showTutorialStep() {
-    if (currentTutorialStep >= tutorialSteps.length) { finishTutorial(); return; }
-    const step = tutorialSteps[currentTutorialStep];
+            if (currentTutorialStep >= tutorialSteps.length) { finishTutorial(); return; }
+            const step = tutorialSteps[currentTutorialStep];
 
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    const targetNav = document.querySelector(`[data-tab="${step.tab}"]`);
-    if (targetNav) targetNav.classList.add('active');
-    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-    const targetPane = document.getElementById(`tab${step.tab.charAt(0).toUpperCase() + step.tab.slice(1)}`);
-    if (targetPane) targetPane.classList.add('active');
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            const targetNav = document.querySelector(`[data-tab="${step.tab}"]`);
+            if (targetNav) targetNav.classList.add('active');
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+            const targetPane = document.getElementById(`tab${step.tab.charAt(0).toUpperCase() + step.tab.slice(1)}`);
+            if (targetPane) targetPane.classList.add('active');
 
-    if (step.subTab) {
-        document.querySelectorAll('.shop-tab').forEach(t => t.classList.remove('active'));
-        if (step.subTab === 'stars') {
-            const starsTab = document.querySelector('[data-shop-tab="stars"]');
-            if (starsTab) starsTab.classList.add('active');
-            const shopNormal = document.getElementById('shopNormal');
-            const shopStars = document.getElementById('shopStars');
-            if (shopNormal) shopNormal.classList.remove('active');
-            if (shopStars) shopStars.classList.add('active');
-        } else {
-            const normalTab = document.querySelector('[data-shop-tab="normal"]');
-            if (normalTab) normalTab.classList.add('active');
-            const shopStars = document.getElementById('shopStars');
-            const shopNormal = document.getElementById('shopNormal');
-            if (shopStars) shopStars.classList.remove('active');
-            if (shopNormal) shopNormal.classList.add('active');
+            if (step.subTab) {
+                document.querySelectorAll('.shop-tab').forEach(t => t.classList.remove('active'));
+                if (step.subTab === 'stars') {
+                    const starsTab = document.querySelector('[data-shop-tab="stars"]');
+                    if (starsTab) starsTab.classList.add('active');
+                    const shopNormal = document.getElementById('shopNormal');
+                    const shopStars = document.getElementById('shopStars');
+                    if (shopNormal) shopNormal.classList.remove('active');
+                    if (shopStars) shopStars.classList.add('active');
+                } else {
+                    const normalTab = document.querySelector('[data-shop-tab="normal"]');
+                    if (normalTab) normalTab.classList.add('active');
+                    const shopStars = document.getElementById('shopStars');
+                    const shopNormal = document.getElementById('shopNormal');
+                    if (shopStars) shopStars.classList.remove('active');
+                    if (shopNormal) shopNormal.classList.add('active');
+                }
+            }
+
+            await new Promise(resolve => setTimeout(resolve, 150));
+
+            let element = getElementByStepId(step.elementId);
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+                await new Promise(resolve => setTimeout(resolve, 600));
+                highlightElement(element, step.text, step.position);
+            } else {
+                console.warn(`Элемент ${step.elementId} не найден`);
+                nextTutorialStep();
+            }
         }
-    }
-
-    await new Promise(resolve => setTimeout(resolve, 150));
-
-    let element = getElementByStepId(step.elementId);
-    if (element) {
-        element.scrollIntoView({
-            behavior: 'smooth',
-            block: 'center',
-            inline: 'center'
-        });
-        await new Promise(resolve => setTimeout(resolve, 600));
-        highlightElement(element, step.text, step.position);
-    } else {
-        console.warn(`Элемент ${step.elementId} не найден`);
-        nextTutorialStep();
-    }
-}
 
         function getElementByStepId(elementId) {
             let element = document.getElementById(elementId);
@@ -6269,42 +6364,42 @@ else if (user.role === 'pioneer' && !user.hide_from_top) roleBadge = '<span clas
         }
 
         function highlightElement(element, text, position = 'bottom') {
-    if (!element) { nextTutorialStep(); return; }
-    const rect = element.getBoundingClientRect();
-    const overlay = document.getElementById('tutorialOverlay');
-    const highlight = document.getElementById('tutorialHighlight');
-    const tooltip = document.getElementById('tutorialTooltip');
-    const tooltipText = document.getElementById('tutorialText');
+            if (!element) { nextTutorialStep(); return; }
+            const rect = element.getBoundingClientRect();
+            const overlay = document.getElementById('tutorialOverlay');
+            const highlight = document.getElementById('tutorialHighlight');
+            const tooltip = document.getElementById('tutorialTooltip');
+            const tooltipText = document.getElementById('tutorialText');
 
-    overlay.style.backgroundColor = 'transparent';
-    overlay.classList.add('active');
+            overlay.style.backgroundColor = 'transparent';
+            overlay.classList.add('active');
 
-    highlight.style.display = 'block';
-    highlight.style.top = rect.top - 8 + 'px';
-    highlight.style.left = rect.left - 8 + 'px';
-    highlight.style.width = rect.width + 16 + 'px';
-    highlight.style.height = rect.height + 16 + 'px';
-    tooltipText.innerHTML = text;
+            highlight.style.display = 'block';
+            highlight.style.top = rect.top - 8 + 'px';
+            highlight.style.left = rect.left - 8 + 'px';
+            highlight.style.width = rect.width + 16 + 'px';
+            highlight.style.height = rect.height + 16 + 'px';
+            tooltipText.innerHTML = text;
 
-    const tooltipHeight = 160;
-    const viewportHeight = window.innerHeight;
-    let tooltipTop, tooltipLeft;
+            const tooltipHeight = 160;
+            const viewportHeight = window.innerHeight;
+            let tooltipTop, tooltipLeft;
 
-    if (position === 'top' || (rect.top < tooltipHeight + 20 && rect.bottom + tooltipHeight > viewportHeight)) {
-        if (rect.top - tooltipHeight > 20) tooltipTop = rect.top - tooltipHeight - 10;
-        else tooltipTop = rect.bottom + 15;
-    } else {
-        if (rect.bottom + tooltipHeight < viewportHeight - 20) tooltipTop = rect.bottom + 15;
-        else tooltipTop = rect.top - tooltipHeight - 10;
-    }
+            if (position === 'top' || (rect.top < tooltipHeight + 20 && rect.bottom + tooltipHeight > viewportHeight)) {
+                if (rect.top - tooltipHeight > 20) tooltipTop = rect.top - tooltipHeight - 10;
+                else tooltipTop = rect.bottom + 15;
+            } else {
+                if (rect.bottom + tooltipHeight < viewportHeight - 20) tooltipTop = rect.bottom + 15;
+                else tooltipTop = rect.top - tooltipHeight - 10;
+            }
 
-    tooltipLeft = Math.max(10, Math.min(rect.left + (rect.width / 2) - 140, window.innerWidth - 290));
-    tooltip.style.top = tooltipTop + 'px';
-    tooltip.style.left = tooltipLeft + 'px';
-    tooltip.style.display = 'block';
+            tooltipLeft = Math.max(10, Math.min(rect.left + (rect.width / 2) - 140, window.innerWidth - 290));
+            tooltip.style.top = tooltipTop + 'px';
+            tooltip.style.left = tooltipLeft + 'px';
+            tooltip.style.display = 'block';
 
-    if (window.tutorialClickListener) document.removeEventListener('click', window.tutorialClickListener);
-}
+            if (window.tutorialClickListener) document.removeEventListener('click', window.tutorialClickListener);
+        }
 
         document.getElementById('tutorialNextBtn').onclick = () => nextTutorialStep();
         document.getElementById('tutorialSkipBtn').onclick = () => skipTutorial();
@@ -6716,7 +6811,7 @@ else if (user.role === 'pioneer' && !user.hide_from_top) roleBadge = '<span clas
                             <div class="top-name">${escapeHtml(player.username)}</div>
                             <div class="top-completed">🏆 ${player.completed} достижений</div>
                         </div>
-                        ${player.role === 'legend' ? '<div class="top-badge"> ЛЕГЕНДА</div>' : ''}
+                        ${player.role === 'legend' ? '<div class="top-badge">ЛЕГЕНДА</div>' : ''}
                     </div>
                 `;
             }
@@ -6749,63 +6844,6 @@ else if (user.role === 'pioneer' && !user.hide_from_top) roleBadge = '<span clas
                 }
             });
         });
-
-        async function disconnectTonWallet() {
-    if (!confirm('⚠️ Вы уверены, что хотите отвязать TON кошелёк?\n\nПосле отвязки вы не сможете оплачивать через TON Connect, пока не подключите кошелёк снова.')) {
-        return;
-    }
-
-    try {
-        if (tonConnectUI) {
-            await tonConnectUI.disconnect();
-        }
-
-        const response = await fetch('/api/ton/disconnect_wallet', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId })
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            showToast('✅ TON кошелёк отвязан', 'success');
-            updateTonWalletStatus();
-            const walletStatus = document.getElementById('tonWalletStatus');
-            if (walletStatus) walletStatus.innerText = 'Не подключён';
-        } else {
-            showToast('❌ Ошибка: ' + (data.error || 'Не удалось отвязать кошелёк'), 'error');
-        }
-    } catch(e) {
-        console.error('Disconnect error:', e);
-        showToast('❌ Ошибка при отвязке кошелька', 'error');
-    }
-}
-
-async function updateTonWalletStatus() {
-    try {
-        const response = await fetch('/api/ton/get_wallet', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId })
-        });
-        const data = await response.json();
-
-        const walletStatus = document.getElementById('tonWalletStatus');
-        if (walletStatus) {
-            if (data.success && data.wallet) {
-                const shortAddress = data.wallet.slice(0, 6) + '...' + data.wallet.slice(-4);
-                walletStatus.innerText = shortAddress;
-                walletStatus.style.color = '#22c55e';
-            } else {
-                walletStatus.innerText = 'Не подключён';
-                walletStatus.style.color = '#FFD700';
-            }
-        }
-    } catch(e) {
-        console.error('Error fetching wallet status:', e);
-    }
-}
 
         document.addEventListener("DOMContentLoaded", () => {
             initTonConnect();
