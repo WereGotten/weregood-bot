@@ -9,7 +9,23 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
-    <script src="https://unpkg.com/@tonconnect/ui@2.0.5/dist/tonconnect-ui.min.js"></script>
+    <!-- TON Connect - правильное подключение -->
+<script type="importmap">
+    {
+        "imports": {
+            "@tonconnect/ui": "https://unpkg.com/@tonconnect/ui@2.0.2/dist/index.js"
+        }
+    }
+</script>
+<script type="module">
+    import { TonConnectUI } from '@tonconnect/ui';
+    window.TonConnectUI = TonConnectUI;
+    window.tonConnectUIReady = true;
+    console.log('✅ TON Connect UI loaded via module');
+
+    // Сигнал о загрузке для остального кода
+    window.dispatchEvent(new Event('tonconnect-loaded'));
+</script>
 
     <style>
         * {
