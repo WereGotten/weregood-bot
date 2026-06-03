@@ -311,13 +311,24 @@ def convert_ton_address_to_raw(address: str) -> str:
         return address
     if address.startswith('0:'):
         return address
+
     try:
         import base64
-        # Убираем первый символ (U или E) и декодируем
-        decoded = base64.urlsafe_b64decode(address[1:] + '=' * (4 - len(address[1:]) % 4))
-        # Берём первые 32 байта как хеш
-        hash_part = decoded[:32]
-        return f"0:{hash_part.hex()}"
+
+        # Для TON адресов формата UQ... или EQ...
+        if address[0] in ['U', 'E']:
+            # Убираем первый символ
+            address_b64 = address[1:]
+            # Декодируем base64 (URL-safe)
+            decoded = base64.urlsafe_b64decode(address_b64 + '==')
+            # Берем первые 32 байта как хеш
+            hash_part = decoded[:32]
+            # Workchain определяется по первому символу (U=0, E=1)
+            workchain = 0 if address[0] == 'U' else 1
+            return f"{workchain}:{hash_part.hex()}"
+        else:
+            return address
+
     except Exception as e:
         logger.error(f"Ошибка конвертации адреса {address}: {e}")
         return address
