@@ -6140,7 +6140,7 @@
         const response = await fetch('/api/ton/create_payment', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId, amount: 0.1 })
+            body: JSON.stringify({ user_id: userId })
         });
 
         const data = await response.json();
@@ -6165,8 +6165,8 @@
         console.log('Transaction result:', result);
 
         if (result) {
-            showToast('💰 Платёж отправлен! Проверяем...', 'info');
-            startPaymentCheck(data.amount);  // ← уникальная сумма!
+            showToast('💰 Платёж отправлен!', 'success');
+            // Бонусы пока выдаём вручную через админку
         }
 
     } catch(e) {

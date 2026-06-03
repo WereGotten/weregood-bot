@@ -2279,7 +2279,6 @@ def api_ton_get_wallet():
 def api_ton_create_payment():
     data = request.json or {}
     user_id = data.get('user_id')
-    amount = data.get('amount', 0.1)
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid:
         return jsonify({"success": False, "error": "Invalid user_id"}), 400
@@ -2288,18 +2287,12 @@ def api_ton_create_payment():
     if not user_wallet:
         return jsonify({"success": False, "error": "Кошелёк не подключён", "need_wallet": True})
 
-    # Уникальная сумма для каждого пользователя
-    unique_amount = 0.1 + (user_id % 10000) / 1000000
-    unique_amount = round(unique_amount, 6)
-
-    # ⚠️ ВАЖНО: возвращаем RAW адрес (0:...), а не UQ...
-    raw_address = "0:9aef185dbc389a2ae1fa4852e0ccb4051fca11c304b6125375b36f375a718ce1f6"
-
+    # Просто 0.1 TON, без уникальной суммы
     return jsonify({
         "success": True,
-        "wallet_address": raw_address,  # ← RAW формат!
-        "amount": unique_amount,
-        "amount_nano": int(unique_amount * 1e9),
+        "wallet_address": "UQCa7xhdvDiaKuH6SFLgzLQFH8oRwwS2ElN1s283WnGM4fYB",
+        "amount": 0.1,
+        "amount_nano": 100000000,
         "comment": f"WereGood:{user_id}"
     })
 
