@@ -6044,16 +6044,13 @@ async function initTonConnect() {
             return;
         }
 
-        // Конвертируем комментарий в HEX формат
-        const comment = data.comment;
-        const payloadHex = "0x" + Array.from(comment).map(c => c.charCodeAt(0).toString(16)).join('');
-
+        // ⚠️ УБИРАЕМ payload (комментарий) совсем
         const transaction = {
             validUntil: Math.floor(Date.now() / 1000) + 300,
             messages: [{
                 address: data.wallet_address,
-                amount: data.amount_nano.toString(),
-                payload: payloadHex  // ← HEX формат!
+                amount: data.amount_nano.toString()
+                // payload НЕ ДОБАВЛЯЕМ!
             }]
         };
 
