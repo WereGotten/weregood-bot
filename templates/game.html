@@ -6155,7 +6155,8 @@
             validUntil: Math.floor(Date.now() / 1000) + 300,
             messages: [{
                 address: data.wallet_address,
-                amount: data.amount_nano.toString()
+                amount: data.amount_nano.toString(),
+                comment: data.comment // Отлично, бэкенд теперь увидит "WereGood:ID"
             }]
         };
 
@@ -6165,13 +6166,20 @@
         console.log('Transaction result:', result);
 
         if (result) {
-            showToast('💰 Платёж отправлен!', 'success');
-            // Бонусы пока выдаём вручную через админку
+            showToast('💰 Платёж отправлен в сеть! Начинаем проверку...', 'info');
+            startPaymentCheck(0.1);
         }
 
     } catch(e) {
         console.error('Payment error:', e);
-        showToast('❌ Ошибка: ' + (e.message || 'Неизвестная ошибка'), 'error');
+
+        // Улучшенная проверка на отмену транзакции пользователем (учитывает разные кошельки)
+        const errorText = e.message || String(e);
+        if (errorText.includes('User rejects') || errorText.includes('Reject') || errorText.includes('canceled')) {
+            showToast('❌ Транзакция отменена пользователем', 'error');
+        } else {
+            showToast('❌ Ошибка: ' + (e.message || 'Неизвестная ошибка'), 'error');
+        }
     }
 };
 
