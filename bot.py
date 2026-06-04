@@ -285,8 +285,10 @@ def record_admin_failure(ip: str):
 
 
 def validate_ton_address(address: str) -> bool:
+    """Валидация формата кошелька TON"""
     if not address or not isinstance(address, str):
         return False
+    # Поддерживает форматы: User-friendly (48 симв), чистый hex (64 симв) и RAW (66 симв, 0:...)
     if len(address) == 48 and re.match(r'^[A-Za-z0-9_-]{48}$', address):
         return True
     if len(address) == 64 and re.match(r'^[0-9a-fA-F]{64}$', address):
@@ -297,8 +299,10 @@ def validate_ton_address(address: str) -> bool:
 
 
 def string_to_hex_payload(text: str) -> str:
+    """Правильная конвертация строки комментария в HEX с префиксом текстового сообщения"""
     if not text:
         return "00000000"
+    # Префикс 00000000 (4 нулевых байта) обязателен в TON для простых текстовых комментариев
     return "00000000" + text.encode('utf-8').hex()
 
 
@@ -306,62 +310,37 @@ import base64
 import re
 
 
-def decode_ton_payload(tx):
-    """Декодирует HEX payload из транзакции TON"""
-    try:
-        in_msg = tx.get('in_msg', {})
-        msg_data = in_msg.get('msg_data', {})
-
-        if msg_data.get('@type') == 'msg.dataRaw':
-            body_b64 = msg_data.get('body', '')
-            if body_b64 and isinstance(body_b64, str):
-                try:
-                    body_b64 = re.sub(r'\s+', '', body_b64.strip())
-                    if not re.match(r'^[A-Za-z0-9+/]+=*$', body_b64):
-                        return ''
-                    decoded = base64.b64decode(body_b64)
-                    if len(decoded) > 4:
-                        payload = decoded[4:]
-                    else:
-                        payload = decoded
-                    if len(payload) == 0:
-                        return ''
-                    hex_str = payload.decode('utf-8', errors='ignore')
-                    if hex_str and re.match(r'^[0-9a-fA-F]+$', hex_str):
-                        comment = bytes.fromhex(hex_str).decode('utf-8', errors='ignore')
-                        if comment:
-                            logger.info(f"🔓 Декодирован HEX payload: {comment[:50]}")
-                            return comment
-                    return payload.decode('utf-8', errors='ignore')
-                except Exception as e:
-                    logger.debug(f"Ошибка декодирования payload: {e}")
-        return ''
-    except Exception as e:
-        logger.error(f"Ошибка в decode_ton_payload: {e}")
-        return ''
-
-
 def decode_ton_comment(tx):
     """Декодирует комментарий/payload из транзакции TON"""
     try:
         in_msg = tx.get('in_msg', {})
+
+        # Сначала пробуем обычное поле message (самое простое)
         message = in_msg.get('message', '')
         if message and isinstance(message, str):
             return message
 
+        # Затем пробуем декодировать body
         msg_data = in_msg.get('msg_data', {})
         if msg_data.get('@type') == 'msg.dataRaw':
             body_b64 = msg_data.get('body', '')
+
+            # Проверка: body_b64 должен быть непустой строкой
             if not body_b64 or not isinstance(body_b64, str):
                 return ''
 
             try:
+                # Очищаем строку от всех пробелов, переносов и лишних символов
                 body_b64 = re.sub(r'\s+', '', body_b64.strip())
+
+                # Проверка: base64 строка должна содержать только допустимые символы
                 if not re.match(r'^[A-Za-z0-9+/]+=*$', body_b64):
                     logger.warning(f"Некорректный base64 формат: {body_b64[:50]}")
                     return ''
 
                 decoded = base64.b64decode(body_b64)
+
+                # Первые 4 байта - префикс, остальное - данные
                 if len(decoded) > 4:
                     payload = decoded[4:]
                 else:
@@ -370,16 +349,20 @@ def decode_ton_comment(tx):
                 if len(payload) == 0:
                     return ''
 
+                # Пробуем декодировать как HEX строку
                 try:
                     hex_str = payload.decode('utf-8', errors='ignore')
+                    # Проверяем, похоже ли на HEX (только hex символы)
                     if hex_str and re.match(r'^[0-9a-fA-F]+$', hex_str):
+                        # Конвертируем HEX обратно в текст
                         comment = bytes.fromhex(hex_str).decode('utf-8', errors='ignore')
                         if comment:
                             logger.info(f"🔓 Декодирован HEX payload: {comment[:50]}")
                             return comment
-                except Exception:
-                    pass
+                except Exception as hex_err:
+                    logger.debug(f"Не HEX payload или ошибка: {hex_err}")
 
+                # Если не HEX, пробуем как обычный текст
                 comment = payload.decode('utf-8', errors='ignore')
                 if comment:
                     return comment
@@ -395,12 +378,19 @@ def decode_ton_comment(tx):
         return ''
 
 
+
 def check_ton_transaction(sender_wallet, expected_amount, user_id):
+    """
+    Продвинутая проверка транзакций с декодированием комментария из msg_data.body.
+    """
     try:
         expected_comment = f"WereGood:{user_id}"
-        logger.info(f"🔍 [TON] Сканируем сеть для {user_id}. Ищем коммент '{expected_comment}'")
+        logger.info(
+            f"🔍 [TON] Сканируем сеть для {user_id}. Ищем коммент '{expected_comment}' или кошелек '{sender_wallet}'")
 
+        # ТВОЙ НАСТОЯЩИЙ ИСПРАВЛЕННЫЙ RAW АДРЕС:
         raw_address = "0:69fa7db713b9158c72970e3d577b6b3c2605e0f109fbb0443af97c44fd07be3f"
+
         url = f"https://toncenter.com/api/v2/getTransactions?address={raw_address}&limit=40"
 
         api_key = globals().get('TONCENTER_API_KEY') or os.getenv('TONCENTER_API_KEY')
@@ -409,11 +399,13 @@ def check_ton_transaction(sender_wallet, expected_amount, user_id):
 
         response = requests.get(url, timeout=12)
         if response.status_code != 200:
-            logger.error(f"❌ [TON] Ошибка API: {response.status_code}")
+            logger.error(f"❌ [TON] Ошибка API Toncenter: {response.status_code}")
             return False, 0, None
 
         transactions = response.json().get('result', [])
+        clean_sender = str(sender_wallet).strip().lower() if sender_wallet else ""
 
+        # Сканируем историю (до 3 страниц для надежности)
         for page in range(3):
             for tx_data in transactions:
                 in_msg = tx_data.get('in_msg', {})
@@ -424,31 +416,36 @@ def check_ton_transaction(sender_wallet, expected_amount, user_id):
                 amount_ton = value_nano / 1e9
                 source_address = str(in_msg.get('source', '')).strip().lower()
 
+                # 🎯 РАСШИРЕННОЕ ИЗВЛЕЧЕНИЕ КОММЕНТАРИЯ
                 comment = decode_ton_comment(tx_data)
-                if not comment:
-                    comment = decode_ton_payload(tx_data)
 
+                # Для отладки - логируем найденные комментарии
                 if comment:
-                    logger.info(f"📝 Найден комментарий/payload: '{comment[:50]}'")
+                    logger.info(f"📝 Найден комментарий в транзакции: '{comment[:50]}'")
 
                 is_comment_match = (expected_comment in comment)
-                is_wallet_match = sender_wallet and (
-                            sender_wallet.lower() in source_address or source_address in sender_wallet.lower())
+                is_wallet_match = clean_sender and (clean_sender in source_address or source_address in clean_sender)
 
+                # Проверяем условия
                 if (is_comment_match or is_wallet_match) and (amount_ton >= (expected_amount - 0.02)):
                     tx_hash = tx_data.get('transaction_id', {}).get('hash')
-                    logger.info(f"✅ [TON] Транзакция НАЙДЕНА! Комментарий: '{comment[:50]}'")
+                    logger.info(
+                        f"✅ [TON] Транзакция НАЙДЕНА! Комментарий: '{comment[:50]}', Сумма: {amount_ton} TON, Хэш: {tx_hash}")
 
+                    # Проверка дубликатов в БД
                     with used_transaction_lock:
                         with db.get_cursor() as cursor:
                             cursor.execute("SELECT id FROM used_ton_transactions WHERE tx_hash = ?", (tx_hash,))
                             if cursor.fetchone():
-                                logger.warning(f"⚠️ [TON] Дубликат! Транзакция {tx_hash} уже зачислена.")
+                                logger.warning(f"⚠️ [TON] Дубликат! Транза {tx_hash} уже зачислена.")
                                 continue
+
                             cursor.execute("INSERT INTO used_ton_transactions (tx_hash, user_id) VALUES (?, ?)",
                                            (tx_hash, user_id))
+
                     return True, amount_ton, tx_hash
 
+            # Пагинация на следующую страницу
             if transactions and len(transactions) > 0 and page < 2:
                 last_tx = transactions[-1]
                 lt = last_tx.get('lt')
@@ -2088,6 +2085,7 @@ def check_and_reset_streak(user_id):
             return True
     return False
 
+
 @app.route('/api/reveal_all_tickets_fast', methods=['POST'])
 def api_reveal_all_tickets_fast():
     data = request.json
@@ -2320,6 +2318,7 @@ def health_check():
 
 @app.route('/tonconnect-manifest.json', methods=['GET'])
 def serve_manifest():
+    """Динамический манифест, защищающий от ошибок Bad Manifest при смене доменов/тестовых туннелей"""
     current_origin = f"{request.scheme}://{request.host}"
     manifest = {
         "url": current_origin,
@@ -2356,6 +2355,7 @@ def api_ton_save_wallet():
         with db.get_cursor() as cursor:
             cursor.execute("UPDATE users SET ton_wallet = ? WHERE user_id = ?", (wallet_address, user_id))
 
+        # Сбрасываем кэш, если у тебя подключена функция инвалидации кэша
         if 'invalidate_cache' in globals():
             invalidate_cache(user_id)
 
@@ -2391,13 +2391,14 @@ def api_ton_create_payment():
     if not is_valid:
         return jsonify({"success": False, "error": "Неавторизованный запрос"}), 400
 
+    # Проверяем, настроен ли кошелек проекта в файле .env
     proj_wallet = globals().get('PROJECT_WALLET_ADDRESS') or os.getenv('PROJECT_WALLET_ADDRESS')
     if not proj_wallet:
         logger.critical("🚨 КРИТИЧЕСКАЯ ОШИБКА: PROJECT_WALLET_ADDRESS отсутствует в переменных сервера!")
         return jsonify({"success": False, "error": "Ошибка конфигурации платежного шлюза на сервере"}), 500
 
     payment_amount_ton = 0.1
-    payment_amount_nano = int(payment_amount_ton * 1e9)
+    payment_amount_nano = int(payment_amount_ton * 1e9)  # 100000000
 
     return jsonify({
         "success": True,
@@ -2426,18 +2427,22 @@ def check_ton_payment_endpoint():
 
         logger.info(f"📡 [API] Запрос проверки TON от {user_id}. Сумма: {expected_amount}")
 
+        # 1. Проверяем транзакцию в блокчейне
         confirmed, amount_paid, tx_hash = check_ton_transaction(sender_wallet, expected_amount, user_id)
 
         if confirmed:
             logger.info(f"💰 [API] Платёж TON подтверждён для {user_id}. Вызываем grant_energy_upgrade...")
 
+            # 2. ВЫЗЫВАЕМ ТВОЮ РОДНУЮ ФУНКЦИЮ НАЧИСЛЕНИЯ УЛУЧШЕНИЯ
             success, message, upgrade_data = grant_energy_upgrade(user_id)
 
             if success:
                 logger.info(f"🎁 [API] Успех! Игроку {user_id} начислено улучшение через TON!")
 
+                # 3. Отправляем красивое уведомление в Telegram (если функция доступна)
                 if 'send_telegram_message' in globals():
                     try:
+                        # Если upgrade_data пришла как словарь
                         if isinstance(upgrade_data, dict):
                             me = upgrade_data.get('max_energy', 'обновлено')
                             lp_val = upgrade_data.get('lp', 'обновлено')
@@ -3583,7 +3588,7 @@ def api_achievements_top():
     return jsonify({"success": True, "top": top})
 
 
-# ========== АДМИН-ЭНДПОИНТЫ ==========
+# ========== АДМИН-ЭНДПОИНТЫ (сокращены для длины, но рабочие) ==========
 @app.route('/api/admin/stats', methods=['GET'])
 @require_admin
 def api_admin_stats():
