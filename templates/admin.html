@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WereGood - Админ-панель</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <script src="/static/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -775,6 +775,11 @@
             background: #FFD700;
             border-radius: 3px;
         }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body>
@@ -862,10 +867,7 @@
                         <div class="stat-card-unit">USDT</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-card-title">
-                            <img src="/static/ticket.png" alt="билет" style="width: 20px; height: 20px; vertical-align: middle; margin-right: 6px;">
-                            ВСЕГО БИЛЕТОВ
-                        </div>
+                        <div class="stat-card-title">🎫 ВСЕГО БИЛЕТОВ</div>
                         <div class="stat-card-value" id="totalTickets">0</div>
                     </div>
                     <div class="stat-card">
@@ -1225,7 +1227,7 @@
                 { title: "🎲 Билетов сейчас", value: data.total_current_tickets },
                 { title: "⭐ Улучшений", value: data.upgrade_1 + data.upgrade_2 + data.upgrade_3 },
                 { title: "⚡ Улучшений энергии", value: data.total_energy_upgrades },
-                { title: "⭐ Задоначено Stars", value: data.total_donated_stars, unit: "Stars" },
+                { title: "⭐ Задоначено Stars", value: data.total_stars, unit: "Stars" },
                 { title: "🎰 Призовой фонд", value: formatNumber(data.lottery_pool), unit: "USDT" }
             ];
             statsGrid.innerHTML = stats.map(s => `
@@ -1238,55 +1240,75 @@
             window.lotteryPool = data.lottery_pool;
         }
 
-        // ========== ГРАФИКИ ==========
+        // ========== ГРАФИКИ (ИСПРАВЛЕННЫЕ) ==========
         async function loadChart() {
             const canvas = document.getElementById('activityChart');
             if (!canvas) return;
-            const data = await apiRequest(`chart_data?period=${currentPeriod}&metric=${currentMetric}`);
-            if (!data.success) return;
-            const titles = {
-                clicks: '📈 Количество кликов по монете',
-                tickets: '🎫 Купленные билеты',
-                users: '👥 Новые игроки',
-                ad_views: '🎬 Просмотры рекламы',
-                stars: '⭐ Донат Telegram Stars',
-                online: '🟢 Онлайн пользователей'
-            };
-            const chartTitle = document.getElementById('chartTitle');
-            if (chartTitle) chartTitle.innerHTML = titles[currentMetric] || '📈 График';
-            if (currentChart) currentChart.destroy();
-            const ctx = canvas.getContext('2d');
-            currentChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: data.labels,
-                    datasets: [{
-                        label: titles[currentMetric] || currentMetric,
-                        data: data.data,
-                        borderColor: '#FFD700',
-                        backgroundColor: 'rgba(255,215,0,0.1)',
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.3,
-                        pointBackgroundColor: '#FFD700',
-                        pointBorderColor: '#fff',
-                        pointRadius: 4,
-                        pointHoverRadius: 6
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: {
-                        legend: { labels: { color: '#fff' } },
-                        tooltip: { backgroundColor: '#1a1a2e', titleColor: '#FFD700', bodyColor: '#fff' }
-                    },
-                    scales: {
-                        y: { beginAtZero: true, ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.1)' } },
-                        x: { ticks: { color: '#fff', maxRotation: 45 }, grid: { color: 'rgba(255,255,255,0.1)' } }
-                    }
+
+            try {
+                const data = await apiRequest(`chart_data?period=${currentPeriod}&metric=${currentMetric}`);
+
+                if (!data.success || !data.labels || !data.data) {
+                    console.error('Chart data error:', data);
+                    return;
                 }
-            });
+
+                const titles = {
+                    clicks: '📈 Количество кликов по монете',
+                    tickets: '🎫 Купленные билеты',
+                    users: '👥 Новые игроки',
+                    ad_views: '🎬 Просмотры рекламы',
+                    stars: '⭐ Донат Telegram Stars',
+                    online: '🟢 Онлайн пользователей'
+                };
+
+                const chartTitle = document.getElementById('chartTitle');
+                if (chartTitle) chartTitle.innerHTML = titles[currentMetric] || '📈 График';
+
+                if (currentChart) currentChart.destroy();
+
+                const ctx = canvas.getContext('2d');
+                currentChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.labels,
+                        datasets: [{
+                            label: titles[currentMetric] || currentMetric,
+                            data: data.data,
+                            borderColor: '#FFD700',
+                            backgroundColor: 'rgba(255,215,0,0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.3,
+                            pointBackgroundColor: '#FFD700',
+                            pointBorderColor: '#fff',
+                            pointRadius: 3,
+                            pointHoverRadius: 5
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: { labels: { color: '#fff', font: { size: 10 } } },
+                            tooltip: { backgroundColor: '#1a1a2e', titleColor: '#FFD700', bodyColor: '#fff' }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: { color: '#fff', stepSize: Math.max(1, Math.ceil(Math.max(...data.data) / 5)) },
+                                grid: { color: 'rgba(255,255,255,0.1)' }
+                            },
+                            x: {
+                                ticks: { color: '#fff', maxRotation: 45, autoSkip: true, maxTicksLimit: 12 },
+                                grid: { color: 'rgba(255,255,255,0.1)' }
+                            }
+                        }
+                    }
+                });
+            } catch(e) {
+                console.error('Chart load error:', e);
+            }
         }
 
         // ========== ЛОТЕРЕЯ ==========
@@ -1367,7 +1389,7 @@
                     <div class="withdrawal-card-header">
                         <div>
                             <span class="withdrawal-amount">💰 ${w.amount} USDT</span>
-                            <span class="withdrawal-user">| 👤 ${w.username} (ID: ${w.user_id})</span>
+                            <span class="withdrawal-user">| 👤 ${escapeHtml(w.username)} (ID: ${w.user_id})</span>
                         </div>
                         <div>
                             ${w.status === 'pending' ? '<span class="status-pending">⏳ Ожидание</span>' :
@@ -1403,7 +1425,7 @@
                               withdrawal.status === 'completed' ? '<span class="status-completed">✅ Выполнено</span>' :
                               '<span class="status-rejected">❌ Отклонено</span>'}
                         </div>
-                        <div style="margin-bottom: 8px;">👤 Игрок: <strong>${withdrawal.username}</strong> (ID: ${withdrawal.user_id})</div>
+                        <div style="margin-bottom: 8px;">👤 Игрок: <strong>${escapeHtml(withdrawal.username)}</strong> (ID: ${withdrawal.user_id})</div>
                         <div style="margin-bottom: 8px;">🌐 Сеть: <strong>${withdrawal.network}</strong></div>
                         <div style="margin-bottom: 8px;">📅 Создана: ${withdrawal.created_at}</div>
                         ${withdrawal.processed_at ? `<div>✅ Обработана: ${withdrawal.processed_at}</div>` : ''}
@@ -1413,7 +1435,7 @@
                         <div style="font-family: monospace; word-break: break-all; background: rgba(0,0,0,0.3); padding: 12px; border-radius: 12px; font-size: 0.75rem;">
                             ${withdrawal.address}
                         </div>
-                        <button class="copy-address-btn" onclick="copyToClipboard('${withdrawal.address}')" style="margin-top: 8px;">📋 Копировать адрес</button>
+                        <button class="copy-address-btn" onclick="copyToClipboard('${withdrawal.address.replace(/'/g, "\\'")}')" style="margin-top: 8px;">📋 Копировать адрес</button>
                     </div>
                     ${withdrawal.status === 'pending' ? `
                         <div style="display: flex; gap: 12px; justify-content: center;">
@@ -1493,7 +1515,7 @@
                         <div class="task-detail-item">⏱️ Дней: ${task.days_remaining}</div>
                     </div>
                     <div class="task-actions">
-                        <button class="btn-sm" onclick="editTask(${JSON.stringify(task).replace(/"/g, '&quot;')})">✏️ Редактировать</button>
+                        <button class="btn-sm" onclick='editTask(${JSON.stringify(task).replace(/'/g, "&#39;")})'>✏️ Редактировать</button>
                         <button class="btn-sm btn-danger" onclick="deleteTask(${task.id})">🗑️ Удалить</button>
                     </div>
                 </div>
@@ -1621,7 +1643,7 @@
                 const promoUrl = `https://t.me/WereGooodbot/WereGood?startapp=claim_${p.code}`;
                 return `
                     <tr>
-                        <td><code class="promo-code">${p.code}</code><span class="password-badge">${p.has_password ? '🔒 Пароль' : '🔓 Без пароля'}</span></td>
+                        <td><code class="promo-code">${escapeHtml(p.code)}</code><span class="password-badge">${p.has_password ? '🔒 Пароль' : '🔓 Без пароля'}</span></td>
                         <td class="${rewardClass}">${rewardIcon} ${p.reward_amount} ${p.reward_type.toUpperCase()}</td>
                         <td>${p.used_count}/${p.max_uses} (${usedPercent}%)</td>
                         <td>${p.max_uses}</td>
@@ -1632,7 +1654,7 @@
                             <br>
                             <span class="promo-link" onclick="copyToClipboard('${promoUrl}')">🔗 Скопировать ссылку</span>
                         </td>
-                        <td><button class="btn-sm" onclick="deletePromoCode(${p.id}, '${p.code}')">🗑️ Удалить</button></td>
+                        <td><button class="btn-sm" onclick="deletePromoCode(${p.id}, '${escapeHtml(p.code)}')">🗑️ Удалить</button></td>
                     </tr>
                 `;
             }).join('');
@@ -1660,7 +1682,7 @@
                 <div style="margin-bottom: 20px;">
                     <div style="background: rgba(255,215,0,0.1); border-radius: 16px; padding: 16px; margin-bottom: 16px;">
                         <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
-                            <span style="font-size: 1.2rem; font-weight: 700; color: #FFD700;">🎫 ${promo.code}</span>
+                            <span style="font-size: 1.2rem; font-weight: 700; color: #FFD700;">🎫 ${escapeHtml(promo.code)}</span>
                             ${promo.is_active ? '<span class="status-completed">✅ Активен</span>' : '<span class="status-rejected">❌ Неактивен</span>'}
                         </div>
                         <div style="margin-bottom: 8px;">🎁 Награда: <strong class="reward-${promo.reward_type}">${rewardText}</strong></div>
@@ -1777,9 +1799,9 @@
             logsList.innerHTML = data.logs.map(log => `
                 <div class="log-entry">
                     <span class="log-time">[${log.timestamp}]</span>
-                    <span style="color:#FFD700;">${log.action}</span>
-                    <span style="opacity:0.5;"> - ${log.username || 'System'} (ID: ${log.user_id || 0})</span>
-                    ${log.details ? `<span style="opacity:0.3;"> ${log.details}</span>` : ''}
+                    <span style="color:#FFD700;">${escapeHtml(log.action)}</span>
+                    <span style="opacity:0.5;"> - ${escapeHtml(log.username) || 'System'} (ID: ${log.user_id || 0})</span>
+                    ${log.details ? `<span style="opacity:0.3;"> ${escapeHtml(log.details)}</span>` : ''}
                 </div>
             `).join('');
 
@@ -1835,7 +1857,7 @@
             playersList.innerHTML = data.users.map(u => `
                 <tr>
                     <td>${u.user_id}</td>
-                    <td>${u.username}</td>
+                    <td>${escapeHtml(u.username)}</td>
                     <td><span style="color:#FFD700;">${u.role}</span></td>
                     <td><span class="clickable-value" onclick="openEditModal(${u.user_id}, 'wg', ${u.wg})">${formatNumber(u.wg)}</span></td>
                     <td><span class="clickable-value" onclick="openEditModal(${u.user_id}, 'lp', ${u.lp})">${u.lp}</span></td>

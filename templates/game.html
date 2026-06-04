@@ -9,40 +9,35 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
-   <script>
-    // Инициализируем глобальные объекты
-    window.TON_CONNECT_UI = null;
+    <script>
+        window.TON_CONNECT_UI = null;
 
-    // Загружаем актуальную стабильную версию TON Connect UI
-    const tonScript = document.createElement('script');
-    tonScript.src = 'https://unpkg.com/@tonconnect/ui@2.0.9/dist/tonconnect-ui.min.js';
+        const tonScript = document.createElement('script');
+        tonScript.src = 'https://unpkg.com/@tonconnect/ui@2.0.9/dist/tonconnect-ui.min.js';
 
-    tonScript.onload = function() {
-        console.log('✅ TON Connect script loaded (v2.0.9)');
+        tonScript.onload = function() {
+            console.log('✅ TON Connect script loaded (v2.0.9)');
+            if (window.TON_CONNECT_UI) {
+                console.log('✅ TON Connect UI ready');
+            } else if (window.tonconnect) {
+                window.TON_CONNECT_UI = window.tonconnect;
+                console.log('✅ TON Connect UI ready (legacy fallback)');
+            }
+            window.dispatchEvent(new Event('tonconnect-ready'));
+        };
 
-        // В современных версиях объект называется TON_CONNECT_UI
-        if (window.TON_CONNECT_UI) {
-            console.log('✅ TON Connect UI ready');
-        } else if (window.tonconnect) {
-            window.TON_CONNECT_UI = window.tonconnect;
-            console.log('✅ TON Connect UI ready (legacy fallback)');
-        }
-        window.dispatchEvent(new Event('tonconnect-ready'));
-    };
+        tonScript.onerror = function() {
+            console.error('❌ Failed to load TON Connect SDK');
+            const btn = document.getElementById('tonDonateBtn');
+            if (btn) {
+                btn.style.opacity = '0.5';
+                btn.disabled = true;
+                btn.title = 'TON Connect временно недоступен';
+            }
+        };
 
-    tonScript.onerror = function() {
-        console.error('❌ Failed to load TON Connect SDK');
-        // Защита: деактивируем кнопку, если скрипт заблокирован сетью
-        const btn = document.getElementById('tonDonateBtn');
-        if (btn) {
-            btn.style.opacity = '0.5';
-            btn.disabled = true;
-            btn.title = 'TON Connect временно недоступен';
-        }
-    };
-
-    document.head.appendChild(tonScript);
-</script>
+        document.head.appendChild(tonScript);
+    </script>
 
     <style>
         * {
@@ -196,7 +191,7 @@
         .balance-card {
             background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,165,0,0.05));
             border-radius: 20px;
-            padding: 12px 16px;
+            padding: 16px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -229,7 +224,7 @@
         }
 
         .balance-value {
-            font-size: 1.2em;
+            font-size: 1.3em;
             font-weight: 700;
             display: flex;
             align-items: center;
@@ -3903,8 +3898,9 @@
                 <span class="logo-badge">BETA</span>
             </div>
             <div class="user-stats">
+                <!-- ИСПРАВЛЕНО: заменена иконка заданий, убрано слово "Задания" -->
                 <div class="tasks-icon" onclick="openTasksModal()">
-                    <img src="/static/tasks.png" alt="Задания" style="width: 36px; height: 36px;">
+                    <img src="/static/quest.png" alt="Квесты" style="width: 36px; height: 36px;">
                 </div>
                 <div class="daily-icon" onclick="openDailyModal()">
                     <img src="/static/gift.png" alt="Ежедневные награды" style="width: 36px; height: 36px;">
@@ -3922,14 +3918,14 @@
                 <div class="balance-card">
                     <div class="balance-info">
                         <div class="balance-label">
-                            <img src="/static/wallet.png" alt="WG" style="width: 28px; height: 28px;">
+                            <img src="/static/wallet.png" alt="WG" style="width: 24px; height: 24px;">
                             <span>WG Coin</span>
                         </div>
                         <div class="balance-value"><span id="wgBalance">0</span> WG</div>
                     </div>
                     <div class="balance-info secondary">
                         <div class="balance-label">
-                            <img src="/static/diamond.png" alt="LP" style="width: 32px; height: 32px;">
+                            <img src="/static/diamond.png" alt="LP" style="width: 28px; height: 28px;">
                             <span>LP</span>
                         </div>
                         <div class="balance-value"><span id="lpBalance">0</span> LP</div>
@@ -4161,7 +4157,7 @@
                             <img src="/static/star_small.png" alt="Stars" style="width: 16px; height: 16px;">
                             Купить за 25 звёзд
                         </button>
-                        <button class="star-upgrade-btn btn-ton" id="tonDonateBtn" onclick="buyWithTon()">💎 Купить за 0.1 TON</button>
+                        <button class="star-upgrade-btn btn-ton" id="tonDonateBtn" onclick="buyWithTon()">💎 Купить за 0.18 TON</button>
                     </div>
 
                     <div class="info-card">
@@ -4174,13 +4170,14 @@
                         </div>
                     </div>
 
+                    <!-- ИСПРАВЛЕНО: заменена иконка TON в информационной карточке -->
                     <div class="info-card">
                         <div class="info-icon">
-                            <img src="/static/ton_icon.png" alt="TON" style="width: 24px; height: 24px;">
+                            <img src="/static/ton_sticker.png" alt="TON" style="width: 32px; height: 32px;">
                         </div>
                         <div class="info-text">
                             <h4>Как оплатить TON?</h4>
-                            <p>Нажмите "Купить за 0.1 TON" → подключите кошелёк → подтвердите платеж → бонус зачислится автоматически!</p>
+                            <p>Нажмите "Купить за 0.18 TON" → подключите кошелёк → подтвердите платеж → бонус зачислится автоматически!</p>
                         </div>
                     </div>
                 </div>
@@ -4394,12 +4391,14 @@
                         </span>
                         <span id="tonWalletStatus" style="font-size:0.7rem; color:#FFD700;">Не подключён</span>
                     </div>
+                    <!-- ИСПРАВЛЕНО: добавлены стикеры для кнопки отвязки кошелька -->
                     <div class="setting-item">
                         <span>
                             <img src="/static/disconnect.png" alt="Отвязать" style="width: 22px; height: 22px;">
                             Отвязать TON кошелёк
                         </span>
-                        <button class="btn-sm" onclick="disconnectTonWallet()" style="background: rgba(244,67,54,0.2); color: #f44336; border: 1px solid rgba(244,67,54,0.3);">
+                        <button class="btn-sm" onclick="disconnectTonWallet()" style="background: rgba(244,67,54,0.2); color: #f44336; border: 1px solid rgba(244,67,54,0.3); display: flex; align-items: center; gap: 6px;">
+                            <img src="/static/disconnect_icon.png" alt="✕" style="width: 14px; height: 14px;">
                             Отвязать
                         </button>
                     </div>
@@ -4526,7 +4525,8 @@
             <div class="daily-timer" id="dailyTimer">⏳ Следующая награда через: <span id="dailyTimerValue">--:--:--</span></div>
             <div class="daily-rewards-grid" id="dailyRewardsGrid"></div>
             <div class="daily-recover" id="dailyRecover" style="display: none;"><button class="daily-recover-btn" onclick="recoverDailyStreak()">⭐ Восстановить прогресс за 20 Stars</button></div>
-            <button class="daily-claim-btn" id="dailyClaimBtn" onclick="claimDailyReward()">
+            <!-- ИСПРАВЛЕНО: у кнопки ежедневной награды теперь оранжевый фон по умолчанию -->
+            <button class="daily-claim-btn" id="dailyClaimBtn" onclick="claimDailyReward()" style="background: linear-gradient(135deg, #FF8C00, #FF4500);">
                 <img src="/static/calendar.png" alt="Забрать награду" style="width: 34px; height: 34px;">
                 Забрать награду
             </button>
@@ -5797,7 +5797,7 @@
         }
 
         function initSocket() {
-            socket = io({ reconnection: true, reconnectionAttempts: 3, reconnectionDelay: 2000, reconnectionDelayMax: 5000, timeout: 20000, transports: ['websocket'] });
+            socket = io({ reconnection: true, reconnectionAttempts: 5, reconnectionDelay: 2000, reconnectionDelayMax: 5000, timeout: 20000, transports: ['websocket', 'polling'] });
             socket.on('connect', () => { socket.emit('get_draw_status', {}); socket.emit('get_remaining_time', {}); });
             socket.on('connect_error', (error) => console.log('Socket connection error:', error));
             socket.on('disconnect', (reason) => { if (reason === 'io server disconnect') socket.connect(); });
@@ -5808,6 +5808,13 @@
             socket.on('prizes_distributed', (data) => { showToast(data.message, 'success'); stopTimer(); updateStatus(); updateLottery(); loadUserTickets(); });
             socket.on('draw_reset', (data) => { isDrawn = false; winningNumbers = []; updateDrawUI(); showToast(data.message, 'info'); updateLottery(); loadUserTickets(); stopTimer(); });
             socket.on('cell_revealed', (data) => { loadUserTickets(); updateTopPlayers(); });
+            socket.on('ton_payment_success', (data) => {
+                if (data.user_id == userId) {
+                    showToast(`${data.message}\n${data.details}`, 'success');
+                    updateStatus();
+                    updateUI();
+                }
+            });
         }
 
         let adController = null;
@@ -5985,7 +5992,7 @@
                 document.getElementById('dailyTimerValue').innerText = 'Доступно!';
                 if (claimBtn) {
                     claimBtn.classList.remove('disabled');
-                    claimBtn.style.background = 'linear-gradient(135deg, #FFD700, #FFA500)';
+                    claimBtn.style.background = 'linear-gradient(135deg, #FF8C00, #FF4500)';
                     claimBtn.style.opacity = '1';
                 }
                 return;
@@ -5994,7 +6001,7 @@
                 document.getElementById('dailyTimerValue').innerText = 'Доступно!';
                 if (claimBtn) {
                     claimBtn.classList.remove('disabled');
-                    claimBtn.style.background = 'linear-gradient(135deg, #FFD700, #FFA500)';
+                    claimBtn.style.background = 'linear-gradient(135deg, #FF8C00, #FF4500)';
                     claimBtn.style.opacity = '1';
                 }
                 return;
@@ -6008,7 +6015,7 @@
                     document.getElementById('dailyTimerValue').innerText = 'Доступно!';
                     if (claimBtn) {
                         claimBtn.classList.remove('disabled');
-                        claimBtn.style.background = 'linear-gradient(135deg, #FFD700, #FFA500)';
+                        claimBtn.style.background = 'linear-gradient(135deg, #FF8C00, #FF4500)';
                         claimBtn.style.opacity = '1';
                     }
                     loadDailyStatus();
@@ -6066,284 +6073,264 @@
         };
 
         function openDailyModal() { document.getElementById('dailyModal').classList.add('active'); loadDailyStatus(); }
-        function closeDailyModal() { document.getElementById('dailyModal').classList.remove('active'); if (dailyTimerInterval) clearInterval(dailyTimerInterval); }// ==================== TON CONNECT МОДУЛЬ (ПОЛНЫЙ) ====================
-let tonConnectUI = null;
-let tonInitAttempts = 0;
-let paymentCheckInterval = null;
+        function closeDailyModal() { document.getElementById('dailyModal').classList.remove('active'); if (dailyTimerInterval) clearInterval(dailyTimerInterval); }
 
-// Инициализация TON Connect при загрузке страницы
-async function initTonConnect() {
-    try {
-        if (typeof window.TON_CONNECT_UI === 'undefined') {
-            tonInitAttempts++;
-            if (tonInitAttempts < 30) {
-                setTimeout(() => initTonConnect(), 300);
+        // ==================== TON CONNECT МОДУЛЬ ====================
+        let tonConnectUI = null;
+        let tonInitAttempts = 0;
+        let paymentCheckInterval = null;
+
+        async function initTonConnect() {
+            try {
+                if (typeof window.TON_CONNECT_UI === 'undefined') {
+                    tonInitAttempts++;
+                    if (tonInitAttempts < 30) {
+                        setTimeout(() => initTonConnect(), 300);
+                        return;
+                    }
+                    console.error('❌ TON Connect SDK не загрузился по сети');
+                    return;
+                }
+
+                const manifestUrl = `${window.location.origin}/tonconnect-manifest.json`;
+                console.log('🔧 Инициализация TON Connect. Манифест:', manifestUrl);
+
+                tonConnectUI = new window.TON_CONNECT_UI.TonConnectUI({
+                    manifestUrl: manifestUrl,
+                    actionsConfiguration: {
+                        twaReturnUrl: `https://t.me/${window.location.pathname.split('/')[1] || 'WereGooodbot'}`
+                    }
+                });
+
+                await tonConnectUI.connectionRestored;
+
+                if (tonConnectUI.wallet) {
+                    const address = tonConnectUI.wallet.account.address;
+                    console.log('💰 Кошелек уже подключен:', address);
+                    await saveWalletToBackend(address);
+                    updateTonWalletStatus(address);
+                } else {
+                    updateTonWalletStatus(null);
+                }
+
+                tonConnectUI.onStatusChange(async (wallet) => {
+                    console.log('🔔 Статус кошелька изменился:', wallet);
+                    if (wallet) {
+                        const address = wallet.account.address;
+                        await saveWalletToBackend(address);
+                        updateTonWalletStatus(address);
+                        showToast('✅ TON кошелёк успешно привязан!', 'success');
+                    } else {
+                        await saveWalletToBackend('');
+                        updateTonWalletStatus(null);
+                    }
+                });
+
+            } catch(e) {
+                console.error('❌ Критическая ошибка инициализации TON Connect:', e);
+            }
+        }
+
+        async function saveWalletToBackend(address) {
+            const targetUrl = address ? '/api/ton/save_wallet' : '/api/ton/disconnect_wallet';
+            const payload = { user_id: userId };
+            if (address) payload.wallet_address = address;
+
+            try {
+                await fetch(targetUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                console.log(`✅ Статус кошелька успешно синхронизирован с сервером (${address ? 'Привязан' : 'Отвязан'})`);
+            } catch(e) {
+                console.error('❌ Не удалось сохранить кошелек на бэкенд:', e);
+            }
+        }
+
+        window.buyWithTon = async function() {
+            console.log('🚀 Кнопка оплаты нажата. Запуск buyWithTon...');
+
+            if (!tonConnectUI) {
+                showToast('🔄 Система оплаты загружается...', 'info');
+                await initTonConnect();
+                if (!tonConnectUI) {
+                    showToast('❌ Ошибка: Система оплаты недоступна', 'error');
+                    return;
+                }
+            }
+
+            if (!tonConnectUI.wallet) {
+                showToast('🔗 Подключите TON кошелёк для оплаты', 'info');
+                try {
+                    await tonConnectUI.openModal();
+                } catch(e) {
+                    console.error('❌ Ошибка открытия списка кошельков:', e);
+                    showToast('❌ Не удалось открыть список кошельков', 'error');
+                }
                 return;
             }
-            console.error('❌ TON Connect SDK не загрузился по сети');
-            return;
-        }
 
-        const manifestUrl = `${window.location.origin}/tonconnect-manifest.json`;
-        console.log('🔧 Инициализация TON Connect. Манифест:', manifestUrl);
-
-        tonConnectUI = new window.TON_CONNECT_UI.TonConnectUI({
-            manifestUrl: manifestUrl,
-            actionsConfiguration: {
-                // Автоматический возврат пользователя обратно в Telegram после подписи
-                twaReturnUrl: `https://t.me/${window.location.pathname.split('/')[1] || 'WereGooodbot'}`
+            let friendlyAddress = '';
+            try {
+                const currentWallet = tonConnectUI.wallet;
+                if (currentWallet && currentWallet.account) {
+                    const rawAddr = currentWallet.account.address;
+                    if (typeof TONConnectUI !== 'undefined' && typeof TONConnectUI.toUserFriendlyAddress === 'function') {
+                        friendlyAddress = TONConnectUI.toUserFriendlyAddress(rawAddr);
+                    } else if (tonConnectUI && typeof tonConnectUI.toUserFriendlyAddress === 'function') {
+                        friendlyAddress = tonConnectUI.toUserFriendlyAddress(rawAddr);
+                    } else if (window.tonConnectUI && typeof window.tonConnectUI.toUserFriendlyAddress === 'function') {
+                        friendlyAddress = window.tonConnectUI.toUserFriendlyAddress(rawAddr);
+                    } else {
+                        friendlyAddress = rawAddr;
+                    }
+                }
+            } catch (addrErr) {
+                console.error('⚠️ Не удалось отформатировать адрес кошелька:', addrErr);
+                friendlyAddress = tonConnectUI.wallet?.account?.address || '';
             }
-        });
 
-        await tonConnectUI.connectionRestored;
+            console.log(`🎯 Определен адрес плательщика для бэкенда: ${friendlyAddress}`);
 
-        // Если кошелек уже подключен сессией
-        if (tonConnectUI.wallet) {
-            const address = tonConnectUI.wallet.account.address;
-            console.log('💰 Кошелек уже подключен:', address);
-            await saveWalletToBackend(address);
-            updateTonWalletStatus(address);
-        } else {
-            updateTonWalletStatus(null);
-        }
+            let paymentData = null;
 
-        // Слушатель изменения статуса кошелька (подключение/отключение)
-        tonConnectUI.onStatusChange(async (wallet) => {
-            console.log('🔔 Статус кошелька изменился:', wallet);
-            if (wallet) {
-                const address = wallet.account.address;
-                await saveWalletToBackend(address);
-                updateTonWalletStatus(address);
-                showToast('✅ TON кошелёк успешно привязан!', 'success');
+            try {
+                showToast('💎 Создаём платёж на сервере...', 'info');
+
+                const response = await fetch('/api/ton/create_payment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId })
+                });
+
+                paymentData = await response.json();
+                console.log('📦 Данные платежа от бэкенда:', paymentData);
+
+                if (!paymentData || !paymentData.success) {
+                    showToast((paymentData && paymentData.error) || 'Ошибка создания платежа', 'error');
+                    return;
+                }
+            } catch(err) {
+                console.error('❌ Ошибка на шаге создания платежа:', err);
+                showToast('❌ Сервер не ответил на запрос платежа', 'error');
+                return;
+            }
+
+            const commentText = String(paymentData.comment || '').trim();
+            const transaction = {
+                validUntil: Math.floor(Date.now() / 1000) + 300,
+                messages: [{
+                    address: paymentData.wallet_address,
+                    amount: paymentData.amount_nano.toString(),
+                    comment: commentText
+                }]
+            };
+
+            console.log('📡 Отправка транзакции в кошелек SDK v2 (с комментарием):', transaction);
+
+            try {
+                const result = await tonConnectUI.sendTransaction(transaction);
+                console.log('🎉 Успешный результат подписания транзакции SDK:', result);
+            } catch(e) {
+                console.warn('⚠️ SDK вызвало исключение при отправке транзакции (нормально для Nicegram):');
+                console.warn('Текст ошибки SDK:', e ? e.message : 'Unknown');
+
+                const errStr = String(e ? e.message : '');
+                if (errStr.includes('User rejects') || errStr.includes('Reject') || errStr.includes('canceled')) {
+                    showToast('❌ Транзакция отменена пользователем', 'error');
+                    return;
+                }
+            }
+
+            showToast('💰 Проверяем зачисление транзакции в блокчейне...', 'info');
+
+            if (typeof startPaymentCheck === 'function') {
+                startPaymentCheck(paymentData.amount, friendlyAddress);
             } else {
-                await saveWalletToBackend('');
-                updateTonWalletStatus(null);
+                console.error('❌ Функция startPaymentCheck не найдена в глобальной видимости!');
             }
-        });
+        };
 
-    } catch(e) {
-        console.error('❌ Критическая ошибка инициализации TON Connect:', e);
-    }
-}
+        function startPaymentCheck(expectedAmount) {
+            let attempts = 0;
+            const maxAttempts = 36;
+            if (paymentCheckInterval) clearInterval(paymentCheckInterval);
 
-// Отправка адреса кошелька на бэкенд
-async function saveWalletToBackend(address) {
-    const targetUrl = address ? '/api/ton/save_wallet' : '/api/ton/disconnect_wallet';
-    const payload = { user_id: userId };
-    if (address) payload.wallet_address = address;
+            let userWalletAddress = '';
+            if (window.tonConnectUI && window.tonConnectUI.wallet) {
+                userWalletAddress = window.tonConnectUI.wallet.account.address;
+            } else if (tonConnectUI && tonConnectUI.wallet) {
+                userWalletAddress = tonConnectUI.wallet.account.address;
+            }
 
-    try {
-        await fetch(targetUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        console.log(`✅ Статус кошелька успешно синхронизирован с сервером (${address ? 'Привязан' : 'Отвязан'})`);
-    } catch(e) {
-        console.error('❌ Не удалось сохранить кошелек на бэкенд:', e);
-    }
-}
+            console.log(`⏱️ Запущен цикл проверки платежа!`);
+            console.log(`🔍 Ожидаем сумму: ${expectedAmount} TON`);
+            console.log(`🔍 Отправляем на бэк адрес кошелька игрока: ${userWalletAddress || 'НЕ НАЙДЕН (ОШИБКА)'}`);
 
-// ==================== АБСОЛЮТНО НЕУБИВАЕМАЯ ФУНКЦИЯ ОПЛАТЫ TON CONNECT V2 ====================
-window.buyWithTon = async function() {
-    console.log('🚀 Кнопка оплаты нажата. Запуск buyWithTon...');
+            paymentCheckInterval = setInterval(async () => {
+                attempts++;
+                try {
+                    const res = await fetch('/api/ton/check_payment', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            user_id: userId,
+                            expected_amount: expectedAmount,
+                            sender_wallet: userWalletAddress
+                        })
+                    });
 
-    if (!tonConnectUI) {
-        showToast('🔄 Система оплаты загружается...', 'info');
-        await initTonConnect();
-        if (!tonConnectUI) {
-            showToast('❌ Ошибка: Система оплаты недоступна', 'error');
-            return;
+                    const responseData = await res.json();
+                    console.log(`📡 [Попытка ${attempts}/${maxAttempts}] Ответ бэкенда:`, responseData);
+
+                    if (responseData && responseData.confirmed) {
+                        clearInterval(paymentCheckInterval);
+                        paymentCheckInterval = null;
+                        showToast(`✨ Улучшение активировано! +50 к макс. энергии и +50 LP!`, 'success');
+                        if (typeof updateStatus === 'function') await updateStatus();
+                        if (typeof updateUI === 'function') updateUI();
+                    }
+                } catch(e) {
+                    console.error('❌ Ошибка при запросе статуса платежа:', e);
+                }
+            }, 5000);
         }
-    }
 
-    // Если кошелек не подключен, сначала открываем модалку привязки
-    if (!tonConnectUI.wallet) {
-        showToast('🔗 Подключите TON кошелёк для оплаты', 'info');
-        try {
-            await tonConnectUI.openModal();
-        } catch(e) {
-            console.error('❌ Ошибка открытия списка кошельков:', e);
-            showToast('❌ Не удалось открыть список кошельков', 'error');
-        }
-        return;
-    }
+        function updateTonWalletStatus(address) {
+            const walletStatus = document.getElementById('tonWalletStatus');
+            if (!walletStatus) return;
 
-    // ВЫТАСКИВАЕМ АДРЕС ИГРОКА В USER-FRIENDLY ФОРМАТЕ (EQ... / UQ...) СРАЗУ
-    let friendlyAddress = '';
-    try {
-        const currentWallet = tonConnectUI.wallet;
-        if (currentWallet && currentWallet.account) {
-            const rawAddr = currentWallet.account.address; // 0:e2544c88...
-
-            // Пробуем сконвертировать через SDK в красивый формат
-            if (typeof TONConnectUI !== 'undefined' && typeof TONConnectUI.toUserFriendlyAddress === 'function') {
-                friendlyAddress = TONConnectUI.toUserFriendlyAddress(rawAddr);
-            } else if (tonConnectUI && typeof tonConnectUI.toUserFriendlyAddress === 'function') {
-                friendlyAddress = tonConnectUI.toUserFriendlyAddress(rawAddr);
-            } else if (window.tonConnectUI && typeof window.tonConnectUI.toUserFriendlyAddress === 'function') {
-                friendlyAddress = window.tonConnectUI.toUserFriendlyAddress(rawAddr);
+            if (address) {
+                const shortAddress = address.slice(0, 6) + '...' + address.slice(-4);
+                walletStatus.innerText = shortAddress;
+                walletStatus.style.color = '#22c55e';
             } else {
-                // Если функций конвертации нет, оставляем RAW (бэк подстрахован и откусит "0:")
-                friendlyAddress = rawAddr;
+                walletStatus.innerText = 'Не подключён';
+                walletStatus.style.color = '#FFD700';
             }
         }
-    } catch (addrErr) {
-        console.error('⚠️ Не удалось отформатировать адрес кошелька:', addrErr);
-        // Резервный вариант: если упало, попробуем взять хотя бы сырой адрес
-        friendlyAddress = tonConnectUI.wallet?.account?.address || '';
-    }
 
-    console.log(`🎯 Определен адрес плательщика для бэкенда: ${friendlyAddress}`);
+        async function disconnectTonWallet() {
+            if (!confirm('⚠️ Вы уверены, что хотите отвязать TON кошелёк?')) return;
 
-    let paymentData = null;
+            try {
+                if (tonConnectUI) {
+                    await tonConnectUI.disconnect();
+                } else {
+                    await saveWalletToBackend('');
+                    updateTonWalletStatus(null);
+                }
+                showToast('✅ TON кошелёк отвязан', 'success');
+            } catch(e) {
+                console.error('❌ Ошибка при отключении кошелька:', e);
+                showToast('❌ Ошибка при отвязке кошелька', 'error');
+            }
+        }
 
-    // ШАГ 1: Запрашиваем данные платежа у бэкенда
-    try {
-        showToast('💎 Создаём платёж на сервере...', 'info');
-
-        const response = await fetch('/api/ton/create_payment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId })
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => initTonConnect(), 500);
         });
-
-        paymentData = await response.json();
-        console.log('📦 Данные платежа от бэкенда:', paymentData);
-
-        if (!paymentData || !paymentData.success) {
-            showToast((paymentData && paymentData.error) || 'Ошибка создания платежа', 'error');
-            return;
-        }
-    } catch(err) {
-        console.error('❌ Ошибка на шаге создания платежа:', err);
-        showToast('❌ Сервер не ответил на запрос платежа', 'error');
-        return;
-    }
-
-    // ШАГ 2: Собираем структуру транзакции для TON Connect v2
-    const commentText = String(paymentData.comment || '').trim();
-    const transaction = {
-        validUntil: Math.floor(Date.now() / 1000) + 300, // 5 минут на оплату
-        messages: [{
-            address: paymentData.wallet_address,
-            amount: paymentData.amount_nano.toString(),
-            comment: commentText
-        }]
-    };
-
-    console.log('📡 Отправка транзакции в кошелек SDK v2 (с комментарием):', transaction);
-
-    // ШАГ 3: Вызываем окно кошелька
-    try {
-        const result = await tonConnectUI.sendTransaction(transaction);
-        console.log('🎉 Успешный результат подписания транзакции SDK:', result);
-    } catch(e) {
-        console.warn('⚠️ SDK вызвало исключение при отправке транзакции (нормально для Nicegram):');
-        console.warn('Текст ошибки SDK:', e ? e.message : 'Unknown');
-
-        const errStr = String(e ? e.message : '');
-        if (errStr.includes('User rejects') || errStr.includes('Reject') || errStr.includes('canceled')) {
-            showToast('❌ Транзакция отменена пользователем', 'error');
-            return; // Прерываем только если юзер осознанно нажал "Отмена" в самом кошельке
-        }
-    }
-
-    // ЖЕЛЕЗОБЕТОННЫЙ ФИНАЛ: Передаем и сумму, и ТОЧНЫЙ адрес кошелька в цикл опроса
-    showToast('💰 Проверяем зачисление транзакции в блокчейне...', 'info');
-
-    if (typeof startPaymentCheck === 'function') {
-        // Вызываем обновленную функцию проверки, передавая туда адрес плательщика
-        startPaymentCheck(paymentData.amount, friendlyAddress);
-    } else {
-        console.error('❌ Функция startPaymentCheck не найдена в глобальной видимости!');
-    }
-};
-
-// Цикл проверки транзакции на бэкенде
-function startPaymentCheck(expectedAmount) {
-    let attempts = 0;
-    const maxAttempts = 36;
-    if (paymentCheckInterval) clearInterval(paymentCheckInterval);
-
-    // Достаем адрес кошелька, с которого юзер платит
-    let userWalletAddress = '';
-    if (window.tonConnectUI && window.tonConnectUI.wallet) {
-        userWalletAddress = window.tonConnectUI.wallet.account.address;
-    } else if (tonConnectUI && tonConnectUI.wallet) {
-        userWalletAddress = tonConnectUI.wallet.account.address;
-    }
-
-    console.log(`⏱️ Запущен цикл проверки платежа!`);
-    console.log(`🔍 Ожидаем сумму: ${expectedAmount} TON`);
-    console.log(`🔍 Отправляем на бэк адрес кошелька игрока: ${userWalletAddress || 'НЕ НАЙДЕН (ОШИБКА)'}`);
-
-    paymentCheckInterval = setInterval(async () => {
-        attempts++;
-        try {
-            const res = await fetch('/api/ton/check_payment', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    user_id: userId,
-                    expected_amount: expectedAmount,
-                    sender_wallet: userWalletAddress // Передаем адрес, чтобы забить на зашифрованный коммент!
-                })
-            });
-
-            const responseData = await res.json();
-            console.log(`📡 [Попытка ${attempts}/${maxAttempts}] Ответ бэкенда:`, responseData);
-
-            if (responseData && responseData.confirmed) {
-                clearInterval(paymentCheckInterval);
-                paymentCheckInterval = null;
-                alert(`✅ Награда получена! +50 Энергии и +50 LP зачислены!`);
-                if (typeof updateStatus === 'function') await updateStatus();
-                if (typeof updateUI === 'function') updateUI();
-            }
-        } catch(e) {
-            console.error('❌ Ошибка при запросе статуса платежа:', e);
-        }
-    }, 5000);
-}
-
-// Обновление текстового статуса привязанного кошелька в интерфейсе профиля
-function updateTonWalletStatus(address) {
-    const walletStatus = document.getElementById('tonWalletStatus');
-    if (!walletStatus) return;
-
-    if (address) {
-        const shortAddress = address.slice(0, 6) + '...' + address.slice(-4);
-        walletStatus.innerText = shortAddress;
-        walletStatus.style.color = '#22c55e'; // Зеленый
-    } else {
-        walletStatus.innerText = 'Не подключён';
-        walletStatus.style.color = '#FFD700'; // Желтый/Золотой
-    }
-}
-
-// Принудительное отключение кошелька пользователем (Кнопка "Отвязать")
-async function disconnectTonWallet() {
-    if (!confirm('⚠️ Вы уверены, что хотите отвязать TON кошелёк?')) return;
-
-    try {
-        if (tonConnectUI) {
-            await tonConnectUI.disconnect();
-        } else {
-            await saveWalletToBackend('');
-            updateTonWalletStatus(null);
-        }
-        showToast('✅ TON кошелёк отвязан', 'success');
-    } catch(e) {
-        console.error('❌ Ошибка при отключении кошелька:', e);
-        showToast('❌ Ошибка при отвязке кошелька', 'error');
-    }
-}
-
-// Запуск инициализации при загрузке документа
-document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(() => initTonConnect(), 500);
-});
 
         let tutorialSteps = [], currentTutorialStep = 0, tutorialActive = false, tutorialClickListener = null;
         function disableScroll() { document.body.style.overflow = 'hidden'; document.body.style.position = 'fixed'; document.body.style.width = '100%'; }
