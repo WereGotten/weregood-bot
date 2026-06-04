@@ -6235,8 +6235,17 @@ function startPaymentCheck(expectedAmount) {
     const maxAttempts = 36;
     if (paymentCheckInterval) clearInterval(paymentCheckInterval);
 
-    // ПОЛУЧАЕМ АДРЕС КОШЕЛЬКА ЮЗЕРА ДЛЯ БЭКЕНДА
-    const userWalletAddress = tonConnectUI && tonConnectUI.wallet ? tonConnectUI.wallet.account.address : '';
+    // Достаем адрес кошелька, с которого юзер платит
+    let userWalletAddress = '';
+    if (window.tonConnectUI && window.tonConnectUI.wallet) {
+        userWalletAddress = window.tonConnectUI.wallet.account.address;
+    } else if (tonConnectUI && tonConnectUI.wallet) {
+        userWalletAddress = tonConnectUI.wallet.account.address;
+    }
+
+    console.log(`⏱️ Запущен цикл проверки платежа!`);
+    console.log(`🔍 Ожидаем сумму: ${expectedAmount} TON`);
+    console.log(`🔍 Отправляем на бэк адрес кошелька игрока: ${userWalletAddress || 'НЕ НАЙДЕН (ОШИБКА)'}`);
 
     paymentCheckInterval = setInterval(async () => {
         attempts++;
@@ -6247,19 +6256,22 @@ function startPaymentCheck(expectedAmount) {
                 body: JSON.stringify({
                     user_id: userId,
                     expected_amount: expectedAmount,
-                    sender_wallet: userWalletAddress // ВОТ ЭТА СТРОКА КРИТИЧЕСКИ ВАЖНА!
+                    sender_wallet: userWalletAddress // Передаем адрес, чтобы забить на зашифрованный коммент!
                 })
             });
-            const data = await res.json();
-            if (data && data.confirmed) {
+
+            const responseData = await res.json();
+            console.log(`📡 [Попытка ${attempts}/${maxAttempts}] Ответ бэкенда:`, responseData);
+
+            if (responseData && responseData.confirmed) {
                 clearInterval(paymentCheckInterval);
                 paymentCheckInterval = null;
-                showToast(`✅ Оплата подтверждена! Награды начислены!`, 'success');
+                alert(`✅ Награда получена! +50 Энергии и +50 LP зачислены!`);
                 if (typeof updateStatus === 'function') await updateStatus();
                 if (typeof updateUI === 'function') updateUI();
             }
         } catch(e) {
-            console.error('❌ Ошибка проверки:', e);
+            console.error('❌ Ошибка при запросе статуса платежа:', e);
         }
     }, 5000);
 }
