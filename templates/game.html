@@ -194,55 +194,58 @@
         }
 
         .balance-card {
-            background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,165,0,0.05));
-            border-radius: 20px;
-            padding: 12px 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            border: 1px solid rgba(255,215,0,0.15);
-        }
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.08), rgba(255, 165, 0, 0.04));
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg) var(--spacing-xl);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-xl);
+    border: 1px solid var(--border-gold);
+}
 
-        .balance-info {
-            flex: 1;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
+.balance-info {
+    flex: 1;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
 
-        .balance-info.secondary {
-            border-left: 1px solid rgba(255,255,255,0.1);
-        }
+.balance-info.secondary {
+    border-left: 1px solid var(--border);
+}
 
-        .balance-label {
-            font-size: 0.7em;
-            opacity: 0.6;
-            margin-bottom: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            white-space: nowrap;
-        }
+.balance-label {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
 
-        .balance-value {
-            font-size: 1.2em;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 4px;
-        }
+        .balance-label img {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+}
 
-        .balance-value span {
-            background: linear-gradient(135deg, #FFD700, #FFA500);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-        }
+.balance-value {
+    font-size: 1.2rem;
+    font-weight: 700;
+    min-width: 80px;
+    text-align: center;
+}
+
+.balance-value span {
+    background: var(--gold-grad);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
 
         .greeting {
             font-size: 0.85em;
@@ -3903,9 +3906,9 @@
                 <span class="logo-badge">BETA</span>
             </div>
             <div class="user-stats">
-                <div class="tasks-icon" onclick="openTasksModal()">
-                    <img src="/static/tasks.png" alt="Задания" style="width: 36px; height: 36px;">
-                </div>
+<div class="tasks-icon" onclick="openTasksModal()">
+    <span style="font-size: 28px;">🎯</span>
+</div>
                 <div class="daily-icon" onclick="openDailyModal()">
                     <img src="/static/gift.png" alt="Ежедневные награды" style="width: 36px; height: 36px;">
                 </div>
@@ -4174,15 +4177,16 @@
                         </div>
                     </div>
 
-                    <div class="info-card">
-                        <div class="info-icon">
-                            <img src="/static/ton_icon.png" alt="TON" style="width: 24px; height: 24px;">
-                        </div>
-                        <div class="info-text">
-                            <h4>Как оплатить TON?</h4>
-                            <p>Нажмите "Купить за 0.1 TON" → подключите кошелёк → подтвердите платеж → бонус зачислится автоматически!</p>
-                        </div>
-                    </div>
+                    <!-- Стало -->
+<div class="info-card">
+    <div class="info-icon">
+        <span style="font-size: 32px;">💎</span>
+    </div>
+    <div class="info-text">
+        <h4>Как оплатить TON?</h4>
+        <p>Нажмите "Купить за 0.18 TON" → подключите кошелёк → подтвердите платеж → бонус зачислится автоматически!</p>
+    </div>
+</div>
                 </div>
             </div>
 
@@ -4387,22 +4391,23 @@
                         </span>
                         <label class="switch"><input type="checkbox" id="hideFromTopToggle"><span class="slider"></span></label>
                     </div>
-                    <div class="setting-item">
-                        <span>
-                            <img src="/static/ton_icon.png" alt="TON" style="width: 22px; height: 22px;">
-                            TON Кошелёк
-                        </span>
-                        <span id="tonWalletStatus" style="font-size:0.7rem; color:#FFD700;">Не подключён</span>
-                    </div>
-                    <div class="setting-item">
-                        <span>
-                            <img src="/static/disconnect.png" alt="Отвязать" style="width: 22px; height: 22px;">
-                            Отвязать TON кошелёк
-                        </span>
-                        <button class="btn-sm" onclick="disconnectTonWallet()" style="background: rgba(244,67,54,0.2); color: #f44336; border: 1px solid rgba(244,67,54,0.3);">
-                            Отвязать
-                        </button>
-                    </div>
+                    <!-- Стало -->
+<div class="setting-item">
+    <span>
+        <span style="font-size: 20px;">💎</span>
+        TON Кошелёк
+    </span>
+    <span id="tonWalletStatus" style="font-size:0.7rem; color:#FFD700;">Не подключён</span>
+</div>
+<div class="setting-item">
+    <span>
+        <span style="font-size: 20px;">🔗</span>
+        Отвязать TON кошелёк
+    </span>
+    <button class="btn-sm" onclick="disconnectTonWallet()" style="background: rgba(244,67,54,0.2); color: #f44336; border: 1px solid rgba(244,67,54,0.3);">
+        Отвязать
+    </button>
+</div>
                 </div>
             </div>
         </main>
@@ -4552,13 +4557,15 @@
     </div>
 
     <div id="tutorialOverlay" class="tutorial-overlay">
-        <div id="tutorialHighlight" class="tutorial-highlight"></div>
-        <div id="tutorialTooltip" class="tutorial-tooltip">
-            <p id="tutorialText"></p>
-            <button class="tutorial-next" id="tutorialNextBtn">Далее →</button>
-            <button class="tutorial-skip" id="tutorialSkipBtn">Пропустить обучение</button>
+    <div id="tutorialHighlight" class="tutorial-highlight"></div>
+    <div id="tutorialTooltip" class="tutorial-tooltip">
+        <p id="tutorialText"></p>
+        <div style="display: flex; gap: 8px; margin-top: 8px;">
+            <button class="tutorial-next" id="tutorialNextBtn" style="flex: 2;">Далее →</button>
+            <button class="tutorial-skip" id="tutorialSkipBtn" style="flex: 1;">Пропустить</button>
         </div>
     </div>
+</div>
 
     <div id="toast" class="toast"></div>
 
@@ -5101,22 +5108,65 @@
         });
 
         window.buyEnergyUpgrade = async function() {
-            if (localEnergyUpgrades >= 15) { showToast('Вы уже достигли максимума улучшений! (15/15)', 'error'); return; }
-            showToast('💰 Создаём счёт для оплаты...', 'info');
-            try {
-                let res = await fetch('/api/create_stars_invoice', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ user_id: userId, chat_id: chatId }) });
-                let data = await res.json();
-                if (!data.success) { showToast(data.msg || 'Ошибка создания счёта', 'error'); return; }
-                if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openInvoice) {
-                    window.Telegram.WebApp.openInvoice(data.invoice_link, (status) => {
-                        if (status === 'paid') {
-                            showToast('✅ Оплата прошла успешно! Улучшение активируется через несколько секунд...', 'success');
-                            setTimeout(() => { updateStatus(); showToast('✨ Улучшение активировано! +50 к макс. энергии и +50 LP!', 'success'); }, 3000);
-                        } else if (status === 'failed' || status === 'cancelled') showToast('❌ Оплата отменена или не удалась', 'error');
-                    });
-                } else { window.open(data.invoice_link, '_blank'); showToast('🔗 Оплатите по ссылке в новом окне', 'info'); }
-            } catch(e) { console.error('Ошибка при оплате:', e); showToast('Ошибка при создании платежа. Попробуйте позже.', 'error'); }
-        };
+    if (localEnergyUpgrades >= 15) {
+        showToast('Вы уже достигли максимума улучшений! (15/15)', 'error');
+        return;
+    }
+    showToast('💰 Создаём счёт для оплаты...', 'info');
+    try {
+        let res = await fetch('/api/create_stars_invoice', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ user_id: userId, chat_id: chatId })
+        });
+        let data = await res.json();
+        if (!data.success) {
+            showToast(data.msg || 'Ошибка создания счёта', 'error');
+            return;
+        }
+        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openInvoice) {
+            window.Telegram.WebApp.openInvoice(data.invoice_link, async (status) => {
+                if (status === 'paid') {
+                    // КРАСИВОЕ ОПОВЕЩЕНИЕ В СТИЛЕ MINI APP
+                    showToast('✨ Улучшение активировано!', 'success');
+
+                    // Дополнительное красивое уведомление через Telegram WebApp
+                    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.showPopup) {
+                        window.Telegram.WebApp.showPopup({
+                            title: '🎉 Покупка успешна!',
+                            message: '✨ Вы получили +50 к макс. энергии\n💎 +50 LP на баланс',
+                            buttons: [{type: 'ok'}]
+                        });
+                    }
+
+                    setTimeout(() => {
+                        updateStatus();
+                        // Дополнительная анимация для энергии
+                        const energyBar = document.getElementById('energyBar');
+                        if (energyBar) {
+                            energyBar.style.transition = 'width 0.5s ease';
+                        }
+                    }, 500);
+                } else if (status === 'failed' || status === 'cancelled') {
+                    showToast('❌ Оплата отменена или не удалась', 'error');
+                    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.showPopup) {
+                        window.Telegram.WebApp.showPopup({
+                            title: '❌ Ошибка',
+                            message: 'Платеж не был завершен. Попробуйте снова.',
+                            buttons: [{type: 'ok'}]
+                        });
+                    }
+                }
+            });
+        } else {
+            window.open(data.invoice_link, '_blank');
+            showToast('🔗 Оплатите по ссылке в новом окне', 'info');
+        }
+    } catch(e) {
+        console.error('Ошибка при оплате:', e);
+        showToast('Ошибка при создании платежа. Попробуйте позже.', 'error');
+    }
+};
 
         document.querySelectorAll('.shop-tab').forEach(tab => {
             tab.onclick = () => {
@@ -5940,23 +5990,38 @@
         window.addEventListener('beforeunload', async () => { try { await fetch('/api/log_game_exit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: userId }) }); } catch(e) {} });
 
         async function loadDailyStatus() {
-            try {
-                let res = await fetch('/api/daily_status', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({user_id: userId})
-                });
-                dailyData = await res.json();
-                renderDailyGrid();
-                updateDailyTimer();
-                if (dailyData.can_claim || dailyData.current_day === 1) {
-                    setTimeout(() => { openDailyModal(); }, 500);
-                }
-                return dailyData;
-            } catch(e) {
-                console.error('Error loading daily:', e);
+    try {
+        let res = await fetch('/api/daily_status', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({user_id: userId})
+        });
+        dailyData = await res.json();
+        renderDailyGrid();
+        updateDailyTimer();
+
+        // НОВЫЙ КОД: делаем кнопку активной, если можно забрать награду
+        const claimBtn = document.getElementById('dailyClaimBtn');
+        if (claimBtn) {
+            if (dailyData.can_claim || dailyData.current_day === 1) {
+                claimBtn.classList.remove('disabled');
+                claimBtn.style.background = 'linear-gradient(135deg, #FFD700, #FFA500)';
+                claimBtn.style.opacity = '1';
+            } else {
+                claimBtn.classList.add('disabled');
+                claimBtn.style.background = '#555';
+                claimBtn.style.opacity = '0.6';
             }
         }
+
+        if (dailyData.can_claim || dailyData.current_day === 1) {
+            setTimeout(() => { openDailyModal(); }, 500);
+        }
+        return dailyData;
+    } catch(e) {
+        console.error('Error loading daily:', e);
+    }
+}
 
         function renderDailyGrid() {
             const container = document.getElementById('dailyRewardsGrid');
@@ -6345,181 +6410,224 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => initTonConnect(), 500);
 });
 
-        let tutorialSteps = [], currentTutorialStep = 0, tutorialActive = false, tutorialClickListener = null;
-        function disableScroll() { document.body.style.overflow = 'hidden'; document.body.style.position = 'fixed'; document.body.style.width = '100%'; }
-        function enableScroll() { document.body.style.overflow = ''; document.body.style.position = ''; document.body.style.width = ''; }
+        let tutorialSteps = [], currentTutorialStep = 0, tutorialActive = false;
 
-        async function checkAndStartTutorial() {
-            try {
-                let dailyRes = await fetch('/api/daily_status', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: userId}) });
-                let dailyDataCheck = await dailyRes.json();
-                if (dailyDataCheck.can_claim || dailyDataCheck.current_day === 1) return;
-                let tutorialRes = await fetch('/api/get_tutorial_status', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: userId}) });
-                let tutorialData = await tutorialRes.json();
-                if (!tutorialData.completed) setTimeout(() => startTutorial(), 1000);
-            } catch(e) { console.error('Tutorial check error:', e); }
+function disableScroll() {
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+}
+
+function enableScroll() {
+    document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.body.style.width = '';
+}
+
+async function checkAndStartTutorial() {
+    try {
+        let dailyRes = await fetch('/api/daily_status', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({user_id: userId})
+        });
+        let dailyDataCheck = await dailyRes.json();
+        // Не показываем обучение, если есть ежедневная награда
+        if (dailyDataCheck.can_claim || dailyDataCheck.current_day === 1) return;
+
+        let tutorialRes = await fetch('/api/get_tutorial_status', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({user_id: userId})
+        });
+        let tutorialData = await tutorialRes.json();
+        if (!tutorialData.completed) {
+            setTimeout(() => startTutorial(), 1500);
         }
+    } catch(e) {
+        console.error('Tutorial check error:', e);
+    }
+}
 
-        function startTutorial() { if (tutorialActive) return; tutorialActive = true; currentTutorialStep = 0; disableScroll(); initTutorialSteps(); showTutorialStep(); }
+function startTutorial() {
+    if (tutorialActive) return;
+    tutorialActive = true;
+    currentTutorialStep = 0;
+    disableScroll();
+    initTutorialSteps();
+    showTutorialStep();
+}
 
-        function initTutorialSteps() {
-            tutorialSteps = [
-                { tab: 'home', elementId: 'coin', text: '💰 Кликай по монете и зарабатывай WG Coin!', position: 'bottom' },
-                { tab: 'home', elementId: 'leaderboard-mini', text: '🏆 Топ игроков — чем больше кликов, тем выше место!', position: 'top' },
-                { tab: 'shop', elementId: 'upgrade-card', text: '🛒 Улучшай заработок за WG Coin. Цена растёт с каждой покупкой!', position: 'bottom', subTab: 'normal' },
-                { tab: 'shop', elementId: 'ad-card', text: '🎬 Смотри рекламу → +200 энергии или +1 к макс. энергии!', position: 'bottom', subTab: 'normal' },
-                { tab: 'shop', elementId: 'energyUpgradeCard', text: '⭐ Покупай усиление за Telegram Stars: +50 энергии и +50 LP!', position: 'bottom', subTab: 'stars' },
-                { tab: 'shop', elementId: 'tonDonateBtn', text: '💎 Купи улучшение за TON через TON Connect!', position: 'bottom', subTab: 'stars' },
-                { tab: 'lottery', elementId: 'ticketBtn', text: '🎫 Купи билет за 100 LP и участвуй в розыгрыше USDT!', position: 'top' },
-                { tab: 'lottery', elementId: 'myTicketsBtn', text: '📋 Здесь твои билеты — стирай их после розыгрыша!', position: 'bottom' },
-                { tab: 'lottery', elementId: 'prize-card', text: '🏆 Главный фонд — в 21:00 он достанется победителям!', position: 'top' },
-                { tab: 'profile', elementId: 'stats-grid', text: '📊 Твои ресурсы: WG, LP, USDT, победы и клики.', position: 'bottom' },
-                { tab: 'profile', elementId: 'withdrawal-btn', text: '💸 Выводи USDT (минимум 2).', position: 'top' },
-                { tab: 'profile', elementId: 'referral-section', text: '👥 Приглашай друзей и получай 5% от их трат LP!', position: 'top' },
-                { tab: 'profile', elementId: 'settings-card', text: '⚙️ Настройки — можно скрыть себя из топа.', position: 'top' }
-            ];
+function initTutorialSteps() {
+    tutorialSteps = [
+        { tab: 'home', elementId: 'coin', text: '💰 Кликай по монете и зарабатывай WG Coin!', position: 'bottom' },
+        { tab: 'home', elementId: 'leaderboard-mini', text: '🏆 Топ игроков — чем больше кликов, тем выше место!', position: 'top' },
+        { tab: 'shop', elementId: 'upgrade-card', text: '🛒 Улучшай заработок за WG Coin. Цена растёт с каждой покупкой!', position: 'bottom', subTab: 'normal' },
+        { tab: 'shop', elementId: 'ad-card', text: '🎬 Смотри рекламу → +200 энергии или +1 к макс. энергии!', position: 'bottom', subTab: 'normal' },
+        { tab: 'shop', elementId: 'energyUpgradeCard', text: '⭐ Покупай усиление за Telegram Stars: +50 энергии и +50 LP!', position: 'bottom', subTab: 'stars' },
+        { tab: 'shop', elementId: 'tonDonateBtn', text: '💎 Купи улучшение за TON через TON Connect!', position: 'bottom', subTab: 'stars' },
+        { tab: 'lottery', elementId: 'ticketBtn', text: '🎫 Купи билет за 100 LP и участвуй в розыгрыше USDT!', position: 'top' },
+        { tab: 'lottery', elementId: 'myTicketsBtn', text: '📋 Здесь твои билеты — стирай их после розыгрыша!', position: 'bottom' },
+        { tab: 'profile', elementId: 'stats-grid', text: '📊 Твои ресурсы: WG, LP, USDT, победы и клики.', position: 'bottom' },
+        { tab: 'profile', elementId: 'withdrawal-btn', text: '💸 Выводи USDT (минимум 2).', position: 'top' },
+        { tab: 'profile', elementId: 'referral-section', text: '👥 Приглашай друзей и получай 5% от их трат LP!', position: 'top' }
+    ];
+}
+
+async function showTutorialStep() {
+    if (currentTutorialStep >= tutorialSteps.length) {
+        finishTutorial();
+        return;
+    }
+
+    const step = tutorialSteps[currentTutorialStep];
+
+    // Переключаем вкладку
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    const targetNav = document.querySelector(`[data-tab="${step.tab}"]`);
+    if (targetNav) targetNav.classList.add('active');
+
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    const targetPane = document.getElementById(`tab${step.tab.charAt(0).toUpperCase() + step.tab.slice(1)}`);
+    if (targetPane) targetPane.classList.add('active');
+
+    // Переключаем подвкладку магазина если нужно
+    if (step.subTab) {
+        const starsTab = document.querySelector('[data-shop-tab="stars"]');
+        const normalTab = document.querySelector('[data-shop-tab="normal"]');
+        const shopStars = document.getElementById('shopStars');
+        const shopNormal = document.getElementById('shopNormal');
+
+        if (step.subTab === 'stars') {
+            if (starsTab) starsTab.classList.add('active');
+            if (normalTab) normalTab.classList.remove('active');
+            if (shopStars) shopStars.classList.add('active');
+            if (shopNormal) shopNormal.classList.remove('active');
+        } else {
+            if (normalTab) normalTab.classList.add('active');
+            if (starsTab) starsTab.classList.remove('active');
+            if (shopNormal) shopNormal.classList.add('active');
+            if (shopStars) shopStars.classList.remove('active');
         }
+    }
 
-        async function showTutorialStep() {
-            if (currentTutorialStep >= tutorialSteps.length) { finishTutorial(); return; }
-            const step = tutorialSteps[currentTutorialStep];
+    await new Promise(resolve => setTimeout(resolve, 200));
 
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            const targetNav = document.querySelector(`[data-tab="${step.tab}"]`);
-            if (targetNav) targetNav.classList.add('active');
-            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-            const targetPane = document.getElementById(`tab${step.tab.charAt(0).toUpperCase() + step.tab.slice(1)}`);
-            if (targetPane) targetPane.classList.add('active');
-
-            if (step.subTab) {
-                document.querySelectorAll('.shop-tab').forEach(t => t.classList.remove('active'));
-                if (step.subTab === 'stars') {
-                    const starsTab = document.querySelector('[data-shop-tab="stars"]');
-                    if (starsTab) starsTab.classList.add('active');
-                    const shopNormal = document.getElementById('shopNormal');
-                    const shopStars = document.getElementById('shopStars');
-                    if (shopNormal) shopNormal.classList.remove('active');
-                    if (shopStars) shopStars.classList.add('active');
-                } else {
-                    const normalTab = document.querySelector('[data-shop-tab="normal"]');
-                    if (normalTab) normalTab.classList.add('active');
-                    const shopStars = document.getElementById('shopStars');
-                    const shopNormal = document.getElementById('shopNormal');
-                    if (shopStars) shopStars.classList.remove('active');
-                    if (shopNormal) shopNormal.classList.add('active');
-                }
-            }
-
-            await new Promise(resolve => setTimeout(resolve, 150));
-
-            let element = getElementByStepId(step.elementId);
-            if (element) {
-                element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
-                await new Promise(resolve => setTimeout(resolve, 600));
-                highlightElement(element, step.text, step.position);
-            } else {
-                console.warn(`Элемент ${step.elementId} не найден`);
-                nextTutorialStep();
-            }
+    let element = document.getElementById(step.elementId);
+    if (!element) {
+        // Пробуем найти по классу
+        const classMap = {
+            'upgrade-card': '.upgrade-card',
+            'ad-card': '.ad-card',
+            'energyUpgradeCard': '#energyUpgradeCard',
+            'tonDonateBtn': '#tonDonateBtn'
+        };
+        if (classMap[step.elementId]) {
+            element = document.querySelector(classMap[step.elementId]);
         }
+    }
 
-        function getElementByStepId(elementId) {
-            let element = document.getElementById(elementId);
-            if (!element) {
-                const selectors = { 'upgrade-card': '.upgrade-card', 'ad-card': '.ad-card', 'energyUpgradeCard': '#energyUpgradeCard', 'tonDonateBtn': '#tonDonateBtn', 'ticketBtn': '#ticketBtn', 'myTicketsBtn': '#myTicketsBtn', 'prize-card': '.prize-card', 'stats-grid': '.stats-grid', 'withdrawal-btn': '.withdrawal-btn', 'referral-section': '.referral-section', 'settings-card': '.settings-card' };
-                if (selectors[elementId]) element = document.querySelector(selectors[elementId]);
-            }
-            return element;
-        }
+    if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        await new Promise(resolve => setTimeout(resolve, 400));
+        highlightElement(element, step.text, step.position);
+    } else {
+        console.warn(`Элемент ${step.elementId} не найден`);
+        nextTutorialStep();
+    }
+}
 
-        function highlightElement(element, text, position = 'bottom') {
-            if (!element) { nextTutorialStep(); return; }
-            const rect = element.getBoundingClientRect();
-            const overlay = document.getElementById('tutorialOverlay');
-            const highlight = document.getElementById('tutorialHighlight');
-            const tooltip = document.getElementById('tutorialTooltip');
-            const tooltipText = document.getElementById('tutorialText');
+function highlightElement(element, text, position = 'bottom') {
+    if (!element) {
+        nextTutorialStep();
+        return;
+    }
 
-            overlay.style.backgroundColor = 'transparent';
-            overlay.classList.add('active');
+    const rect = element.getBoundingClientRect();
+    const overlay = document.getElementById('tutorialOverlay');
+    const highlight = document.getElementById('tutorialHighlight');
+    const tooltip = document.getElementById('tutorialTooltip');
+    const tooltipText = document.getElementById('tutorialText');
 
-            highlight.style.display = 'block';
-            highlight.style.top = rect.top - 8 + 'px';
-            highlight.style.left = rect.left - 8 + 'px';
-            highlight.style.width = rect.width + 16 + 'px';
-            highlight.style.height = rect.height + 16 + 'px';
-            tooltipText.innerHTML = text;
+    overlay.style.backgroundColor = 'rgba(0,0,0,0.85)';
+    overlay.classList.add('active');
 
-            const tooltipHeight = 160;
-            const viewportHeight = window.innerHeight;
-            let tooltipTop, tooltipLeft;
+    highlight.style.display = 'block';
+    highlight.style.top = (rect.top - 8) + 'px';
+    highlight.style.left = (rect.left - 8) + 'px';
+    highlight.style.width = (rect.width + 16) + 'px';
+    highlight.style.height = (rect.height + 16) + 'px';
+    tooltipText.innerHTML = text;
 
-            if (position === 'top' || (rect.top < tooltipHeight + 20 && rect.bottom + tooltipHeight > viewportHeight)) {
-                if (rect.top - tooltipHeight > 20) tooltipTop = rect.top - tooltipHeight - 10;
-                else tooltipTop = rect.bottom + 15;
-            } else {
-                if (rect.bottom + tooltipHeight < viewportHeight - 20) tooltipTop = rect.bottom + 15;
-                else tooltipTop = rect.top - tooltipHeight - 10;
-            }
+    // Позиционирование подсказки
+    const tooltipHeight = 180;
+    const viewportHeight = window.innerHeight;
+    let tooltipTop, tooltipLeft;
 
-            tooltipLeft = Math.max(10, Math.min(rect.left + (rect.width / 2) - 140, window.innerWidth - 290));
-            tooltip.style.top = tooltipTop + 'px';
-            tooltip.style.left = tooltipLeft + 'px';
-            tooltip.style.display = 'block';
+    if (position === 'top' || rect.top < 100) {
+        tooltipTop = rect.bottom + 15;
+    } else {
+        tooltipTop = rect.top - tooltipHeight - 15;
+    }
 
-            if (window.tutorialClickListener) document.removeEventListener('click', window.tutorialClickListener);
-        }
+    tooltipLeft = Math.max(10, Math.min(rect.left + (rect.width / 2) - 150, window.innerWidth - 310));
 
-        document.getElementById('tutorialNextBtn').onclick = () => nextTutorialStep();
-        document.getElementById('tutorialSkipBtn').onclick = () => skipTutorial();
+    tooltip.style.top = tooltipTop + 'px';
+    tooltip.style.left = tooltipLeft + 'px';
+    tooltip.style.display = 'block';
+}
 
-        function nextTutorialStep() {
-            const overlay = document.getElementById('tutorialOverlay');
-            const highlight = document.getElementById('tutorialHighlight');
-            const tooltip = document.getElementById('tutorialTooltip');
-            if (overlay) overlay.classList.remove('active');
-            if (highlight) highlight.style.display = 'none';
-            if (tooltip) tooltip.style.display = 'none';
-            if (window.tutorialClickListener) {
-                document.removeEventListener('click', window.tutorialClickListener);
-                window.tutorialClickListener = null;
-            }
-            currentTutorialStep++;
-            if (currentTutorialStep >= tutorialSteps.length) {
-                finishTutorial();
-            } else {
-                showTutorialStep();
-            }
-        }
+function nextTutorialStep() {
+    const overlay = document.getElementById('tutorialOverlay');
+    const highlight = document.getElementById('tutorialHighlight');
+    const tooltip = document.getElementById('tutorialTooltip');
 
-        function skipTutorial() {
-            const overlay = document.getElementById('tutorialOverlay');
-            if (overlay) overlay.classList.remove('active');
-            tutorialActive = false;
-            enableScroll();
-            fetch('/api/complete_tutorial', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({user_id: userId})
-            }).catch(e => console.log('Tutorial skip error:', e));
-            showToast('Обучение пропущено', 'info');
-        }
+    if (overlay) overlay.classList.remove('active');
+    if (highlight) highlight.style.display = 'none';
+    if (tooltip) tooltip.style.display = 'none';
 
-        async function finishTutorial() {
-            const overlay = document.getElementById('tutorialOverlay');
-            if (overlay) overlay.classList.remove('active');
-            tutorialActive = false;
-            enableScroll();
-            await fetch('/api/complete_tutorial', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({user_id: userId})
-            });
-            showToast('🎓 Обучение завершено! Добро пожаловать в игру!', 'success');
-        }
+    currentTutorialStep++;
 
-        const dailyIconElement = document.querySelector('.daily-icon');
-        const energyBadgeElement = document.querySelector('.stat-badge');
+    if (currentTutorialStep >= tutorialSteps.length) {
+        finishTutorial();
+    } else {
+        setTimeout(() => showTutorialStep(), 300);
+    }
+}
+
+function skipTutorial() {
+    const overlay = document.getElementById('tutorialOverlay');
+    if (overlay) overlay.classList.remove('active');
+    tutorialActive = false;
+    enableScroll();
+
+    fetch('/api/complete_tutorial', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({user_id: userId})
+    }).catch(e => console.log('Tutorial skip error:', e));
+
+    showToast('Обучение пропущено', 'info');
+}
+
+async function finishTutorial() {
+    const overlay = document.getElementById('tutorialOverlay');
+    if (overlay) overlay.classList.remove('active');
+    tutorialActive = false;
+    enableScroll();
+
+    await fetch('/api/complete_tutorial', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({user_id: userId})
+    });
+
+    showToast('🎓 Обучение завершено! Добро пожаловать в игру!', 'success');
+}
+
+// Подключаем кнопки
+document.getElementById('tutorialNextBtn').onclick = () => nextTutorialStep();
+document.getElementById('tutorialSkipBtn').onclick = () => skipTutorial();
 
         function bounceElements() {
             if (dailyIconElement) {

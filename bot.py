@@ -1528,6 +1528,10 @@ def add_referral_earning(referrer_id, referred_id, spent_lp):
             referrer = get_user(referrer_id)
             add_log(f"👥 Получил 5% от трат реферала (+{earning:.2f} LP)", referrer_id, referrer['username'],
                     old_value=old_lp, new_value=new_lp, currency="lp")
+
+            # ДОБАВЛЯЕМ ПРОВЕРКУ ДОСТИЖЕНИЯ
+            update_achievement_progress(referrer_id, 'social', 1)
+
             return True
     return False
 
@@ -1556,7 +1560,7 @@ def create_stars_invoice(chat_id, user_id):
 
 def grant_energy_upgrade(user_id):
     with db.get_cursor() as cursor:
-        cursor.execute("SELECT energy_upgrades, max_energy, lp FROM users WHERE user_id=?", (user_id,))
+        cursor.execute("SELECT energy_upgrades, max_energy, lp, username FROM users WHERE user_id=?", (user_id,))
         user = cursor.fetchone()
         if not user:
             return False, "Пользователь не найден", None
@@ -1569,6 +1573,15 @@ def grant_energy_upgrade(user_id):
         cursor.execute("UPDATE users SET energy_upgrades=?, max_energy=?, lp=? WHERE user_id=?",
                        (new_upgrades, new_max_energy, new_lp, user_id))
         invalidate_cache(user_id)
+
+        # ДОБАВЛЯЕМ ЛОГ В АДМИН-ПАНЕЛЬ
+        add_admin_log(
+            f"⭐ Купил энергетический усилитель за Stars | +50 макс. энергии, +50 LP",
+            user_id,
+            user['username'] or f"User_{user_id}",
+            details=f"Улучшений теперь: {new_upgrades}/15, макс. энергия: {new_max_energy}"
+        )
+
         return True, "✨ Улучшение активировано! +50 макс. энергии и +50 LP!", {"energy_upgrades": new_upgrades,
                                                                                "max_energy": new_max_energy,
                                                                                "lp": new_lp}
@@ -1781,6 +1794,7 @@ def reveal_all_tickets(user_id):
 
 
 def perform_draw():
+    """Розыгрыш в 21:00"""
     global winning_numbers, is_drawn, draw_time, lottery_phase
     with lottery_lock:
         if lottery_tickets:
@@ -1789,32 +1803,40 @@ def perform_draw():
             draw_time = datetime.datetime.now()
             lottery_phase = "reveal"
             save_lottery()
+            # Конец розыгрыша в 00:00 (через 3 часа)
             end_time = draw_time + datetime.timedelta(seconds=10800)
             try:
-                socketio.emit('draw_completed', {'winning_numbers': winning_numbers,
-                                                 'message': '🎉 Розыгрыш начался! У вас 3 часа на открытие билетов! ⏰',
-                                                 'end_time': end_time.isoformat()})
+                socketio.emit('draw_completed', {
+                    'winning_numbers': winning_numbers,
+                    'message': '🎉 Розыгрыш начался! У вас 3 часа на открытие билетов! ⏰',
+                    'end_time': end_time.isoformat()
+                })
             except:
                 pass
             add_log(f"🎲 Розыгрыш лотереи начался. Выигрышные номера: {winning_numbers}", 0, "System")
+            # Запускаем авто-открытие через 3 часа (в 00:00)
             threading.Timer(10800, auto_reveal_and_distribute).start()
 
 
 def auto_reveal_and_distribute():
-    time.sleep(10800)
+    """Авто-открытие билетов в 00:00 и распределение призов"""
+    time.sleep(10800)  # Ждём 3 часа (до 00:00)
     with lottery_lock:
         if is_drawn:
+            # Автоматически открываем все неоткрытые билеты
             for ticket in lottery_tickets:
                 if not all(ticket.get("revealed", [])):
                     ticket["revealed"] = [True] * 12
             save_lottery()
-            add_log(f"⏰ Автоматическое открытие билетов (время вышло)", 0, "System")
+            add_log(f"⏰ Автоматическое открытие билетов (время вышло в 00:00)", 0, "System")
             try:
                 socketio.emit('auto_revealed', {'message': '⏰ Время истекло! Билеты открыты автоматически!'})
             except:
                 pass
+            # Распределяем призы
             distribute_prizes()
-            time.sleep(1800)
+            # Ждём 1 час до 01:00 и сбрасываем лотерею
+            time.sleep(3600)
             reset_lottery()
             schedule_next_draw()
 
@@ -1856,6 +1878,7 @@ def distribute_prizes():
 
 
 def reset_lottery():
+    """Сброс лотереи для нового розыгрыша (в 01:00)"""
     global is_drawn, winning_numbers, draw_time, lottery_tickets, lottery_pool, global_ticket_counter, lottery_phase
     with lottery_lock:
         is_drawn = False
@@ -1866,23 +1889,28 @@ def reset_lottery():
         global_ticket_counter = 0
         lottery_phase = "buy"
         save_lottery()
-        add_log(f"🔄 Сброс лотереи для нового розыгрыша", 0, "System")
+        add_log(f"🔄 Сброс лотереи для нового розыгрыша (новый день в 01:00)", 0, "System")
         try:
-            socketio.emit('draw_reset', {'message': '🔄 Лотерея сброшена! Новый розыгрыш завтра в 21:00!'})
+            socketio.emit('draw_reset', {'message': '🔄 Новая лотерея началась! Покупайте билеты до 21:00!'})
         except:
             pass
 
 
 def schedule_next_draw():
+    """Планирование следующего розыгрыша в 21:00"""
     def wait_and_draw():
-        now = datetime.datetime.now()
-        next_draw = now.replace(hour=21, minute=0, second=0, microsecond=0)
-        if now >= next_draw:
-            next_draw += datetime.timedelta(days=1)
-        wait_seconds = (next_draw - now).total_seconds()
-        time.sleep(wait_seconds)
-        perform_draw()
-
+        while True:
+            now = datetime.datetime.now()
+            # Следующий розыгрыш в 21:00
+            next_draw = now.replace(hour=21, minute=0, second=0, microsecond=0)
+            if now >= next_draw:
+                next_draw += datetime.timedelta(days=1)
+            wait_seconds = (next_draw - now).total_seconds()
+            time.sleep(wait_seconds)
+            perform_draw()
+            # После розыгрыша ждём до 01:00 следующего дня для сброса
+            time.sleep(14400)  # 4 часа (с 21:00 до 01:00)
+            reset_lottery()
     threading.Thread(target=wait_and_draw, daemon=True).start()
 
 
@@ -1897,7 +1925,7 @@ def schedule_draw():
         perform_draw()
 
 
-threading.Thread(target=schedule_draw, daemon=True).start()
+threading.Thread(target=schedule_next_draw, daemon=True).start()
 
 DAILY_REWARDS = {1: {"wg": 15, "lp": 0, "energy_limit": 0, "description": "15 WG"},
                  2: {"wg": 50, "lp": 0, "energy_limit": 0, "description": "50 WG"},
@@ -2337,7 +2365,7 @@ def api_ton_create_payment():
         logger.critical("🚨 КРИТИЧЕСКАЯ ОШИБКА: PROJECT_WALLET_ADDRESS отсутствует в переменных сервера!")
         return jsonify({"success": False, "error": "Ошибка конфигурации платежного шлюза на сервере"}), 500
 
-    payment_amount_ton = 0.1
+    payment_amount_ton = 0.18
     payment_amount_nano = int(payment_amount_ton * 1e9)  # 100000000
 
     return jsonify({
@@ -2367,29 +2395,27 @@ def check_ton_payment_endpoint():
 
         logger.info(f"📡 [API] Запрос проверки TON от {user_id}. Сумма: {expected_amount}")
 
-        # 1. Проверяем транзакцию в блокчейне
         confirmed, amount_paid, tx_hash = check_ton_transaction(sender_wallet, expected_amount, user_id)
 
         if confirmed:
             logger.info(f"💰 [API] Платёж TON подтверждён для {user_id}. Вызываем grant_energy_upgrade...")
 
-            # 2. ВЫЗЫВАЕМ ТВОЮ РОДНУЮ ФУНКЦИЮ НАЧИСЛЕНИЯ УЛУЧШЕНИЯ
             success, message, upgrade_data = grant_energy_upgrade(user_id)
 
             if success:
                 logger.info(f"🎁 [API] Успех! Игроку {user_id} начислено улучшение через TON!")
 
-                # 3. Отправляем красивое уведомление в Telegram (если функция доступна)
+                # ДОБАВЛЯЕМ ЛОГ В АДМИН-ПАНЕЛЬ
+                user = get_user(user_id)
+                add_admin_log(
+                    f"💎 Купил энергетический усилитель за TON ({expected_amount} TON) | +50 макс. энергии, +50 LP",
+                    user_id,
+                    user.get('username') or f"User_{user_id}",
+                    details=f"Хэш транзакции: {tx_hash}, кошелёк: {sender_wallet}"
+                )
+
                 if 'send_telegram_message' in globals():
                     try:
-                        # Если upgrade_data пришла как словарь
-                        if isinstance(upgrade_data, dict):
-                            me = upgrade_data.get('max_energy', 'обновлено')
-                            lp_val = upgrade_data.get('lp', 'обновлено')
-                        else:
-                            me = "+50"
-                            lp_val = "+50"
-
                         send_telegram_message(user_id,
                                               f"✨ **Оплата через TON получена!**\n\n"
                                               f"⚡️ +50 к максимальной энергии\n"
@@ -2401,6 +2427,13 @@ def check_ton_payment_endpoint():
 
                 return jsonify({'confirmed': True, 'tx_hash': tx_hash})
             else:
+                # ДОБАВЛЯЕМ ЛОГ О НЕУДАЧЕ
+                add_admin_log(
+                    f"❌ НЕУДАЧНАЯ покупка за TON ({expected_amount} TON) - ошибка начисления",
+                    user_id,
+                    f"User_{user_id}",
+                    details=f"Ошибка: {message}"
+                )
                 logger.error(f"❌ [API] Ошибка внутри grant_energy_upgrade: {message}")
                 return jsonify({'confirmed': False, 'error': message}), 400
 
