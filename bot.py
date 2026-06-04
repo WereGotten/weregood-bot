@@ -308,15 +308,15 @@ def string_to_hex_payload(text: str) -> str:
 
 def check_ton_transaction(sender_wallet, expected_amount, user_id):
     """
-    Продвинутая проверка транзакций с исправленным сравнением RAW и Friendly адресов.
+    Железобетонная проверка транзакций с автоматической конвертацией RAW адресов плательщика.
     """
     try:
         expected_comment = f"WereGood:{user_id}"
         logger.info(
-            f"🔍 [TON] Сканируем сеть для {user_id}. Ищем коммент '{expected_comment}' или кошелек '{sender_wallet}'")
+            f"🔍 [TON] Сканируем сеть. Юзер: {user_id}, Ожидаем коммент: '{expected_comment}' или кошелек: '{sender_wallet}'")
 
-        raw_address = "0:69fa7db713b9158c72970e3d577b6b3c2605e0f109fbb0443af97c44fd07be3f"
-        url = f"https://toncenter.com/api/v2/getTransactions?address={raw_address}&limit=40"
+        raw_project_address = "0:69fa7db713b9158c72970e3d577b6b3c2605e0f109fbb0443af97c44fd07be3f"
+        url = f"https://toncenter.com/api/v2/getTransactions?address={raw_project_address}&limit=40"
 
         api_key = globals().get('TONCENTER_API_KEY') or os.getenv('TONCENTER_API_KEY')
         if api_key:
@@ -329,10 +329,16 @@ def check_ton_transaction(sender_wallet, expected_amount, user_id):
 
         transactions = response.json().get('result', [])
 
-        # Подготовка адреса отправителя для сравнения
-        clean_sender = str(sender_wallet).strip().lower() if sender_wallet else ""
-        # Если адрес пришел в формате 0:e2544c88..., вытащим чистый хэш после двоеточия
-        sender_hex = clean_sender.split(':')[-1] if ':' in clean_sender else clean_sender
+        # Подготавливаем адрес отправителя от фронтенда
+        clean_sender = str(sender_wallet).strip()
+        friendly_sender = ""
+
+        # Если фронт прислал сырой 0:e254..., на лету превращаем его в UQ...
+        if clean_sender.startswith("0:"):
+            friendly_sender = raw_to_user_friendly(clean_sender).lower()
+            logger.info(f"🔄 [TON] Сконвертировали RAW адрес фронтенда в Friendly: {friendly_sender}")
+        else:
+            friendly_sender = clean_sender.lower()
 
         for page in range(2):
             for tx_data in transactions:
@@ -344,27 +350,26 @@ def check_ton_transaction(sender_wallet, expected_amount, user_id):
                 amount_ton = value_nano / 1e9
                 source_address = str(in_msg.get('source', '')).strip().lower()
 
-                # Комментарий
+                # Извлекаем комментарий
                 comment = in_msg.get('message', '').strip()
                 if not comment and in_msg.get('msg_data', {}).get('@type') == 'msg.dataText':
                     comment = in_msg.get('msg_data', {}).get('text', '').strip()
 
                 is_comment_match = (expected_comment in comment)
 
-                # КРУТОЕ СРАВНЕНИЕ КОШЕЛЬКОВ:
-                # Если в адресе из блокчейна или в адресе от юзера совпадает уникальный хэш
+                # СРАВНЕНИЕ: Сверяем чистый friendly_sender с адресом из блокчейна source_address
                 is_wallet_match = False
-                if sender_hex and (sender_hex in source_address or source_address in clean_sender):
+                if friendly_sender and (friendly_sender in source_address or source_address in friendly_sender):
                     is_wallet_match = True
 
-                # Дополнительно: проверяем поле френдли-адреса, если Toncenter его декодировал
-                # Некоторые версии API возвращают source_friendly
-                if not is_wallet_match and in_msg.get('source_friendly'):
-                    sf = str(in_msg.get('source_friendly')).lower()
-                    if clean_sender in sf or sf in clean_sender:
+                # Подстраховка на случай, если адрес в блокчейне начинается на EQ, а у нас UQ (проверяем основную часть без первых 2-3 символов)
+                if not is_wallet_match and len(friendly_sender) > 10 and len(source_address) > 10:
+                    core_sender = friendly_sender[3:]
+                    core_source = source_address[3:]
+                    if core_sender in core_source or core_source in core_sender:
                         is_wallet_match = True
 
-                # Проверяем условия (сумма совпадает + кошелек или коммент совпали)
+                # Если сумма совпадает и совпал либо кошелек, либо коммент
                 if (is_comment_match or is_wallet_match) and (amount_ton >= (expected_amount - 0.02)):
                     tx_hash = tx_data.get('transaction_id', {}).get('hash')
 
@@ -381,14 +386,14 @@ def check_ton_transaction(sender_wallet, expected_amount, user_id):
                                                (tx_hash, user_id))
 
                     logger.info(
-                        f"✅ [TON] УСПЕХ! Транзакция НАЙДЕНА (Кошелек совпал: {is_wallet_match}). Хэш: {tx_hash}")
+                        f"✅ [TON] Транзакция УСПЕШНО НАЙДЕНА! Кошелек совпал: {is_wallet_match}. Хэш: {tx_hash}")
                     return True, amount_ton, tx_hash
 
             # Пагинация
             if transactions and 'transaction_id' in transactions[-1] and page == 0:
                 lt = transactions[-1].get('lt')
                 last_hash = transactions[-1]['transaction_id'].get('hash')
-                next_url = f"https://toncenter.com/api/v2/getTransactions?address={raw_address}&limit=40&lt={lt}&hash={last_hash}"
+                next_url = f"https://toncenter.com/api/v2/getTransactions?address={raw_project_address}&limit=40&lt={lt}&hash={last_hash}"
                 if api_key:
                     next_url += f"&api_key={api_key}"
                 try:
@@ -4257,6 +4262,51 @@ def handle_telegram_updates():
             logger.error(f"Ошибка в polling: {e}")
             time.sleep(5)
 
+
+import codecs
+import base64
+
+
+def raw_to_user_friendly(raw_address: str) -> str:
+    """
+    Конвертирует RAW адрес (0:e2544c88...) в User-Friendly Non-bounceable (UQ...)
+    """
+    try:
+        if not raw_address or ":" not in raw_address:
+            return raw_address.strip()
+
+        parts = raw_address.split(":")
+        workchain = int(parts[0])
+        hex_address = parts[1].strip()
+
+        # Заменяем дефолтный воркчейн если нужно
+        workchain_byte = workchain if workchain >= 0 else 256 + workchain
+
+        # Тег для Non-bounceable Mainnet кошельков обычно 0x11 (или UQ)
+        tag = 0x11
+
+        address_bytes = bytearray([tag, workchain_byte]) + bytearray(codecs.decode(hex_address, 'hex'))
+
+        # Считаем контрольную сумму CRC16
+        POLY = 0x1021
+        crc = 0
+        for byte in address_bytes:
+            crc ^= (byte << 8)
+            for _ in range(8):
+                if crc & 0x8000:
+                    crc = (crc << 1) ^ POLY
+                else:
+                    crc <<= 1
+                crc &= 0xFFFF
+
+        address_bytes += bytearray([crc >> 8, crc & 0xFF])
+
+        # Кодируем в Base64 URL-safe без заполнения (=)
+        friendly = base64.urlsafe_b64encode(address_bytes).decode('utf-8').rstrip('=')
+        return friendly
+    except Exception as e:
+        print(f"Ошибка конвертации адреса: {e}")
+        return raw_address
 
 if __name__ == '__main__':
     threading.Thread(target=handle_telegram_updates, daemon=True).start()
