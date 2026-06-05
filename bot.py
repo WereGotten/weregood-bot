@@ -2554,6 +2554,24 @@ def check_lp_boost_payment():
         return jsonify({'confirmed': False, 'error': str(e)}), 500
 
 
+@app.route('/api/get_lp_boost_count', methods=['POST'])
+def api_get_lp_boost_count():
+    data = request.json or {}
+    user_id = data.get('user_id')
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"success": False, "error": "Invalid user_id"}), 400
+
+    with db.get_cursor() as cursor:
+        cursor.execute(
+            "SELECT COUNT(*) as count FROM successful_payments WHERE user_id = ? AND payload = 'lp_boost'",
+            (user_id,)
+        )
+        row = cursor.fetchone()
+        count = row['count'] if row else 0
+
+    return jsonify({"success": True, "count": count})
+
 # Добавьте обработку успешной оплаты Stars для LP Бустера
 # В функцию handle_successful_payment добавьте:
 def handle_successful_payment(chat_id, payment_info):

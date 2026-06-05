@@ -668,49 +668,52 @@
             margin-top: 4px;
         }
 
-        /* КАРУСЕЛЬ ДЛЯ КАРТОЧЕК ДОНАТА */
-        .donate-carousel-container {
-            overflow: hidden;
-            border-radius: 24px;
-            position: relative;
-        }
+        /* КАРУСЕЛЬ ДЛЯ КАРТОЧЕК ДОНАТА - КРАСИВЫЕ СТРЕЛКИ */
+.donate-carousel-container {
+    overflow: hidden;
+    border-radius: 24px;
+    position: relative;
+}
 
-        .donate-carousel-track {
-            display: flex;
-            transition: transform 0.3s ease;
-        }
+.donate-carousel-track {
+    display: flex;
+    transition: transform 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+}
 
-        .carousel-prev, .carousel-next {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            background: rgba(255,215,0,0.2);
-            border: none;
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            color: #FFD700;
-            font-size: 1.2rem;
-            cursor: pointer;
-            z-index: 10;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            backdrop-filter: blur(5px);
-            transition: all 0.2s ease;
-        }
+.carousel-prev, .carousel-next {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255,215,0,0.25);
+    border: 1px solid rgba(255,215,0,0.4);
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    color: #FFD700;
+    font-size: 1.1rem;
+    cursor: pointer;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(8px);
+    transition: all 0.25s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
 
-        .carousel-prev { left: -10px; }
-        .carousel-next { right: -10px; }
+.carousel-prev { left: 8px; }
+.carousel-next { right: 8px; }
 
-        .carousel-prev:hover, .carousel-next:hover {
-            background: rgba(255,215,0,0.4);
-            transform: translateY(-50%) scale(1.05);
-        }
+.carousel-prev:hover, .carousel-next:hover {
+    background: rgba(255,215,0,0.45);
+    transform: translateY(-50%) scale(1.08);
+    border-color: rgba(255,215,0,0.7);
+    box-shadow: 0 4px 12px rgba(255,215,0,0.3);
+}
 
-        .carousel-prev:active, .carousel-next:active {
-            transform: translateY(-50%) scale(0.95);
-        }
+.carousel-prev:active, .carousel-next:active {
+    transform: translateY(-50%) scale(0.95);
+}
 
         .star-upgrade-card {
             background: linear-gradient(145deg, #1a1a2e, #0f0f20);
@@ -4297,51 +4300,51 @@
                                 </div>
 
                                 <!-- КАРТОЧКА 2: LP БУСТЕР (НОВАЯ) -->
-                                <div class="star-upgrade-card" id="lpBoostCard">
-                                    <div class="star-upgrade-header">
-                                        <div class="star-upgrade-icon">
-                                            <img src="/static/diamond.png" alt="LP" style="width: 32px; height: 32px;">
-                                        </div>
-                                        <div class="star-upgrade-title">
-                                            <h3>💎 LP Бустер</h3>
-                                            <p>Пополняет баланс LP</p>
-                                        </div>
-                                    </div>
-                                    <div class="star-upgrade-price">
-                                        <img src="/static/star_small.png" alt="Stars" style="width: 16px; height: 16px;">
-                                        22 Stars
-                                    </div>
-                                    <div class="star-upgrade-desc">
-                                        <div class="star-upgrade-desc-item">
-                                            <div class="desc-icon">
-                                                <img src="/static/diamond.png" alt="LP" style="width: 30px; height: 30px;">
-                                            </div>
-                                            <div class="desc-text">+50 LP</div>
-                                            <div class="desc-value">на баланс</div>
-                                        </div>
-                                        <div class="star-upgrade-desc-item">
-                                            <div class="desc-icon">
-                                                <span style="font-size: 28px;">🔄</span>
-                                            </div>
-                                            <div class="desc-text">Безлимитная покупка</div>
-                                            <div class="desc-value">покупай сколько хочешь</div>
-                                        </div>
-                                    </div>
-                                    <div class="star-upgrade-progress">
-                                        <div class="progress-info">
-                                            <span>💰 Пополнение LP</span>
-                                            <span>⚡ Мгновенное зачисление</span>
-                                        </div>
-                                        <div class="progress-bar-bg">
-                                            <div class="progress-bar-fill" style="width: 100%; background: linear-gradient(90deg, #FFD700, #FFA500);"></div>
-                                        </div>
-                                    </div>
-                                    <button class="star-upgrade-btn btn-stars" id="lpBoostStarsBtn" onclick="buyLPBoostStars()">
-                                        <img src="/static/star_small.png" alt="Stars" style="width: 16px; height: 16px;">
-                                        Купить за 22 звёзд
-                                    </button>
-                                    <button class="star-upgrade-btn btn-ton" id="lpBoostTonBtn" onclick="buyLPBoostTon()">💎 Купить за 0.13 TON</button>
-                                </div>
+<div class="star-upgrade-card" id="lpBoostCard">
+    <div class="star-upgrade-header">
+        <div class="star-upgrade-icon">
+            <img src="/static/diamond.png" alt="LP" style="width: 44px; height: 44px;">
+        </div>
+        <div class="star-upgrade-title">
+            <h3>💎 LP Бустер</h3>
+            <p>Пополняет баланс LP</p>
+        </div>
+    </div>
+    <div class="star-upgrade-price">
+        <img src="/static/star_small.png" alt="Stars" style="width: 16px; height: 16px;">
+        22 Stars
+    </div>
+    <div class="star-upgrade-desc">
+        <div class="star-upgrade-desc-item">
+            <div class="desc-icon">
+                <img src="/static/diamond.png" alt="LP" style="width: 36px; height: 36px;">
+            </div>
+            <div class="desc-text">+50 LP</div>
+            <div class="desc-value">на баланс</div>
+        </div>
+        <div class="star-upgrade-desc-item">
+            <div class="desc-icon">
+                <img src="/static/withdraw.png" alt="Безлимит" style="width: 30px; height: 30px;">
+            </div>
+            <div class="desc-text">Безлимитная покупка</div>
+            <div class="desc-value">покупай сколько хочешь</div>
+        </div>
+    </div>
+    <div class="star-upgrade-progress">
+        <div class="progress-info">
+            <span>💰 Куплено: <span id="lpBoostPurchaseCount">0</span> раз</span>
+            <span>⚡ Мгновенное зачисление</span>
+        </div>
+        <div class="progress-bar-bg">
+            <div class="progress-bar-fill" style="width: 100%; background: linear-gradient(90deg, #FFD700, #FFA500);"></div>
+        </div>
+    </div>
+    <button class="star-upgrade-btn btn-stars" id="lpBoostStarsBtn" onclick="buyLPBoostStars()">
+        <img src="/static/star_small.png" alt="Stars" style="width: 16px; height: 16px;">
+        Купить за 22 звёзд
+    </button>
+    <button class="star-upgrade-btn btn-ton" id="lpBoostTonBtn" onclick="buyLPBoostTon()">💎 Купить за 0.13 TON</button>
+</div>
 
                             </div>
                         </div>
@@ -5609,6 +5612,7 @@
                             }
                             setTimeout(() => {
                                 updateStatus();
+                                updateLPBoostCount();  // ← ДОБАВЛЕНО
                             }, 500);
                         } else if (status === 'failed' || status === 'cancelled') {
                             showToast('❌ Оплата отменена или не удалась', 'error');
@@ -5721,6 +5725,7 @@
                         paymentCheckInterval = null;
                         showToast('✅ Награда получена! +50 LP зачислены!', 'success');
                         await updateStatus();
+                        await updateLPBoostCount();  // ← ДОБАВЛЕНО
                         updateUI();
                     } else if (attempts >= maxAttempts) {
                         clearInterval(paymentCheckInterval);
@@ -7900,6 +7905,23 @@
             } catch(e) {}
         });
 
+        // ==================== СЧЁТЧИК ПОКУПОК LP БУСТЕРА ====================
+        async function updateLPBoostCount() {
+            try {
+                let res = await fetch('/api/get_lp_boost_count', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId })
+                });
+                let data = await res.json();
+                if (data.success) {
+                    document.getElementById('lpBoostPurchaseCount').innerText = data.count;
+                }
+            } catch(e) {
+                console.error('Error loading LP boost count:', e);
+            }
+        }
+
         // ==================== DOMCONTENTLOADED ====================
         document.addEventListener("DOMContentLoaded", () => {
             initTonConnect();
@@ -7921,6 +7943,7 @@
             setInterval(loadRecentPlayers, 15000);
             setInterval(() => updateLeaderboard(), 8000);
             startDailyLeaderboardTimer();
+            updateLPBoostCount();
             if (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
                 const startParam = tg.initDataUnsafe.start_param;
                 if (startParam && startParam.startsWith('claim_')) {
