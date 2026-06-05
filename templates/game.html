@@ -3895,6 +3895,82 @@
         padding: 6px 15px;
     }
 }
+        /* COMING SOON - КРАСИВЫЙ БЛОК */
+.coming-soon {
+    background: linear-gradient(135deg, rgba(255,215,0,0.08), rgba(255,165,0,0.04));
+    border-radius: 28px;
+    padding: 32px 24px;
+    text-align: center;
+    margin-bottom: 20px;
+    border: 1px solid rgba(255,215,0,0.2);
+    backdrop-filter: blur(10px);
+}
+
+.coming-soon-icon {
+    font-size: 3rem;
+    margin-bottom: 16px;
+    display: inline-block;
+    animation: comingSoonPulse 2s infinite ease-in-out;
+}
+
+@keyframes comingSoonPulse {
+    0% { transform: scale(1); opacity: 0.6; }
+    50% { transform: scale(1.1); opacity: 1; }
+    100% { transform: scale(1); opacity: 0.6; }
+}
+
+.coming-soon-title {
+    font-size: 1.3rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: 12px;
+    letter-spacing: 1px;
+}
+
+.coming-soon-text {
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.6);
+    line-height: 1.4;
+    max-width: 280px;
+    margin: 0 auto;
+}
+
+.coming-soon-progress {
+    max-width: 200px;
+    margin: 20px auto 0;
+}
+
+.coming-soon-progress .progress-bar {
+    height: 3px;
+    background: linear-gradient(90deg, rgba(255,215,0,0.3), #FFD700, rgba(255,215,0,0.3));
+    background-size: 200% 100%;
+    animation: progressShine 1.5s infinite;
+    border-radius: 3px;
+}
+
+@keyframes progressShine {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* Адаптация для мобильных */
+@media (max-width: 480px) {
+    .coming-soon {
+        padding: 24px 16px;
+    }
+    .coming-soon-icon {
+        font-size: 2.5rem;
+    }
+    .coming-soon-title {
+        font-size: 1.1rem;
+    }
+    .coming-soon-text {
+        font-size: 0.7rem;
+    }
+}
     </style>
 </head>
 <body>
@@ -4504,8 +4580,13 @@
 
     <!-- СООБЩЕНИЕ ДЛЯ НЕДЕЛИ/МЕСЯЦА -->
     <div class="coming-soon" id="comingSoonMsg" style="display: none;">
-        <span>🔄 Топ недели и месяца будут добавлены в ближайшие дни!</span>
+    <div class="coming-soon-icon">🔄</div>
+    <div class="coming-soon-title">Скоро появится!</div>
+    <div class="coming-soon-text">Топ недели и месяца будут добавлены в ближайшие дни</div>
+    <div class="coming-soon-progress">
+        <div class="progress-bar"></div>
     </div>
+</div>
 
     <div class="leaderboard-list" id="leaderboardList">Загрузка...</div>
 </div>
@@ -6462,17 +6543,16 @@
         const leaderboardList = document.getElementById('leaderboardList');
 
         if (period === 'day') {
-            if (timerContainer) timerContainer.style.display = 'flex';
+            if (timerContainer) timerContainer.style.display = 'block';
             if (comingSoonMsg) comingSoonMsg.style.display = 'none';
             if (leaderboardList) leaderboardList.style.display = 'flex';
             loadLeaderboardData('day', true);
-            startDailyLeaderboardTimer();
+            if (typeof startDailyLeaderboardTimer === 'function') startDailyLeaderboardTimer();
         } else {
             if (timerContainer) timerContainer.style.display = 'none';
             if (comingSoonMsg) comingSoonMsg.style.display = 'block';
             if (leaderboardList) leaderboardList.style.display = 'none';
-            // Показываем заглушку
-            if (leaderboardList) leaderboardList.innerHTML = '<div class="empty-state">🔄 Топ недели и месяца будут добавлены в ближайшие дни!</div>';
+            leaderboardList.innerHTML = ''; // Очищаем список
         }
     };
 });
