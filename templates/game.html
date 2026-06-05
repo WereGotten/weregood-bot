@@ -1213,10 +1213,8 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
     font-weight: 600;
-    padding-bottom: 8px;
-    border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 
 .recent-header span {
@@ -1239,17 +1237,18 @@
     color: #FFD700;
 }
 
+/* СТАРЫЙ КОМПАКТНЫЙ ДИЗАЙН */
 .recent-players-list {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 6px;
 }
 
 .recent-player-item {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 10px 12px;
+    gap: 10px;
+    padding: 6px 8px;
     background: rgba(255,255,255,0.03);
     border-radius: 12px;
     cursor: pointer;
@@ -1261,8 +1260,8 @@
 }
 
 .recent-player-avatar {
-    width: 36px;
-    height: 36px;
+    width: 28px;
+    height: 28px;
     background: rgba(255,215,0,0.1);
     border-radius: 50%;
     display: flex;
@@ -1283,21 +1282,21 @@
 }
 
 .recent-player-name {
-    font-size: 0.8rem;
-    font-weight: 600;
+    font-size: 0.75rem;
+    font-weight: 500;
 }
 
 .recent-player-time {
-    font-size: 0.6rem;
+    font-size: 0.55rem;
     opacity: 0.5;
     margin-top: 2px;
 }
 
 .recent-player-ticket {
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     color: #FFD700;
     background: rgba(255,215,0,0.1);
-    padding: 4px 10px;
+    padding: 3px 8px;
     border-radius: 20px;
     white-space: nowrap;
 }
@@ -5080,24 +5079,24 @@
             if (playerName.startsWith('@')) playerName = playerName.substring(1);
             if (localHideFromTop && p.user_id == userId) playerName = 'Anonim';
 
-            // Обработка времени
+            // Время
             let timeAgo = p.time_ago || 'только что';
 
-            // Роль и бейдж
-            let roleBadge = '';
-            if (p.role === 'founder') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#ef4444;">👑</span>';
-            else if (p.role === 'pioneer') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#00b4d8;">⭐</span>';
-            else if (p.role === 'legend') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#FFD700;">👑</span>';
+            // Роль (только иконка, без текста)
+            let roleIcon = '';
+            if (p.role === 'founder') roleIcon = '👑';
+            else if (p.role === 'legend') roleIcon = '👑';
+            else if (p.role === 'pioneer') roleIcon = '⭐';
 
-            // Старый дизайн - компактная строка
+            // КОМПАКТНАЯ СТРОКА - всё в одну линию
             html += `<div class="recent-player-item" onclick="openPlayerProfile(${p.user_id}, 0)">
-                        <div class="recent-player-avatar">${avatarHtml}</div>
-                        <div class="recent-player-info">
-                            <div class="recent-player-name">${escapeHtml(playerName)}${roleBadge}</div>
-                            <div class="recent-player-time">🕐 ${timeAgo}</div>
-                        </div>
-                        <div class="recent-player-ticket">🎫 #${p.ticket_number}</div>
-                    </div>`;
+                <div class="recent-player-avatar">${avatarHtml}</div>
+                <div class="recent-player-info">
+                    <div class="recent-player-name">${escapeHtml(playerName)} ${roleIcon}</div>
+                    <div class="recent-player-time">${timeAgo}</div>
+                </div>
+                <div class="recent-player-ticket">🎫 #${p.ticket_number}</div>
+            </div>`;
         }
 
         document.getElementById('recentPlayersList').innerHTML = html;
