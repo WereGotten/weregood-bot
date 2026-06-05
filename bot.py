@@ -3029,7 +3029,6 @@ def api_get_referrals():
 def api_leaderboard():
     global leaderboard_cache, leaderboard_cache_time
     now = time.time()
-
     force_refresh = request.args.get('force', 'false').lower() == 'true'
 
     if not force_refresh and now - leaderboard_cache_time < LEADERBOARD_CACHE_TTL:
