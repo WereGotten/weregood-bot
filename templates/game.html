@@ -1213,8 +1213,9 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
     font-weight: 600;
+    padding-bottom: 4px;
 }
 
 .recent-header span {
@@ -1237,18 +1238,18 @@
     color: #FFD700;
 }
 
-/* СТАРЫЙ КОМПАКТНЫЙ ДИЗАЙН */
+/* УВЕЛИЧЕННЫЕ ОТСТУПЫ МЕЖДУ СТРОКАМИ */
 .recent-players-list {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 10px;  /* ← было 6px, увеличил до 10px */
 }
 
 .recent-player-item {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 6px 8px;
+    gap: 12px;  /* ← было 10px, увеличил до 12px */
+    padding: 10px 12px;  /* ← было 6px 8px, увеличил до 10px 12px */
     background: rgba(255,255,255,0.03);
     border-radius: 12px;
     cursor: pointer;
@@ -1260,8 +1261,8 @@
 }
 
 .recent-player-avatar {
-    width: 28px;
-    height: 28px;
+    width: 32px;  /* ← было 28px, увеличил до 32px */
+    height: 32px;
     background: rgba(255,215,0,0.1);
     border-radius: 50%;
     display: flex;
@@ -1282,21 +1283,21 @@
 }
 
 .recent-player-name {
-    font-size: 0.75rem;
+    font-size: 0.8rem;  /* ← было 0.75rem, увеличил */
     font-weight: 500;
 }
 
 .recent-player-time {
-    font-size: 0.55rem;
+    font-size: 0.6rem;  /* ← было 0.55rem, увеличил */
     opacity: 0.5;
     margin-top: 2px;
 }
 
 .recent-player-ticket {
-    font-size: 0.65rem;
+    font-size: 0.7rem;  /* ← было 0.65rem, увеличил */
     color: #FFD700;
     background: rgba(255,215,0,0.1);
-    padding: 3px 8px;
+    padding: 4px 10px;  /* ← было 3px 8px, увеличил */
     border-radius: 20px;
     white-space: nowrap;
 }
