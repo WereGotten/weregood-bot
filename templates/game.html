@@ -1213,9 +1213,8 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
     font-weight: 600;
-    padding-bottom: 4px;
 }
 
 .recent-header span {
@@ -1238,31 +1237,25 @@
     color: #FFD700;
 }
 
-/* УВЕЛИЧЕННЫЕ ОТСТУПЫ МЕЖДУ СТРОКАМИ */
 .recent-players-list {
     display: flex;
     flex-direction: column;
-    gap: 10px;  /* ← было 6px, увеличил до 10px */
+    gap: 8px;
 }
 
 .recent-player-item {
     display: flex;
     align-items: center;
-    gap: 12px;  /* ← было 10px, увеличил до 12px */
-    padding: 10px 12px;  /* ← было 6px 8px, увеличил до 10px 12px */
+    gap: 10px;
+    padding: 6px 8px;
     background: rgba(255,255,255,0.03);
     border-radius: 12px;
     cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.recent-player-item:hover {
-    background: rgba(255,215,0,0.08);
 }
 
 .recent-player-avatar {
-    width: 32px;  /* ← было 28px, увеличил до 32px */
-    height: 32px;
+    width: 30px;
+    height: 30px;
     background: rgba(255,215,0,0.1);
     border-radius: 50%;
     display: flex;
@@ -1283,21 +1276,21 @@
 }
 
 .recent-player-name {
-    font-size: 0.8rem;  /* ← было 0.75rem, увеличил */
+    font-size: 0.75rem;
     font-weight: 500;
 }
 
 .recent-player-time {
-    font-size: 0.6rem;  /* ← было 0.55rem, увеличил */
+    font-size: 0.55rem;
     opacity: 0.5;
     margin-top: 2px;
 }
 
 .recent-player-ticket {
-    font-size: 0.7rem;  /* ← было 0.65rem, увеличил */
+    font-size: 0.65rem;
     color: #FFD700;
     background: rgba(255,215,0,0.1);
-    padding: 4px 10px;  /* ← было 3px 8px, увеличил */
+    padding: 3px 8px;
     border-radius: 20px;
     white-space: nowrap;
 }
@@ -5067,37 +5060,25 @@
         }
 
         for (let p of data) {
-            // Аватар
-            let avatarHtml = '';
-            if (p.avatar_url && p.avatar_url !== '') {
-                avatarHtml = `<img src="${p.avatar_url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
-            } else {
-                avatarHtml = '👤';
-            }
-
-            // Имя игрока
+            let avatar = p.avatar_url ? `<img src="${p.avatar_url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">` : '👤';
             let playerName = p.username || p.first_name || 'Игрок';
+            if (playerName.startsWith('Player_') || playerName.startsWith('@Player_')) playerName = p.first_name || 'Игрок';
             if (playerName.startsWith('@')) playerName = playerName.substring(1);
-            if (localHideFromTop && p.user_id == userId) playerName = 'Anonim';
+            if (localHideFromTop && p.user_id == userId) playerName = '@Anonim';
 
-            // Время
-            let timeAgo = p.time_ago || 'только что';
-
-            // Роль (только иконка, без текста)
             let roleIcon = '';
             if (p.role === 'founder') roleIcon = '👑';
             else if (p.role === 'legend') roleIcon = '👑';
             else if (p.role === 'pioneer') roleIcon = '⭐';
 
-            // КОМПАКТНАЯ СТРОКА - всё в одну линию
             html += `<div class="recent-player-item" onclick="openPlayerProfile(${p.user_id}, 0)">
-                <div class="recent-player-avatar">${avatarHtml}</div>
-                <div class="recent-player-info">
-                    <div class="recent-player-name">${escapeHtml(playerName)} ${roleIcon}</div>
-                    <div class="recent-player-time">${timeAgo}</div>
-                </div>
-                <div class="recent-player-ticket">🎫 #${p.ticket_number}</div>
-            </div>`;
+                        <div class="recent-player-avatar">${avatar}</div>
+                        <div class="recent-player-info">
+                            <div class="recent-player-name">${escapeHtml(playerName)} ${roleIcon}</div>
+                            <div class="recent-player-time">${p.time_ago}</div>
+                        </div>
+                        <div class="recent-player-ticket">🎫 #${p.ticket_number}</div>
+                    </div>`;
         }
 
         document.getElementById('recentPlayersList').innerHTML = html;
