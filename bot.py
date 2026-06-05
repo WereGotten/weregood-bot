@@ -1529,7 +1529,7 @@ def add_referral_earning(referrer_id, referred_id, spent_lp):
             add_log(f"👥 Получил 5% от трат реферала (+{earning:.2f} LP)", referrer_id, referrer['username'],
                     old_value=old_lp, new_value=new_lp, currency="lp")
 
-            # ДОБАВЛЯЕМ ПРОВЕРКУ ДОСТИЖЕНИЯ
+            # ВАЖНО: обновляем прогресс достижения "social"
             update_achievement_progress(referrer_id, 'social', 1)
 
             return True
@@ -1568,21 +1568,22 @@ def grant_energy_upgrade(user_id):
         if current_upgrades >= 15:
             return False, "Максимум улучшений! (15/15)", None
         new_upgrades = current_upgrades + 1
-        new_max_energy = 500 + (new_upgrades * 50)
+        # max_energy: +40 за улучшение (было +50)
+        new_max_energy = 500 + (new_upgrades * 40)
+        # LP остаётся +50 (не меняем)
         new_lp = (user['lp'] or 0) + 50
         cursor.execute("UPDATE users SET energy_upgrades=?, max_energy=?, lp=? WHERE user_id=?",
                        (new_upgrades, new_max_energy, new_lp, user_id))
         invalidate_cache(user_id)
 
-        # ДОБАВЛЯЕМ ЛОГ В АДМИН-ПАНЕЛЬ
         add_admin_log(
-            f"⭐ Купил энергетический усилитель за Stars | +50 макс. энергии, +50 LP",
+            f"⭐ Купил энергетический усилитель за Stars | +40 макс. энергии, +50 LP",
             user_id,
             user['username'] or f"User_{user_id}",
             details=f"Улучшений теперь: {new_upgrades}/15, макс. энергия: {new_max_energy}"
         )
 
-        return True, "✨ Улучшение активировано! +50 макс. энергии и +50 LP!", {"energy_upgrades": new_upgrades,
+        return True, "✨ Улучшение активировано! +40 макс. энергии и +50 LP!", {"energy_upgrades": new_upgrades,
                                                                                "max_energy": new_max_energy,
                                                                                "lp": new_lp}
 
@@ -2513,51 +2514,93 @@ def api_online_count():
 def api_register():
     if not check_rate_limit(f"register_{request.remote_addr}", limit=10, window_seconds=60):
         return jsonify({"success": False, "error": "Too many requests"}), 429
+
     data = request.json
     if not data:
         return jsonify({"success": False, "error": "No data"}), 400
+
     user_id = data.get('user_id')
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid:
         return jsonify({"success": False, "error": "Invalid user_id"}), 400
+
     username = sanitize_string(data.get('username', ''), 50)
     first_name = sanitize_string(data.get('first_name', ''), 50)
     last_name = sanitize_string(data.get('last_name', ''), 50)
     avatar_url = sanitize_string(data.get('avatar_url', ''), 200)
     referral_code = sanitize_string(data.get('referral_code', ''), 50)
+
     with db.get_cursor() as cursor:
         cursor.execute("SELECT * FROM users WHERE user_id=?", (user_id,))
         existing = cursor.fetchone()
+
         if existing:
+            # Обновление существующего профиля
             cursor.execute("UPDATE users SET username=?, first_name=?, last_name=?, avatar_url=? WHERE user_id=?",
                            (username, first_name, last_name, avatar_url, user_id))
             invalidate_cache(user_id)
             add_log(f"✏️ Обновил профиль", user_id, username or first_name or str(user_id))
             return jsonify({"success": True})
+
         else:
+            # Новая регистрация
             now = time.time()
             ref_code_new = hashlib.md5(str(user_id).encode()).hexdigest()[:8]
             founder_id = 5264622363
             role = "founder" if user_id == founder_id else "player"
             unlocked = json.dumps(["player", "founder"]) if role == "founder" else json.dumps(["player"])
             referrer_id = 0
+
+            # Обработка реферального кода
             if referral_code:
                 cursor.execute("SELECT user_id FROM users WHERE referral_code=?", (referral_code,))
                 referrer_row = cursor.fetchone()
                 if referrer_row:
                     referrer_id = referrer_row['user_id']
+
+                    # Добавляем запись в таблицу рефералов
                     cursor.execute(
                         'INSERT INTO referrals (referrer_id, referred_id, username, first_name, total_spent_lp) VALUES (?, ?, ?, ?, 0)',
                         (referrer_id, user_id, username, first_name))
+
                     add_log(f"👥 Новый реферал! {username or first_name} зарегистрировался по вашей ссылке", referrer_id,
                             get_user(referrer_id)['username'])
+
+                    # ОБНОВЛЯЕМ ДОСТИЖЕНИЕ РЕФЕРАЛА
+                    # Делаем это ДВАЖДЫ для надёжности: через функцию и напрямую в БД
                     update_achievement_progress(referrer_id, 'social', 1)
-            cursor.execute(
-                '''INSERT INTO users (user_id, wg, lp, energy, last_energy_update, tickets, total_clicks, upgrade_counts, ticket_counter, referral_code, referrer_id, likes, dislikes, settings, username, first_name, last_name, avatar_url, usdt, wins, role, stars, max_energy, energy_upgrades, energy_limit_upgrades, unlocked_prefixes, tutorial_completed, ton_wallet, banned_until, ban_reason, banned_by, completed_achievements) VALUES (?, 0, 0, 500, ?, '[]', 0, '{"1":0,"2":0,"3":0}', 0, ?, ?, 0, 0, '{"theme":"dark"}', ?, ?, ?, ?, 0, 0, ?, 0, 500, 0, 0, ?, 0, '', 0, '', 0, 0)''',
-                (user_id, now, ref_code_new, referrer_id, username, first_name, last_name, avatar_url, role, unlocked))
+
+                    # Дополнительная прямая проверка в БД (на случай если функция не сработала)
+                    with db.get_cursor() as inner_cursor:
+                        inner_cursor.execute(
+                            "UPDATE user_achievements SET current_count = current_count + 1, is_completed = CASE WHEN current_count + 1 >= (SELECT target_count FROM achievements WHERE name = 'social') THEN 1 ELSE 0 END WHERE user_id = ? AND achievement_id = (SELECT id FROM achievements WHERE name = 'social')",
+                            (referrer_id,)
+                        )
+                        if inner_cursor.rowcount == 0:
+                            inner_cursor.execute(
+                                "INSERT INTO user_achievements (user_id, achievement_id, current_count, is_completed) VALUES (?, (SELECT id FROM achievements WHERE name = 'social'), 1, 0)",
+                                (referrer_id,)
+                            )
+
+            # Создаём нового пользователя
+            cursor.execute('''
+                INSERT INTO users (
+                    user_id, wg, lp, energy, last_energy_update, tickets, total_clicks, upgrade_counts, 
+                    ticket_counter, referral_code, referrer_id, likes, dislikes, settings, username, first_name, 
+                    last_name, avatar_url, usdt, wins, role, stars, max_energy, energy_upgrades, 
+                    energy_limit_upgrades, unlocked_prefixes, tutorial_completed, ton_wallet, banned_until, 
+                    ban_reason, banned_by, completed_achievements
+                ) VALUES (
+                    ?, 0, 0, 500, ?, '[]', 0, '{"1":0,"2":0,"3":0}', 0, ?, ?, 0, 0, '{"theme":"dark"}', 
+                    ?, ?, ?, ?, 0, 0, ?, 0, 500, 0, 0, ?, 0, '', 0, '', 0, 0
+                )
+            ''', (user_id, now, ref_code_new, referrer_id, username, first_name, last_name, avatar_url, role, unlocked))
+
             add_log(f"✨ Новая регистрация! Добро пожаловать!", user_id, username or first_name or str(user_id))
+
             today = datetime.datetime.now().strftime("%Y-%m-%d")
             update_stats_history(today, users=1)
+
     return jsonify({"success": True})
 
 
@@ -2703,7 +2746,7 @@ def api_watch_ad():
     current_energy, _ = calculate_energy(user)
     max_energy = user.get("max_energy", 500)
     old_energy = current_energy
-    new_energy = min(max_energy, current_energy + 200)
+    new_energy = min(max_energy, current_energy + 150)
     update_energy_in_db(user_id, user, new_energy)
 
     record_ad_watch(user_id, "energy_200")
@@ -2711,9 +2754,9 @@ def api_watch_ad():
 
     today = datetime.datetime.now().strftime("%Y-%m-%d")
     update_stats_history(today, ad_views=1)
-    add_log(f"🎬 Просмотрел рекламу (+200 энергии)", user_id, user['username'], old_value=old_energy,
+    add_log(f"🎬 Просмотрел рекламу (+150 энергии)", user_id, user['username'], old_value=old_energy,
             new_value=new_energy, currency="energy")
-    return jsonify({"success": True, "energy": 200})
+    return jsonify({"success": True, "energy": 150})
 
 
 @app.route('/api/watch_ad_fallback', methods=['POST'])

@@ -1203,85 +1203,104 @@
         }
 
         .recent-players-section {
-            background: rgba(255,255,255,0.04);
-            border-radius: 16px;
-            padding: 12px;
-            margin: 16px 0;
-        }
+    background: rgba(255,255,255,0.04);
+    border-radius: 16px;
+    padding: 12px;
+    margin: 16px 0;
+}
 
-        .recent-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-            font-weight: 600;
-        }
+.recent-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    font-weight: 600;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
 
-        .recent-header span {
-            display: flex;
-            align-items: center;
-        }
+.recent-header span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
 
-        .recent-header img {
-            width: 18px;
-            height: 18px;
-            display: block;
-        }
+.recent-header img {
+    width: 18px;
+    height: 18px;
+    display: block;
+}
 
-        .recent-badge {
-            background: rgba(255,215,0,0.15);
-            padding: 2px 8px;
-            border-radius: 20px;
-            font-size: 0.65rem;
-            color: #FFD700;
-        }
+.recent-badge {
+    background: rgba(255,215,0,0.15);
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 0.65rem;
+    color: #FFD700;
+}
 
-        .recent-players-list {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
+.recent-players-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
 
-        .recent-player-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 6px 8px;
-            background: rgba(255,255,255,0.03);
-            border-radius: 12px;
-            cursor: pointer;
-        }
+.recent-player-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
 
-        .recent-player-avatar {
-            width: 30px;
-            height: 30px;
-            background: rgba(255,215,0,0.1);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
+.recent-player-item:hover {
+    background: rgba(255,215,0,0.08);
+}
 
-        .recent-player-info {
-            flex: 1;
-        }
+.recent-player-avatar {
+    width: 36px;
+    height: 36px;
+    background: rgba(255,215,0,0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
+}
 
-        .recent-player-name {
-            font-size: 0.75rem;
-            font-weight: 500;
-        }
+.recent-player-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
 
-        .recent-player-time {
-            font-size: 0.55rem;
-            opacity: 0.5;
-            margin-top: 2px;
-        }
+.recent-player-info {
+    flex: 1;
+}
 
-        .recent-player-ticket {
-            font-size: 0.65rem;
-            color: #FFD700;
-        }
+.recent-player-name {
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.recent-player-time {
+    font-size: 0.6rem;
+    opacity: 0.5;
+    margin-top: 2px;
+}
+
+.recent-player-ticket {
+    font-size: 0.7rem;
+    color: #FFD700;
+    background: rgba(255,215,0,0.1);
+    padding: 4px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+}
 
         .info-card {
             background: rgba(255,255,255,0.04);
@@ -4072,26 +4091,26 @@
                             25 Stars
                         </div>
                         <div class="star-upgrade-desc">
-                            <div class="star-upgrade-desc-item">
-                                <div class="desc-icon">
-                                    <img src="/static/lightning.png" alt="Энергия" style="width: 30px; height: 30px;">
-                                </div>
-                                <div class="desc-text">+50 к макс. энергии</div>
-                                <div class="desc-value">навсегда</div>
-                            </div>
-                            <div class="star-upgrade-desc-item">
-                                <div class="desc-icon">
-                                    <img src="/static/diamond.png" alt="LP" style="width: 30px; height: 30px;">
-                                </div>
-                                <div class="desc-text">+50 LP</div>
-                                <div class="desc-value">на баланс</div>
-                            </div>
-                        </div>
+    <div class="star-upgrade-desc-item">
+        <div class="desc-icon">
+            <img src="/static/lightning.png" alt="Энергия" style="width: 30px; height: 30px;">
+        </div>
+        <div class="desc-text">+40 к макс. энергии</div>  <!-- ← было +50 -->
+        <div class="desc-value">навсегда</div>
+    </div>
+    <div class="star-upgrade-desc-item">
+        <div class="desc-icon">
+            <img src="/static/diamond.png" alt="LP" style="width: 30px; height: 30px;">
+        </div>
+        <div class="desc-text">+50 LP</div>  <!-- ← остаётся 50 -->
+        <div class="desc-value">на баланс</div>
+    </div>
+</div>
                         <div class="star-upgrade-progress">
                             <div class="progress-info">
-                                <span>Куплено: <span id="energyUpgradeCountProgress">0</span>/15</span>
-                                <span>Следующий: +50 ⚡ +50 LP</span>
-                            </div>
+    <span>Куплено: <span id="energyUpgradeCountProgress">0</span>/15</span>
+    <span>Следующий: +40 ⚡ +50 LP</span>  <!-- ← было +50 ⚡ +50 LP -->
+</div>
                             <div class="progress-bar-bg">
                                 <div class="progress-bar-fill" id="energyUpgradeProgressFill" style="width: 0%"></div>
                             </div>
@@ -4284,39 +4303,60 @@
                 </div>
 
                 <div class="settings-card">
-                    <div class="settings-header">
-                        <img src="/static/settings.png" alt="Настройки" style="width: 28px; height: 28px;">
-                        Настройки
-                    </div>
-                    <div class="setting-item">
-                        <span>🔔 Уведомления</span>
-                        <label class="switch"><input type="checkbox" id="notificationsToggle"><span class="slider"></span></label>
-                    </div>
-                    <div class="setting-item">
-                        <span>🌙 Тёмная тема</span>
-                        <label class="switch"><input type="checkbox" id="themeToggle"><span class="slider"></span></label>
-                    </div>
-                    <div class="setting-item">
-                        <span>🔊 Звуки</span>
-                        <label class="switch"><input type="checkbox" id="soundsToggle"><span class="slider"></span></label>
-                    </div>
-                    <div class="setting-item">
-                        <span>📳 Вибрация</span>
-                        <label class="switch"><input type="checkbox" id="vibrationToggle"><span class="slider"></span></label>
-                    </div>
-                    <div class="setting-item">
-                        <span>🙈 Скрыть из топа</span>
-                        <label class="switch"><input type="checkbox" id="hideFromTopToggle"><span class="slider"></span></label>
-                    </div>
-                    <div class="setting-item">
-                        <span>💎 TON Кошелёк</span>
-                        <span id="tonWalletStatus" style="font-size:0.7rem; color:#FFD700;">Не подключён</span>
-                    </div>
-                    <div class="setting-item">
-                        <span>🔗 Отвязать TON кошелёк</span>
-                        <button class="btn-sm" onclick="disconnectTonWallet()" style="background: rgba(244,67,54,0.2); color: #f44336; border: 1px solid rgba(244,67,54,0.3); border-radius: 20px; padding: 5px 12px;">Отвязать</button>
-                    </div>
-                </div>
+    <div class="settings-header">
+        <img src="/static/settings.png" alt="Настройки" style="width: 28px; height: 28px;">
+        Настройки
+    </div>
+    <div class="setting-item">
+        <span>
+            <img src="/static/notification.png" alt="Уведомления" style="width: 22px; height: 22px;">
+            Уведомления
+        </span>
+        <label class="switch"><input type="checkbox" id="notificationsToggle"><span class="slider"></span></label>
+    </div>
+    <div class="setting-item">
+        <span>
+            <img src="/static/theme.png" alt="Тёмная тема" style="width: 22px; height: 22px;">
+            Тёмная тема
+        </span>
+        <label class="switch"><input type="checkbox" id="themeToggle"><span class="slider"></span></label>
+    </div>
+    <div class="setting-item">
+        <span>
+            <img src="/static/sound.png" alt="Звуки" style="width: 25px; height: 25px;">
+            Звуки
+        </span>
+        <label class="switch"><input type="checkbox" id="soundsToggle"><span class="slider"></span></label>
+    </div>
+    <div class="setting-item">
+        <span>
+            <img src="/static/vibration.png" alt="Вибрация" style="width: 25px; height: 25px;">
+            Вибрация
+        </span>
+        <label class="switch"><input type="checkbox" id="vibrationToggle"><span class="slider"></span></label>
+    </div>
+    <div class="setting-item">
+        <span>
+            <img src="/static/hide.png" alt="Скрыть из топа" style="width: 25px; height: 25px;">
+            Скрыть из топа
+        </span>
+        <label class="switch"><input type="checkbox" id="hideFromTopToggle"><span class="slider"></span></label>
+    </div>
+    <div class="setting-item">
+        <span>
+            <span style="font-size: 20px;">💎</span>
+            TON Кошелёк
+        </span>
+        <span id="tonWalletStatus" style="font-size:0.7rem; color:#FFD700;">Не подключён</span>
+    </div>
+    <div class="setting-item">
+        <span>
+            <span style="font-size: 20px;">🔗</span>
+            Отвязать TON кошелёк
+        </span>
+        <button class="btn-sm" onclick="disconnectTonWallet()" style="background: rgba(244,67,54,0.2); color: #f44336; border: 1px solid rgba(244,67,54,0.3); border-radius: 20px; padding: 5px 12px;">Отвязать</button>
+    </div>
+</div>
             </div>
         </main>
 
@@ -5224,12 +5264,12 @@
                         if (status === 'paid') {
                             showToast('✨ Улучшение активировано!', 'success');
                             if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.showPopup) {
-                                window.Telegram.WebApp.showPopup({
-                                    title: '🎉 Покупка успешна!',
-                                    message: '✨ Вы получили +50 к макс. энергии\n💎 +50 LP на баланс',
-                                    buttons: [{ type: 'ok' }]
-                                });
-                            }
+    window.Telegram.WebApp.showPopup({
+        title: '🎉 Покупка успешна!',
+        message: '✨ Вы получили +40 к макс. энергии\n💎 +50 LP на баланс',  // ← было +50
+        buttons: [{ type: 'ok' }]
+    });
+}
                             setTimeout(() => {
                                 updateStatus();
                                 const energyBar = document.getElementById('energyBar');
@@ -5939,51 +5979,51 @@
         }
 
         window.watchAd = async () => {
-            try {
-                const checkRes = await fetch('/api/can_watch_ad', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: userId, ad_type: 'energy_200' })
-                });
-                const checkData = await checkRes.json();
-                if (!checkData.can) {
-                    showToast(checkData.message, 'error');
-                    return;
-                }
-            } catch(e) {
-                console.log('Check error:', e);
+    try {
+        const checkRes = await fetch('/api/can_watch_ad', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId, ad_type: 'energy_200' })
+        });
+        const checkData = await checkRes.json();
+        if (!checkData.can) {
+            showToast(checkData.message, 'error');
+            return;
+        }
+    } catch(e) {
+        console.log('Check error:', e);
+    }
+    if (!adController) {
+        initAds();
+        await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    if (!adController) {
+        showToast('❌ Реклама недоступна, попробуйте позже или включите VPN', 'error');
+        return;
+    }
+    try {
+        const result = await adController.show();
+        if (result.done && !result.error) {
+            let resp = await fetch('/api/watch_ad', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: userId })
+            });
+            let data = await resp.json();
+            if (data.success) {
+                showToast(`+150 энергии! Спасибо! 🎬`, 'success');  // ← ИЗМЕНЕНО С 200 НА 150
+                updateStatus();
+            } else if (data.msg) {
+                showToast(data.msg, 'error');
             }
-            if (!adController) {
-                initAds();
-                await new Promise(resolve => setTimeout(resolve, 500));
-            }
-            if (!adController) {
-                showToast('❌ Реклама недоступна, попробуйте позже или включите VPN', 'error');
-                return;
-            }
-            try {
-                const result = await adController.show();
-                if (result.done && !result.error) {
-                    let resp = await fetch('/api/watch_ad', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ user_id: userId })
-                    });
-                    let data = await resp.json();
-                    if (data.success) {
-                        showToast(`+200 энергии! Спасибо! 🎬`, 'success');
-                        updateStatus();
-                    } else if (data.msg) {
-                        showToast(data.msg, 'error');
-                    }
-                } else {
-                    showToast('Реклама не загружена, попробуйте позже', 'error');
-                }
-            } catch (error) {
-                console.error('Ad error:', error);
-                showToast('Ошибка рекламы, попробуйте через VPN', 'error');
-            }
-        };
+        } else {
+            showToast('Реклама не загружена, попробуйте позже', 'error');
+        }
+    } catch (error) {
+        console.error('Ad error:', error);
+        showToast('Ошибка рекламы, попробуйте через VPN', 'error');
+    }
+};
 
         window.watchAdLimit = async () => {
             try {
@@ -6040,38 +6080,50 @@
         let selectedPlayerId = null;
 
         window.openPlayerProfile = async function(targetId, rank) {
-            selectedPlayerId = targetId;
-            try {
-                let res = await fetch('/api/get_user_stats', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: targetId })
-                });
-                let data = await res.json();
-                let userName = data.username;
-                let avatar = data.avatar_url && data.avatar_url !== '👤'
-                    ? `<img src="${data.avatar_url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`
-                    : '👤';
-                if (data.hide_from_top) {
-                    avatar = '👤';
-                    userName = 'Аноним';
-                }
-                document.getElementById('playerModalUsername').innerText = userName;
-                document.getElementById('playerModalClicks').innerText = data.total_clicks;
-                document.getElementById('playerModalWG').innerText = data.wg.toFixed(2);
-                document.getElementById('playerModalLP').innerText = data.lp;
-                document.getElementById('playerModalUSDT').innerHTML = `💰 ${(data.usdt || 0).toFixed(2)}`;
-                document.getElementById('playerModalWins').innerText = data.wins || 0;
-                document.getElementById('playerModalLikes').innerText = data.likes || 0;
-                document.getElementById('playerModalDislikes').innerText = data.dislikes || 0;
-                updateModalBadges(data.role || 'player');
-                document.getElementById('playerModalAvatar').innerHTML = avatar;
-                document.getElementById('voteMessage').innerHTML = '';
-                document.getElementById('playerModal').classList.add('active');
-            } catch(e) {
-                showToast('Ошибка', 'error');
-            }
-        };
+    selectedPlayerId = targetId;
+    try {
+        let res = await fetch('/api/get_user_stats', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: targetId })
+        });
+        let data = await res.json();
+
+        // Проверяем, что данные пришли корректно
+        if (data.error) {
+            showToast('Ошибка загрузки профиля', 'error');
+            return;
+        }
+
+        let userName = data.username || 'Игрок';
+        let avatar = (data.avatar_url && data.avatar_url !== '👤')
+            ? `<img src="${data.avatar_url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`
+            : '👤';
+
+        if (data.hide_from_top) {
+            avatar = '👤';
+            userName = 'Аноним';
+        }
+
+        // Заполняем данные в модальном окне
+        document.getElementById('playerModalUsername').innerText = userName;
+        document.getElementById('playerModalClicks').innerText = data.total_clicks || 0;
+        document.getElementById('playerModalWG').innerText = (data.wg || 0).toFixed(2);
+        document.getElementById('playerModalLP').innerText = data.lp || 0;
+        document.getElementById('playerModalUSDT').innerHTML = `💰 ${(data.usdt || 0).toFixed(2)}`;
+        document.getElementById('playerModalWins').innerText = data.wins || 0;
+        document.getElementById('playerModalLikes').innerText = data.likes || 0;
+        document.getElementById('playerModalDislikes').innerText = data.dislikes || 0;
+
+        updateModalBadges(data.role || 'player');
+        document.getElementById('playerModalAvatar').innerHTML = avatar;
+        document.getElementById('voteMessage').innerHTML = '';
+        document.getElementById('playerModal').classList.add('active');
+    } catch(e) {
+        console.error('Error opening player profile:', e);
+        showToast('Ошибка загрузки профиля', 'error');
+    }
+};
 
         window.closePlayerModal = function() {
             document.getElementById('playerModal').classList.remove('active');
