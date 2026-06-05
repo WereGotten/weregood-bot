@@ -2445,6 +2445,164 @@ def check_ton_payment_endpoint():
         return jsonify({'confirmed': False, 'error': str(e)}), 500
 
 
+# ==================== LP БУСТЕР ====================
+@app.route('/api/create_lp_boost_invoice', methods=['POST'])
+def api_create_lp_boost_invoice():
+    data = request.json
+    if not data:
+        return jsonify({"success": False, "msg": "No data"}), 400
+    user_id = data.get('user_id')
+    chat_id = data.get('chat_id', user_id)
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"success": False, "msg": "Invalid user_id"}), 400
+
+    try:
+        title = "💎 LP Бустер"
+        description = "Пополняет баланс на 50 LP!"
+        payload = json.dumps({"user_id": user_id, "type": "lp_boost"})
+        provider_token = ""
+        currency = "XTR"
+        prices = [{"label": "LP Бустер", "amount": 22}]
+        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/createInvoiceLink"
+        data = {
+            "title": title,
+            "description": description,
+            "payload": payload,
+            "provider_token": provider_token,
+            "currency": currency,
+            "prices": prices
+        }
+        verify_ssl = not DEBUG_MODE
+        response = requests.post(url, json=data, timeout=10, verify=verify_ssl)
+        result = response.json()
+        if result.get("ok"):
+            return jsonify({"success": True, "invoice_link": result["result"]})
+        return jsonify({"success": False, "msg": "Ошибка создания счёта"})
+    except Exception as e:
+        logger.error(f"Ошибка в create_lp_boost_invoice: {e}")
+        return jsonify({"success": False, "msg": str(e)}), 500
+
+
+@app.route('/api/ton/create_lp_boost_payment', methods=['POST'])
+def api_ton_create_lp_boost_payment():
+    data = request.json or {}
+    user_id = data.get('user_id')
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"success": False, "error": "Неавторизованный запрос"}), 400
+
+    proj_wallet = globals().get('PROJECT_WALLET_ADDRESS') or os.getenv('PROJECT_WALLET_ADDRESS')
+    if not proj_wallet:
+        logger.critical("🚨 PROJECT_WALLET_ADDRESS отсутствует!")
+        return jsonify({"success": False, "error": "Ошибка конфигурации платежного шлюза"}), 500
+
+    payment_amount_ton = 0.13
+    payment_amount_nano = int(payment_amount_ton * 1e9)
+
+    return jsonify({
+        "success": True,
+        "wallet_address": proj_wallet,
+        "amount": payment_amount_ton,
+        "amount_nano": payment_amount_nano,
+        "comment": f"WereGood_LP:{user_id}"
+    })
+
+
+@app.route('/api/ton/check_lp_boost_payment', methods=['POST'])
+def check_lp_boost_payment():
+    try:
+        data = request.json or {}
+        user_id = data.get('user_id')
+        expected_amount = data.get('expected_amount')
+        sender_wallet = data.get('sender_wallet')
+
+        if not user_id or not expected_amount:
+            return jsonify({'confirmed': False, 'error': 'Missing parameters'}), 400
+
+        expected_amount = float(expected_amount)
+        confirmed, amount_paid, tx_hash = check_ton_transaction(sender_wallet, expected_amount, user_id)
+
+        if confirmed:
+            # Начисляем 50 LP
+            user = get_user(user_id)
+            old_lp = user['lp']
+            new_lp = old_lp + 50
+            safe_update_user(user_id, lp=new_lp)
+
+            add_admin_log(
+                f"💎 Купил LP Бустер за TON ({expected_amount} TON) | +50 LP",
+                user_id,
+                user.get('username') or f"User_{user_id}",
+                details=f"Хэш транзакции: {tx_hash}, LP: {old_lp} → {new_lp}"
+            )
+
+            if 'send_telegram_message' in globals():
+                try:
+                    send_telegram_message(user_id,
+                                          f"✨ **LP Бустер активирован!**\n\n"
+                                          f"💎 +50 LP на баланс!\n\n"
+                                          f"Спасибо за поддержку проекта!")
+                except Exception as tg_err:
+                    logger.error(f"⚠️ Не удалось отправить ТГ-сообщение: {tg_err}")
+
+            return jsonify({'confirmed': True, 'tx_hash': tx_hash})
+
+        return jsonify({'confirmed': False})
+    except Exception as e:
+        logger.error(f"Ошибка в check_lp_boost_payment: {e}", exc_info=True)
+        return jsonify({'confirmed': False, 'error': str(e)}), 500
+
+
+# Добавьте обработку успешной оплаты Stars для LP Бустера
+# В функцию handle_successful_payment добавьте:
+def handle_successful_payment(chat_id, payment_info):
+    try:
+        payload = json.loads(payment_info.get('invoice_payload', '{}'))
+        user_id = payload.get('user_id')
+        payment_type = payload.get('type', 'energy_upgrade')
+        payment_charge_id = payment_info.get('telegram_payment_charge_id')
+        total_amount = payment_info.get('total_amount', 100)
+        stars_amount = total_amount // 100
+
+        if not user_id:
+            return False
+
+        with db.get_cursor() as cursor:
+            cursor.execute("SELECT id FROM successful_payments WHERE telegram_payment_charge_id=?",
+                           (payment_charge_id,))
+            if cursor.fetchone():
+                return True
+            cursor.execute(
+                "INSERT INTO successful_payments (user_id, telegram_payment_charge_id, payload, amount) VALUES (?, ?, ?, ?)",
+                (user_id, payment_charge_id, payment_type, stars_amount))
+
+        if payment_type == 'lp_boost':
+            # Начисляем 50 LP
+            user = get_user(user_id)
+            old_lp = user['lp']
+            new_lp = old_lp + 50
+            safe_update_user(user_id, lp=new_lp)
+            send_telegram_message(chat_id, f"✅ LP Бустер активирован! +50 LP на баланс!")
+            add_admin_log(f"⭐ Купил LP Бустер за Stars | +50 LP", user_id, user.get('username') or f"User_{user_id}")
+            today = datetime.datetime.now().strftime("%Y-%m-%d")
+            update_stats_history(today, stars=stars_amount)
+            return True
+        elif payment_type == 'energy_upgrade':
+            success, message, data = grant_energy_upgrade(user_id)
+            if success:
+                send_telegram_message(chat_id,
+                                      f"✅ {message}\n✨ Макс. энергия: {data['max_energy']}\n💎 LP: {data['lp']}")
+                today = datetime.datetime.now().strftime("%Y-%m-%d")
+                update_stats_history(today, stars=stars_amount)
+            else:
+                send_telegram_message(chat_id, f"❌ {message}")
+            return success
+        return False
+    except Exception as e:
+        logger.error(f"Ошибка в handle_successful_payment: {e}")
+        return False
+
 @app.route('/api/ton/disconnect_wallet', methods=['POST'])
 def api_ton_disconnect_wallet():
     data = request.json or {}
