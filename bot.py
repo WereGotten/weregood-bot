@@ -3072,6 +3072,52 @@ def api_leaderboard():
     return jsonify(result)
 
 
+@app.route('/api/leaderboard/daily', methods=['GET'])
+def api_daily_leaderboard():
+    """Получить топ дня с наградами"""
+    with db.get_cursor() as cursor:
+        today = datetime.datetime.now().strftime("%Y-%m-%d")
+        cursor.execute('''
+            SELECT user_id, total_clicks, username, first_name, avatar_url, role, settings
+            FROM users 
+            ORDER BY total_clicks DESC 
+            LIMIT 50
+        ''')
+        rows = cursor.fetchall()
+
+        rewards = {1: "🏆 70 LP + 200 WG", 2: "🥈 50 LP + 150 WG", 3: "🥉 35 LP + 120 WG",
+                   4: "🎖️ 25 LP + 100 WG", 5: "🎖️ 15 LP + 75 WG"}
+
+        result = []
+        for i, row in enumerate(rows, 1):
+            hide_from_top = False
+            if row['settings']:
+                try:
+                    settings = json.loads(row['settings'])
+                    hide_from_top = settings.get('hideFromTop', False)
+                except:
+                    pass
+
+            if hide_from_top:
+                display_name = 'Аноним'
+                avatar = '👤'
+            else:
+                display_name = f"@{row['username']}" if row['username'] else (
+                            row['first_name'] or f"Player_{row['user_id']}")
+                avatar = row['avatar_url'] or '👤'
+
+            result.append({
+                "rank": i,
+                "user_id": row['user_id'],
+                "username": display_name,
+                "total_clicks": row['total_clicks'],
+                "avatar": avatar,
+                "role": row['role'] or 'player',
+                "reward": rewards.get(i, "")
+            })
+
+        return jsonify(result)
+
 @app.route('/api/get_user_stats', methods=['POST'])
 def api_get_user_stats():
     data = request.json
@@ -4383,6 +4429,89 @@ def raw_to_user_friendly(raw_address: str) -> str:
     except Exception as e:
         print(f"Ошибка конвертации адреса: {e}")
         return raw_address
+
+
+# Добавь эти функции в bot.py
+
+def calculate_daily_top():
+    """Расчёт топа за день и выдача наград"""
+    with db.get_cursor() as cursor:
+        # Получаем топ-5 по кликам за сегодня
+        today = datetime.datetime.now().strftime("%Y-%m-%d")
+        cursor.execute('''
+            SELECT user_id, total_clicks, username, first_name, role
+            FROM users 
+            WHERE user_id IN (
+                SELECT user_id FROM stats_history 
+                WHERE date = ? AND clicks > 0
+                ORDER BY clicks DESC LIMIT 5
+            )
+            ORDER BY total_clicks DESC
+            LIMIT 5
+        ''', (today,))
+
+        # Если нет данных по stats_history, берём общие клики
+        if cursor.rowcount == 0:
+            cursor.execute('''
+                SELECT user_id, total_clicks, username, first_name, role
+                FROM users 
+                ORDER BY total_clicks DESC 
+                LIMIT 5
+            ''')
+
+        rows = cursor.fetchall()
+
+        rewards = {
+            1: {"lp": 70, "wg": 200},
+            2: {"lp": 50, "wg": 150},
+            3: {"lp": 35, "wg": 120},
+            4: {"lp": 25, "wg": 100},
+            5: {"lp": 15, "wg": 75}
+        }
+
+        for i, row in enumerate(rows, 1):
+            if i in rewards:
+                user = get_user(row['user_id'])
+                new_lp = user['lp'] + rewards[i]["lp"]
+                new_wg = user['wg'] + rewards[i]["wg"]
+                safe_update_user(row['user_id'], lp=new_lp, wg=new_wg)
+                add_log(f"🏆 ТОП ДНЯ #{i} место | +{rewards[i]['lp']} LP, +{rewards[i]['wg']} WG",
+                        row['user_id'], row['username'] or row['first_name'] or str(row['user_id']))
+
+                send_telegram_message(row['user_id'],
+                                      f"🏆 ПОЗДРАВЛЯЕМ!\n\nВы заняли #{i} место в ТОПЕ ДНЯ!\n\nНаграда:\n💎 +{rewards[i]['lp']} LP\n💰 +{rewards[i]['wg']} WG\n\nПродолжайте кликать! 🎉")
+
+        add_admin_log(f"🏆 РАЗДАЧА НАГРАД ТОПА ДНЯ завершена. Выдано {len(rows)} наград", 0, "System")
+        return rows
+
+
+def schedule_daily_top_reset():
+    """Планировщик сброса топа в 00:00 МСК"""
+
+    def reset_and_reward():
+        while True:
+            now = datetime.datetime.now()
+            # Следующий 00:00 МСК (21:00 UTC)
+            next_reset = now.replace(hour=21, minute=0, second=0, microsecond=0)
+            if now >= next_reset:
+                next_reset += datetime.timedelta(days=1)
+            wait_seconds = (next_reset - now).total_seconds()
+            time.sleep(wait_seconds)
+
+            # Выдаём награды
+            calculate_daily_top()
+
+            # Сбрасываем клики для нового дня (опционально, если хотим обнулять)
+            # with db.get_cursor() as cursor:
+            #     cursor.execute("UPDATE users SET daily_clicks = 0")
+
+            add_admin_log(f"🔄 ЕЖЕДНЕВНЫЙ СБРОС ТОПА выполнен в {datetime.datetime.now()}", 0, "System")
+
+    threading.Thread(target=reset_and_reward, daemon=True).start()
+
+
+# Запускаем планировщик после инициализации
+schedule_daily_top_reset()
 
 if __name__ == '__main__':
     threading.Thread(target=handle_telegram_updates, daemon=True).start()

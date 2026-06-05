@@ -3841,6 +3841,53 @@
         html {
             scroll-behavior: smooth;
         }
+        /* Таймер для топа дня */
+.daily-timer-container {
+    background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,165,0,0.08));
+    border-radius: 20px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border: 1px solid rgba(255,215,0,0.2);
+}
+
+.daily-timer-icon {
+    font-size: 2rem;
+}
+
+.daily-timer-info {
+    flex: 1;
+}
+
+.daily-timer-label {
+    font-size: 0.7rem;
+    color: rgba(255,255,255,0.6);
+    margin-bottom: 4px;
+}
+
+.daily-timer-value {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #FFD700;
+    font-family: monospace;
+    letter-spacing: 2px;
+}
+
+.coming-soon {
+    background: rgba(255,215,0,0.1);
+    border-radius: 16px;
+    padding: 20px;
+    text-align: center;
+    margin-bottom: 20px;
+    border: 1px dashed rgba(255,215,0,0.3);
+}
+
+.coming-soon span {
+    color: #FFD700;
+    font-size: 0.85rem;
+}
     </style>
 </head>
 <body>
@@ -4428,17 +4475,33 @@
     </div>
 
     <div id="leaderboardPage" class="leaderboard-page">
-        <div class="leaderboard-header">
-            <button class="back-btn" onclick="closeLeaderboard()">←</button>
-            <h2>🏆 Таблица лидеров</h2>
-        </div>
-        <div class="leaderboard-tabs">
-            <button class="leaderboard-tab active" data-period="day">Топ дня</button>
-            <button class="leaderboard-tab" data-period="week">Топ недели</button>
-            <button class="leaderboard-tab" data-period="month">Топ месяца</button>
-        </div>
-        <div class="leaderboard-list" id="leaderboardList">Загрузка...</div>
+    <div class="leaderboard-header">
+        <button class="back-btn" onclick="closeLeaderboard()">←</button>
+        <h2>🏆 Таблица лидеров</h2>
     </div>
+
+    <!-- ТАЙМЕР ДЛЯ ТОПА ДНЯ -->
+    <div class="daily-timer-container" id="dailyTimerContainer">
+        <div class="daily-timer-icon">⏰</div>
+        <div class="daily-timer-info">
+            <div class="daily-timer-label">До окончания дня и раздачи наград:</div>
+            <div class="daily-timer-value" id="dailyLeaderboardTimer">-- : -- : --</div>
+        </div>
+    </div>
+
+    <div class="leaderboard-tabs">
+        <button class="leaderboard-tab active" data-period="day">🏆 Топ дня</button>
+        <button class="leaderboard-tab" data-period="week">📅 Топ недели</button>
+        <button class="leaderboard-tab" data-period="month">📆 Топ месяца</button>
+    </div>
+
+    <!-- СООБЩЕНИЕ ДЛЯ НЕДЕЛИ/МЕСЯЦА -->
+    <div class="coming-soon" id="comingSoonMsg" style="display: none;">
+        <span>🔄 Топ недели и месяца будут добавлены в ближайшие дни!</span>
+    </div>
+
+    <div class="leaderboard-list" id="leaderboardList">Загрузка...</div>
+</div>
 
     <div id="withdrawalModal" class="withdrawal-modal">
         <div class="withdrawal-modal-content">
@@ -6358,12 +6421,30 @@
         }
 
         document.querySelectorAll('.leaderboard-tab').forEach(tab => {
-            tab.onclick = () => {
-                document.querySelectorAll('.leaderboard-tab').forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
-                loadLeaderboardData(tab.dataset.period);
-            };
-        });
+    tab.onclick = () => {
+        const period = tab.dataset.period;
+        document.querySelectorAll('.leaderboard-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+
+        const timerContainer = document.getElementById('dailyTimerContainer');
+        const comingSoonMsg = document.getElementById('comingSoonMsg');
+        const leaderboardList = document.getElementById('leaderboardList');
+
+        if (period === 'day') {
+            if (timerContainer) timerContainer.style.display = 'flex';
+            if (comingSoonMsg) comingSoonMsg.style.display = 'none';
+            if (leaderboardList) leaderboardList.style.display = 'flex';
+            loadLeaderboardData('day', true);
+            startDailyLeaderboardTimer();
+        } else {
+            if (timerContainer) timerContainer.style.display = 'none';
+            if (comingSoonMsg) comingSoonMsg.style.display = 'block';
+            if (leaderboardList) leaderboardList.style.display = 'none';
+            // Показываем заглушку
+            if (leaderboardList) leaderboardList.innerHTML = '<div class="empty-state">🔄 Топ недели и месяца будут добавлены в ближайшие дни!</div>';
+        }
+    };
+});
 
         // ==================== РЕФЕРАЛЫ ====================
         window.copyReferralLink = function() {
@@ -6883,6 +6964,49 @@
                 }
             });
         });
+
+        // Таймер для топа дня
+let dailyLeaderboardTimerInterval = null;
+
+function startDailyLeaderboardTimer() {
+    if (dailyLeaderboardTimerInterval) clearInterval(dailyLeaderboardTimerInterval);
+
+    function updateTimer() {
+        const now = new Date();
+        // Следующий 00:00 по МСК (UTC+3)
+        const nextMidnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 21, 0, 0));
+        // МСК = UTC+3, поэтому 00:00 МСК = 21:00 UTC предыдущего дня
+
+        let targetDate = new Date(nextMidnight);
+
+        // Если уже прошло 00:00 МСК сегодня, то цель - завтрашняя
+        if (now > targetDate) {
+            targetDate = new Date(targetDate.getTime() + 24 * 60 * 60 * 1000);
+        }
+
+        const diff = targetDate - now;
+
+        if (diff <= 0) {
+            // Время вышло - обновляем топ и перезапускаем таймер
+            if (dailyLeaderboardTimerInterval) clearInterval(dailyLeaderboardTimerInterval);
+            loadLeaderboardData('day', true);
+            startDailyLeaderboardTimer();
+            return;
+        }
+
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+        const timerElement = document.getElementById('dailyLeaderboardTimer');
+        if (timerElement) {
+            timerElement.innerHTML = `${hours.toString().padStart(2, '0')} : ${minutes.toString().padStart(2, '0')} : ${seconds.toString().padStart(2, '0')}`;
+        }
+    }
+
+    updateTimer();
+    dailyLeaderboardTimerInterval = setInterval(updateTimer, 1000);
+}
 
         // ==================== ПРОМОКОДЫ ====================
         async function openPromoModalWithCode(promoCode) {
@@ -7416,6 +7540,7 @@
             setInterval(updateLottery, 30000);
             setInterval(loadRecentPlayers, 15000);
             setInterval(() => updateLeaderboard(), 8000);
+            startDailyLeaderboardTimer();
             if (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
                 const startParam = tg.initDataUnsafe.start_param;
                 if (startParam && startParam.startsWith('claim_')) {
