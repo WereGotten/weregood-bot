@@ -1213,8 +1213,10 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
     font-weight: 600;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 
 .recent-header span {
@@ -1237,25 +1239,32 @@
     color: #FFD700;
 }
 
+/* СТАРЫЙ ДИЗАЙН - С НОРМАЛЬНЫМИ ОТСТУПАМИ */
 .recent-players-list {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 12px;
+    margin-top: 8px;
 }
 
 .recent-player-item {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 6px 8px;
-    background: rgba(255,255,255,0.03);
+    gap: 12px;
+    padding: 10px 12px;
+    background: rgba(255,255,255,0.04);
     border-radius: 12px;
     cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.recent-player-item:hover {
+    background: rgba(255,215,0,0.08);
 }
 
 .recent-player-avatar {
-    width: 30px;
-    height: 30px;
+    width: 36px;
+    height: 36px;
     background: rgba(255,215,0,0.1);
     border-radius: 50%;
     display: flex;
@@ -1276,23 +1285,24 @@
 }
 
 .recent-player-name {
-    font-size: 0.75rem;
-    font-weight: 500;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 2px;
 }
 
 .recent-player-time {
-    font-size: 0.55rem;
+    font-size: 0.6rem;
     opacity: 0.5;
-    margin-top: 2px;
 }
 
 .recent-player-ticket {
-    font-size: 0.65rem;
+    font-size: 0.7rem;
     color: #FFD700;
     background: rgba(255,215,0,0.1);
-    padding: 3px 8px;
+    padding: 4px 10px;
     border-radius: 20px;
     white-space: nowrap;
+    font-weight: 500;
 }
 
         .info-card {
@@ -5060,25 +5070,37 @@
         }
 
         for (let p of data) {
-            let avatar = p.avatar_url ? `<img src="${p.avatar_url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">` : '👤';
-            let playerName = p.username || p.first_name || 'Игрок';
-            if (playerName.startsWith('Player_') || playerName.startsWith('@Player_')) playerName = p.first_name || 'Игрок';
-            if (playerName.startsWith('@')) playerName = playerName.substring(1);
-            if (localHideFromTop && p.user_id == userId) playerName = '@Anonim';
+            // Аватар
+            let avatarHtml = '👤';
+            if (p.avatar_url && p.avatar_url !== '') {
+                avatarHtml = `<img src="${p.avatar_url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+            }
 
+            // Имя
+            let playerName = p.username || p.first_name || 'Игрок';
+            if (playerName.startsWith('@')) playerName = playerName.substring(1);
+            if (playerName.startsWith('Player_')) playerName = 'Игрок';
+            if (localHideFromTop && p.user_id == userId) playerName = 'Аноним';
+
+            // Иконка роли
             let roleIcon = '';
             if (p.role === 'founder') roleIcon = '👑';
             else if (p.role === 'legend') roleIcon = '👑';
             else if (p.role === 'pioneer') roleIcon = '⭐';
 
-            html += `<div class="recent-player-item" onclick="openPlayerProfile(${p.user_id}, 0)">
-                        <div class="recent-player-avatar">${avatar}</div>
-                        <div class="recent-player-info">
-                            <div class="recent-player-name">${escapeHtml(playerName)} ${roleIcon}</div>
-                            <div class="recent-player-time">${p.time_ago}</div>
-                        </div>
-                        <div class="recent-player-ticket">🎫 #${p.ticket_number}</div>
-                    </div>`;
+            // Время
+            let timeAgo = p.time_ago || 'только что';
+
+            html += `
+                <div class="recent-player-item" onclick="openPlayerProfile(${p.user_id}, 0)">
+                    <div class="recent-player-avatar">${avatarHtml}</div>
+                    <div class="recent-player-info">
+                        <div class="recent-player-name">${escapeHtml(playerName)} ${roleIcon}</div>
+                        <div class="recent-player-time">🕐 ${timeAgo}</div>
+                    </div>
+                    <div class="recent-player-ticket">🎫 #${p.ticket_number}</div>
+                </div>
+            `;
         }
 
         document.getElementById('recentPlayersList').innerHTML = html;
