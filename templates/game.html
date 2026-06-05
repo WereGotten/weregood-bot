@@ -668,13 +668,59 @@
             margin-top: 4px;
         }
 
+        /* КАРУСЕЛЬ ДЛЯ КАРТОЧЕК ДОНАТА */
+        .donate-carousel-container {
+            overflow: hidden;
+            border-radius: 24px;
+            position: relative;
+        }
+
+        .donate-carousel-track {
+            display: flex;
+            transition: transform 0.3s ease;
+        }
+
+        .carousel-prev, .carousel-next {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,215,0,0.2);
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            color: #FFD700;
+            font-size: 1.2rem;
+            cursor: pointer;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+            transition: all 0.2s ease;
+        }
+
+        .carousel-prev { left: -10px; }
+        .carousel-next { right: -10px; }
+
+        .carousel-prev:hover, .carousel-next:hover {
+            background: rgba(255,215,0,0.4);
+            transform: translateY(-50%) scale(1.05);
+        }
+
+        .carousel-prev:active, .carousel-next:active {
+            transform: translateY(-50%) scale(0.95);
+        }
+
         .star-upgrade-card {
             background: linear-gradient(145deg, #1a1a2e, #0f0f20);
             border-radius: 24px;
             padding: 20px;
-            margin-bottom: 20px;
+            margin-bottom: 0;
             border: 1px solid rgba(255,215,0,0.15);
             position: relative;
+            min-width: 100%;
+            flex-shrink: 0;
         }
 
         .star-upgrade-card.disabled {
@@ -1203,96 +1249,96 @@
         }
 
         .recent-players-section {
-    background: rgba(255,255,255,0.04);
-    border-radius: 16px;
-    padding: 16px;
-    margin: 16px 0;
-}
+            background: rgba(255,255,255,0.04);
+            border-radius: 16px;
+            padding: 16px;
+            margin: 16px 0;
+        }
 
-.recent-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-    font-weight: 600;
-}
+        .recent-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
 
-.recent-header span:first-child {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.85rem;
-}
+        .recent-header span:first-child {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+        }
 
-.recent-badge {
-    background: rgba(255,215,0,0.15);
-    padding: 2px 10px;
-    border-radius: 20px;
-    font-size: 0.7rem;
-    color: #FFD700;
-}
+        .recent-badge {
+            background: rgba(255,215,0,0.15);
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            color: #FFD700;
+        }
 
-.recent-players-list {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
+        .recent-players-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
 
-.recent-player-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 12px;
-    background: rgba(255,255,255,0.04);
-    border-radius: 14px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    border: 1px solid rgba(255,255,255,0.05);
-}
+        .recent-player-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            background: rgba(255,255,255,0.04);
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
 
-.recent-player-avatar {
-    width: 42px;
-    height: 42px;
-    background: rgba(255,215,0,0.1);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    flex-shrink: 0;
-    font-size: 1.3rem;
-}
+        .recent-player-avatar {
+            width: 42px;
+            height: 42px;
+            background: rgba(255,215,0,0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            flex-shrink: 0;
+            font-size: 1.3rem;
+        }
 
-.recent-player-avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
+        .recent-player-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
 
-.recent-player-info {
-    flex: 1;
-}
+        .recent-player-info {
+            flex: 1;
+        }
 
-.recent-player-name {
-    font-size: 0.85rem;
-    font-weight: 600;
-    margin-bottom: 3px;
-}
+        .recent-player-name {
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 3px;
+        }
 
-.recent-player-time {
-    font-size: 0.6rem;
-    opacity: 0.5;
-}
+        .recent-player-time {
+            font-size: 0.6rem;
+            opacity: 0.5;
+        }
 
-.recent-player-ticket {
-    font-size: 0.7rem;
-    color: #FFD700;
-    background: rgba(255,215,0,0.1);
-    padding: 4px 10px;
-    border-radius: 30px;
-    white-space: nowrap;
-    font-weight: 500;
-}
+        .recent-player-ticket {
+            font-size: 0.7rem;
+            color: #FFD700;
+            background: rgba(255,215,0,0.1);
+            padding: 4px 10px;
+            border-radius: 30px;
+            white-space: nowrap;
+            font-weight: 500;
+        }
 
         .info-card {
             background: rgba(255,255,255,0.04);
@@ -2291,70 +2337,69 @@
             color: #0a0a1a;
         }
 
-        /* ТАБЛИЦА ЛИДЕРОВ - ПРЕМИУМ ДИЗАЙН */
-.leaderboard-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    max-height: calc(100vh - 150px);
-    overflow-y: auto;
-}
+        .leaderboard-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: calc(100vh - 150px);
+            overflow-y: auto;
+        }
 
-.leaderboard-item {
-    background: rgba(255,255,255,0.04);
-    border-radius: 14px;
-    padding: 10px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    cursor: pointer;
-}
+        .leaderboard-item {
+            background: rgba(255,255,255,0.04);
+            border-radius: 14px;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+        }
 
-.leaderboard-item .rank {
-    width: 28px;
-    font-weight: 700;
-    color: #FFD700;
-    font-size: 0.85rem;
-}
+        .leaderboard-item .rank {
+            width: 28px;
+            font-weight: 700;
+            color: #FFD700;
+            font-size: 0.85rem;
+        }
 
-.leaderboard-item .avatar {
-    width: 32px;
-    height: 32px;
-    background: rgba(255,215,0,0.1);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-}
+        .leaderboard-item .avatar {
+            width: 32px;
+            height: 32px;
+            background: rgba(255,215,0,0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
 
-.leaderboard-item .avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
+        .leaderboard-item .avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
 
-.leaderboard-item .info {
-    flex: 1;
-}
+        .leaderboard-item .info {
+            flex: 1;
+        }
 
-.leaderboard-item .name {
-    font-weight: 500;
-    font-size: 0.75rem;
-}
+        .leaderboard-item .name {
+            font-weight: 500;
+            font-size: 0.75rem;
+        }
 
-.leaderboard-item .clicks {
-    font-size: 0.55rem;
-    opacity: 0.5;
-}
+        .leaderboard-item .clicks {
+            font-size: 0.55rem;
+            opacity: 0.5;
+        }
 
-.leaderboard-item .reward {
-    font-size: 0.6rem;
-    background: rgba(255,215,0,0.1);
-    padding: 3px 8px;
-    border-radius: 20px;
-    color: #FFD700;
-}
+        .leaderboard-item .reward {
+            font-size: 0.6rem;
+            background: rgba(255,215,0,0.1);
+            padding: 3px 8px;
+            border-radius: 20px;
+            color: #FFD700;
+        }
 
         .bottom-nav {
             position: fixed;
@@ -3842,135 +3887,133 @@
         html {
             scroll-behavior: smooth;
         }
-        /* Таймер для топа дня */
-.daily-timer-container {
-    background: linear-gradient(135deg, rgba(255,215,0,0.12), rgba(255,165,0,0.06));
-    border-radius: 30px;
-    padding: 16px 20px;
-    margin-bottom: 24px;
-    text-align: center;
-    border: 1px solid rgba(255,215,0,0.25);
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-}
 
-.daily-timer-icon {
-    font-size: 1.8rem;
-    margin-bottom: 6px;
-    display: inline-block;
-    animation: timerPulse 2s infinite;
-}
+        .daily-timer-container {
+            background: linear-gradient(135deg, rgba(255,215,0,0.12), rgba(255,165,0,0.06));
+            border-radius: 30px;
+            padding: 16px 20px;
+            margin-bottom: 24px;
+            text-align: center;
+            border: 1px solid rgba(255,215,0,0.25);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
 
-@keyframes timerPulse {
-    0% { transform: scale(1); opacity: 0.7; }
-    50% { transform: scale(1.05); opacity: 1; }
-    100% { transform: scale(1); opacity: 0.7; }
-}
+        .daily-timer-icon {
+            font-size: 1.8rem;
+            margin-bottom: 6px;
+            display: inline-block;
+            animation: timerPulse 2s infinite;
+        }
 
-.daily-timer-label {
-    font-size: 0.7rem;
-    color: rgba(255,255,255,0.5);
-    margin-bottom: 8px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-}
+        @keyframes timerPulse {
+            0% { transform: scale(1); opacity: 0.7; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.7; }
+        }
 
-.daily-timer-value {
-    font-size: 1.8rem;
-    font-weight: 800;
-    color: #FFD700;
-    font-family: 'Courier New', monospace;
-    letter-spacing: 4px;
-    text-shadow: 0 0 10px rgba(255,215,0,0.3);
-    background: rgba(0,0,0,0.3);
-    display: inline-block;
-    padding: 8px 20px;
-    border-radius: 50px;
-}
+        .daily-timer-label {
+            font-size: 0.7rem;
+            color: rgba(255,255,255,0.5);
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
 
-/* Компактная версия таймера для мобильных */
-@media (max-width: 480px) {
-    .daily-timer-value {
-        font-size: 1.3rem;
-        letter-spacing: 2px;
-        padding: 6px 15px;
-    }
-}
-        /* COMING SOON - КРАСИВЫЙ БЛОК */
-.coming-soon {
-    background: linear-gradient(135deg, rgba(255,215,0,0.08), rgba(255,165,0,0.04));
-    border-radius: 28px;
-    padding: 32px 24px;
-    text-align: center;
-    margin-bottom: 20px;
-    border: 1px solid rgba(255,215,0,0.2);
-    backdrop-filter: blur(10px);
-}
+        .daily-timer-value {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #FFD700;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 4px;
+            text-shadow: 0 0 10px rgba(255,215,0,0.3);
+            background: rgba(0,0,0,0.3);
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 50px;
+        }
 
-.coming-soon-icon {
-    font-size: 3rem;
-    margin-bottom: 16px;
-    display: inline-block;
-    animation: comingSoonPulse 2s infinite ease-in-out;
-}
+        @media (max-width: 480px) {
+            .daily-timer-value {
+                font-size: 1.3rem;
+                letter-spacing: 2px;
+                padding: 6px 15px;
+            }
+        }
 
-@keyframes comingSoonPulse {
-    0% { transform: scale(1); opacity: 0.6; }
-    50% { transform: scale(1.1); opacity: 1; }
-    100% { transform: scale(1); opacity: 0.6; }
-}
+        .coming-soon {
+            background: linear-gradient(135deg, rgba(255,215,0,0.08), rgba(255,165,0,0.04));
+            border-radius: 28px;
+            padding: 32px 24px;
+            text-align: center;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255,215,0,0.2);
+            backdrop-filter: blur(10px);
+        }
 
-.coming-soon-title {
-    font-size: 1.3rem;
-    font-weight: 800;
-    background: linear-gradient(135deg, #FFD700, #FFA500);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    margin-bottom: 12px;
-    letter-spacing: 1px;
-}
+        .coming-soon-icon {
+            font-size: 3rem;
+            margin-bottom: 16px;
+            display: inline-block;
+            animation: comingSoonPulse 2s infinite ease-in-out;
+        }
 
-.coming-soon-text {
-    font-size: 0.8rem;
-    color: rgba(255,255,255,0.6);
-    line-height: 1.4;
-    max-width: 280px;
-    margin: 0 auto;
-}
+        @keyframes comingSoonPulse {
+            0% { transform: scale(1); opacity: 0.6; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.6; }
+        }
 
-.coming-soon-progress {
-    max-width: 200px;
-    margin: 20px auto 0;
-}
+        .coming-soon-title {
+            font-size: 1.3rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 12px;
+            letter-spacing: 1px;
+        }
 
-.coming-soon-progress .progress-bar {
-    height: 3px;
-    background: linear-gradient(90deg, rgba(255,215,0,0.3), #FFD700, rgba(255,215,0,0.3));
-    background-size: 200% 100%;
-    animation: progressShine 1.5s infinite;
-    border-radius: 3px;
-}
+        .coming-soon-text {
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.6);
+            line-height: 1.4;
+            max-width: 280px;
+            margin: 0 auto;
+        }
 
-@keyframes progressShine {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
-}
+        .coming-soon-progress {
+            max-width: 200px;
+            margin: 20px auto 0;
+        }
 
-/* Адаптация для мобильных */
-@media (max-width: 480px) {
-    .coming-soon {
-        padding: 24px 16px;
-    }
-    .coming-soon-icon {
-        font-size: 2.5rem;
-    }
-    .coming-soon-title {
-        font-size: 1.1rem;
-    }
-    .coming-soon-text {
-        font-size: 0.7rem;
-    }
-}
+        .coming-soon-progress .progress-bar {
+            height: 3px;
+            background: linear-gradient(90deg, rgba(255,215,0,0.3), #FFD700, rgba(255,215,0,0.3));
+            background-size: 200% 100%;
+            animation: progressShine 1.5s infinite;
+            border-radius: 3px;
+        }
+
+        @keyframes progressShine {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        @media (max-width: 480px) {
+            .coming-soon {
+                padding: 24px 16px;
+            }
+            .coming-soon-icon {
+                font-size: 2.5rem;
+            }
+            .coming-soon-title {
+                font-size: 1.1rem;
+            }
+            .coming-soon-text {
+                font-size: 0.7rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -4198,50 +4241,110 @@
                         </div>
                     </div>
 
-                    <div class="star-upgrade-card" id="energyUpgradeCard">
-                        <div class="star-upgrade-header">
-                            <div class="star-upgrade-icon">
-                                <img src="/static/lightning.png" alt="Энергия" style="width: 32px; height: 32px;">
-                            </div>
-                            <div class="star-upgrade-title">
-                                <h3>✨ Энергетический усилитель</h3>
-                                <p>Увеличивает лимит энергии</p>
+                    <!-- КАРУСЕЛЬ С ДВУМЯ КАРТОЧКАМИ -->
+                    <div style="position: relative; margin-bottom: 20px;">
+                        <button class="carousel-prev" id="donateCarouselPrev">←</button>
+                        <button class="carousel-next" id="donateCarouselNext">→</button>
+
+                        <div class="donate-carousel-container">
+                            <div class="donate-carousel-track" id="donateCarouselTrack">
+
+                                <!-- КАРТОЧКА 1: Энергетический усилитель -->
+                                <div class="star-upgrade-card" id="energyUpgradeCard">
+                                    <div class="star-upgrade-header">
+                                        <div class="star-upgrade-icon">
+                                            <img src="/static/lightning.png" alt="Энергия" style="width: 32px; height: 32px;">
+                                        </div>
+                                        <div class="star-upgrade-title">
+                                            <h3>✨ Энергетический усилитель</h3>
+                                            <p>Увеличивает лимит энергии</p>
+                                        </div>
+                                    </div>
+                                    <div class="star-upgrade-price">
+                                        <img src="/static/star_small.png" alt="Stars" style="width: 16px; height: 16px;">
+                                        25 Stars
+                                    </div>
+                                    <div class="star-upgrade-desc">
+                                        <div class="star-upgrade-desc-item">
+                                            <div class="desc-icon">
+                                                <img src="/static/lightning.png" alt="Энергия" style="width: 30px; height: 30px;">
+                                            </div>
+                                            <div class="desc-text">+40 к макс. энергии</div>
+                                            <div class="desc-value">навсегда</div>
+                                        </div>
+                                        <div class="star-upgrade-desc-item">
+                                            <div class="desc-icon">
+                                                <img src="/static/diamond.png" alt="LP" style="width: 30px; height: 30px">
+                                            </div>
+                                            <div class="desc-text">+50 LP</div>
+                                            <div class="desc-value">на баланс</div>
+                                        </div>
+                                    </div>
+                                    <div class="star-upgrade-progress">
+                                        <div class="progress-info">
+                                            <span>Куплено: <span id="energyUpgradeCountProgress">0</span>/15</span>
+                                            <span>Следующий: +40 ⚡ +50 LP</span>
+                                        </div>
+                                        <div class="progress-bar-bg">
+                                            <div class="progress-bar-fill" id="energyUpgradeProgressFill" style="width: 0%"></div>
+                                        </div>
+                                    </div>
+                                    <button class="star-upgrade-btn btn-stars" id="energyUpgradeBtn" onclick="buyEnergyUpgrade()">
+                                        <img src="/static/star_small.png" alt="Stars" style="width: 16px; height: 16px;">
+                                        Купить за 25 звёзд
+                                    </button>
+                                    <button class="star-upgrade-btn btn-ton" id="tonDonateBtn" onclick="buyWithTon()">💎 Купить за 0.18 TON</button>
+                                </div>
+
+                                <!-- КАРТОЧКА 2: LP БУСТЕР (НОВАЯ) -->
+                                <div class="star-upgrade-card" id="lpBoostCard">
+                                    <div class="star-upgrade-header">
+                                        <div class="star-upgrade-icon">
+                                            <img src="/static/diamond.png" alt="LP" style="width: 32px; height: 32px;">
+                                        </div>
+                                        <div class="star-upgrade-title">
+                                            <h3>💎 LP Бустер</h3>
+                                            <p>Пополняет баланс LP</p>
+                                        </div>
+                                    </div>
+                                    <div class="star-upgrade-price">
+                                        <img src="/static/star_small.png" alt="Stars" style="width: 16px; height: 16px;">
+                                        22 Stars
+                                    </div>
+                                    <div class="star-upgrade-desc">
+                                        <div class="star-upgrade-desc-item">
+                                            <div class="desc-icon">
+                                                <img src="/static/diamond.png" alt="LP" style="width: 30px; height: 30px;">
+                                            </div>
+                                            <div class="desc-text">+50 LP</div>
+                                            <div class="desc-value">на баланс</div>
+                                        </div>
+                                        <div class="star-upgrade-desc-item">
+                                            <div class="desc-icon">
+                                                <span style="font-size: 28px;">🔄</span>
+                                            </div>
+                                            <div class="desc-text">Безлимитная покупка</div>
+                                            <div class="desc-value">покупай сколько хочешь</div>
+                                        </div>
+                                    </div>
+                                    <div class="star-upgrade-progress">
+                                        <div class="progress-info">
+                                            <span>💰 Пополнение LP</span>
+                                            <span>⚡ Мгновенное зачисление</span>
+                                        </div>
+                                        <div class="progress-bar-bg">
+                                            <div class="progress-bar-fill" style="width: 100%; background: linear-gradient(90deg, #FFD700, #FFA500);"></div>
+                                        </div>
+                                    </div>
+                                    <button class="star-upgrade-btn btn-stars" id="lpBoostStarsBtn" onclick="buyLPBoostStars()">
+                                        <img src="/static/star_small.png" alt="Stars" style="width: 16px; height: 16px;">
+                                        Купить за 22 звёзд
+                                    </button>
+                                    <button class="star-upgrade-btn btn-ton" id="lpBoostTonBtn" onclick="buyLPBoostTon()">💎 Купить за 0.13 TON</button>
+                                </div>
+
                             </div>
                         </div>
-                        <div class="star-upgrade-price">
-                            <img src="/static/star_small.png" alt="Stars" style="width: 16px; height: 16px;">
-                            25 Stars
-                        </div>
-                        <div class="star-upgrade-desc">
-    <div class="star-upgrade-desc-item">
-        <div class="desc-icon">
-            <img src="/static/lightning.png" alt="Энергия" style="width: 30px; height: 30px;">
-        </div>
-        <div class="desc-text">+40 к макс. энергии</div>  <!-- ← было +50 -->
-        <div class="desc-value">навсегда</div>
-    </div>
-    <div class="star-upgrade-desc-item">
-        <div class="desc-icon">
-            <img src="/static/diamond.png" alt="LP" style="width: 30px; height: 30px;">
-        </div>
-        <div class="desc-text">+50 LP</div>  <!-- ← остаётся 50 -->
-        <div class="desc-value">на баланс</div>
-    </div>
-</div>
-                        <div class="star-upgrade-progress">
-                            <div class="progress-info">
-    <span>Куплено: <span id="energyUpgradeCountProgress">0</span>/15</span>
-    <span>Следующий: +40 ⚡ +50 LP</span>  <!-- ← было +50 ⚡ +50 LP -->
-</div>
-                            <div class="progress-bar-bg">
-                                <div class="progress-bar-fill" id="energyUpgradeProgressFill" style="width: 0%"></div>
-                            </div>
-                        </div>
-                        <button class="star-upgrade-btn btn-stars" id="energyUpgradeBtn" onclick="buyEnergyUpgrade()">
-                            <img src="/static/star_small.png" alt="Stars" style="width: 16px; height: 16px;">
-                            Купить за 25 звёзд
-                        </button>
-                        <button class="star-upgrade-btn btn-ton" id="tonDonateBtn" onclick="buyWithTon()">💎 Купить за 0.18 TON</button>
                     </div>
 
                     <div class="info-card">
@@ -4256,7 +4359,7 @@
                         <div class="info-icon">💎</div>
                         <div class="info-text">
                             <h4>Как оплатить TON?</h4>
-                            <p>Нажмите "Купить за 0.18 TON" → подключите кошелёк → подтвердите платеж → бонус зачислится автоматически!</p>
+                            <p>Нажмите "Купить за TON" → подключите кошелёк → подтвердите платеж → бонус зачислится автоматически!</p>
                         </div>
                     </div>
                 </div>
@@ -4316,14 +4419,14 @@
                 </div>
 
                 <div class="recent-players-section" id="recentPlayersSection">
-    <div class="recent-header">
-        <span>📋 Последние участники</span>
-        <span class="recent-badge">5</span>
-    </div>
-    <div class="recent-players-list" id="recentPlayersList">
-        <!-- Здесь будут элементы -->
-    </div>
-</div>
+                    <div class="recent-header">
+                        <span>📋 Последние участники</span>
+                        <span class="recent-badge">5</span>
+                    </div>
+                    <div class="recent-players-list" id="recentPlayersList">
+                        <!-- Здесь будут элементы -->
+                    </div>
+                </div>
 
                 <div class="info-card">
                     <div class="info-icon">ℹ️</div>
@@ -4427,60 +4530,60 @@
                 </div>
 
                 <div class="settings-card">
-    <div class="settings-header">
-        <img src="/static/settings.png" alt="Настройки" style="width: 28px; height: 28px;">
-        Настройки
-    </div>
-    <div class="setting-item">
-        <span>
-            <img src="/static/notification.png" alt="Уведомления" style="width: 22px; height: 22px;">
-            Уведомления
-        </span>
-        <label class="switch"><input type="checkbox" id="notificationsToggle"><span class="slider"></span></label>
-    </div>
-    <div class="setting-item">
-        <span>
-            <img src="/static/theme.png" alt="Тёмная тема" style="width: 22px; height: 22px;">
-            Тёмная тема
-        </span>
-        <label class="switch"><input type="checkbox" id="themeToggle"><span class="slider"></span></label>
-    </div>
-    <div class="setting-item">
-        <span>
-            <img src="/static/sound.png" alt="Звуки" style="width: 25px; height: 25px;">
-            Звуки
-        </span>
-        <label class="switch"><input type="checkbox" id="soundsToggle"><span class="slider"></span></label>
-    </div>
-    <div class="setting-item">
-        <span>
-            <img src="/static/vibration.png" alt="Вибрация" style="width: 25px; height: 25px;">
-            Вибрация
-        </span>
-        <label class="switch"><input type="checkbox" id="vibrationToggle"><span class="slider"></span></label>
-    </div>
-    <div class="setting-item">
-        <span>
-            <img src="/static/hide.png" alt="Скрыть из топа" style="width: 25px; height: 25px;">
-            Скрыть из топа
-        </span>
-        <label class="switch"><input type="checkbox" id="hideFromTopToggle"><span class="slider"></span></label>
-    </div>
-    <div class="setting-item">
-        <span>
-            <span style="font-size: 20px;">💎</span>
-            TON Кошелёк
-        </span>
-        <span id="tonWalletStatus" style="font-size:0.7rem; color:#FFD700;">Не подключён</span>
-    </div>
-    <div class="setting-item">
-        <span>
-            <span style="font-size: 20px;">🔗</span>
-            Отвязать TON кошелёк
-        </span>
-        <button class="btn-sm" onclick="disconnectTonWallet()" style="background: rgba(244,67,54,0.2); color: #f44336; border: 1px solid rgba(244,67,54,0.3); border-radius: 20px; padding: 5px 12px;">Отвязать</button>
-    </div>
-</div>
+                    <div class="settings-header">
+                        <img src="/static/settings.png" alt="Настройки" style="width: 28px; height: 28px;">
+                        Настройки
+                    </div>
+                    <div class="setting-item">
+                        <span>
+                            <img src="/static/notification.png" alt="Уведомления" style="width: 22px; height: 22px;">
+                            Уведомления
+                        </span>
+                        <label class="switch"><input type="checkbox" id="notificationsToggle"><span class="slider"></span></label>
+                    </div>
+                    <div class="setting-item">
+                        <span>
+                            <img src="/static/theme.png" alt="Тёмная тема" style="width: 22px; height: 22px;">
+                            Тёмная тема
+                        </span>
+                        <label class="switch"><input type="checkbox" id="themeToggle"><span class="slider"></span></label>
+                    </div>
+                    <div class="setting-item">
+                        <span>
+                            <img src="/static/sound.png" alt="Звуки" style="width: 25px; height: 25px;">
+                            Звуки
+                        </span>
+                        <label class="switch"><input type="checkbox" id="soundsToggle"><span class="slider"></span></label>
+                    </div>
+                    <div class="setting-item">
+                        <span>
+                            <img src="/static/vibration.png" alt="Вибрация" style="width: 25px; height: 25px;">
+                            Вибрация
+                        </span>
+                        <label class="switch"><input type="checkbox" id="vibrationToggle"><span class="slider"></span></label>
+                    </div>
+                    <div class="setting-item">
+                        <span>
+                            <img src="/static/hide.png" alt="Скрыть из топа" style="width: 25px; height: 25px;">
+                            Скрыть из топа
+                        </span>
+                        <label class="switch"><input type="checkbox" id="hideFromTopToggle"><span class="slider"></span></label>
+                    </div>
+                    <div class="setting-item">
+                        <span>
+                            <span style="font-size: 20px;">💎</span>
+                            TON Кошелёк
+                        </span>
+                        <span id="tonWalletStatus" style="font-size:0.7rem; color:#FFD700;">Не подключён</span>
+                    </div>
+                    <div class="setting-item">
+                        <span>
+                            <span style="font-size: 20px;">🔗</span>
+                            Отвязать TON кошелёк
+                        </span>
+                        <button class="btn-sm" onclick="disconnectTonWallet()" style="background: rgba(244,67,54,0.2); color: #f44336; border: 1px solid rgba(244,67,54,0.3); border-radius: 20px; padding: 5px 12px;">Отвязать</button>
+                    </div>
+                </div>
             </div>
         </main>
 
@@ -4528,27 +4631,27 @@
                 </div>
             </div>
             <div class="player-stats">
-    <div class="player-stat">
-        <div class="player-stat-value" id="playerModalClicks">0</div>
-        <div class="player-stat-label">Кликов</div>
-    </div>
-    <div class="player-stat">
-        <div class="player-stat-value" id="playerModalWG">0</div>
-        <div class="player-stat-label">WG</div>
-    </div>
-    <div class="player-stat">
-        <div class="player-stat-value" id="playerModalLP">0</div>
-        <div class="player-stat-label">LP</div>
-    </div>
-    <div class="player-stat">
-        <div class="player-stat-value usdt" id="playerModalUSDT">💰 0</div>
-        <div class="player-stat-label">USDT</div>
-    </div>
-    <div class="player-stat">
-        <div class="player-stat-value" id="playerModalWins">0</div>
-        <div class="player-stat-label">Побед</div>
-    </div>
-</div>
+                <div class="player-stat">
+                    <div class="player-stat-value" id="playerModalClicks">0</div>
+                    <div class="player-stat-label">Кликов</div>
+                </div>
+                <div class="player-stat">
+                    <div class="player-stat-value" id="playerModalWG">0</div>
+                    <div class="player-stat-label">WG</div>
+                </div>
+                <div class="player-stat">
+                    <div class="player-stat-value" id="playerModalLP">0</div>
+                    <div class="player-stat-label">LP</div>
+                </div>
+                <div class="player-stat">
+                    <div class="player-stat-value usdt" id="playerModalUSDT">💰 0</div>
+                    <div class="player-stat-label">USDT</div>
+                </div>
+                <div class="player-stat">
+                    <div class="player-stat-value" id="playerModalWins">0</div>
+                    <div class="player-stat-label">Побед</div>
+                </div>
+            </div>
             <div class="player-votes">
                 <button class="vote-btn like-btn" onclick="voteForPlayer('like')">👍 <span id="playerModalLikes">0</span></button>
                 <button class="vote-btn dislike-btn" onclick="voteForPlayer('dislike')">👎 <span id="playerModalDislikes">0</span></button>
@@ -4558,38 +4661,36 @@
     </div>
 
     <div id="leaderboardPage" class="leaderboard-page">
-    <div class="leaderboard-header">
-        <button class="back-btn" onclick="closeLeaderboard()">←</button>
-        <h2>🏆 Таблица лидеров</h2>
-    </div>
-
-    <!-- ТАЙМЕР ДЛЯ ТОПА ДНЯ -->
-    <div class="daily-timer-container" id="dailyTimerContainer">
-        <div class="daily-timer-icon">⏰</div>
-        <div class="daily-timer-info">
-            <div class="daily-timer-label">До окончания дня и раздачи наград:</div>
-            <div class="daily-timer-value" id="dailyLeaderboardTimer">-- : -- : --</div>
+        <div class="leaderboard-header">
+            <button class="back-btn" onclick="closeLeaderboard()">←</button>
+            <h2>🏆 Таблица лидеров</h2>
         </div>
-    </div>
 
-    <div class="leaderboard-tabs">
-        <button class="leaderboard-tab active" data-period="day">🏆 Топ дня</button>
-        <button class="leaderboard-tab" data-period="week">📅 Топ недели</button>
-        <button class="leaderboard-tab" data-period="month">📆 Топ месяца</button>
-    </div>
+        <div class="daily-timer-container" id="dailyTimerContainer">
+            <div class="daily-timer-icon">⏰</div>
+            <div class="daily-timer-info">
+                <div class="daily-timer-label">До окончания дня и раздачи наград:</div>
+                <div class="daily-timer-value" id="dailyLeaderboardTimer">-- : -- : --</div>
+            </div>
+        </div>
 
-    <!-- СООБЩЕНИЕ ДЛЯ НЕДЕЛИ/МЕСЯЦА -->
-    <div class="coming-soon" id="comingSoonMsg" style="display: none;">
-    <div class="coming-soon-icon">🔄</div>
-    <div class="coming-soon-title">Скоро появится!</div>
-    <div class="coming-soon-text">Топ недели и месяца будут добавлены в ближайшие дни</div>
-    <div class="coming-soon-progress">
-        <div class="progress-bar"></div>
-    </div>
-</div>
+        <div class="leaderboard-tabs">
+            <button class="leaderboard-tab active" data-period="day">🏆 Топ дня</button>
+            <button class="leaderboard-tab" data-period="week">📅 Топ недели</button>
+            <button class="leaderboard-tab" data-period="month">📆 Топ месяца</button>
+        </div>
 
-    <div class="leaderboard-list" id="leaderboardList">Загрузка...</div>
-</div>
+        <div class="coming-soon" id="comingSoonMsg" style="display: none;">
+            <div class="coming-soon-icon">🔄</div>
+            <div class="coming-soon-title">Скоро появится!</div>
+            <div class="coming-soon-text">Топ недели и месяца будут добавлены в ближайшие дни</div>
+            <div class="coming-soon-progress">
+                <div class="progress-bar"></div>
+            </div>
+        </div>
+
+        <div class="leaderboard-list" id="leaderboardList">Загрузка...</div>
+    </div>
 
     <div id="withdrawalModal" class="withdrawal-modal">
         <div class="withdrawal-modal-content">
@@ -4647,6 +4748,7 @@
             </button>
         </div>
     </div>
+
     <div id="promoModal" class="promo-modal">
         <div class="promo-modal-content">
             <div class="promo-modal-header">
@@ -4750,7 +4852,6 @@
     <audio id="lpDropSound" preload="auto"><source src="/static/lp_drop.mp3" type="audio/mpeg"></audio>
     <audio id="settingsSound" preload="auto"><source src="/static/settings.mp3" type="audio/mpeg"></audio>
     <audio id="purchaseSound" preload="auto"><source src="/static/purchase.mp3" type="audio/mpeg"></audio>
-
     <script>
         // ==================== ИНИЦИАЛИЗАЦИЯ ====================
         let tg = window.Telegram?.WebApp;
@@ -5201,57 +5302,52 @@
         }
 
         async function loadRecentPlayers() {
-    try {
-        let res = await fetch('/api/recent_players');
-        let data = await res.json();
-        let html = '';
+            try {
+                let res = await fetch('/api/recent_players');
+                let data = await res.json();
+                let html = '';
 
-        if (!data || data.length === 0) {
-            document.getElementById('recentPlayersList').innerHTML = '<div class="empty-state">😢 Пока нет участников</div>';
-            return;
-        }
+                if (!data || data.length === 0) {
+                    document.getElementById('recentPlayersList').innerHTML = '<div class="empty-state">😢 Пока нет участников</div>';
+                    return;
+                }
 
-        for (let p of data) {
-            // Аватар
-            let avatarHtml = '';
-            if (p.avatar_url && p.avatar_url !== '') {
-                avatarHtml = `<img src="${p.avatar_url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
-            } else {
-                avatarHtml = '👤';
+                for (let p of data) {
+                    let avatarHtml = '';
+                    if (p.avatar_url && p.avatar_url !== '') {
+                        avatarHtml = `<img src="${p.avatar_url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+                    } else {
+                        avatarHtml = '👤';
+                    }
+
+                    let playerName = p.username || p.first_name || 'Игрок';
+                    if (playerName.startsWith('@')) playerName = playerName.substring(1);
+                    if (localHideFromTop && p.user_id == userId) playerName = 'Anonim';
+
+                    let timeAgo = p.time_ago || 'только что';
+
+                    let roleBadge = '';
+                    if (p.role === 'founder') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#ef4444;">👑</span>';
+                    else if (p.role === 'pioneer') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#00b4d8;">⭐</span>';
+                    else if (p.role === 'legend') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#FFD700;">👑</span>';
+
+                    html += `<div class="recent-player-item" onclick="openPlayerProfile(${p.user_id}, 0)">
+                                <div class="recent-player-avatar">${avatarHtml}</div>
+                                <div class="recent-player-info">
+                                    <div class="recent-player-name">${escapeHtml(playerName)}${roleBadge}</div>
+                                    <div class="recent-player-time">🕐 ${timeAgo}</div>
+                                </div>
+                                <div class="recent-player-ticket">🎫 #${p.ticket_number}</div>
+                            </div>`;
+                }
+
+                document.getElementById('recentPlayersList').innerHTML = html;
+
+            } catch(e) {
+                console.error('Error loading recent players:', e);
+                document.getElementById('recentPlayersList').innerHTML = '<div class="empty-state">Ошибка загрузки</div>';
             }
-
-            // Имя игрока
-            let playerName = p.username || p.first_name || 'Игрок';
-            if (playerName.startsWith('@')) playerName = playerName.substring(1);
-            if (localHideFromTop && p.user_id == userId) playerName = 'Anonim';
-
-            // Обработка времени
-            let timeAgo = p.time_ago || 'только что';
-
-            // Роль и бейдж
-            let roleBadge = '';
-            if (p.role === 'founder') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#ef4444;">👑</span>';
-            else if (p.role === 'pioneer') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#00b4d8;">⭐</span>';
-            else if (p.role === 'legend') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#FFD700;">👑</span>';
-
-            // Старый дизайн - компактная строка
-            html += `<div class="recent-player-item" onclick="openPlayerProfile(${p.user_id}, 0)">
-                        <div class="recent-player-avatar">${avatarHtml}</div>
-                        <div class="recent-player-info">
-                            <div class="recent-player-name">${escapeHtml(playerName)}${roleBadge}</div>
-                            <div class="recent-player-time">🕐 ${timeAgo}</div>
-                        </div>
-                        <div class="recent-player-ticket">🎫 #${p.ticket_number}</div>
-                    </div>`;
         }
-
-        document.getElementById('recentPlayersList').innerHTML = html;
-
-    } catch(e) {
-        console.error('Error loading recent players:', e);
-        document.getElementById('recentPlayersList').innerHTML = '<div class="empty-state">Ошибка загрузки</div>';
-    }
-}
 
         async function loadReferralLink() {
             try {
@@ -5452,12 +5548,12 @@
                         if (status === 'paid') {
                             showToast('✨ Улучшение активировано!', 'success');
                             if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.showPopup) {
-    window.Telegram.WebApp.showPopup({
-        title: '🎉 Покупка успешна!',
-        message: '✨ Вы получили +40 к макс. энергии\n💎 +50 LP на баланс',  // ← было +50
-        buttons: [{ type: 'ok' }]
-    });
-}
+                                window.Telegram.WebApp.showPopup({
+                                    title: '🎉 Покупка успешна!',
+                                    message: '✨ Вы получили +40 к макс. энергии\n💎 +50 LP на баланс',
+                                    buttons: [{ type: 'ok' }]
+                                });
+                            }
                             setTimeout(() => {
                                 updateStatus();
                                 const energyBar = document.getElementById('energyBar');
@@ -5486,6 +5582,157 @@
             }
         };
 
+        // ==================== LP БУСТЕР (НОВЫЕ ФУНКЦИИ) ====================
+        window.buyLPBoostStars = async function() {
+            showToast('💰 Создаём счёт для оплаты...', 'info');
+            try {
+                let res = await fetch('/api/create_lp_boost_invoice', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId, chat_id: chatId })
+                });
+                let data = await res.json();
+                if (!data.success) {
+                    showToast(data.msg || 'Ошибка создания счёта', 'error');
+                    return;
+                }
+                if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openInvoice) {
+                    window.Telegram.WebApp.openInvoice(data.invoice_link, async (status) => {
+                        if (status === 'paid') {
+                            showToast('✨ LP Бустер активирован!', 'success');
+                            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.showPopup) {
+                                window.Telegram.WebApp.showPopup({
+                                    title: '🎉 Покупка успешна!',
+                                    message: '💎 Вы получили +50 LP на баланс!',
+                                    buttons: [{ type: 'ok' }]
+                                });
+                            }
+                            setTimeout(() => {
+                                updateStatus();
+                            }, 500);
+                        } else if (status === 'failed' || status === 'cancelled') {
+                            showToast('❌ Оплата отменена или не удалась', 'error');
+                            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.showPopup) {
+                                window.Telegram.WebApp.showPopup({
+                                    title: '❌ Ошибка',
+                                    message: 'Платеж не был завершен. Попробуйте снова.',
+                                    buttons: [{ type: 'ok' }]
+                                });
+                            }
+                        }
+                    });
+                } else {
+                    window.open(data.invoice_link, '_blank');
+                    showToast('🔗 Оплатите по ссылке в новом окне', 'info');
+                }
+            } catch(e) {
+                console.error('Ошибка при оплате:', e);
+                showToast('Ошибка при создании платежа. Попробуйте позже.', 'error');
+            }
+        };
+
+        window.buyLPBoostTon = async function() {
+            if (!tonConnectUI) {
+                showToast('🔄 Система оплаты загружается...', 'info');
+                await initTonConnect();
+                if (!tonConnectUI) {
+                    showToast('❌ Ошибка: Система оплаты недоступна', 'error');
+                    return;
+                }
+            }
+            if (!tonConnectUI.wallet) {
+                showToast('🔗 Подключите TON кошелёк для оплаты', 'info');
+                try {
+                    await tonConnectUI.openModal();
+                } catch(e) {
+                    showToast('❌ Не удалось открыть список кошельков', 'error');
+                }
+                return;
+            }
+
+            let friendlyAddress = '';
+            try {
+                const rawAddr = tonConnectUI.wallet.account.address;
+                friendlyAddress = rawAddr;
+            } catch(e) {
+                friendlyAddress = tonConnectUI.wallet?.account?.address || '';
+            }
+
+            let paymentData = null;
+            try {
+                showToast('💎 Создаём платёж на сервере...', 'info');
+                const response = await fetch('/api/ton/create_lp_boost_payment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId })
+                });
+                paymentData = await response.json();
+                if (!paymentData || !paymentData.success) {
+                    showToast(paymentData?.error || 'Ошибка создания платежа', 'error');
+                    return;
+                }
+            } catch(err) {
+                showToast('❌ Сервер не ответил на запрос платежа', 'error');
+                return;
+            }
+
+            const transaction = {
+                validUntil: Math.floor(Date.now() / 1000) + 300,
+                messages: [{
+                    address: paymentData.wallet_address,
+                    amount: paymentData.amount_nano.toString(),
+                    comment: paymentData.comment
+                }]
+            };
+
+            try {
+                await tonConnectUI.sendTransaction(transaction);
+            } catch(e) {
+                if (String(e.message).includes('canceled')) {
+                    showToast('❌ Транзакция отменена', 'error');
+                    return;
+                }
+            }
+
+            showToast('💰 Проверяем зачисление транзакции...', 'info');
+            startLPBoostPaymentCheck(paymentData.amount);
+        };
+
+        function startLPBoostPaymentCheck(expectedAmount) {
+            let attempts = 0;
+            const maxAttempts = 36;
+            if (paymentCheckInterval) clearInterval(paymentCheckInterval);
+            let userWalletAddress = tonConnectUI?.wallet?.account?.address || '';
+            paymentCheckInterval = setInterval(async () => {
+                attempts++;
+                try {
+                    const res = await fetch('/api/ton/check_lp_boost_payment', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            user_id: userId,
+                            expected_amount: expectedAmount,
+                            sender_wallet: userWalletAddress
+                        })
+                    });
+                    const data = await res.json();
+                    if (data && data.confirmed) {
+                        clearInterval(paymentCheckInterval);
+                        paymentCheckInterval = null;
+                        showToast('✅ Награда получена! +50 LP зачислены!', 'success');
+                        await updateStatus();
+                        updateUI();
+                    } else if (attempts >= maxAttempts) {
+                        clearInterval(paymentCheckInterval);
+                        paymentCheckInterval = null;
+                        showToast('⚠️ Не удалось подтвердить платеж, обратитесь в поддержку', 'error');
+                    }
+                } catch(e) {
+                    console.error('Payment check error:', e);
+                }
+            }, 5000);
+        }
+
         document.querySelectorAll('.shop-tab').forEach(tab => {
             tab.onclick = () => {
                 let target = tab.dataset.shopTab;
@@ -5500,6 +5747,38 @@
                 }
             };
         });
+
+        // ==================== КАРУСЕЛЬ ДЛЯ КАРТОЧЕК ДОНАТА ====================
+        let currentDonateCard = 0;
+        const donateCards = document.querySelectorAll('#donateCarouselTrack .star-upgrade-card');
+        const track = document.getElementById('donateCarouselTrack');
+        const prevBtn = document.getElementById('donateCarouselPrev');
+        const nextBtn = document.getElementById('donateCarouselNext');
+
+        function updateDonateCarousel() {
+            if (!track || donateCards.length === 0) return;
+            const cardWidth = donateCards[0]?.offsetWidth || 0;
+            track.style.transform = `translateX(-${currentDonateCard * cardWidth}px)`;
+        }
+
+        if (prevBtn && nextBtn && donateCards.length > 1) {
+            prevBtn.addEventListener('click', () => {
+                if (currentDonateCard > 0) {
+                    currentDonateCard--;
+                    updateDonateCarousel();
+                }
+            });
+
+            nextBtn.addEventListener('click', () => {
+                if (currentDonateCard < donateCards.length - 1) {
+                    currentDonateCard++;
+                    updateDonateCarousel();
+                }
+            });
+
+            window.addEventListener('resize', () => updateDonateCarousel());
+            setTimeout(() => updateDonateCarousel(), 100);
+        }
 
         document.querySelectorAll('.nav-item').forEach(item => {
             const oldOnClick = item.onclick;
@@ -6167,51 +6446,51 @@
         }
 
         window.watchAd = async () => {
-    try {
-        const checkRes = await fetch('/api/can_watch_ad', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId, ad_type: 'energy_200' })
-        });
-        const checkData = await checkRes.json();
-        if (!checkData.can) {
-            showToast(checkData.message, 'error');
-            return;
-        }
-    } catch(e) {
-        console.log('Check error:', e);
-    }
-    if (!adController) {
-        initAds();
-        await new Promise(resolve => setTimeout(resolve, 500));
-    }
-    if (!adController) {
-        showToast('❌ Реклама недоступна, попробуйте позже или включите VPN', 'error');
-        return;
-    }
-    try {
-        const result = await adController.show();
-        if (result.done && !result.error) {
-            let resp = await fetch('/api/watch_ad', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: userId })
-            });
-            let data = await resp.json();
-            if (data.success) {
-                showToast(`+150 энергии! Спасибо! 🎬`, 'success');  // ← ИЗМЕНЕНО С 200 НА 150
-                updateStatus();
-            } else if (data.msg) {
-                showToast(data.msg, 'error');
+            try {
+                const checkRes = await fetch('/api/can_watch_ad', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId, ad_type: 'energy_200' })
+                });
+                const checkData = await checkRes.json();
+                if (!checkData.can) {
+                    showToast(checkData.message, 'error');
+                    return;
+                }
+            } catch(e) {
+                console.log('Check error:', e);
             }
-        } else {
-            showToast('Реклама не загружена, попробуйте позже', 'error');
-        }
-    } catch (error) {
-        console.error('Ad error:', error);
-        showToast('Ошибка рекламы, попробуйте через VPN', 'error');
-    }
-};
+            if (!adController) {
+                initAds();
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            if (!adController) {
+                showToast('❌ Реклама недоступна, попробуйте позже или включите VPN', 'error');
+                return;
+            }
+            try {
+                const result = await adController.show();
+                if (result.done && !result.error) {
+                    let resp = await fetch('/api/watch_ad', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ user_id: userId })
+                    });
+                    let data = await resp.json();
+                    if (data.success) {
+                        showToast(`+150 энергии! Спасибо! 🎬`, 'success');
+                        updateStatus();
+                    } else if (data.msg) {
+                        showToast(data.msg, 'error');
+                    }
+                } else {
+                    showToast('Реклама не загружена, попробуйте позже', 'error');
+                }
+            } catch (error) {
+                console.error('Ad error:', error);
+                showToast('Ошибка рекламы, попробуйте через VPN', 'error');
+            }
+        };
 
         window.watchAdLimit = async () => {
             try {
@@ -6268,87 +6547,84 @@
         let selectedPlayerId = null;
 
         window.openPlayerProfile = async function(targetId, rank) {
-    console.log('Opening profile for user:', targetId);
-    selectedPlayerId = targetId;
+            selectedPlayerId = targetId;
 
-    // Проверяем существование элементов перед использованием
-    const modalUsername = document.getElementById('playerModalUsername');
-    const modalClicks = document.getElementById('playerModalClicks');
-    const modalWG = document.getElementById('playerModalWG');
-    const modalLP = document.getElementById('playerModalLP');
-    const modalUSDT = document.getElementById('playerModalUSDT');
-    const modalWins = document.getElementById('playerModalWins');
-    const modalLikes = document.getElementById('playerModalLikes');
-    const modalDislikes = document.getElementById('playerModalDislikes');
-    const modalAvatar = document.getElementById('playerModalAvatar');
-    const modalBadges = document.getElementById('playerModalBadges');
-    const voteMessage = document.getElementById('voteMessage');
+            const modalUsername = document.getElementById('playerModalUsername');
+            const modalClicks = document.getElementById('playerModalClicks');
+            const modalWG = document.getElementById('playerModalWG');
+            const modalLP = document.getElementById('playerModalLP');
+            const modalUSDT = document.getElementById('playerModalUSDT');
+            const modalWins = document.getElementById('playerModalWins');
+            const modalLikes = document.getElementById('playerModalLikes');
+            const modalDislikes = document.getElementById('playerModalDislikes');
+            const modalAvatar = document.getElementById('playerModalAvatar');
+            const modalBadges = document.getElementById('playerModalBadges');
+            const voteMessage = document.getElementById('voteMessage');
 
-    // Проверяем что все элементы существуют
-    if (!modalUsername || !modalClicks || !modalWG || !modalLP || !modalUSDT || !modalWins || !modalLikes || !modalDislikes) {
-        console.error('Profile modal elements not found');
-        showToast('Ошибка открытия профиля', 'error');
-        return;
-    }
+            if (!modalUsername || !modalClicks || !modalWG || !modalLP || !modalUSDT || !modalWins || !modalLikes || !modalDislikes) {
+                console.error('Profile modal elements not found');
+                showToast('Ошибка открытия профиля', 'error');
+                return;
+            }
 
-    try {
-        let res = await fetch('/api/get_user_stats', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({user_id: targetId})
-        });
-        let data = await res.json();
+            try {
+                let res = await fetch('/api/get_user_stats', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({user_id: targetId})
+                });
+                let data = await res.json();
 
-        if (data.error) {
-            showToast('Пользователь не найден', 'error');
-            return;
-        }
+                if (data.error) {
+                    showToast('Пользователь не найден', 'error');
+                    return;
+                }
 
-        let userName = data.username || 'Игрок';
-        let avatar = (data.avatar_url && data.avatar_url !== '👤')
-            ? `<img src="${data.avatar_url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`
-            : '👤';
+                let userName = data.username || 'Игрок';
+                let avatar = (data.avatar_url && data.avatar_url !== '👤')
+                    ? `<img src="${data.avatar_url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`
+                    : '👤';
 
-        if (data.hide_from_top) {
-            avatar = '👤';
-            userName = 'Аноним';
-        }
+                if (data.hide_from_top) {
+                    avatar = '👤';
+                    userName = 'Аноним';
+                }
 
-        modalUsername.innerText = userName;
-        modalClicks.innerText = data.total_clicks || 0;
-        modalWG.innerText = (data.wg || 0).toFixed(2);
-        modalLP.innerText = data.lp || 0;
-        modalUSDT.innerHTML = `💰 ${(data.usdt || 0).toFixed(2)}`;
-        modalWins.innerText = data.wins || 0;
-        modalLikes.innerText = data.likes || 0;
-        modalDislikes.innerText = data.dislikes || 0;
+                modalUsername.innerText = userName;
+                modalClicks.innerText = data.total_clicks || 0;
+                modalWG.innerText = (data.wg || 0).toFixed(2);
+                modalLP.innerText = data.lp || 0;
+                modalUSDT.innerHTML = `💰 ${(data.usdt || 0).toFixed(2)}`;
+                modalWins.innerText = data.wins || 0;
+                modalLikes.innerText = data.likes || 0;
+                modalDislikes.innerText = data.dislikes || 0;
 
-        if (modalAvatar) modalAvatar.innerHTML = avatar;
-        if (modalBadges) {
-            let role = data.role || 'player';
-            let badgesHtml = '';
-            if (role === 'founder') badgesHtml = '<span class="role-badge founder">👑 ОСНОВАТЕЛЬ</span>';
-            else if (role === 'legend') badgesHtml = '<span class="role-badge legend">ЛЕГЕНДА</span>';
-            else if (role === 'pioneer') badgesHtml = '<span class="role-badge pioneer">⭐ ПЕРВООТКРЫВАТЕЛЬ</span>';
-            else badgesHtml = '<span class="role-badge player">🎮 Игрок</span>';
-            modalBadges.innerHTML = badgesHtml;
-        }
+                if (modalAvatar) modalAvatar.innerHTML = avatar;
+                if (modalBadges) {
+                    let role = data.role || 'player';
+                    let badgesHtml = '';
+                    if (role === 'founder') badgesHtml = '<span class="role-badge founder">👑 ОСНОВАТЕЛЬ</span>';
+                    else if (role === 'legend') badgesHtml = '<span class="role-badge legend">ЛЕГЕНДА</span>';
+                    else if (role === 'pioneer') badgesHtml = '<span class="role-badge pioneer">⭐ ПЕРВООТКРЫВАТЕЛЬ</span>';
+                    else badgesHtml = '<span class="role-badge player">🎮 Игрок</span>';
+                    modalBadges.innerHTML = badgesHtml;
+                }
 
-        if (voteMessage) voteMessage.innerHTML = '';
+                if (voteMessage) voteMessage.innerHTML = '';
 
-        const modal = document.getElementById('playerModal');
-        if (modal) modal.classList.add('active');
+                const modal = document.getElementById('playerModal');
+                if (modal) modal.classList.add('active');
 
-    } catch(e) {
-        console.error('Error opening player profile:', e);
-        showToast('Ошибка загрузки профиля', 'error');
-    }
-};
+            } catch(e) {
+                console.error('Error opening player profile:', e);
+                showToast('Ошибка загрузки профиля', 'error');
+            }
+        };
 
         window.closePlayerModal = function() {
-    const modal = document.getElementById('playerModal');
-    if (modal) modal.classList.remove('active');
-};
+            const modal = document.getElementById('playerModal');
+            if (modal) modal.classList.remove('active');
+        };
 
         window.voteForPlayer = async function(type) {
             try {
@@ -6476,86 +6752,84 @@
         };
 
         async function loadLeaderboardData(period, forceRefresh = false) {
-    let listDiv = document.getElementById('leaderboardList');
-    if (!listDiv) return;
+            let listDiv = document.getElementById('leaderboardList');
+            if (!listDiv) return;
 
-    listDiv.innerHTML = '<div class="loading">Загрузка...</div>';
+            listDiv.innerHTML = '<div class="loading">Загрузка...</div>';
 
-    try {
-        let res = await fetch(`/api/leaderboard?limit=50${forceRefresh ? '&force=true' : ''}`);
-        let data = await res.json();
+            try {
+                let res = await fetch(`/api/leaderboard?limit=50${forceRefresh ? '&force=true' : ''}`);
+                let data = await res.json();
 
-        let html = '';
-        for (let userItem of data) {
-            let avatar = userItem.avatar && userItem.avatar !== '👤'
-                ? `<img src="${userItem.avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`
-                : '👤';
+                let html = '';
+                for (let userItem of data) {
+                    let avatar = userItem.avatar && userItem.avatar !== '👤'
+                        ? `<img src="${userItem.avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`
+                        : '👤';
 
-            let userName = userItem.username;
+                    let userName = userItem.username;
 
-            let roleBadge = '';
-            if (userItem.role === 'founder' && !userItem.hide_from_top) {
-                roleBadge = '<span class="leaderboard-founder-badge">👑</span>';
-            } else if (userItem.role === 'legend' && !userItem.hide_from_top) {
-                roleBadge = '<span class="leaderboard-legend-badge">👑</span>';
-            } else if (userItem.role === 'pioneer' && !userItem.hide_from_top) {
-                roleBadge = '<span class="leaderboard-pioneer-badge">⭐</span>';
+                    let roleBadge = '';
+                    if (userItem.role === 'founder' && !userItem.hide_from_top) {
+                        roleBadge = '<span class="leaderboard-founder-badge">👑</span>';
+                    } else if (userItem.role === 'legend' && !userItem.hide_from_top) {
+                        roleBadge = '<span class="leaderboard-legend-badge">👑</span>';
+                    } else if (userItem.role === 'pioneer' && !userItem.hide_from_top) {
+                        roleBadge = '<span class="leaderboard-pioneer-badge">⭐</span>';
+                    }
+
+                    let rewardHtml = '';
+                    if (userItem.rank === 1) rewardHtml = '<span class="reward">🏆 70 LP + 200 WG</span>';
+                    else if (userItem.rank === 2) rewardHtml = '<span class="reward">🥈 50 LP + 150 WG</span>';
+                    else if (userItem.rank === 3) rewardHtml = '<span class="reward">🥉 35 LP + 120 WG</span>';
+                    else if (userItem.rank === 4) rewardHtml = '<span class="reward">🎖️ 25 LP + 100 WG</span>';
+                    else if (userItem.rank === 5) rewardHtml = '<span class="reward">🎖️ 15 LP + 75 WG</span>';
+
+                    html += `
+                        <div class="leaderboard-item" onclick="openPlayerProfile(${userItem.user_id}, ${userItem.rank})">
+                            <div class="rank">${userItem.rank}</div>
+                            <div class="avatar">${avatar}</div>
+                            <div class="info">
+                                <div class="name">${userName}${roleBadge}</div>
+                                <div class="clicks">${userItem.total_clicks} кликов</div>
+                            </div>
+                            ${rewardHtml}
+                        </div>
+                    `;
+                }
+
+                listDiv.innerHTML = html || '<div class="empty-state">Нет данных</div>';
+
+            } catch(e) {
+                console.error('Leaderboard error:', e);
+                listDiv.innerHTML = '<div class="empty-state">Ошибка</div>';
             }
-
-            // ПРАВИЛЬНЫЕ НАГРАДЫ ТОЛЬКО ДЛЯ ТОП-5
-            let rewardHtml = '';
-            if (userItem.rank === 1) rewardHtml = '<span class="reward">🏆 70 LP + 200 WG</span>';
-            else if (userItem.rank === 2) rewardHtml = '<span class="reward">🥈 50 LP + 150 WG</span>';
-            else if (userItem.rank === 3) rewardHtml = '<span class="reward">🥉 35 LP + 120 WG</span>';
-            else if (userItem.rank === 4) rewardHtml = '<span class="reward">🎖️ 25 LP + 100 WG</span>';
-            else if (userItem.rank === 5) rewardHtml = '<span class="reward">🎖️ 15 LP + 75 WG</span>';
-            // Для мест 6 и выше - награды НЕТ
-
-            html += `
-                <div class="leaderboard-item" onclick="openPlayerProfile(${userItem.user_id}, ${userItem.rank})">
-                    <div class="rank">${userItem.rank}</div>
-                    <div class="avatar">${avatar}</div>
-                    <div class="info">
-                        <div class="name">${userName}${roleBadge}</div>
-                        <div class="clicks">${userItem.total_clicks} кликов</div>
-                    </div>
-                    ${rewardHtml}
-                </div>
-            `;
         }
-
-        listDiv.innerHTML = html || '<div class="empty-state">Нет данных</div>';
-
-    } catch(e) {
-        console.error('Leaderboard error:', e);
-        listDiv.innerHTML = '<div class="empty-state">Ошибка</div>';
-    }
-}
 
         document.querySelectorAll('.leaderboard-tab').forEach(tab => {
-    tab.onclick = () => {
-        const period = tab.dataset.period;
-        document.querySelectorAll('.leaderboard-tab').forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
+            tab.onclick = () => {
+                const period = tab.dataset.period;
+                document.querySelectorAll('.leaderboard-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
 
-        const timerContainer = document.getElementById('dailyTimerContainer');
-        const comingSoonMsg = document.getElementById('comingSoonMsg');
-        const leaderboardList = document.getElementById('leaderboardList');
+                const timerContainer = document.getElementById('dailyTimerContainer');
+                const comingSoonMsg = document.getElementById('comingSoonMsg');
+                const leaderboardList = document.getElementById('leaderboardList');
 
-        if (period === 'day') {
-            if (timerContainer) timerContainer.style.display = 'block';
-            if (comingSoonMsg) comingSoonMsg.style.display = 'none';
-            if (leaderboardList) leaderboardList.style.display = 'flex';
-            loadLeaderboardData('day', true);
-            if (typeof startDailyLeaderboardTimer === 'function') startDailyLeaderboardTimer();
-        } else {
-            if (timerContainer) timerContainer.style.display = 'none';
-            if (comingSoonMsg) comingSoonMsg.style.display = 'block';
-            if (leaderboardList) leaderboardList.style.display = 'none';
-            leaderboardList.innerHTML = ''; // Очищаем список
-        }
-    };
-});
+                if (period === 'day') {
+                    if (timerContainer) timerContainer.style.display = 'block';
+                    if (comingSoonMsg) comingSoonMsg.style.display = 'none';
+                    if (leaderboardList) leaderboardList.style.display = 'flex';
+                    loadLeaderboardData('day', true);
+                    if (typeof startDailyLeaderboardTimer === 'function') startDailyLeaderboardTimer();
+                } else {
+                    if (timerContainer) timerContainer.style.display = 'none';
+                    if (comingSoonMsg) comingSoonMsg.style.display = 'block';
+                    if (leaderboardList) leaderboardList.style.display = 'none';
+                    leaderboardList.innerHTML = '';
+                }
+            };
+        });
 
         // ==================== РЕФЕРАЛЫ ====================
         window.copyReferralLink = function() {
@@ -7076,48 +7350,43 @@
             });
         });
 
-        // Таймер для топа дня
-let dailyLeaderboardTimerInterval = null;
+        // ==================== ТАЙМЕР ДЛЯ ТОПА ДНЯ ====================
+        let dailyLeaderboardTimerInterval = null;
 
-function startDailyLeaderboardTimer() {
-    if (dailyLeaderboardTimerInterval) clearInterval(dailyLeaderboardTimerInterval);
-
-    function updateTimer() {
-        const now = new Date();
-        // Следующий 00:00 по МСК (UTC+3)
-        const nextMidnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 21, 0, 0));
-        // МСК = UTC+3, поэтому 00:00 МСК = 21:00 UTC предыдущего дня
-
-        let targetDate = new Date(nextMidnight);
-
-        // Если уже прошло 00:00 МСК сегодня, то цель - завтрашняя
-        if (now > targetDate) {
-            targetDate = new Date(targetDate.getTime() + 24 * 60 * 60 * 1000);
-        }
-
-        const diff = targetDate - now;
-
-        if (diff <= 0) {
-            // Время вышло - обновляем топ и перезапускаем таймер
+        function startDailyLeaderboardTimer() {
             if (dailyLeaderboardTimerInterval) clearInterval(dailyLeaderboardTimerInterval);
-            loadLeaderboardData('day', true);
-            startDailyLeaderboardTimer();
-            return;
+
+            function updateTimer() {
+                const now = new Date();
+                const nextMidnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 21, 0, 0));
+                let targetDate = new Date(nextMidnight);
+
+                if (now > targetDate) {
+                    targetDate = new Date(targetDate.getTime() + 24 * 60 * 60 * 1000);
+                }
+
+                const diff = targetDate - now;
+
+                if (diff <= 0) {
+                    if (dailyLeaderboardTimerInterval) clearInterval(dailyLeaderboardTimerInterval);
+                    loadLeaderboardData('day', true);
+                    startDailyLeaderboardTimer();
+                    return;
+                }
+
+                const hours = Math.floor(diff / (1000 * 60 * 60));
+                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+                const timerElement = document.getElementById('dailyLeaderboardTimer');
+                if (timerElement) {
+                    timerElement.innerHTML = `${hours.toString().padStart(2, '0')} : ${minutes.toString().padStart(2, '0')} : ${seconds.toString().padStart(2, '0')}`;
+                }
+            }
+
+            updateTimer();
+            dailyLeaderboardTimerInterval = setInterval(updateTimer, 1000);
         }
-
-        const hours = Math.floor(diff / (1000 * 60 * 60));
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-        const timerElement = document.getElementById('dailyLeaderboardTimer');
-        if (timerElement) {
-            timerElement.innerHTML = `${hours.toString().padStart(2, '0')} : ${minutes.toString().padStart(2, '0')} : ${seconds.toString().padStart(2, '0')}`;
-        }
-    }
-
-    updateTimer();
-    dailyLeaderboardTimerInterval = setInterval(updateTimer, 1000);
-}
 
         // ==================== ПРОМОКОДЫ ====================
         async function openPromoModalWithCode(promoCode) {
@@ -7324,7 +7593,7 @@ function startDailyLeaderboardTimer() {
                     if (data && data.confirmed) {
                         clearInterval(paymentCheckInterval);
                         paymentCheckInterval = null;
-                        showToast('✅ Награда получена! +50 энергии и +50 LP зачислены!', 'success');
+                        showToast('✅ Награда получена! +40 энергии и +50 LP зачислены!', 'success');
                         await updateStatus();
                         updateUI();
                     } else if (attempts >= maxAttempts) {
@@ -7406,7 +7675,7 @@ function startDailyLeaderboardTimer() {
                 { tab: 'home', elementId: 'leaderboard-mini', text: '🏆 Топ игроков — чем больше кликов, тем выше место!', position: 'top' },
                 { tab: 'shop', elementId: 'upgrade-card', text: '🛒 Улучшай заработок за WG Coin. Цена растёт с каждой покупкой!', position: 'bottom', subTab: 'normal' },
                 { tab: 'shop', elementId: 'ad-card', text: '🎬 Смотри рекламу → +150 энергии или +1 к макс. энергии!', position: 'bottom', subTab: 'normal' },
-                { tab: 'shop', elementId: 'energyUpgradeCard', text: '⭐ Покупай усиление за Telegram Stars: +50 энергии и +50 LP!', position: 'bottom', subTab: 'stars' },
+                { tab: 'shop', elementId: 'energyUpgradeCard', text: '⭐ Покупай усиление за Telegram Stars: +40 энергии и +50 LP!', position: 'bottom', subTab: 'stars' },
                 { tab: 'shop', elementId: 'tonDonateBtn', text: '💎 Купи улучшение за TON через TON Connect!', position: 'bottom', subTab: 'stars' },
                 { tab: 'lottery', elementId: 'ticketBtn', text: '🎫 Купи билет за 100 LP и участвуй в розыгрыше USDT!', position: 'top' },
                 { tab: 'lottery', elementId: 'myTicketsBtn', text: '📋 Здесь твои билеты — стирай их после розыгрыша!', position: 'bottom' },
