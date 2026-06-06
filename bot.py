@@ -3013,10 +3013,9 @@ def api_click():
             )
 
     # 🔥 ОБНОВЛЕНИЕ ДНЕВНЫХ КЛИКОВ ДЛЯ ТОПА ДНЯ
-    # Принудительно получаем свежие данные и обновляем
-    fresh_user = get_user(user_id, force_refresh=True)
-    current_daily_clicks = fresh_user.get('daily_clicks', 0)
-    safe_update_user(user_id, daily_clicks=current_daily_clicks + 1)
+    with db.get_cursor() as cursor:
+        cursor.execute("UPDATE users SET daily_clicks = daily_clicks + 1 WHERE user_id = ?", (user_id,))
+    invalidate_cache(user_id)
 
     today = datetime.datetime.now().strftime("%Y-%m-%d")
 
