@@ -1209,6 +1209,10 @@ def init_db():
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_logs_timestamp ON system_logs(timestamp DESC)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_logs_user_id ON system_logs(user_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_tasks ON user_tasks(user_id, task_id)')
+        try:
+            cursor.execute('ALTER TABLE users ADD COLUMN daily_clicks INTEGER DEFAULT 0')
+        except:
+            pass  # колонка уже существует
 
         for col in ['banned_until', 'ban_reason', 'banned_by']:
             try:
@@ -2929,6 +2933,7 @@ def api_debug_user():
             })
     return jsonify({"error": "User not found"}), 404
 
+
 @app.route('/api/click', methods=['POST'])
 def api_click():
     data = request.json
@@ -2973,6 +2978,10 @@ def api_click():
 
     # Обновляем WG сразу
     safe_update_user(user_id, wg=new_wg)
+
+    # 🔥 ОБНОВЛЕНИЕ ДНЕВНЫХ КЛИКОВ ДЛЯ ТОПА ДНЯ
+    current_daily_clicks = user.get('daily_clicks', 0)
+    safe_update_user(user_id, daily_clicks=current_daily_clicks + 1)
 
     today = datetime.datetime.now().strftime("%Y-%m-%d")
 
@@ -3425,13 +3434,21 @@ def api_leaderboard():
 
 @app.route('/api/leaderboard/daily', methods=['GET'])
 def api_daily_leaderboard():
-    """Получить топ дня с наградами"""
+    """Получить топ дня по daily_clicks"""
     with db.get_cursor() as cursor:
-        today = datetime.datetime.now().strftime("%Y-%m-%d")
+        # Проверяем, есть ли колонка daily_clicks
+        cursor.execute("PRAGMA table_info(users)")
+        columns = [col[1] for col in cursor.fetchall()]
+
+        if 'daily_clicks' not in columns:
+            # Если нет колонки - возвращаем пустой топ
+            return jsonify([])
+
         cursor.execute('''
-            SELECT user_id, total_clicks, username, first_name, avatar_url, role, settings
+            SELECT user_id, daily_clicks, username, first_name, avatar_url, role, settings
             FROM users 
-            ORDER BY total_clicks DESC 
+            WHERE daily_clicks > 0
+            ORDER BY daily_clicks DESC 
             LIMIT 50
         ''')
         rows = cursor.fetchall()
@@ -3454,14 +3471,14 @@ def api_daily_leaderboard():
                 avatar = '👤'
             else:
                 display_name = f"@{row['username']}" if row['username'] else (
-                            row['first_name'] or f"Player_{row['user_id']}")
+                        row['first_name'] or f"Player_{row['user_id']}")
                 avatar = row['avatar_url'] or '👤'
 
             result.append({
                 "rank": i,
                 "user_id": row['user_id'],
                 "username": display_name,
-                "total_clicks": row['total_clicks'],
+                "daily_clicks": row['daily_clicks'],  # ← ИСПРАВЛЕНО
                 "avatar": avatar,
                 "role": row['role'] or 'player',
                 "reward": rewards.get(i, "")
@@ -4655,6 +4672,7 @@ def api_set_referral():
     return jsonify({"success": False, "error": "Referrer not found"}), 404
 
 
+
 def handle_telegram_updates():
     last_update_id = 0
     verify_ssl = not DEBUG_MODE
@@ -4787,47 +4805,29 @@ def raw_to_user_friendly(raw_address: str) -> str:
 def calculate_daily_top():
     """Расчёт топа за день и выдача наград"""
     with db.get_cursor() as cursor:
-        # Получаем топ-5 по daily_clicks (количество кликов за сегодня)
-        # Сначала проверяем, есть ли колонка daily_clicks
+        # Проверяем, есть ли колонка daily_clicks
         cursor.execute("PRAGMA table_info(users)")
         columns = [col[1] for col in cursor.fetchall()]
 
-        if 'daily_clicks' in columns:
-            cursor.execute('''
-                SELECT user_id, daily_clicks, username, first_name, role
-                FROM users 
-                WHERE daily_clicks > 0
-                ORDER BY daily_clicks DESC 
-                LIMIT 5
-            ''')
-        else:
-            # Если колонки нет, используем stats_history
-            today = datetime.datetime.now().strftime("%Y-%m-%d")
-            cursor.execute('''
-                SELECT user_id, total_clicks as daily_clicks, username, first_name, role
-                FROM users 
-                WHERE user_id IN (
-                    SELECT user_id FROM stats_history 
-                    WHERE date = ? AND clicks > 0
-                    ORDER BY clicks DESC LIMIT 5
-                )
-                ORDER BY total_clicks DESC
-                LIMIT 5
-            ''', (today,))
+        # Если колонки нет - создаём её
+        if 'daily_clicks' not in columns:
+            cursor.execute('ALTER TABLE users ADD COLUMN daily_clicks INTEGER DEFAULT 0')
+            add_admin_log("➕ Создана колонка daily_clicks для топа дня", 0, "System")
 
-            # Если нет данных в stats_history, берём общие клики
-            if cursor.rowcount == 0:
-                cursor.execute('''
-                    SELECT user_id, total_clicks as daily_clicks, username, first_name, role
-                    FROM users 
-                    ORDER BY total_clicks DESC 
-                    LIMIT 5
-                ''')
-
+        # Получаем топ-5 по daily_clicks (клики за сегодня)
+        cursor.execute('''
+            SELECT user_id, daily_clicks, username, first_name, role
+            FROM users 
+            WHERE daily_clicks > 0
+            ORDER BY daily_clicks DESC 
+            LIMIT 5
+        ''')
         rows = cursor.fetchall()
 
         if not rows:
-            add_admin_log("🏆 ТОП ДНЯ: нет данных для награждения", 0, "System")
+            # Если нет данных, всё равно обнуляем (на случай если никто не кликал)
+            cursor.execute("UPDATE users SET daily_clicks = 0")
+            add_admin_log("🏆 ТОП ДНЯ: нет данных для награждения, но daily_clicks обнулён", 0, "System")
             return []
 
         rewards = {
@@ -4842,28 +4842,51 @@ def calculate_daily_top():
         for i, row in enumerate(rows, 1):
             if i in rewards and row['daily_clicks'] > 0:
                 user = get_user(row['user_id'])
-                new_lp = user['lp'] + rewards[i]["lp"]
-                new_wg = user['wg'] + rewards[i]["wg"]
+                old_lp = user['lp']
+                old_wg = user['wg']
+                new_lp = old_lp + rewards[i]["lp"]
+                new_wg = old_wg + rewards[i]["wg"]
                 safe_update_user(row['user_id'], lp=new_lp, wg=new_wg)
+
                 add_log(
                     f"🏆 ТОП ДНЯ #{i} место ({row['daily_clicks']} кликов) | +{rewards[i]['lp']} LP, +{rewards[i]['wg']} WG",
-                    row['user_id'], row['username'] or row['first_name'] or str(row['user_id']))
+                    row['user_id'],
+                    row['username'] or row['first_name'] or str(row['user_id']),
+                    old_lp, new_lp, "lp"
+                )
+                add_log(
+                    f"🏆 ТОП ДНЯ #{i} место ({row['daily_clicks']} кликов) | +{rewards[i]['lp']} LP, +{rewards[i]['wg']} WG",
+                    row['user_id'],
+                    row['username'] or row['first_name'] or str(row['user_id']),
+                    old_wg, new_wg, "wg"
+                )
 
-                send_telegram_message(row['user_id'],
-                                      f"🏆 ПОЗДРАВЛЯЕМ!\n\nВы заняли #{i} место в ТОПЕ ДНЯ!\n\n📊 Кликов за день: {row['daily_clicks']}\n\nНаграда:\n💎 +{rewards[i]['lp']} LP\n💰 +{rewards[i]['wg']} WG\n\nПродолжайте кликать! 🎉")
+                try:
+                    send_telegram_message(
+                        row['user_id'],
+                        f"🏆 **ПОЗДРАВЛЯЕМ!**\n\n"
+                        f"Вы заняли #{i} место в **ТОПЕ ДНЯ**!\n\n"
+                        f"📊 Кликов за день: {row['daily_clicks']}\n\n"
+                        f"**Награда:**\n"
+                        f"💎 +{rewards[i]['lp']} LP\n"
+                        f"💰 +{rewards[i]['wg']} WG\n\n"
+                        f"Продолжайте кликать! 🎉"
+                    )
+                except Exception as e:
+                    logger.error(f"Ошибка отправки Telegram сообщения: {e}")
+
                 awarded_count += 1
 
-        # Обнуляем daily_clicks для всех пользователей (если колонка существует)
-        if 'daily_clicks' in columns:
-            cursor.execute("UPDATE users SET daily_clicks = 0")
-            add_admin_log(f"🔄 ОБНУЛЕНИЕ daily_clicks выполнено в {datetime.datetime.now()}", 0, "System")
+        # ОБНУЛЯЕМ daily_clicks для всех пользователей
+        cursor.execute("UPDATE users SET daily_clicks = 0")
+        add_admin_log(f"🔄 ОБНУЛЕНИЕ daily_clicks выполнено в {datetime.datetime.now()}, выдано {awarded_count} наград",
+                      0, "System")
 
-        add_admin_log(f"🏆 РАЗДАЧА НАГРАД ТОПА ДНЯ завершена. Выдано {awarded_count} наград", 0, "System")
         return rows
 
 
 def schedule_daily_top_reset():
-    """Планировщик сброса топа в 00:00 МСК"""
+    """Планировщик сброса топа в 00:00 МСК (21:00 UTC)"""
 
     def reset_and_reward():
         while True:
@@ -4873,14 +4896,16 @@ def schedule_daily_top_reset():
             if now >= next_reset:
                 next_reset += datetime.timedelta(days=1)
             wait_seconds = (next_reset - now).total_seconds()
+
+            # Логируем время до следующего сброса
+            hours = int(wait_seconds // 3600)
+            minutes = int((wait_seconds % 3600) // 60)
+            add_admin_log(f"⏰ До следующего сброса топа: {hours}ч {minutes}мин", 0, "System")
+
             time.sleep(wait_seconds)
 
-            # Выдаём награды
+            # Выдаём награды и обнуляем daily_clicks
             calculate_daily_top()
-
-            # Сбрасываем клики для нового дня (опционально, если хотим обнулять)
-            # with db.get_cursor() as cursor:
-            #     cursor.execute("UPDATE users SET daily_clicks = 0")
 
             add_admin_log(f"🔄 ЕЖЕДНЕВНЫЙ СБРОС ТОПА выполнен в {datetime.datetime.now()}", 0, "System")
 
