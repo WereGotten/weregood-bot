@@ -6822,7 +6822,7 @@ let displayName = firstName || username || 'Игрок';
 
             let userName = userItem.username;
             let clicksCount = userItem.daily_clicks || 0;
-            let clicksLabel = 'кликов за день';
+            let clicksLabel = 'кликов';
 
             let roleBadge = '';
             if (userItem.role === 'founder' && !userItem.hide_from_top) {
@@ -6844,7 +6844,7 @@ let displayName = firstName || username || 'Игрок';
                     <div class="avatar">${avatar}</div>
                     <div class="info">
                         <div class="name">${escapeHtml(userName)}${roleBadge}</div>
-                        <div class="clicks">📊 ${clicksCount.toLocaleString()} ${clicksLabel}</div>
+                        <div class="clicks"> ${clicksCount.toLocaleString()} ${clicksLabel}</div>
                     </div>
                     ${rewardHtml}
                 </div>
