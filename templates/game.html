@@ -6789,59 +6789,74 @@ let displayName = firstName || username || 'Игрок';
         };
 
         async function loadLeaderboardData(period, forceRefresh = false) {
-            let listDiv = document.getElementById('leaderboardList');
-            if (!listDiv) return;
+    let listDiv = document.getElementById('leaderboardList');
+    if (!listDiv) return;
 
-            listDiv.innerHTML = '<div class="loading">Загрузка...</div>';
+    listDiv.innerHTML = '<div class="loading">Загрузка...</div>';
 
-            try {
-                let res = await fetch(`/api/leaderboard?limit=50${forceRefresh ? '&force=true' : ''}`);
-                let data = await res.json();
-
-                let html = '';
-                for (let userItem of data) {
-                    let avatar = userItem.avatar && userItem.avatar !== '👤'
-                        ? `<img src="${userItem.avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`
-                        : '👤';
-
-                    let userName = userItem.username;
-
-                    let roleBadge = '';
-                    if (userItem.role === 'founder' && !userItem.hide_from_top) {
-                        roleBadge = '<span class="leaderboard-founder-badge">👑</span>';
-                    } else if (userItem.role === 'legend' && !userItem.hide_from_top) {
-                        roleBadge = '<span class="leaderboard-legend-badge">👑</span>';
-                    } else if (userItem.role === 'pioneer' && !userItem.hide_from_top) {
-                        roleBadge = '<span class="leaderboard-pioneer-badge">⭐</span>';
-                    }
-
-                    let rewardHtml = '';
-                    if (userItem.rank === 1) rewardHtml = '<span class="reward">🏆 70 LP + 200 WG</span>';
-                    else if (userItem.rank === 2) rewardHtml = '<span class="reward">🥈 50 LP + 150 WG</span>';
-                    else if (userItem.rank === 3) rewardHtml = '<span class="reward">🥉 35 LP + 120 WG</span>';
-                    else if (userItem.rank === 4) rewardHtml = '<span class="reward">🎖️ 25 LP + 100 WG</span>';
-                    else if (userItem.rank === 5) rewardHtml = '<span class="reward">🎖️ 15 LP + 75 WG</span>';
-
-                    html += `
-                        <div class="leaderboard-item" onclick="openPlayerProfile(${userItem.user_id}, ${userItem.rank})">
-                            <div class="rank">${userItem.rank}</div>
-                            <div class="avatar">${avatar}</div>
-                            <div class="info">
-                                <div class="name">${userName}${roleBadge}</div>
-                                <div class="clicks"> ${userItem.total_clicks} ${userItem.clicks_label || 'кликов'}</div>
-                            </div>
-                            ${rewardHtml}
-                        </div>
-                    `;
-                }
-
-                listDiv.innerHTML = html || '<div class="empty-state">Нет данных</div>';
-
-            } catch(e) {
-                console.error('Leaderboard error:', e);
-                listDiv.innerHTML = '<div class="empty-state">Ошибка</div>';
-            }
+    try {
+        let url;
+        if (period === 'day') {
+            // Топ дня использует API с daily_clicks
+            url = `/api/leaderboard/daily${forceRefresh ? '?force=true' : ''}`;
+        } else {
+            // Топ недели/месяца пока не реализованы
+            listDiv.innerHTML = '<div class="coming-soon" style="text-align:center; padding:40px;">🔄 Скоро появится!</div>';
+            return;
         }
+
+        let res = await fetch(url);
+        let data = await res.json();
+
+        if (!data || data.length === 0) {
+            listDiv.innerHTML = '<div class="empty-state">😢 Нет данных за сегодня</div>';
+            return;
+        }
+
+        let html = '';
+        for (let userItem of data) {
+            let avatar = userItem.avatar && userItem.avatar !== '👤'
+                ? `<img src="${userItem.avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`
+                : '👤';
+
+            let userName = userItem.username;
+            let clicksCount = userItem.daily_clicks || 0;
+            let clicksLabel = 'кликов за день';
+
+            let roleBadge = '';
+            if (userItem.role === 'founder' && !userItem.hide_from_top) {
+                roleBadge = '<span class="leaderboard-founder-badge">👑</span>';
+            } else if (userItem.role === 'legend' && !userItem.hide_from_top) {
+                roleBadge = '<span class="leaderboard-legend-badge">👑</span>';
+            } else if (userItem.role === 'pioneer' && !userItem.hide_from_top) {
+                roleBadge = '<span class="leaderboard-pioneer-badge">⭐</span>';
+            }
+
+            let rewardHtml = '';
+            if (userItem.reward) {
+                rewardHtml = `<span class="reward">${userItem.reward}</span>`;
+            }
+
+            html += `
+                <div class="leaderboard-item" onclick="openPlayerProfile(${userItem.user_id}, ${userItem.rank})">
+                    <div class="rank">${userItem.rank}</div>
+                    <div class="avatar">${avatar}</div>
+                    <div class="info">
+                        <div class="name">${escapeHtml(userName)}${roleBadge}</div>
+                        <div class="clicks">📊 ${clicksCount.toLocaleString()} ${clicksLabel}</div>
+                    </div>
+                    ${rewardHtml}
+                </div>
+            `;
+        }
+
+        listDiv.innerHTML = html;
+
+    } catch(e) {
+        console.error('Leaderboard error:', e);
+        listDiv.innerHTML = '<div class="empty-state">❌ Ошибка загрузки</div>';
+    }
+}
 
         document.querySelectorAll('.leaderboard-tab').forEach(tab => {
             tab.onclick = () => {
