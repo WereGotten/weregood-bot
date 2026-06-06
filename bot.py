@@ -158,7 +158,7 @@ for _ in range(click_workers):
 # ========== БУФЕР ДЛЯ КЛИКОВ (ОПТИМИЗАЦИЯ) ==========
 click_buffer = {}
 click_buffer_lock = threading.Lock()
-BUFFER_FLUSH_INTERVAL = 3
+BUFFER_FLUSH_INTERVAL = 5
 
 
 def flush_click_buffer():
