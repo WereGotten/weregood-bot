@@ -4859,11 +4859,15 @@
         // ==================== ИНИЦИАЛИЗАЦИЯ ====================
         let tg = window.Telegram?.WebApp;
         let user = tg?.initDataUnsafe?.user;
-        let userId = user ? user.id : 12345678;
-        let username = user ? (user.username || user.first_name || 'Игрок') : 'Игрок';
-        let firstName = user ? user.first_name || '' : '';
-        let photoUrl = user && user.photo_url ? user.photo_url : '';
-        let chatId = user ? user.id : userId;
+let userId = user ? user.id : 12345678;
+let username = user ? (user.username || '') : '';
+let firstName = user ? (user.first_name || '') : '';
+let lastName = user ? (user.last_name || '') : '';
+let photoUrl = user && user.photo_url ? user.photo_url : '';
+let chatId = user ? user.id : userId;
+
+// Для отображения в приветствии используем first_name или username или 'Игрок'
+let displayName = firstName || username || 'Игрок';
 
         let currentTickets = [];
         let socket = null;
@@ -5080,22 +5084,34 @@
 
         // ==================== API ЗАПРОСЫ ====================
         async function autoRegister() {
-            try {
-                let urlParams = new URLSearchParams(window.location.search);
-                let refCode = urlParams.get('startapp') || '';
-                await fetch('/api/register', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        user_id: userId,
-                        username: username,
-                        first_name: firstName,
-                        avatar_url: photoUrl,
-                        referral_code: refCode
-                    })
-                });
-            } catch(e) {}
+    try {
+        let urlParams = new URLSearchParams(window.location.search);
+        let refCode = urlParams.get('startapp') || '';
+
+        // Отправляем оба поля: username (если есть) и first_name
+        const response = await fetch('/api/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id: userId,
+                username: username || '',      // если нет username - пустая строка
+                first_name: firstName || '',   // если нет first_name - пустая строка
+                last_name: lastName || '',
+                avatar_url: photoUrl,
+                referral_code: refCode
+            })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            console.log('✅ Регистрация успешна');
+            // Обновляем приветствие
+            document.getElementById('userGreeting').innerText = firstName || username || 'Игрок';
         }
+    } catch(e) {
+        console.error('AutoRegister error:', e);
+    }
+}
 
         async function loadSettings() {
             try {
