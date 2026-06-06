@@ -161,8 +161,8 @@ click_buffer_lock = threading.Lock()
 BUFFER_FLUSH_INTERVAL = 5
 
 
+# Используйте атомарные операции или более безопасный подход
 def flush_click_buffer():
-    """Периодическая запись накопленных кликов в БД"""
     while True:
         time.sleep(BUFFER_FLUSH_INTERVAL)
         with click_buffer_lock:
@@ -171,16 +171,20 @@ def flush_click_buffer():
             to_update = list(click_buffer.items())
             click_buffer.clear()
 
-        try:
-            with db.get_cursor() as cursor:
-                for user_id, total_clicks in to_update:
+        # ОБРАБАТЫВАЕМ ВНЕ БЛОКИРОВКИ!
+        for user_id, total_clicks in to_update:
+            try:
+                with db.get_cursor() as cursor:
                     cursor.execute(
                         "UPDATE users SET total_clicks = total_clicks + ? WHERE user_id = ?",
                         (total_clicks, user_id)
                     )
                     invalidate_cache(user_id)
-        except Exception as e:
-            logger.error(f"Flush buffer error: {e}")
+            except Exception as e:
+                logger.error(f"Flush buffer error: {e}")
+                # ВОЗВРАЩАЕМ В БУФЕР ПРИ ОШИБКЕ
+                with click_buffer_lock:
+                    click_buffer[user_id] = click_buffer.get(user_id, 0) + total_clicks
 
 
 def async_click_tasks(user_id, user, earning, old_wg, new_wg, today):
@@ -1634,33 +1638,82 @@ def create_stars_invoice(chat_id, user_id):
 
 
 def grant_energy_upgrade(user_id):
-    with db.get_cursor() as cursor:
-        cursor.execute("SELECT energy_upgrades, max_energy, lp, username FROM users WHERE user_id=?", (user_id,))
-        user = cursor.fetchone()
-        if not user:
-            return False, "Пользователь не найден", None
-        current_upgrades = user['energy_upgrades'] or 0
-        if current_upgrades >= 15:
-            return False, "Максимум улучшений! (15/15)", None
-        new_upgrades = current_upgrades + 1
-        # max_energy: +40 за улучшение (было +50)
-        new_max_energy = 500 + (new_upgrades * 40)
-        # LP остаётся +50 (не меняем)
-        new_lp = (user['lp'] or 0) + 50
-        cursor.execute("UPDATE users SET energy_upgrades=?, max_energy=?, lp=? WHERE user_id=?",
-                       (new_upgrades, new_max_energy, new_lp, user_id))
-        invalidate_cache(user_id)
+    """
+    Начисляет улучшение энергии за Stars или TON.
+    +40 к максимальной энергии, +50 LP.
+    """
+    try:
+        with db.get_cursor() as cursor:
+            # Получаем данные пользователя
+            cursor.execute("""
+                SELECT energy_upgrades, max_energy, lp, username, last_energy_update, energy 
+                FROM users WHERE user_id = ?
+            """, (user_id,))
+            user = cursor.fetchone()
 
-        add_admin_log(
-            f"⭐ Купил энергетический усилитель за Stars | +40 макс. энергии, +50 LP",
-            user_id,
-            user['username'] or f"User_{user_id}",
-            details=f"Улучшений теперь: {new_upgrades}/15, макс. энергия: {new_max_energy}"
-        )
+            if not user:
+                return False, "Пользователь не найден", None
 
-        return True, "✨ Улучшение активировано! +40 макс. энергии и +50 LP!", {"energy_upgrades": new_upgrades,
-                                                                               "max_energy": new_max_energy,
-                                                                               "lp": new_lp}
+            current_upgrades = user['energy_upgrades'] or 0
+
+            # Проверка лимита
+            if current_upgrades >= 15:
+                return False, "Максимум улучшений! (15/15)", None
+
+            # Новые значения
+            new_upgrades = current_upgrades + 1
+            new_max_energy = 500 + (new_upgrades * 40)
+            new_lp = (user['lp'] or 0) + 50
+
+            # Важно: при изменении max_energy нужно синхронизировать текущую энергию
+            current_energy = user['energy'] or 0
+            last_update = user['last_energy_update'] or time.time()
+            now = time.time()
+
+            # Пересчитываем энергию с учётом прошедшего времени
+            seconds_passed = now - last_update
+            recovery_rate = user['max_energy'] / 7200  # Старая max_energy для расчёта
+            recovered = int(seconds_passed * recovery_rate)
+            recalculated_energy = min(user['max_energy'], current_energy + recovered)
+
+            # Обновляем запись
+            cursor.execute("""
+                UPDATE users 
+                SET energy_upgrades = ?, 
+                    max_energy = ?, 
+                    lp = ?, 
+                    last_energy_update = ?,
+                    energy = ?
+                WHERE user_id = ?
+            """, (new_upgrades, new_max_energy, new_lp, now, recalculated_energy, user_id))
+
+            # Инвалидируем кэш ПОСЛЕ успешного обновления
+            invalidate_cache(user_id)
+
+            # Отправляем лог (используем try-except, чтобы не прерывать основную логику)
+            try:
+                add_admin_log(
+                    f"⭐ Купил энергетический усилитель | +40 макс. энергии, +50 LP",
+                    user_id,
+                    user['username'] or f"User_{user_id}",
+                    details=f"Улучшений теперь: {new_upgrades}/15, макс. энергия: {new_max_energy}"
+                )
+            except Exception as log_error:
+                logger.error(f"Ошибка при добавлении лога: {log_error}")
+
+            return True, "✨ Улучшение активировано! +40 макс. энергии и +50 LP!", {
+                "energy_upgrades": new_upgrades,
+                "max_energy": new_max_energy,
+                "lp": new_lp,
+                "energy": recalculated_energy
+            }
+
+    except sqlite3.Error as db_error:
+        logger.error(f"Ошибка БД в grant_energy_upgrade для user {user_id}: {db_error}")
+        return False, f"Ошибка базы данных: {db_error}", None
+    except Exception as e:
+        logger.error(f"Неожиданная ошибка в grant_energy_upgrade для user {user_id}: {e}", exc_info=True)
+        return False, "Внутренняя ошибка сервера", None
 
 
 def handle_successful_payment(chat_id, payment_info):
