@@ -5290,44 +5290,45 @@ let displayName = firstName || username || 'Игрок';
         let leaderboardUpdateTimeout = null;
         let leaderboardUpdatePromise = null;
 
-        async function updateLeaderboard() {
-            if (leaderboardUpdatePromise) return leaderboardUpdatePromise;
-            if (leaderboardUpdateTimeout) clearTimeout(leaderboardUpdateTimeout);
-            leaderboardUpdatePromise = new Promise((resolve) => {
-                leaderboardUpdateTimeout = setTimeout(async () => {
-                    try {
-                        let res = await fetch('/api/leaderboard?limit=5');
-                        let data = await res.json();
-                        let html = '';
-                        for (let user of data) {
-                            let avatar = user.avatar && user.avatar !== '👤'
-                                ? `<img src="${user.avatar}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;">`
-                                : '👤';
-                            let userName = user.username;
-                            let roleBadge = '';
-                            if (user.role === 'founder' && !user.hide_from_top) roleBadge = '<span class="leaderboard-founder-badge">👑</span>';
-                            else if (user.role === 'legend' && !user.hide_from_top) roleBadge = '<span class="leaderboard-legend-badge">👑</span>';
-                            else if (user.role === 'pioneer' && !user.hide_from_top) roleBadge = '<span class="leaderboard-pioneer-badge">⭐</span>';
-                            html += `<div class="leaderboard-mini-item">
-                                <span class="rank">${user.rank}</span>
-                                <span class="avatar-mini">${avatar}</span>
-                                <span class="name">${userName}${roleBadge}</span>
-                                <span class="clicks">${user.total_clicks} кликов</span>
-                            </div>`;
-                        }
-                        document.getElementById('leaderboardMini').innerHTML = html || '<div>Нет данных</div>';
-                        resolve(true);
-                    } catch(e) {
-                        console.error('Leaderboard error:', e);
-                        resolve(false);
-                    } finally {
-                        leaderboardUpdateTimeout = null;
-                        leaderboardUpdatePromise = null;
-                    }
-                }, 2000);
-            });
-            return leaderboardUpdatePromise;
-        }
+       async function updateLeaderboard() {
+    if (leaderboardUpdatePromise) return leaderboardUpdatePromise;
+    if (leaderboardUpdateTimeout) clearTimeout(leaderboardUpdateTimeout);
+    leaderboardUpdatePromise = new Promise((resolve) => {
+        leaderboardUpdateTimeout = setTimeout(async () => {
+            try {
+                // Используем API топа дня (daily_clicks) вместо общего топа
+                let res = await fetch('/api/leaderboard/daily?limit=5');
+                let data = await res.json();
+                let html = '';
+                for (let user of data) {
+                    let avatar = user.avatar && user.avatar !== '👤'
+                        ? `<img src="${user.avatar}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;">`
+                        : '👤';
+                    let userName = user.username;
+                    let roleBadge = '';
+                    if (user.role === 'founder' && !user.hide_from_top) roleBadge = '<span class="leaderboard-founder-badge">👑</span>';
+                    else if (user.role === 'legend' && !user.hide_from_top) roleBadge = '<span class="leaderboard-legend-badge">👑</span>';
+                    else if (user.role === 'pioneer' && !user.hide_from_top) roleBadge = '<span class="leaderboard-pioneer-badge">⭐</span>';
+                    html += `<div class="leaderboard-mini-item">
+                        <span class="rank">${user.rank}</span>
+                        <span class="avatar-mini">${avatar}</span>
+                        <span class="name">${userName}${roleBadge}</span>
+                        <span class="clicks">${user.daily_clicks || 0} кликов</span>
+                    </div>`;
+                }
+                document.getElementById('leaderboardMini').innerHTML = html || '<div>Нет данных за сегодня</div>';
+                resolve(true);
+            } catch(e) {
+                console.error('Leaderboard error:', e);
+                resolve(false);
+            } finally {
+                leaderboardUpdateTimeout = null;
+                leaderboardUpdatePromise = null;
+            }
+        }, 2000);
+    });
+    return leaderboardUpdatePromise;
+}
 
         async function loadRecentPlayers() {
             try {
