@@ -598,7 +598,13 @@ def repair_database():
 
 
 repair_database()
-db = Database(DATABASE_PATH)
+try:
+    from pg_adapter import pg_db
+    db = pg_db
+    print("✅ Используем PostgreSQL")
+except Exception as e:
+    print(f"⚠️ Ошибка подключения PostgreSQL: {e}, используем SQLite")
+    db = Database(DATABASE_PATH)
 
 ALLOWED_UPDATE_FIELDS = {
     'wg', 'lp', 'energy', 'last_energy_update', 'tickets', 'total_clicks',
