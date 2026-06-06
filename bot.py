@@ -2765,20 +2765,35 @@ def api_register():
     avatar_url = sanitize_string(data.get('avatar_url', ''), 200)
     referral_code = sanitize_string(data.get('referral_code', ''), 50)
 
+    # ЛОГИРУЕМ для отладки
+    logger.info(f"📝 Регистрация/обновление: user_id={user_id}, username={username}, first_name={first_name}")
+
     with db.get_cursor() as cursor:
         cursor.execute("SELECT * FROM users WHERE user_id=?", (user_id,))
         existing = cursor.fetchone()
 
         if existing:
-            # Обновление существующего профиля
-            cursor.execute("UPDATE users SET username=?, first_name=?, last_name=?, avatar_url=? WHERE user_id=?",
-                           (username, first_name, last_name, avatar_url, user_id))
+            # ОБНОВЛЕНИЕ существующего профиля - сохраняем username!
+            cursor.execute("""
+                UPDATE users 
+                SET username = ?, 
+                    first_name = ?, 
+                    last_name = ?, 
+                    avatar_url = ? 
+                WHERE user_id = ?
+            """, (username, first_name, last_name, avatar_url, user_id))
             invalidate_cache(user_id)
-            add_log(f"✏️ Обновил профиль", user_id, username or first_name or str(user_id))
-            return jsonify({"success": True})
+            add_log(f"✏️ Обновил профиль (username: {username or first_name})", user_id,
+                    username or first_name or str(user_id))
 
+            # Проверяем, что сохранилось
+            cursor.execute("SELECT username, first_name FROM users WHERE user_id=?", (user_id,))
+            check = cursor.fetchone()
+            logger.info(f"✅ После обновления: username={check['username']}, first_name={check['first_name']}")
+
+            return jsonify({"success": True})
         else:
-            # Новая регистрация
+            # НОВАЯ регистрация
             now = time.time()
             ref_code_new = hashlib.md5(str(user_id).encode()).hexdigest()[:8]
             founder_id = 5264622363
@@ -2786,58 +2801,64 @@ def api_register():
             unlocked = json.dumps(["player", "founder"]) if role == "founder" else json.dumps(["player"])
             referrer_id = 0
 
-            # Обработка реферального кода
             if referral_code:
                 cursor.execute("SELECT user_id FROM users WHERE referral_code=?", (referral_code,))
                 referrer_row = cursor.fetchone()
                 if referrer_row:
                     referrer_id = referrer_row['user_id']
-
-                    # Добавляем запись в таблицу рефералов
                     cursor.execute(
                         'INSERT INTO referrals (referrer_id, referred_id, username, first_name, total_spent_lp) VALUES (?, ?, ?, ?, 0)',
                         (referrer_id, user_id, username, first_name))
-
                     add_log(f"👥 Новый реферал! {username or first_name} зарегистрировался по вашей ссылке", referrer_id,
                             get_user(referrer_id)['username'])
-
-                    # ОБНОВЛЯЕМ ДОСТИЖЕНИЕ РЕФЕРАЛА
-                    # Делаем это ДВАЖДЫ для надёжности: через функцию и напрямую в БД
                     update_achievement_progress(referrer_id, 'social', 1)
 
-                    # Дополнительная прямая проверка в БД (на случай если функция не сработала)
-                    with db.get_cursor() as inner_cursor:
-                        inner_cursor.execute(
-                            "UPDATE user_achievements SET current_count = current_count + 1, is_completed = CASE WHEN current_count + 1 >= (SELECT target_count FROM achievements WHERE name = 'social') THEN 1 ELSE 0 END WHERE user_id = ? AND achievement_id = (SELECT id FROM achievements WHERE name = 'social')",
-                            (referrer_id,)
-                        )
-                        if inner_cursor.rowcount == 0:
-                            inner_cursor.execute(
-                                "INSERT INTO user_achievements (user_id, achievement_id, current_count, is_completed) VALUES (?, (SELECT id FROM achievements WHERE name = 'social'), 1, 0)",
-                                (referrer_id,)
-                            )
-
-            # Создаём нового пользователя
+            # ВАЖНО: сохраняем username и first_name!
             cursor.execute('''
                 INSERT INTO users (
                     user_id, wg, lp, energy, last_energy_update, tickets, total_clicks, upgrade_counts, 
-                    ticket_counter, referral_code, referrer_id, likes, dislikes, settings, username, first_name, 
-                    last_name, avatar_url, usdt, wins, role, stars, max_energy, energy_upgrades, 
-                    energy_limit_upgrades, unlocked_prefixes, tutorial_completed, ton_wallet, banned_until, 
-                    ban_reason, banned_by, completed_achievements
+                    ticket_counter, referral_code, referrer_id, likes, dislikes, settings, 
+                    username, first_name, last_name, avatar_url, usdt, wins, role, stars, 
+                    max_energy, energy_upgrades, energy_limit_upgrades, unlocked_prefixes, 
+                    tutorial_completed, ton_wallet, banned_until, ban_reason, banned_by, completed_achievements
                 ) VALUES (
                     ?, 0, 0, 500, ?, '[]', 0, '{"1":0,"2":0,"3":0}', 0, ?, ?, 0, 0, '{"theme":"dark"}', 
                     ?, ?, ?, ?, 0, 0, ?, 0, 500, 0, 0, ?, 0, '', 0, '', 0, 0
                 )
             ''', (user_id, now, ref_code_new, referrer_id, username, first_name, last_name, avatar_url, role, unlocked))
 
-            add_log(f"✨ Новая регистрация! Добро пожаловать!", user_id, username or first_name or str(user_id))
-
+            add_log(f"✨ Новая регистрация! Добро пожаловать, {username or first_name}!", user_id,
+                    username or first_name or str(user_id))
             today = datetime.datetime.now().strftime("%Y-%m-%d")
             update_stats_history(today, users=1)
 
+            # Проверяем
+            cursor.execute("SELECT username, first_name FROM users WHERE user_id=?", (user_id,))
+            check = cursor.fetchone()
+            logger.info(f"✅ После регистрации: username={check['username']}, first_name={check['first_name']}")
+
     return jsonify({"success": True})
 
+
+@app.route('/api/debug_user', methods=['POST'])
+def api_debug_user():
+    data = request.json
+    user_id = data.get('user_id')
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"error": "Invalid user_id"}), 400
+
+    with db.get_cursor() as cursor:
+        cursor.execute("SELECT user_id, username, first_name, last_name FROM users WHERE user_id=?", (user_id,))
+        row = cursor.fetchone()
+        if row:
+            return jsonify({
+                "user_id": row['user_id'],
+                "username": row['username'],
+                "first_name": row['first_name'],
+                "last_name": row['last_name']
+            })
+    return jsonify({"error": "User not found"}), 404
 
 @app.route('/api/click', methods=['POST'])
 def api_click():
