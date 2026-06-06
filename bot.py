@@ -606,7 +606,8 @@ ALLOWED_UPDATE_FIELDS = {
     'referral_code', 'referrer_id', 'likes', 'dislikes', 'settings',
     'avatar_url', 'usdt', 'wins', 'role', 'stars', 'max_energy',
     'energy_upgrades', 'energy_limit_upgrades', 'unlocked_prefixes',
-    'tutorial_completed', 'ton_wallet', 'banned_until', 'ban_reason', 'banned_by', 'completed_achievements'
+    'tutorial_completed', 'ton_wallet', 'banned_until', 'ban_reason', 'banned_by',
+    'completed_achievements'
 }
 
 MAX_USER_CACHE = 5000
@@ -2937,7 +2938,6 @@ def api_debug_user():
             })
     return jsonify({"error": "User not found"}), 404
 
-
 @app.route('/api/click', methods=['POST'])
 def api_click():
     data = request.json
@@ -3012,7 +3012,9 @@ def api_click():
             )
 
     # 🔥 ОБНОВЛЕНИЕ ДНЕВНЫХ КЛИКОВ ДЛЯ ТОПА ДНЯ
-    current_daily_clicks = user.get('daily_clicks', 0)
+    # Принудительно получаем свежие данные и обновляем
+    fresh_user = get_user(user_id, force_refresh=True)
+    current_daily_clicks = fresh_user.get('daily_clicks', 0)
     safe_update_user(user_id, daily_clicks=current_daily_clicks + 1)
 
     today = datetime.datetime.now().strftime("%Y-%m-%d")
@@ -3044,7 +3046,6 @@ def api_click():
         "lp_reward": lp_reward,
         "earning_per_click": earning
     })
-
 
 @app.route('/api/status', methods=['POST'])
 def api_status():
