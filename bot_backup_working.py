@@ -2434,20 +2434,30 @@ def api_click():
     success, new_energy = spend_energy(user_id, user, 1)
     if not success:
         return jsonify({"error": "Нет энергии", "energy": new_energy, "wg": user["wg"], "lp": user["lp"]})
+
     earning = get_total_earning(user["upgrade_counts"])
     old_wg = user["wg"]
     new_wg = old_wg + earning
     new_clicks = user["total_clicks"] + 1
-    safe_update_user(user_id, wg=new_wg, total_clicks=new_clicks)
+    new_daily_clicks = user.get("daily_clicks", 0) + 1  # Увеличиваем счётчик за день
+
+    # Обновляем все счётчики одним запросом
+    safe_update_user(user_id,
+                     wg=new_wg,
+                     total_clicks=new_clicks,
+                     daily_clicks=new_daily_clicks)
+
     today = datetime.datetime.now().strftime("%Y-%m-%d")
     update_stats_history(today, clicks=1)
     update_achievement_progress(user_id, 'autoclicker', 1)
+
     if user["total_clicks"] == 0:
         add_log(f"🆕👆 ПЕРВЫЙ КЛИК в игре! +{earning:.4f} WG", user_id, user['username'], old_value=old_wg,
                 new_value=new_wg, currency="wg")
     else:
         add_log(f"🖱️ Клик по монете +{earning:.4f} WG", user_id, user['username'], old_value=old_wg, new_value=new_wg,
                 currency="wg")
+
     lp_reward = False
     if random.random() < 0.0025:
         old_lp = user["lp"]
@@ -2458,10 +2468,13 @@ def api_click():
         new_lp_value = new_lp
     else:
         new_lp_value = user["lp"]
+
     click_queue.put({"user_id": user_id})
+
     return jsonify(
-        {"energy": new_energy, "wg": new_wg, "lp": new_lp_value, "total_clicks": new_clicks, "earned": earning,
-         "lp_reward": lp_reward, "earning_per_click": earning})
+        {"energy": new_energy, "wg": new_wg, "lp": new_lp_value, "total_clicks": new_clicks,
+         "daily_clicks": new_daily_clicks, "earned": earning, "lp_reward": lp_reward,
+         "earning_per_click": earning})
 
 
 @app.route('/api/status', methods=['POST'])
