@@ -615,7 +615,7 @@ def invalidate_cache(user_id):
             del user_cache_time[user_id]
 
 
-def get_user(user_id, force_refresh=False):
+def get_user(user_id, force_refresh=False, username=None, first_name=None, last_name=None, avatar_url=None):
     now = time.time()
 
     if not force_refresh and user_id in user_cache:
@@ -632,19 +632,34 @@ def get_user(user_id, force_refresh=False):
             founder_id = 5264622363
             role = "founder" if user_id == founder_id else "player"
             unlocked = json.dumps(["player", "founder"]) if role == "founder" else json.dumps(["player"])
+
+            # Используем переданные имена или пустые строки
+            final_username = username if username else ""
+            final_first_name = first_name if first_name else ""
+            final_last_name = last_name if last_name else ""
+            final_avatar_url = avatar_url if avatar_url else ""
+
             try:
                 cursor.execute('''
-                    INSERT INTO users (user_id, wg, lp, energy, last_energy_update, tickets, total_clicks,
-                    upgrade_counts, ticket_counter, referral_code, referrer_id, likes, dislikes, settings,
-                    username, first_name, last_name, avatar_url, usdt, wins, role, stars,
-                    max_energy, energy_upgrades, energy_limit_upgrades, unlocked_prefixes, tutorial_completed, ton_wallet,
-                    banned_until, ban_reason, banned_by, completed_achievements)
-                    VALUES (?, 0, 0, 500, ?, '[]', 0, '{"1":0,"2":0,"3":0}', 0, ?, 0, 0, 0,
-                    '{"theme":"dark"}', ?, ?, ?, ?, 0, 0, ?, 0, 500, 0, 0, ?, 0, '', 0, '', 0, 0)
-                ''', (user_id, now_time, ref_code, "", "", "", "", role, unlocked))
+                    INSERT INTO users (
+                        user_id, wg, lp, energy, last_energy_update, tickets, total_clicks,
+                        upgrade_counts, ticket_counter, referral_code, referrer_id, likes, dislikes, settings,
+                        username, first_name, last_name, avatar_url, usdt, wins, role, stars,
+                        max_energy, energy_upgrades, energy_limit_upgrades, unlocked_prefixes, tutorial_completed, ton_wallet,
+                        banned_until, ban_reason, banned_by, completed_achievements
+                    ) VALUES (
+                        ?, 0, 0, 500, ?, '[]', 0, '{"1":0,"2":0,"3":0}', 0, ?, ?, 0, 0,
+                        '{"theme":"dark"}', ?, ?, ?, ?, 0, 0, ?, 0, 500, 0, 0, ?, 0, '', 0, '', 0, 0
+                    )
+                ''', (
+                    user_id, now_time, ref_code, 0,
+                    final_username, final_first_name, final_last_name, final_avatar_url,
+                    role, unlocked
+                ))
                 cursor.execute("SELECT * FROM users WHERE user_id=?", (user_id,))
                 row = cursor.fetchone()
-            except:
+            except Exception as e:
+                logger.error(f"Ошибка создания пользователя {user_id}: {e}")
                 cursor.execute("SELECT * FROM users WHERE user_id=?", (user_id,))
                 row = cursor.fetchone()
 
@@ -669,6 +684,7 @@ def get_user(user_id, force_refresh=False):
                         del user_cache_time[uid]
             return default_user
 
+        # ... остальной код обработки row (парсинг JSON и т.д.) остаётся без изменений
         upgrade_counts = json.loads(row['upgrade_counts']) if row['upgrade_counts'] else {1: 0, 2: 0, 3: 0}
         if isinstance(upgrade_counts, dict):
             upgrade_counts = {int(k): v for k, v in upgrade_counts.items()}
