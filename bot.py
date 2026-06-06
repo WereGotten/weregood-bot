@@ -1210,6 +1210,10 @@ def init_db():
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_logs_user_id ON system_logs(user_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_tasks ON user_tasks(user_id, task_id)')
         try:
+            cursor.execute('ALTER TABLE referrals ADD COLUMN total_earned_wg REAL DEFAULT 0')
+        except:
+            pass
+        try:
             cursor.execute('ALTER TABLE users ADD COLUMN daily_clicks INTEGER DEFAULT 0')
         except:
             pass  # колонка уже существует
@@ -2979,6 +2983,34 @@ def api_click():
     # Обновляем WG сразу
     safe_update_user(user_id, wg=new_wg)
 
+    # 👥 НАЧИСЛЕНИЕ РЕФЕРЕРУ 10% ОТ ЗАРАБОТКА WG
+    referrer_id = user.get('referrer_id', 0)
+    if referrer_id > 0:
+        referrer_earning = earning * 0.1  # 10% от заработка
+        if referrer_earning > 0:
+            referrer = get_user(referrer_id)
+            old_referrer_wg = referrer['wg']
+            new_referrer_wg = old_referrer_wg + referrer_earning
+            safe_update_user(referrer_id, wg=new_referrer_wg)
+
+            # Обновляем статистику в таблице referrals (WG доход)
+            with db.get_cursor() as cursor:
+                cursor.execute('''
+                    UPDATE referrals 
+                    SET total_earned_wg = total_earned_wg + ? 
+                    WHERE referrer_id = ? AND referred_id = ?
+                ''', (referrer_earning, referrer_id, user_id))
+
+            # Логируем начисление рефереру
+            add_log(
+                f"👥 Получил 10% от WG реферала (+{referrer_earning:.4f} WG)",
+                referrer_id,
+                referrer.get('username') or f"User_{referrer_id}",
+                old_value=old_referrer_wg,
+                new_value=new_referrer_wg,
+                currency="wg"
+            )
+
     # 🔥 ОБНОВЛЕНИЕ ДНЕВНЫХ КЛИКОВ ДЛЯ ТОПА ДНЯ
     current_daily_clicks = user.get('daily_clicks', 0)
     safe_update_user(user_id, daily_clicks=current_daily_clicks + 1)
@@ -3364,26 +3396,44 @@ def api_get_referral_link():
 def api_get_referrals():
     data = request.json
     if not data:
-        return jsonify({"referrals": [], "total_earned": 0}), 400
+        return jsonify({"referrals": [], "total_earned_lp": 0, "total_earned_wg": 0}), 400
     user_id = data.get('user_id')
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid:
-        return jsonify({"referrals": [], "total_earned": 0}), 400
+        return jsonify({"referrals": [], "total_earned_lp": 0, "total_earned_wg": 0}), 400
+
     with db.get_cursor() as cursor:
-        cursor.execute(
-            "SELECT r.username, r.first_name, r.created_at, r.total_spent_lp FROM referrals r WHERE r.referrer_id = ?",
-            (user_id,))
+        cursor.execute('''
+            SELECT r.username, r.first_name, r.created_at, r.total_spent_lp, r.total_earned_wg
+            FROM referrals r 
+            WHERE r.referrer_id = ?
+        ''', (user_id,))
         rows = cursor.fetchall()
+
         referrals = []
-        total_earned = 0
+        total_earned_lp = 0
+        total_earned_wg = 0
+
         for row in rows:
             name = row['username'] or row['first_name'] or "Игрок"
-            earned = (row['total_spent_lp'] or 0) * 0.05
-            total_earned += earned
-            referrals.append(
-                {"username": escape_html(name), "date": row['created_at'], "spent_lp": row['total_spent_lp'] or 0,
-                 "earned": round(earned, 2)})
-    return jsonify({"referrals": referrals, "total_earned": round(total_earned, 2)})
+            earned_lp = (row['total_spent_lp'] or 0) * 0.05
+            earned_wg = (row['total_earned_wg'] or 0)
+            total_earned_lp += earned_lp
+            total_earned_wg += earned_wg
+
+            referrals.append({
+                "username": escape_html(name),
+                "date": row['created_at'],
+                "spent_lp": row['total_spent_lp'] or 0,
+                "earned_lp": round(earned_lp, 2),
+                "earned_wg": round(earned_wg, 4)
+            })
+
+    return jsonify({
+        "referrals": referrals,
+        "total_earned_lp": round(total_earned_lp, 2),
+        "total_earned_wg": round(total_earned_wg, 4)
+    })
 
 
 @app.route('/api/leaderboard', methods=['GET'])
