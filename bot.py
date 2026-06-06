@@ -139,7 +139,7 @@ energy_lock = threading.Lock()
 user_energy_locks = defaultdict(threading.Lock)
 
 click_queue = Queue()
-click_workers = 50
+click_workers = 25
 
 def process_click_worker():
     while True:
@@ -158,7 +158,7 @@ for _ in range(click_workers):
 # ========== БУФЕР ДЛЯ КЛИКОВ (ОПТИМИЗАЦИЯ) ==========
 click_buffer = {}
 click_buffer_lock = threading.Lock()
-BUFFER_FLUSH_INTERVAL = 2
+BUFFER_FLUSH_INTERVAL = 5
 
 
 # Используйте атомарные операции или более безопасный подход
@@ -256,7 +256,7 @@ def check_rate_limit(key: str, limit: int = 30, window_seconds: int = 10) -> boo
         limit = 15
         window_seconds = 86400
     elif key.startswith("status_"):
-        limit = 600
+        limit = 180
         window_seconds = 60
     elif key.startswith("leaderboard_"):
         limit = 90
@@ -598,13 +598,7 @@ def repair_database():
 
 
 repair_database()
-try:
-    from pg_adapter import pg_db
-    db = pg_db
-    print("✅ Используем PostgreSQL")
-except Exception as e:
-    print(f"⚠️ Ошибка подключения PostgreSQL: {e}, используем SQLite")
-    db = Database(DATABASE_PATH)
+db = Database(DATABASE_PATH)
 
 ALLOWED_UPDATE_FIELDS = {
     'wg', 'lp', 'energy', 'last_energy_update', 'tickets', 'total_clicks',
