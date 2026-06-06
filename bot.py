@@ -607,7 +607,8 @@ ALLOWED_UPDATE_FIELDS = {
     'avatar_url', 'usdt', 'wins', 'role', 'stars', 'max_energy',
     'energy_upgrades', 'energy_limit_upgrades', 'unlocked_prefixes',
     'tutorial_completed', 'ton_wallet', 'banned_until', 'ban_reason', 'banned_by',
-    'completed_achievements'
+    'completed_achievements',
+    'daily_clicks'
 }
 
 MAX_USER_CACHE = 5000
