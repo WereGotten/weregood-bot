@@ -1208,43 +1208,104 @@ def validate_ton_address(address: str) -> bool:
 
 
 def check_ton_transaction(sender_wallet, expected_amount, user_id):
+    """
+    Железобетонная проверка транзакций с автоматической конвертацией RAW адресов плательщика.
+    """
     try:
         expected_comment = f"WereGood:{user_id}"
+        logger.info(f"🔍 [TON] Сканируем сеть. Юзер: {user_id}, Ожидаем коммент: '{expected_comment}' или кошелек: '{sender_wallet}'")
+
         raw_project_address = "0:69fa7db713b9158c72970e3d577b6b3c2605e0f109fbb0443af97c44fd07be3f"
         url = f"https://toncenter.com/api/v2/getTransactions?address={raw_project_address}&limit=40"
+
         api_key = globals().get('TONCENTER_API_KEY') or os.getenv('TONCENTER_API_KEY')
         if api_key:
             url += f"&api_key={api_key}"
+
         response = requests.get(url, timeout=12)
         if response.status_code != 200:
+            logger.error(f"❌ [TON] Ошибка API Toncenter: {response.status_code}")
             return False, 0, None
+
         transactions = response.json().get('result', [])
+
+        # Подготавливаем адрес отправителя от фронтенда
         clean_sender = str(sender_wallet).strip()
-        for tx_data in transactions:
-            in_msg = tx_data.get('in_msg', {})
-            if not in_msg:
-                continue
-            value_nano = int(in_msg.get('value', '0'))
-            amount_ton = value_nano / 1e9
-            source_address = str(in_msg.get('source', '')).strip().lower()
-            comment = in_msg.get('message', '').strip()
-            if not comment and in_msg.get('msg_data', {}).get('@type') == 'msg.dataText':
-                comment = in_msg.get('msg_data', {}).get('text', '').strip()
-            is_comment_match = (expected_comment in comment)
-            is_wallet_match = (clean_sender.lower() in source_address or source_address in clean_sender.lower())
-            if (is_comment_match or is_wallet_match) and (amount_ton >= (expected_amount - 0.02)):
-                tx_hash = tx_data.get('transaction_id', {}).get('hash')
-                with used_transaction_lock:
-                    with db.get_cursor() as cursor:
-                        cursor.execute("SELECT id FROM used_ton_transactions WHERE tx_hash = ?", (tx_hash,))
-                        if cursor.fetchone():
-                            continue
-                        cursor.execute("INSERT INTO used_ton_transactions (tx_hash, user_id) VALUES (?, ?)",
-                                       (tx_hash, user_id))
-                return True, amount_ton, tx_hash
+        friendly_sender = ""
+
+        # Если фронт прислал сырой 0:e254..., на лету превращаем его в UQ...
+        if clean_sender.startswith("0:"):
+            friendly_sender = raw_to_user_friendly(clean_sender).lower()
+            logger.info(f"🔄 [TON] Сконвертировали RAW адрес фронтенда в Friendly: {friendly_sender}")
+        else:
+            friendly_sender = clean_sender.lower()
+
+        for page in range(2):
+            for tx_data in transactions:
+                in_msg = tx_data.get('in_msg', {})
+                if not in_msg:
+                    continue
+
+                value_nano = int(in_msg.get('value', '0'))
+                amount_ton = value_nano / 1e9
+                source_address = str(in_msg.get('source', '')).strip().lower()
+
+                # Извлекаем комментарий
+                comment = in_msg.get('message', '').strip()
+                if not comment and in_msg.get('msg_data', {}).get('@type') == 'msg.dataText':
+                    comment = in_msg.get('msg_data', {}).get('text', '').strip()
+
+                is_comment_match = (expected_comment in comment)
+
+                # СРАВНЕНИЕ: Сверяем чистый friendly_sender с адресом из блокчейна source_address
+                is_wallet_match = False
+                if friendly_sender and (friendly_sender in source_address or source_address in friendly_sender):
+                    is_wallet_match = True
+
+                # Подстраховка на случай, если адрес в блокчейне начинается на EQ, а у нас UQ (проверяем основную часть без первых 2-3 символов)
+                if not is_wallet_match and len(friendly_sender) > 10 and len(source_address) > 10:
+                    core_sender = friendly_sender[3:]
+                    core_source = source_address[3:]
+                    if core_sender in core_source or core_source in core_sender:
+                        is_wallet_match = True
+
+                # Если сумма совпадает и совпал либо кошелек, либо коммент
+                if (is_comment_match or is_wallet_match) and (amount_ton >= (expected_amount - 0.02)):
+                    tx_hash = tx_data.get('transaction_id', {}).get('hash')
+
+                    # Проверка дубликатов
+                    if 'used_transaction_lock' in globals() and 'db' in globals():
+                        with used_transaction_lock:
+                            with db.get_cursor() as cursor:
+                                cursor.execute("SELECT id FROM used_ton_transactions WHERE tx_hash = ?", (tx_hash,))
+                                if cursor.fetchone():
+                                    logger.warning(f"⚠️ [TON] Дубликат! Транзакция {tx_hash} уже зачислена.")
+                                    continue
+
+                                cursor.execute("INSERT INTO used_ton_transactions (tx_hash, user_id) VALUES (?, ?)",
+                                               (tx_hash, user_id))
+
+                    logger.info(f"✅ [TON] Транзакция УСПЕШНО НАЙДЕНА! Кошелек совпал: {is_wallet_match}. Хэш: {tx_hash}")
+                    return True, amount_ton, tx_hash
+
+            # Пагинация
+            if transactions and 'transaction_id' in transactions[-1] and page == 0:
+                lt = transactions[-1].get('lt')
+                last_hash = transactions[-1]['transaction_id'].get('hash')
+                next_url = f"https://toncenter.com/api/v2/getTransactions?address={raw_project_address}&limit=40&lt={lt}&hash={last_hash}"
+                if api_key:
+                    next_url += f"&api_key={api_key}"
+                try:
+                    res = requests.get(next_url, timeout=10)
+                    transactions = res.json().get('result', [])
+                except:
+                    break
+            else:
+                break
+
         return False, 0, None
     except Exception as e:
-        logger.error(f"Ошибка в check_ton_transaction: {e}")
+        logger.error(f"❌ Ошибка в check_ton_transaction: {e}", exc_info=True)
         return False, 0, None
 
 
@@ -2533,12 +2594,22 @@ def api_ton_create_payment():
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid:
         return jsonify({"success": False, "error": "Неавторизованный запрос"}), 400
+
     proj_wallet = globals().get('PROJECT_WALLET_ADDRESS') or os.getenv('PROJECT_WALLET_ADDRESS')
     if not proj_wallet:
-        return jsonify({"success": False, "error": "Ошибка конфигурации платежного шлюза"}), 500
+        logger.critical("🚨 КРИТИЧЕСКАЯ ОШИБКА: PROJECT_WALLET_ADDRESS отсутствует в переменных сервера!")
+        return jsonify({"success": False, "error": "Ошибка конфигурации платежного шлюза на сервере"}), 500
+
     payment_amount_ton = 0.18
     payment_amount_nano = int(payment_amount_ton * 1e9)
-    return jsonify({"success": True, "wallet_address": proj_wallet, "amount": payment_amount_ton, "amount_nano": payment_amount_nano, "comment": f"WereGood:{user_id}"})
+
+    return jsonify({
+        "success": True,
+        "wallet_address": proj_wallet,
+        "amount": payment_amount_ton,
+        "amount_nano": payment_amount_nano,
+        "comment": f"WereGood:{user_id}"
+    })
 
 @app.route('/api/ton/check_payment', methods=['POST'])
 def check_ton_payment_endpoint():
@@ -2547,21 +2618,63 @@ def check_ton_payment_endpoint():
         user_id = data.get('user_id')
         expected_amount = data.get('expected_amount')
         sender_wallet = data.get('sender_wallet')
+
         if not user_id or not expected_amount:
             return jsonify({'confirmed': False, 'error': 'Missing parameters'}), 400
-        expected_amount = float(expected_amount)
+
+        try:
+            expected_amount = float(expected_amount)
+        except ValueError:
+            return jsonify({'confirmed': False, 'error': 'Invalid amount'}), 400
+
+        logger.info(f"📡 [API] Запрос проверки TON от {user_id}. Сумма: {expected_amount}")
+
         confirmed, amount_paid, tx_hash = check_ton_transaction(sender_wallet, expected_amount, user_id)
+
         if confirmed:
+            logger.info(f"💰 [API] Платёж TON подтверждён для {user_id}. Вызываем grant_energy_upgrade...")
+
             success, message, upgrade_data = grant_energy_upgrade(user_id)
+
             if success:
+                logger.info(f"🎁 [API] Успех! Игроку {user_id} начислено улучшение через TON!")
+
+                # ДОБАВЛЯЕМ ЛОГ В АДМИН-ПАНЕЛЬ
                 user = get_user(user_id)
-                add_admin_log(f"💎 Купил энергетический усилитель за TON ({expected_amount} TON) | +40 макс. энергии, +50 LP",
-                              user_id, user.get('username') or f"User_{user_id}", details=f"Хэш: {tx_hash}")
+                add_admin_log(
+                    f"💎 Купил энергетический усилитель за TON ({expected_amount} TON) | +40 макс. энергии, +50 LP",
+                    user_id,
+                    user.get('username') or f"User_{user_id}",
+                    details=f"Хэш транзакции: {tx_hash}, кошелёк: {sender_wallet}"
+                )
+
+                if 'send_telegram_message' in globals():
+                    try:
+                        send_telegram_message(user_id,
+                                              f"✨ **Оплата через TON получена!**\n\n"
+                                              f"⚡️ +40 к максимальной энергии\n"
+                                              f"💎 +50 LP на баланс\n\n"
+                                              f"💪 Энергетический усилитель успешно активирован!"
+                                              )
+                    except Exception as tg_err:
+                        logger.error(f"⚠️ Не удалось отправить ТГ-сообщение: {tg_err}")
+
                 return jsonify({'confirmed': True, 'tx_hash': tx_hash})
-            return jsonify({'confirmed': False, 'error': message}), 400
+            else:
+                # ДОБАВЛЯЕМ ЛОГ О НЕУДАЧЕ
+                add_admin_log(
+                    f"❌ НЕУДАЧНАЯ покупка за TON ({expected_amount} TON) - ошибка начисления",
+                    user_id,
+                    f"User_{user_id}",
+                    details=f"Ошибка: {message}"
+                )
+                logger.error(f"❌ [API] Ошибка внутри grant_energy_upgrade: {message}")
+                return jsonify({'confirmed': False, 'error': message}), 400
+
         return jsonify({'confirmed': False})
+
     except Exception as e:
-        logger.error(f"Ошибка в check_ton_payment: {e}")
+        logger.error(f"❌ Критическая ошибка в check_ton_payment_endpoint: {e}", exc_info=True)
         return jsonify({'confirmed': False, 'error': str(e)}), 500
 
 @app.route('/api/ton/create_lp_boost_payment', methods=['POST'])
@@ -3442,6 +3555,45 @@ def schedule_daily_top_reset():
     threading.Thread(target=reset_and_reward, daemon=True).start()
 
 schedule_daily_top_reset()
+
+import codecs
+import base64
+
+def raw_to_user_friendly(raw_address: str) -> str:
+    """
+    Конвертирует RAW адрес (0:e2544c88...) в User-Friendly Non-bounceable (UQ...)
+    """
+    try:
+        if not raw_address or ":" not in raw_address:
+            return raw_address.strip()
+
+        parts = raw_address.split(":")
+        workchain = int(parts[0])
+        hex_address = parts[1].strip()
+
+        workchain_byte = workchain if workchain >= 0 else 256 + workchain
+        tag = 0x11
+
+        address_bytes = bytearray([tag, workchain_byte]) + bytearray(codecs.decode(hex_address, 'hex'))
+
+        POLY = 0x1021
+        crc = 0
+        for byte in address_bytes:
+            crc ^= (byte << 8)
+            for _ in range(8):
+                if crc & 0x8000:
+                    crc = (crc << 1) ^ POLY
+                else:
+                    crc <<= 1
+                crc &= 0xFFFF
+
+        address_bytes += bytearray([crc >> 8, crc & 0xFF])
+
+        friendly = base64.urlsafe_b64encode(address_bytes).decode('utf-8').rstrip('=')
+        return friendly
+    except Exception as e:
+        print(f"Ошибка конвертации адреса: {e}")
+        return raw_address
 
 if __name__ == '__main__':
     threading.Thread(target=handle_telegram_updates, daemon=True).start()
