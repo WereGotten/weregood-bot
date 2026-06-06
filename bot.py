@@ -24,6 +24,9 @@ from flask_cors import CORS
 import requests
 from dotenv import load_dotenv
 
+# ========== ОПТИМИЗАЦИЯ ==========
+sqlite3.enable_callback_tracebacks(True)
+
 # ========== НАСТРОЙКА ЛОГИРОВАНИЯ ==========
 logging.basicConfig(
     level=logging.WARNING,
@@ -107,81 +110,7 @@ socketio = SocketIO(app,
                     max_http_buffer_size=1e6,
                     async_mode='threading')
 
-
-# ========== ОПТИМИЗИРОВАННЫЙ КЕШ ==========
-class LRUCache:
-    def __init__(self, max_size=2000, ttl=30):
-        self.cache = {}
-        self.max_size = max_size
-        self.ttl = ttl
-        self.lock = threading.RLock()
-
-    def get(self, key):
-        with self.lock:
-            if key in self.cache:
-                value, timestamp = self.cache[key]
-                if time.time() - timestamp < self.ttl:
-                    return value
-                del self.cache[key]
-        return None
-
-    def set(self, key, value):
-        with self.lock:
-            if len(self.cache) >= self.max_size:
-                oldest = min(self.cache.items(), key=lambda x: x[1][1])[0]
-                del self.cache[oldest]
-            self.cache[key] = (value, time.time())
-
-    def delete(self, key):
-        with self.lock:
-            if key in self.cache:
-                del self.cache[key]
-
-
-user_cache = LRUCache(max_size=2000, ttl=30)
-leaderboard_cache = LRUCache(max_size=10, ttl=5)
-
-
-# ========== ОПТИМИЗИРОВАННЫЙ ПУЛ СОЕДИНЕНИЙ ==========
-class DBConnectionPool:
-    def __init__(self, db_file, max_connections=10):
-        self.db_file = db_file
-        self.max_connections = max_connections
-        self._pool = Queue(maxsize=max_connections)
-        self.local = threading.local()
-
-        for _ in range(max_connections):
-            conn = self._create_connection()
-            self._pool.put(conn)
-
-    def _create_connection(self):
-        conn = sqlite3.connect(self.db_file, check_same_thread=False, timeout=10)
-        conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA journal_mode=WAL")
-        conn.execute("PRAGMA busy_timeout=5000")
-        conn.execute("PRAGMA synchronous=NORMAL")
-        conn.execute("PRAGMA cache_size=-65536")
-        conn.execute("PRAGMA temp_store=MEMORY")
-        return conn
-
-    @contextmanager
-    def get_cursor(self):
-        conn = self._pool.get()
-        cursor = conn.cursor()
-        try:
-            yield cursor
-            conn.commit()
-        except Exception as e:
-            conn.rollback()
-            raise e
-        finally:
-            cursor.close()
-            self._pool.put(conn)
-
-
-db_pool = DBConnectionPool(DATABASE_PATH, max_connections=10)
-
-# ========== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ (ОСТАВЛЯЕМ КАК БЫЛО) ==========
+# ========== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ==========
 pending_invoices = {}
 online_users = {}
 online_users_lock = threading.Lock()
@@ -193,8 +122,10 @@ is_drawn = False
 draw_time = None
 lottery_phase = "buy"
 
+user_cache = {}
 user_cache_time = {}
 CACHE_TTL = 60
+leaderboard_cache = []
 leaderboard_cache_time = 0
 LEADERBOARD_CACHE_TTL = 5
 
@@ -207,9 +138,6 @@ energy_lock = threading.Lock()
 
 click_queue = Queue()
 click_workers = 2
-
-rate_limits = defaultdict(list)
-admin_failures = defaultdict(int)
 
 
 def process_click_worker():
@@ -257,8 +185,11 @@ def schedule_backup():
 if not DEBUG_MODE:
     threading.Thread(target=schedule_backup, daemon=True).start()
 
-
 # ========== RATE LIMITING ==========
+rate_limits = defaultdict(list)
+admin_failures = defaultdict(int)
+
+
 def check_rate_limit(key: str, limit: int = 30, window_seconds: int = 10) -> bool:
     if key.startswith("click_"):
         limit = 250
@@ -308,7 +239,7 @@ def check_rate_limit(key: str, limit: int = 30, window_seconds: int = 10) -> boo
 
 
 def check_ad_cooldown(user_id: int, ad_type: str, cooldown_minutes: int, daily_limit: int) -> Tuple[bool, str]:
-    with db_pool.get_cursor() as cursor:
+    with db.get_cursor() as cursor:
         cursor.execute('''
             SELECT COUNT(*) FROM ad_watch_history 
             WHERE user_id = ? AND ad_type = ? 
@@ -337,7 +268,7 @@ def check_ad_cooldown(user_id: int, ad_type: str, cooldown_minutes: int, daily_l
 
 
 def record_ad_watch(user_id: int, ad_type: str):
-    with db_pool.get_cursor() as cursor:
+    with db.get_cursor() as cursor:
         cursor.execute('''
             INSERT INTO ad_watch_history (user_id, ad_type, watched_at)
             VALUES (?, ?, datetime('now'))
@@ -354,8 +285,10 @@ def record_admin_failure(ip: str):
 
 
 def validate_ton_address(address: str) -> bool:
+    """Валидация формата кошелька TON"""
     if not address or not isinstance(address, str):
         return False
+    # Поддерживает форматы: User-friendly (48 симв), чистый hex (64 симв) и RAW (66 симв, 0:...)
     if len(address) == 48 and re.match(r'^[A-Za-z0-9_-]{48}$', address):
         return True
     if len(address) == 64 and re.match(r'^[0-9a-fA-F]{64}$', address):
@@ -366,15 +299,21 @@ def validate_ton_address(address: str) -> bool:
 
 
 def string_to_hex_payload(text: str) -> str:
+    """Правильная конвертация строки комментария в HEX с префиксом текстового сообщения"""
     if not text:
         return "00000000"
+    # Префикс 00000000 (4 нулевых байта) обязателен в TON для простых текстовых комментариев
     return "00000000" + text.encode('utf-8').hex()
 
 
 def check_ton_transaction(sender_wallet, expected_amount, user_id):
+    """
+    Железобетонная проверка транзакций с автоматической конвертацией RAW адресов плательщика.
+    """
     try:
         expected_comment = f"WereGood:{user_id}"
-        logger.info(f"🔍 [TON] Сканируем сеть. Юзер: {user_id}")
+        logger.info(
+            f"🔍 [TON] Сканируем сеть. Юзер: {user_id}, Ожидаем коммент: '{expected_comment}' или кошелек: '{sender_wallet}'")
 
         raw_project_address = "0:69fa7db713b9158c72970e3d577b6b3c2605e0f109fbb0443af97c44fd07be3f"
         url = f"https://toncenter.com/api/v2/getTransactions?address={raw_project_address}&limit=40"
@@ -390,9 +329,11 @@ def check_ton_transaction(sender_wallet, expected_amount, user_id):
 
         transactions = response.json().get('result', [])
 
+        # Подготавливаем адрес отправителя от фронтенда
         clean_sender = str(sender_wallet).strip()
         friendly_sender = ""
 
+        # Если фронт прислал сырой 0:e254..., на лету превращаем его в UQ...
         if clean_sender.startswith("0:"):
             friendly_sender = raw_to_user_friendly(clean_sender).lower()
             logger.info(f"🔄 [TON] Сконвертировали RAW адрес фронтенда в Friendly: {friendly_sender}")
@@ -409,38 +350,46 @@ def check_ton_transaction(sender_wallet, expected_amount, user_id):
                 amount_ton = value_nano / 1e9
                 source_address = str(in_msg.get('source', '')).strip().lower()
 
+                # Извлекаем комментарий
                 comment = in_msg.get('message', '').strip()
                 if not comment and in_msg.get('msg_data', {}).get('@type') == 'msg.dataText':
                     comment = in_msg.get('msg_data', {}).get('text', '').strip()
 
                 is_comment_match = (expected_comment in comment)
 
+                # СРАВНЕНИЕ: Сверяем чистый friendly_sender с адресом из блокчейна source_address
                 is_wallet_match = False
                 if friendly_sender and (friendly_sender in source_address or source_address in friendly_sender):
                     is_wallet_match = True
 
+                # Подстраховка на случай, если адрес в блокчейне начинается на EQ, а у нас UQ (проверяем основную часть без первых 2-3 символов)
                 if not is_wallet_match and len(friendly_sender) > 10 and len(source_address) > 10:
                     core_sender = friendly_sender[3:]
                     core_source = source_address[3:]
                     if core_sender in core_source or core_source in core_sender:
                         is_wallet_match = True
 
+                # Если сумма совпадает и совпал либо кошелек, либо коммент
                 if (is_comment_match or is_wallet_match) and (amount_ton >= (expected_amount - 0.02)):
                     tx_hash = tx_data.get('transaction_id', {}).get('hash')
 
-                    if 'used_transaction_lock' in globals() and 'db_pool' in globals():
+                    # Проверка дубликатов
+                    if 'used_transaction_lock' in globals() and 'db' in globals():
                         with used_transaction_lock:
-                            with db_pool.get_cursor() as cursor:
+                            with db.get_cursor() as cursor:
                                 cursor.execute("SELECT id FROM used_ton_transactions WHERE tx_hash = ?", (tx_hash,))
                                 if cursor.fetchone():
                                     logger.warning(f"⚠️ [TON] Дубликат! Транза {tx_hash} уже зачислена.")
                                     continue
+
                                 cursor.execute("INSERT INTO used_ton_transactions (tx_hash, user_id) VALUES (?, ?)",
                                                (tx_hash, user_id))
 
-                    logger.info(f"✅ [TON] Транзакция УСПЕШНО НАЙДЕНА! Хэш: {tx_hash}")
+                    logger.info(
+                        f"✅ [TON] Транзакция УСПЕШНО НАЙДЕНА! Кошелек совпал: {is_wallet_match}. Хэш: {tx_hash}")
                     return True, amount_ton, tx_hash
 
+            # Пагинация
             if transactions and 'transaction_id' in transactions[-1] and page == 0:
                 lt = transactions[-1].get('lt')
                 last_hash = transactions[-1]['transaction_id'].get('hash')
@@ -466,6 +415,7 @@ def convert_ton_address_to_raw(address: str) -> str:
         return address
     if address.startswith('0:'):
         return address
+
     try:
         import base64
         if address[0] in ['U', 'E']:
@@ -479,36 +429,6 @@ def convert_ton_address_to_raw(address: str) -> str:
     except Exception as e:
         logger.error(f"Ошибка конвертации адреса {address}: {e}")
         return address
-
-
-def raw_to_user_friendly(raw_address: str) -> str:
-    try:
-        if not raw_address or ":" not in raw_address:
-            return raw_address.strip()
-        parts = raw_address.split(":")
-        workchain = int(parts[0])
-        hex_address = parts[1].strip()
-        workchain_byte = workchain if workchain >= 0 else 256 + workchain
-        tag = 0x11
-        import codecs
-        address_bytes = bytearray([tag, workchain_byte]) + bytearray(codecs.decode(hex_address, 'hex'))
-        POLY = 0x1021
-        crc = 0
-        for byte in address_bytes:
-            crc ^= (byte << 8)
-            for _ in range(8):
-                if crc & 0x8000:
-                    crc = (crc << 1) ^ POLY
-                else:
-                    crc <<= 1
-                crc &= 0xFFFF
-        address_bytes += bytearray([crc >> 8, crc & 0xFF])
-        import base64
-        friendly = base64.urlsafe_b64encode(address_bytes).decode('utf-8').rstrip('=')
-        return friendly
-    except Exception as e:
-        print(f"Ошибка конвертации адреса: {e}")
-        return raw_address
 
 
 def check_origin():
@@ -530,7 +450,7 @@ def check_origin():
 def before_request():
     if request.path.startswith('/static') or request.path == '/health' or request.path.startswith(
             '/tonconnect') or request.path.startswith('/api/adsgram') or request.path.startswith(
-            '/api/promo') or request.path.startswith('/claim'):
+        '/api/promo') or request.path.startswith('/claim'):
         return None
     if not check_origin():
         logger.warning(f"CSRF попытка с Origin: {request.headers.get('Origin')}")
@@ -571,7 +491,7 @@ def require_admin(f):
     return decorated_function
 
 
-# ========== БАЗА ДАННЫХ (ОСТАВЛЯЕМ КАК БЫЛО ДЛЯ СОВМЕСТИМОСТИ) ==========
+# ========== БАЗА ДАННЫХ ==========
 class Database:
     def __init__(self, db_file):
         self.db_file = db_file
@@ -641,17 +561,18 @@ MAX_USER_CACHE = 5000
 
 def invalidate_cache(user_id):
     if user_id in user_cache:
-        user_cache.delete(user_id)
+        del user_cache[user_id]
+        if user_id in user_cache_time:
+            del user_cache_time[user_id]
 
 
 def get_user(user_id, force_refresh=False):
-    # Сначала проверяем новый кеш
-    if not force_refresh:
-        cached = user_cache.get(user_id)
-        if cached:
-            return cached.copy()
+    now = time.time()
 
-    # Используем старую логику как резерв
+    if not force_refresh and user_id in user_cache:
+        if now - user_cache_time.get(user_id, 0) < CACHE_TTL:
+            return user_cache[user_id].copy()
+
     with db.get_cursor() as cursor:
         cursor.execute("SELECT * FROM users WHERE user_id=?", (user_id,))
         row = cursor.fetchone()
@@ -688,10 +609,15 @@ def get_user(user_id, force_refresh=False):
                 "unlocked_prefixes": ["player"], "ton_wallet": "", "banned_until": 0, "ban_reason": "", "banned_by": 0,
                 "completed_achievements": 0
             }
-            user_cache.set(user_id, default_user)
-            if len(user_cache.cache) > MAX_USER_CACHE:
-                # Очистка старого кеша
-                pass
+            user_cache[user_id] = default_user
+            user_cache_time[user_id] = now
+            if len(user_cache) > MAX_USER_CACHE:
+                oldest = sorted(user_cache_time.items(), key=lambda x: x[1])[:MAX_USER_CACHE // 10]
+                for uid, _ in oldest:
+                    if uid in user_cache:
+                        del user_cache[uid]
+                    if uid in user_cache_time:
+                        del user_cache_time[uid]
             return default_user
 
         upgrade_counts = json.loads(row['upgrade_counts']) if row['upgrade_counts'] else {1: 0, 2: 0, 3: 0}
@@ -734,7 +660,8 @@ def get_user(user_id, force_refresh=False):
             "completed_achievements": row['completed_achievements'] if 'completed_achievements' in row.keys() else 0
         }
 
-        user_cache.set(user_id, user_data)
+        user_cache[user_id] = user_data
+        user_cache_time[user_id] = now
         return user_data
 
 
@@ -963,61 +890,6 @@ def get_user_referrals_count(user_id):
         return cursor.fetchone()[0]
 
 
-def calculate_daily_top():
-    with db.get_cursor() as cursor:
-        cursor.execute('''
-            SELECT user_id, daily_clicks, username, first_name, role
-            FROM users 
-            ORDER BY daily_clicks DESC 
-            LIMIT 5
-        ''')
-        rows = cursor.fetchall()
-
-        rewards = {
-            1: {"lp": 70, "wg": 200},
-            2: {"lp": 50, "wg": 150},
-            3: {"lp": 35, "wg": 120},
-            4: {"lp": 25, "wg": 100},
-            5: {"lp": 15, "wg": 75}
-        }
-
-        for i, row in enumerate(rows, 1):
-            if i in rewards and row['daily_clicks'] > 0:
-                user = get_user(row['user_id'])
-                new_lp = user['lp'] + rewards[i]["lp"]
-                new_wg = user['wg'] + rewards[i]["wg"]
-                safe_update_user(row['user_id'], lp=new_lp, wg=new_wg)
-                add_log(
-                    f"🏆 ТОП ДНЯ #{i} место | {row['daily_clicks']} кликов | +{rewards[i]['lp']} LP, +{rewards[i]['wg']} WG",
-                    row['user_id'], row['username'] or row['first_name'] or str(row['user_id']))
-                send_telegram_message(row['user_id'],
-                                      f"🏆 ПОЗДРАВЛЯЕМ!\n\nВы заняли #{i} место в ТОПЕ ДНЯ!\n\nКликов за день: {row['daily_clicks']}\n\nНаграда:\n💎 +{rewards[i]['lp']} LP\n💰 +{rewards[i]['wg']} WG\n\nПродолжайте кликать! 🎉")
-
-        add_admin_log(
-            f"🏆 РАЗДАЧА НАГРАД ТОПА ДНЯ завершена. Выдано {len([r for r in rows if r['daily_clicks'] > 0])} наград", 0,
-            "System")
-
-        cursor.execute("UPDATE users SET daily_clicks = 0")
-        add_admin_log(f"🔄 ОБНУЛЕНИЕ daily_clicks выполнено в {datetime.datetime.now()}", 0, "System")
-
-        return rows
-
-
-def schedule_daily_top_reset():
-    def reset_and_reward():
-        while True:
-            now = datetime.datetime.now()
-            next_reset = now.replace(hour=21, minute=0, second=0, microsecond=0)
-            if now >= next_reset:
-                next_reset += datetime.timedelta(days=1)
-            wait_seconds = (next_reset - now).total_seconds()
-            time.sleep(wait_seconds)
-            calculate_daily_top()
-            add_admin_log(f"🔄 ЕЖЕДНЕВНЫЙ СБРОС ТОПА выполнен в {datetime.datetime.now()}", 0, "System")
-
-    threading.Thread(target=reset_and_reward, daemon=True).start()
-
-
 # ========== ИНИЦИАЛИЗАЦИЯ БД ==========
 def init_db():
     with db.get_cursor() as cursor:
@@ -1054,8 +926,7 @@ def init_db():
                 banned_until REAL DEFAULT 0,
                 ban_reason TEXT DEFAULT '',
                 banned_by INTEGER DEFAULT 0,
-                completed_achievements INTEGER DEFAULT 0,
-                daily_clicks INTEGER DEFAULT 0
+                completed_achievements INTEGER DEFAULT 0
             )
         ''')
 
@@ -1270,7 +1141,7 @@ def init_db():
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_logs_user_id ON system_logs(user_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_tasks ON user_tasks(user_id, task_id)')
 
-        for col in ['banned_until', 'ban_reason', 'banned_by', 'daily_clicks']:
+        for col in ['banned_until', 'ban_reason', 'banned_by']:
             try:
                 cursor.execute(f"ALTER TABLE users ADD COLUMN {col} DEFAULT 0")
             except:
@@ -1456,13 +1327,13 @@ def get_logs(log_type='all', limit=100, offset=0, date=None, action_filter=None,
 
 def update_stats_history(date, clicks=0, ad_views=0, stars=0, online=0, tickets=0, users=0):
     with db.get_cursor() as cursor:
-        cursor.execute('''INSERT INTO stats_history (date, clicks, ad_views, stars_donated, online_peak, tickets_sold, new_users) 
+        cursor.execute(
+            '''INSERT INTO stats_history (date, clicks, ad_views, stars_donated, online_peak, tickets_sold, new_users) 
                VALUES (?, ?, ?, ?, ?, ?, ?) 
                ON CONFLICT(date) DO UPDATE SET 
                clicks = clicks + ?, ad_views = ad_views + ?, stars_donated = stars_donated + ?, 
                online_peak = MAX(online_peak, ?), tickets_sold = tickets_sold + ?, new_users = new_users + ?''',
-                       (date, clicks, ad_views, stars, online, tickets, users, clicks, ad_views, stars, online, tickets,
-                        users))
+            (date, clicks, ad_views, stars, online, tickets, users, clicks, ad_views, stars, online, tickets, users))
 
 
 def get_stats_history(period='week', metric='clicks'):
@@ -1657,7 +1528,10 @@ def add_referral_earning(referrer_id, referred_id, spent_lp):
             referrer = get_user(referrer_id)
             add_log(f"👥 Получил 5% от трат реферала (+{earning:.2f} LP)", referrer_id, referrer['username'],
                     old_value=old_lp, new_value=new_lp, currency="lp")
+
+            # ВАЖНО: обновляем прогресс достижения "social"
             update_achievement_progress(referrer_id, 'social', 1)
+
             return True
     return False
 
@@ -1694,14 +1568,21 @@ def grant_energy_upgrade(user_id):
         if current_upgrades >= 15:
             return False, "Максимум улучшений! (15/15)", None
         new_upgrades = current_upgrades + 1
+        # max_energy: +40 за улучшение (было +50)
         new_max_energy = 500 + (new_upgrades * 40)
+        # LP остаётся +50 (не меняем)
         new_lp = (user['lp'] or 0) + 50
         cursor.execute("UPDATE users SET energy_upgrades=?, max_energy=?, lp=? WHERE user_id=?",
                        (new_upgrades, new_max_energy, new_lp, user_id))
         invalidate_cache(user_id)
-        add_admin_log(f"⭐ Купил энергетический усилитель за Stars | +40 макс. энергии, +50 LP", user_id,
-                      user['username'] or f"User_{user_id}",
-                      details=f"Улучшений теперь: {new_upgrades}/15, макс. энергия: {new_max_energy}")
+
+        add_admin_log(
+            f"⭐ Купил энергетический усилитель за Stars | +40 макс. энергии, +50 LP",
+            user_id,
+            user['username'] or f"User_{user_id}",
+            details=f"Улучшений теперь: {new_upgrades}/15, макс. энергия: {new_max_energy}"
+        )
+
         return True, "✨ Улучшение активировано! +40 макс. энергии и +50 LP!", {"energy_upgrades": new_upgrades,
                                                                                "max_energy": new_max_energy,
                                                                                "lp": new_lp}
@@ -1914,6 +1795,7 @@ def reveal_all_tickets(user_id):
 
 
 def perform_draw():
+    """Розыгрыш в 21:00"""
     global winning_numbers, is_drawn, draw_time, lottery_phase
     with lottery_lock:
         if lottery_tickets:
@@ -1922,21 +1804,27 @@ def perform_draw():
             draw_time = datetime.datetime.now()
             lottery_phase = "reveal"
             save_lottery()
+            # Конец розыгрыша в 00:00 (через 3 часа)
             end_time = draw_time + datetime.timedelta(seconds=10800)
             try:
-                socketio.emit('draw_completed', {'winning_numbers': winning_numbers,
-                                                 'message': '🎉 Розыгрыш начался! У вас 3 часа на открытие билетов! ⏰',
-                                                 'end_time': end_time.isoformat()})
+                socketio.emit('draw_completed', {
+                    'winning_numbers': winning_numbers,
+                    'message': '🎉 Розыгрыш начался! У вас 3 часа на открытие билетов! ⏰',
+                    'end_time': end_time.isoformat()
+                })
             except:
                 pass
             add_log(f"🎲 Розыгрыш лотереи начался. Выигрышные номера: {winning_numbers}", 0, "System")
+            # Запускаем авто-открытие через 3 часа (в 00:00)
             threading.Timer(10800, auto_reveal_and_distribute).start()
 
 
 def auto_reveal_and_distribute():
-    time.sleep(10800)
+    """Авто-открытие билетов в 00:00 и распределение призов"""
+    time.sleep(10800)  # Ждём 3 часа (до 00:00)
     with lottery_lock:
         if is_drawn:
+            # Автоматически открываем все неоткрытые билеты
             for ticket in lottery_tickets:
                 if not all(ticket.get("revealed", [])):
                     ticket["revealed"] = [True] * 12
@@ -1946,7 +1834,9 @@ def auto_reveal_and_distribute():
                 socketio.emit('auto_revealed', {'message': '⏰ Время истекло! Билеты открыты автоматически!'})
             except:
                 pass
+            # Распределяем призы
             distribute_prizes()
+            # Ждём 1 час до 01:00 и сбрасываем лотерею
             time.sleep(3600)
             reset_lottery()
             schedule_next_draw()
@@ -1989,6 +1879,7 @@ def distribute_prizes():
 
 
 def reset_lottery():
+    """Сброс лотереи для нового розыгрыша (в 01:00)"""
     global is_drawn, winning_numbers, draw_time, lottery_tickets, lottery_pool, global_ticket_counter, lottery_phase
     with lottery_lock:
         is_drawn = False
@@ -2007,22 +1898,35 @@ def reset_lottery():
 
 
 def schedule_next_draw():
+    """Планирование следующего розыгрыша в 21:00"""
     def wait_and_draw():
         while True:
             now = datetime.datetime.now()
+            # Следующий розыгрыш в 21:00
             next_draw = now.replace(hour=21, minute=0, second=0, microsecond=0)
             if now >= next_draw:
                 next_draw += datetime.timedelta(days=1)
             wait_seconds = (next_draw - now).total_seconds()
             time.sleep(wait_seconds)
             perform_draw()
-            time.sleep(14400)
+            # После розыгрыша ждём до 01:00 следующего дня для сброса
+            time.sleep(14400)  # 4 часа (с 21:00 до 01:00)
             reset_lottery()
-
     threading.Thread(target=wait_and_draw, daemon=True).start()
 
 
-schedule_next_draw()
+def schedule_draw():
+    while True:
+        now = datetime.datetime.now()
+        next_draw = now.replace(hour=21, minute=0, second=0, microsecond=0)
+        if now >= next_draw:
+            next_draw += datetime.timedelta(days=1)
+        wait_seconds = (next_draw - now).total_seconds()
+        time.sleep(wait_seconds)
+        perform_draw()
+
+
+threading.Thread(target=schedule_next_draw, daemon=True).start()
 
 DAILY_REWARDS = {1: {"wg": 15, "lp": 0, "energy_limit": 0, "description": "15 WG"},
                  2: {"wg": 50, "lp": 0, "energy_limit": 0, "description": "50 WG"},
@@ -2151,57 +2055,635 @@ def check_and_reset_streak(user_id):
     return False
 
 
-# ========== API ENDPOINTS ==========
-
-@app.route('/api/click', methods=['POST'])
-def api_click():
+@app.route('/api/reveal_all_tickets_fast', methods=['POST'])
+def api_reveal_all_tickets_fast():
     data = request.json
     if not data:
-        return jsonify({"error": "No data"}), 400
+        return jsonify({"success": False, "msg": "No data"}), 400
     user_id = data.get('user_id')
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid:
-        return jsonify({"error": "Invalid user_id"}), 400
+        return jsonify({"success": False, "msg": "Invalid user_id"}), 400
 
-    if not check_rate_limit(f"click_{user_id}", limit=250, window_seconds=10):
-        return jsonify({"error": "Too many clicks"}), 429
+    with lottery_lock:
+        if not is_drawn:
+            return jsonify({"success": False, "msg": "Розыгрыш ещё не начался!"})
 
-    banned, _ = is_banned(user_id)
-    if banned:
-        return jsonify({"error": "You are banned"}), 403
+        revealed_count = 0
+        tickets_revealed = 0
 
-    user = get_user(user_id)
-    current_energy, _ = calculate_energy(user)
-    if current_energy < 1:
-        return jsonify({"error": "No energy", "energy": current_energy}), 429
+        for ticket in lottery_tickets:
+            if ticket.get("user_id") == user_id:
+                ticket_revealed = False
+                for i in range(12):
+                    if not ticket["revealed"][i]:
+                        ticket["revealed"][i] = True
+                        revealed_count += 1
+                        ticket_revealed = True
+                if ticket_revealed:
+                    tickets_revealed += 1
 
-    earning = get_total_earning(user["upgrade_counts"])
-    lp_reward = 0.5 if random.random() < 0.0025 else 0
+        if revealed_count > 0:
+            save_lottery()
+            user = get_user(user_id)
+            add_log(f"🔓 Открыл все клетки ({revealed_count} клеток, {tickets_revealed} билетов)", user_id,
+                    user['username'])
+            return jsonify({"success": True, "msg": f"Открыто {revealed_count} клеток в {tickets_revealed} билетах!",
+                            "revealed": revealed_count})
 
-    new_energy = current_energy - 1
-    update_energy_in_db(user_id, user, new_energy)
+        return jsonify({"success": False, "msg": "Нет неоткрытых клеток"})
 
-    old_wg = user["wg"]
-    new_wg = old_wg + earning
-    safe_update_user(user_id, wg=new_wg)
 
-    if lp_reward > 0:
-        old_lp = user["lp"]
-        new_lp = old_lp + lp_reward
-        safe_update_user(user_id, lp=new_lp)
+@socketio.on('reveal_cell')
+def handle_reveal_cell(data):
+    user_id = data.get('user_id')
+    ticket_number = data.get('ticket_number')
+    cell_index = data.get('cell_index')
+    if not is_drawn:
+        emit('reveal_error', {'message': 'Розыгрыш ещё не начался!'})
+        return
+    with lottery_lock:
+        for ticket in lottery_tickets:
+            if ticket.get("user_id") == user_id and ticket.get("number") == ticket_number:
+                if not ticket["revealed"][cell_index]:
+                    ticket["revealed"][cell_index] = True
+                    save_lottery()
+                    number = ticket["numbers"][cell_index]
+                    is_win = number in winning_numbers
+                    user = get_user(user_id)
+                    win_text = "ВЫИГРЫШНАЯ" if is_win else "обычная"
+                    add_log(
+                        f"🔓 Открыл клетку {cell_index + 1} билета #{ticket_number} ({win_text} клетка, число {number})",
+                        user_id, user['username'])
+                    emit('cell_revealed',
+                         {'ticket_number': ticket_number, 'cell_index': cell_index, 'number': number, 'is_win': is_win})
+                    if all(ticket["revealed"]):
+                        matches = sum(1 for i in range(12) if ticket["numbers"][i] in winning_numbers)
+                        add_log(f"🎫 Полностью открыл билет #{ticket_number} (совпадений: {matches}/12)", user_id,
+                                user['username'])
+                        emit('ticket_completed', {'ticket_number': ticket_number, 'matches': matches})
+                return
+
+
+@socketio.on('reveal_all_tickets')
+def handle_reveal_all_tickets(data):
+    user_id = data.get('user_id')
+    success, msg = reveal_all_tickets(user_id)
+    if success:
+        emit('reveal_all_completed', {'message': msg})
+    else:
+        emit('reveal_error', {'message': msg})
+
+
+@socketio.on('get_draw_status')
+def handle_get_draw_status(data):
+    emit('draw_status',
+         {'is_drawn': is_drawn, 'winning_numbers': winning_numbers if is_drawn else [], 'lottery_phase': lottery_phase})
+
+
+@socketio.on('get_remaining_time')
+def handle_get_remaining_time(data):
+    global draw_time, is_drawn
+    if is_drawn and draw_time:
+        if isinstance(draw_time, str):
+            try:
+                draw_time = datetime.datetime.fromisoformat(draw_time)
+            except:
+                draw_time = None
+        if draw_time:
+            end_time = draw_time + datetime.timedelta(seconds=10800)
+            now = datetime.datetime.now()
+            remaining = int((end_time - now).total_seconds())
+            if remaining < 0:
+                remaining = 0
+            emit('remaining_time', {'seconds': remaining})
+        else:
+            emit('remaining_time', {'seconds': 0})
+    else:
+        emit('remaining_time', {'seconds': 0})
+
+
+@app.route('/')
+def game_page():
+    return render_template('game.html')
+
+
+@app.route('/admin')
+def admin_panel_page():
+    client_ip = request.remote_addr
+    if not DEBUG_MODE and not check_admin_bruteforce(client_ip):
+        return "Too many failed attempts", 429
+    key = request.args.get('key')
+    if not key or not secrets.compare_digest(key, ADMIN_SECRET):
+        if not DEBUG_MODE:
+            record_admin_failure(client_ip)
+        return "Доступ запрещён", 403
+    admin_failures.pop(client_ip, None)
+    return render_template('admin.html')
+
+
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    return send_from_directory('static', filename)
+
+
+@app.route('/claim')
+def claim_promo_page():
+    code = request.args.get('code', '').upper().strip()
+    if not code:
+        return render_template('claim.html', error="Не указан код промокода")
+    with db.get_cursor() as cursor:
+        cursor.execute('SELECT * FROM promo_codes WHERE code = ? AND is_active = 1', (code,))
+        promo = cursor.fetchone()
+        if not promo:
+            return render_template('claim.html', error="Промокод не найден или неактивен")
+        if promo['expires_at']:
+            expires = datetime.datetime.fromisoformat(promo['expires_at'])
+            if datetime.datetime.now() > expires:
+                return render_template('claim.html', error="Срок действия промокода истёк")
+        used_count = promo['used_count'] or 0
+        remaining = promo['max_uses'] - used_count
+        if remaining <= 0:
+            return render_template('claim.html', error="Промокод больше не активен (все активации использованы)")
+        reward_names = {'wg': 'WG Coin', 'lp': 'LP Coin', 'energy_limit': 'Лимит энергии'}
+        promo_info = {
+            'code': promo['code'],
+            'reward_type': promo['reward_type'],
+            'reward_name': reward_names.get(promo['reward_type'], promo['reward_type']),
+            'reward_amount': promo['reward_amount'],
+            'remaining': remaining,
+            'has_password': bool(promo['password'])
+        }
+        return render_template('claim.html', promo=promo_info)
+
+
+@app.route('/api/activate_promo_via_web', methods=['POST'])
+def api_activate_promo_via_web():
+    data = request.json
+    code = data.get('code', '').upper().strip()
+    user_id = data.get('user_id')
+    password = data.get('password', '').strip()
+    if not user_id:
+        return jsonify({"success": False, "error": "Не авторизован"}), 401
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"success": False, "error": "Неверный ID пользователя"}), 400
+    with db.get_cursor() as cursor:
+        cursor.execute('SELECT * FROM promo_codes WHERE code = ? AND is_active = 1', (code,))
+        promo = cursor.fetchone()
+        if not promo:
+            return jsonify({"success": False, "error": "Промокод не найден"}), 404
+        if promo['expires_at']:
+            expires = datetime.datetime.fromisoformat(promo['expires_at'])
+            if datetime.datetime.now() > expires:
+                return jsonify({"success": False, "error": "Срок действия промокода истёк"}), 400
+        used_count = promo['used_count'] or 0
+        if used_count >= promo['max_uses']:
+            return jsonify({"success": False, "error": "Промокод больше не активен"}), 400
+        if promo['password'] and promo['password'] != password:
+            return jsonify({"success": False, "error": "Неверный пароль промокода"}), 400
+        cursor.execute("SELECT id FROM promo_activations WHERE promo_id = ? AND user_id = ?", (promo['id'], user_id))
+        if cursor.fetchone():
+            return jsonify({"success": False, "error": "Вы уже активировали этот промокод"}), 400
+        user = get_user(user_id)
+        old_value = None
+        new_value = None
+        if promo['reward_type'] == 'wg':
+            old_value = user['wg']
+            new_value = old_value + promo['reward_amount']
+            safe_update_user(user_id, wg=new_value)
+            add_log(f"🎁 Активировал промокод {code} | +{promo['reward_amount']} WG", user_id, user['username'],
+                    old_value=old_value, new_value=new_value, currency="wg")
+        elif promo['reward_type'] == 'lp':
+            old_value = user['lp']
+            new_value = old_value + promo['reward_amount']
+            safe_update_user(user_id, lp=new_value)
+            add_log(f"🎁 Активировал промокод {code} | +{promo['reward_amount']} LP", user_id, user['username'],
+                    old_value=old_value, new_value=new_value, currency="lp")
+        elif promo['reward_type'] == 'energy_limit':
+            old_value = user['max_energy']
+            new_value = old_value + promo['reward_amount']
+            safe_update_user(user_id, max_energy=new_value)
+            add_log(f"🎁 Активировал промокод {code} | +{promo['reward_amount']} к макс. энергии", user_id,
+                    user['username'], old_value=old_value, new_value=new_value, currency="energy")
+        new_used_count = used_count + 1
+        cursor.execute("UPDATE promo_codes SET used_count = ? WHERE id = ?", (new_used_count, promo['id']))
+        cursor.execute("INSERT INTO promo_activations (promo_id, user_id) VALUES (?, ?)", (promo['id'], user_id))
+        add_admin_log(f"🎫 Активировал промокод {code} и получил {promo['reward_amount']} {promo['reward_type']}",
+                      user_id, user['username'])
+        return jsonify(
+            {"success": True, "message": f"Вы получили +{promo['reward_amount']} {promo['reward_type'].upper()}!",
+             "reward_type": promo['reward_type'], "reward_amount": promo['reward_amount']})
+
+
+@app.route('/health')
+def health_check():
+    with online_users_lock:
+        online_count = len(online_users)
+    return jsonify({"status": "ok", "online_users": online_count, "threads": threading.active_count(),
+                    "db_size": os.path.getsize(DATABASE_PATH) if os.path.exists(DATABASE_PATH) else 0,
+                    "timestamp": time.time()})
+
+
+@app.route('/tonconnect-manifest.json', methods=['GET'])
+def serve_manifest():
+    """Динамический манифест, защищающий от ошибок Bad Manifest при смене доменов/тестовых туннелей"""
+    current_origin = f"{request.scheme}://{request.host}"
+    manifest = {
+        "url": current_origin,
+        "name": "WereGood Game",
+        "iconUrl": f"{current_origin}/static/coin.png",
+        "termsOfUseUrl": f"{current_origin}/terms",
+        "privacyPolicyUrl": f"{current_origin}/privacy"
+    }
+    return jsonify(manifest)
+
+
+@app.route('/terms')
+def terms_page():
+    return '<!DOCTYPE html><html><head><title>Условия использования</title></head><body style="background:#0a0a1a; color:white; padding:20px; font-family:system-ui;"><h1>Условия использования WereGood</h1><p>Используя наш сервис, вы соглашаетесь с правилами игры.</p><p>Все внутриигровые транзакции финальны.</p><p>Администрация оставляет за собой право блокировать пользователей за нарушение правил.</p></body></html>'
+
+
+@app.route('/privacy')
+def privacy_page():
+    return '<!DOCTYPE html><html><head><title>Политика конфиденциальности</title></head><body style="background:#0a0a1a; color:white; padding:20px; font-family:system-ui;"><h1>Политика конфиденциальности WereGood</h1><p>Мы собираем только ваш Telegram ID и данные профиля для работы игры.</p><p>Данные не передаются третьим лицам.</p><p>Вы можете удалить свои данные, обратившись к администратору.</p></body></html>'
+
+@app.route('/api/ton/save_wallet', methods=['POST'])
+def api_ton_save_wallet():
+    data = request.json or {}
+    user_id = data.get('user_id')
+    wallet_address = data.get('wallet_address')
+
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid or not wallet_address:
+        return jsonify({"success": False, "error": "Неверный ID пользователя или адрес кошелька"}), 400
+    if not validate_ton_address(wallet_address):
+        return jsonify({"success": False, "error": "Неверный формат TON кошелька"}), 400
+
+    try:
+        with db.get_cursor() as cursor:
+            cursor.execute("UPDATE users SET ton_wallet = ? WHERE user_id = ?", (wallet_address, user_id))
+
+        # Сбрасываем кэш, если у тебя подключена функция инвалидации кэша
+        if 'invalidate_cache' in globals():
+            invalidate_cache(user_id)
+
+        user = get_user(user_id)
+        add_log(f"🔗 Привязал TON кошелёк: {wallet_address[:6]}...{wallet_address[-4:]}", user_id,
+                user.get('username', 'Unknown'))
+        return jsonify({"success": True, "wallet": wallet_address})
+    except Exception as e:
+        logger.error(f"❌ Ошибка при сохранении кошелька в БД: {e}")
+        return jsonify({"success": False, "error": "Ошибка базы данных"}), 500
+
+
+@app.route('/api/ton/get_wallet', methods=['POST'])
+def api_ton_get_wallet():
+    data = request.json or {}
+    user_id = data.get('user_id')
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"success": False, "error": "Invalid user_id"}), 400
+
+    with db.get_cursor() as cursor:
+        cursor.execute("SELECT ton_wallet FROM users WHERE user_id = ?", (user_id,))
+        row = cursor.fetchone()
+        wallet = row['ton_wallet'] if row else None
+    return jsonify({"success": True, "wallet": wallet})
+
+
+@app.route('/api/ton/create_payment', methods=['POST'])
+def api_ton_create_payment():
+    data = request.json or {}
+    user_id = data.get('user_id')
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"success": False, "error": "Неавторизованный запрос"}), 400
+
+    # Проверяем, настроен ли кошелек проекта в файле .env
+    proj_wallet = globals().get('PROJECT_WALLET_ADDRESS') or os.getenv('PROJECT_WALLET_ADDRESS')
+    if not proj_wallet:
+        logger.critical("🚨 КРИТИЧЕСКАЯ ОШИБКА: PROJECT_WALLET_ADDRESS отсутствует в переменных сервера!")
+        return jsonify({"success": False, "error": "Ошибка конфигурации платежного шлюза на сервере"}), 500
+
+    payment_amount_ton = 0.18
+    payment_amount_nano = int(payment_amount_ton * 1e9)  # 100000000
+
+    return jsonify({
+        "success": True,
+        "wallet_address": proj_wallet,
+        "amount": payment_amount_ton,
+        "amount_nano": payment_amount_nano,
+        "comment": f"WereGood:{user_id}"
+    })
+
+
+@app.route('/api/ton/check_payment', methods=['POST'])
+def check_ton_payment_endpoint():
+    try:
+        data = request.json or {}
+        user_id = data.get('user_id')
+        expected_amount = data.get('expected_amount')
+        sender_wallet = data.get('sender_wallet')
+
+        if not user_id or not expected_amount:
+            return jsonify({'confirmed': False, 'error': 'Missing parameters'}), 400
+
+        try:
+            expected_amount = float(expected_amount)
+        except ValueError:
+            return jsonify({'confirmed': False, 'error': 'Invalid amount'}), 400
+
+        logger.info(f"📡 [API] Запрос проверки TON от {user_id}. Сумма: {expected_amount}")
+
+        confirmed, amount_paid, tx_hash = check_ton_transaction(sender_wallet, expected_amount, user_id)
+
+        if confirmed:
+            logger.info(f"💰 [API] Платёж TON подтверждён для {user_id}. Вызываем grant_energy_upgrade...")
+
+            success, message, upgrade_data = grant_energy_upgrade(user_id)
+
+            if success:
+                logger.info(f"🎁 [API] Успех! Игроку {user_id} начислено улучшение через TON!")
+
+                # ДОБАВЛЯЕМ ЛОГ В АДМИН-ПАНЕЛЬ
+                user = get_user(user_id)
+                add_admin_log(
+                    f"💎 Купил энергетический усилитель за TON ({expected_amount} TON) | +50 макс. энергии, +50 LP",
+                    user_id,
+                    user.get('username') or f"User_{user_id}",
+                    details=f"Хэш транзакции: {tx_hash}, кошелёк: {sender_wallet}"
+                )
+
+                if 'send_telegram_message' in globals():
+                    try:
+                        send_telegram_message(user_id,
+                                              f"✨ **Оплата через TON получена!**\n\n"
+                                              f"⚡️ +50 к максимальной энергии\n"
+                                              f"💎 +50 LP на баланс\n\n"
+                                              f"💪 Энергетический усилитель успешно активирован!"
+                                              )
+                    except Exception as tg_err:
+                        logger.error(f"⚠️ Не удалось отправить ТГ-сообщение: {tg_err}")
+
+                return jsonify({'confirmed': True, 'tx_hash': tx_hash})
+            else:
+                # ДОБАВЛЯЕМ ЛОГ О НЕУДАЧЕ
+                add_admin_log(
+                    f"❌ НЕУДАЧНАЯ покупка за TON ({expected_amount} TON) - ошибка начисления",
+                    user_id,
+                    f"User_{user_id}",
+                    details=f"Ошибка: {message}"
+                )
+                logger.error(f"❌ [API] Ошибка внутри grant_energy_upgrade: {message}")
+                return jsonify({'confirmed': False, 'error': message}), 400
+
+        return jsonify({'confirmed': False})
+
+    except Exception as e:
+        logger.error(f"❌ Критическая ошибка в check_ton_payment_endpoint: {e}", exc_info=True)
+        return jsonify({'confirmed': False, 'error': str(e)}), 500
+
+
+# ==================== LP БУСТЕР ====================
+@app.route('/api/create_lp_boost_invoice', methods=['POST'])
+def api_create_lp_boost_invoice():
+    data = request.json
+    if not data:
+        return jsonify({"success": False, "msg": "No data"}), 400
+    user_id = data.get('user_id')
+    chat_id = data.get('chat_id', user_id)
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"success": False, "msg": "Invalid user_id"}), 400
+
+    try:
+        title = "💎 LP Бустер"
+        description = "Пополняет баланс на 50 LP!"
+        payload = json.dumps({"user_id": user_id, "type": "lp_boost"})
+        provider_token = ""
+        currency = "XTR"
+        prices = [{"label": "LP Бустер", "amount": 22}]
+        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/createInvoiceLink"
+        data = {
+            "title": title,
+            "description": description,
+            "payload": payload,
+            "provider_token": provider_token,
+            "currency": currency,
+            "prices": prices
+        }
+        verify_ssl = not DEBUG_MODE
+        response = requests.post(url, json=data, timeout=10, verify=verify_ssl)
+        result = response.json()
+        if result.get("ok"):
+            return jsonify({"success": True, "invoice_link": result["result"]})
+        return jsonify({"success": False, "msg": "Ошибка создания счёта"})
+    except Exception as e:
+        logger.error(f"Ошибка в create_lp_boost_invoice: {e}")
+        return jsonify({"success": False, "msg": str(e)}), 500
+
+
+@app.route('/api/ton/create_lp_boost_payment', methods=['POST'])
+def api_ton_create_lp_boost_payment():
+    data = request.json or {}
+    user_id = data.get('user_id')
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"success": False, "error": "Неавторизованный запрос"}), 400
+
+    proj_wallet = globals().get('PROJECT_WALLET_ADDRESS') or os.getenv('PROJECT_WALLET_ADDRESS')
+    if not proj_wallet:
+        logger.critical("🚨 PROJECT_WALLET_ADDRESS отсутствует!")
+        return jsonify({"success": False, "error": "Ошибка конфигурации платежного шлюза"}), 500
+
+    payment_amount_ton = 0.13
+    payment_amount_nano = int(payment_amount_ton * 1e9)
+
+    return jsonify({
+        "success": True,
+        "wallet_address": proj_wallet,
+        "amount": payment_amount_ton,
+        "amount_nano": payment_amount_nano,
+        "comment": f"WereGood_LP:{user_id}"
+    })
+
+
+@app.route('/api/ton/check_lp_boost_payment', methods=['POST'])
+def check_lp_boost_payment():
+    try:
+        data = request.json or {}
+        user_id = data.get('user_id')
+        expected_amount = data.get('expected_amount')
+        sender_wallet = data.get('sender_wallet')
+
+        if not user_id or not expected_amount:
+            return jsonify({'confirmed': False, 'error': 'Missing parameters'}), 400
+
+        expected_amount = float(expected_amount)
+        confirmed, amount_paid, tx_hash = check_ton_transaction(sender_wallet, expected_amount, user_id)
+
+        if confirmed:
+            # Начисляем 50 LP
+            user = get_user(user_id)
+            old_lp = user['lp']
+            new_lp = old_lp + 50
+            safe_update_user(user_id, lp=new_lp)
+
+            add_admin_log(
+                f"💎 Купил LP Бустер за TON ({expected_amount} TON) | +50 LP",
+                user_id,
+                user.get('username') or f"User_{user_id}",
+                details=f"Хэш транзакции: {tx_hash}, LP: {old_lp} → {new_lp}"
+            )
+
+            if 'send_telegram_message' in globals():
+                try:
+                    send_telegram_message(user_id,
+                                          f"✨ **LP Бустер активирован!**\n\n"
+                                          f"💎 +50 LP на баланс!\n\n"
+                                          f"Спасибо за поддержку проекта!")
+                except Exception as tg_err:
+                    logger.error(f"⚠️ Не удалось отправить ТГ-сообщение: {tg_err}")
+
+            return jsonify({'confirmed': True, 'tx_hash': tx_hash})
+
+        return jsonify({'confirmed': False})
+    except Exception as e:
+        logger.error(f"Ошибка в check_lp_boost_payment: {e}", exc_info=True)
+        return jsonify({'confirmed': False, 'error': str(e)}), 500
+
+
+@app.route('/api/get_lp_boost_count', methods=['POST'])
+def api_get_lp_boost_count():
+    data = request.json or {}
+    user_id = data.get('user_id')
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"success": False, "error": "Invalid user_id"}), 400
 
     with db.get_cursor() as cursor:
         cursor.execute(
-            "UPDATE users SET daily_clicks = daily_clicks + 1, total_clicks = total_clicks + 1 WHERE user_id = ?",
-            (user_id,))
+            "SELECT COUNT(*) as count FROM successful_payments WHERE user_id = ? AND payload = 'lp_boost'",
+            (user_id,)
+        )
+        row = cursor.fetchone()
+        count = row['count'] if row else 0
 
-    invalidate_cache(user_id)
+    return jsonify({"success": True, "count": count})
 
-    return jsonify({
-        "success": True, "earned": earning, "wg": new_wg, "lp": user["lp"] + lp_reward if lp_reward > 0 else user["lp"],
-        "energy": new_energy, "total_clicks": user["total_clicks"] + 1, "earning_per_click": earning,
-        "lp_reward": lp_reward > 0
-    })
+# Добавьте обработку успешной оплаты Stars для LP Бустера
+# В функцию handle_successful_payment добавьте:
+def handle_successful_payment(chat_id, payment_info):
+    try:
+        payload = json.loads(payment_info.get('invoice_payload', '{}'))
+        user_id = payload.get('user_id')
+        payment_type = payload.get('type', 'energy_upgrade')
+        payment_charge_id = payment_info.get('telegram_payment_charge_id')
+        total_amount = payment_info.get('total_amount', 100)
+        stars_amount = total_amount // 100
+
+        if not user_id:
+            return False
+
+        with db.get_cursor() as cursor:
+            cursor.execute("SELECT id FROM successful_payments WHERE telegram_payment_charge_id=?",
+                           (payment_charge_id,))
+            if cursor.fetchone():
+                return True
+            cursor.execute(
+                "INSERT INTO successful_payments (user_id, telegram_payment_charge_id, payload, amount) VALUES (?, ?, ?, ?)",
+                (user_id, payment_charge_id, payment_type, stars_amount))
+
+        if payment_type == 'lp_boost':
+            # Начисляем 50 LP
+            user = get_user(user_id)
+            old_lp = user['lp']
+            new_lp = old_lp + 50
+            safe_update_user(user_id, lp=new_lp)
+            send_telegram_message(chat_id, f"✅ LP Бустер активирован! +50 LP на баланс!")
+            add_admin_log(f"⭐ Купил LP Бустер за Stars | +50 LP", user_id, user.get('username') or f"User_{user_id}")
+            today = datetime.datetime.now().strftime("%Y-%m-%d")
+            update_stats_history(today, stars=stars_amount)
+            return True
+        elif payment_type == 'energy_upgrade':
+            success, message, data = grant_energy_upgrade(user_id)
+            if success:
+                send_telegram_message(chat_id,
+                                      f"✅ {message}\n✨ Макс. энергия: {data['max_energy']}\n💎 LP: {data['lp']}")
+                today = datetime.datetime.now().strftime("%Y-%m-%d")
+                update_stats_history(today, stars=stars_amount)
+            else:
+                send_telegram_message(chat_id, f"❌ {message}")
+            return success
+        return False
+    except Exception as e:
+        logger.error(f"Ошибка в handle_successful_payment: {e}")
+        return False
+
+@app.route('/api/ton/disconnect_wallet', methods=['POST'])
+def api_ton_disconnect_wallet():
+    data = request.json or {}
+    user_id = data.get('user_id')
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"success": False, "error": "Invalid user_id"}), 400
+
+    try:
+        with db.get_cursor() as cursor:
+            cursor.execute("UPDATE users SET ton_wallet = '' WHERE user_id = ?", (user_id,))
+        if 'invalidate_cache' in globals():
+            invalidate_cache(user_id)
+
+        user = get_user(user_id)
+        add_log(f"🔗 Отвязал TON кошелёк", user_id, user.get('username', 'Unknown'))
+        return jsonify({"success": True, "message": "Кошелёк отвязан"})
+    except Exception as e:
+        logger.error(f"❌ Ошибка при отвязке кошелька в БД: {e}")
+        return jsonify({"success": False, "error": "Ошибка базы данных"}), 500
+
+
+@app.route('/api/log_game_entry', methods=['POST'])
+def api_log_game_entry():
+    data = request.json
+    if not data:
+        return jsonify({"success": False}), 400
+    user_id = data.get('user_id')
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"success": False}), 400
+    user = get_user(user_id)
+    with online_users_lock:
+        online_users[user_id] = time.time()
+    update_online_count()
+    today = datetime.datetime.now().strftime("%Y-%m-%d")
+    update_stats_history(today, online=len(online_users))
+    add_log(f"🟢 Вошёл в игру", user_id, user['username'])
+    return jsonify({"success": True})
+
+
+@app.route('/api/log_game_exit', methods=['POST'])
+def api_log_game_exit():
+    data = request.json
+    if not data:
+        return jsonify({"success": False}), 400
+    user_id = data.get('user_id')
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"success": False}), 400
+    user = get_user(user_id)
+    with online_users_lock:
+        if user_id in online_users:
+            del online_users[user_id]
+    add_log(f"🔴 Вышел из игры", user_id, user['username'])
+    return jsonify({"success": True})
+
+
+@app.route('/api/online_count', methods=['GET'])
+def api_online_count():
+    update_online_count()
+    with online_users_lock:
+        return jsonify({"online": len(online_users)})
 
 
 @app.route('/api/register', methods=['POST'])
@@ -2229,6 +2711,7 @@ def api_register():
         existing = cursor.fetchone()
 
         if existing:
+            # Обновление существующего профиля
             cursor.execute("UPDATE users SET username=?, first_name=?, last_name=?, avatar_url=? WHERE user_id=?",
                            (username, first_name, last_name, avatar_url, user_id))
             invalidate_cache(user_id)
@@ -2236,6 +2719,7 @@ def api_register():
             return jsonify({"success": True})
 
         else:
+            # Новая регистрация
             now = time.time()
             ref_code_new = hashlib.md5(str(user_id).encode()).hexdigest()[:8]
             founder_id = 5264622363
@@ -2243,18 +2727,38 @@ def api_register():
             unlocked = json.dumps(["player", "founder"]) if role == "founder" else json.dumps(["player"])
             referrer_id = 0
 
+            # Обработка реферального кода
             if referral_code:
                 cursor.execute("SELECT user_id FROM users WHERE referral_code=?", (referral_code,))
                 referrer_row = cursor.fetchone()
                 if referrer_row:
                     referrer_id = referrer_row['user_id']
+
+                    # Добавляем запись в таблицу рефералов
                     cursor.execute(
                         'INSERT INTO referrals (referrer_id, referred_id, username, first_name, total_spent_lp) VALUES (?, ?, ?, ?, 0)',
                         (referrer_id, user_id, username, first_name))
+
                     add_log(f"👥 Новый реферал! {username or first_name} зарегистрировался по вашей ссылке", referrer_id,
                             get_user(referrer_id)['username'])
+
+                    # ОБНОВЛЯЕМ ДОСТИЖЕНИЕ РЕФЕРАЛА
+                    # Делаем это ДВАЖДЫ для надёжности: через функцию и напрямую в БД
                     update_achievement_progress(referrer_id, 'social', 1)
 
+                    # Дополнительная прямая проверка в БД (на случай если функция не сработала)
+                    with db.get_cursor() as inner_cursor:
+                        inner_cursor.execute(
+                            "UPDATE user_achievements SET current_count = current_count + 1, is_completed = CASE WHEN current_count + 1 >= (SELECT target_count FROM achievements WHERE name = 'social') THEN 1 ELSE 0 END WHERE user_id = ? AND achievement_id = (SELECT id FROM achievements WHERE name = 'social')",
+                            (referrer_id,)
+                        )
+                        if inner_cursor.rowcount == 0:
+                            inner_cursor.execute(
+                                "INSERT INTO user_achievements (user_id, achievement_id, current_count, is_completed) VALUES (?, (SELECT id FROM achievements WHERE name = 'social'), 1, 0)",
+                                (referrer_id,)
+                            )
+
+            # Создаём нового пользователя
             cursor.execute('''
                 INSERT INTO users (
                     user_id, wg, lp, energy, last_energy_update, tickets, total_clicks, upgrade_counts, 
@@ -2269,10 +2773,60 @@ def api_register():
             ''', (user_id, now, ref_code_new, referrer_id, username, first_name, last_name, avatar_url, role, unlocked))
 
             add_log(f"✨ Новая регистрация! Добро пожаловать!", user_id, username or first_name or str(user_id))
+
             today = datetime.datetime.now().strftime("%Y-%m-%d")
             update_stats_history(today, users=1)
 
     return jsonify({"success": True})
+
+
+@app.route('/api/click', methods=['POST'])
+def api_click():
+    data = request.json
+    if not data:
+        return jsonify({"error": "No data"}), 400
+    user_id = data.get('user_id')
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"error": "Invalid user_id"}), 400
+    if not check_rate_limit(f"click_{user_id}", limit=30, window_seconds=10):
+        return jsonify({"error": "Слишком много кликов! Подождите."}), 429
+    banned, ban_info = is_banned(user_id)
+    if banned:
+        return jsonify(
+            {"error": f"Вы забанены! Причина: {ban_info['reason']}. До: {ban_info['until_date']}", "banned": True})
+    user = get_user(user_id)
+    success, new_energy = spend_energy(user_id, user, 1)
+    if not success:
+        return jsonify({"error": "Нет энергии", "energy": new_energy, "wg": user["wg"], "lp": user["lp"]})
+    earning = get_total_earning(user["upgrade_counts"])
+    old_wg = user["wg"]
+    new_wg = old_wg + earning
+    new_clicks = user["total_clicks"] + 1
+    safe_update_user(user_id, wg=new_wg, total_clicks=new_clicks)
+    today = datetime.datetime.now().strftime("%Y-%m-%d")
+    update_stats_history(today, clicks=1)
+    update_achievement_progress(user_id, 'autoclicker', 1)
+    if user["total_clicks"] == 0:
+        add_log(f"🆕👆 ПЕРВЫЙ КЛИК в игре! +{earning:.4f} WG", user_id, user['username'], old_value=old_wg,
+                new_value=new_wg, currency="wg")
+    else:
+        add_log(f"🖱️ Клик по монете +{earning:.4f} WG", user_id, user['username'], old_value=old_wg, new_value=new_wg,
+                currency="wg")
+    lp_reward = False
+    if random.random() < 0.0025:
+        old_lp = user["lp"]
+        new_lp = old_lp + 0.5
+        safe_update_user(user_id, lp=new_lp)
+        lp_reward = True
+        add_log(f"🎲 Редкий дроп! +0.5 LP", user_id, user['username'], old_value=old_lp, new_value=new_lp, currency="lp")
+        new_lp_value = new_lp
+    else:
+        new_lp_value = user["lp"]
+    click_queue.put({"user_id": user_id})
+    return jsonify(
+        {"energy": new_energy, "wg": new_wg, "lp": new_lp_value, "total_clicks": new_clicks, "earned": earning,
+         "lp_reward": lp_reward, "earning_per_click": earning})
 
 
 @app.route('/api/status', methods=['POST'])
@@ -2332,31 +2886,337 @@ def api_buy_upgrade():
     new_count = current_count + 1
     user["upgrade_counts"][upgrade_id] = new_count
     safe_update_user(user_id, wg=new_wg, upgrade_counts=user["upgrade_counts"])
+
     update_achievement_progress(user_id, 'investor', 1)
     update_achievement_progress(user_id, 'spender', int(cost))
-    add_log(f"💰 Купил {UPGRADE_CONFIG[upgrade_id]['name']} #{new_count} за {cost:.2f} WG", user_id, user['username'],
-            old_value=old_wg, new_value=new_wg, currency="wg")
+
+    if current_count == 0:
+        add_log(f"🆕⭐ ПЕРВАЯ ПОКУПКА улучшения! {UPGRADE_CONFIG[upgrade_id]['name']} за {cost:.2f} WG", user_id,
+                user['username'], old_value=old_wg, new_value=new_wg, currency="wg")
+    else:
+        add_log(f"💰 Купил {UPGRADE_CONFIG[upgrade_id]['name']} #{new_count} за {cost:.2f} WG", user_id,
+                user['username'], old_value=old_wg, new_value=new_wg, currency="wg")
     return jsonify(
         {"success": True, "msg": f"{UPGRADE_CONFIG[upgrade_id]['name']} #{new_count} куплено!", "new_count": new_count,
          "next_cost": get_upgrade_cost(upgrade_id, new_count)})
 
 
+@app.route('/api/watch_ad', methods=['POST'])
+def api_watch_ad():
+    data = request.json
+    if not data:
+        return jsonify({"success": False, "msg": "No data"}), 400
+    user_id = data.get('user_id')
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"success": False, "msg": "Invalid user_id"}), 400
+
+    can_watch, msg = check_ad_cooldown(user_id, "energy_200", 5, 40)
+    if not can_watch:
+        return jsonify({"success": False, "msg": msg}), 429
+
+    banned, ban_info = is_banned(user_id)
+    if banned:
+        return jsonify({"success": False, "msg": f"Вы забанены! {ban_info['reason']}"})
+    user = get_user(user_id)
+    current_energy, _ = calculate_energy(user)
+    max_energy = user.get("max_energy", 500)
+    old_energy = current_energy
+    new_energy = min(max_energy, current_energy + 150)
+    update_energy_in_db(user_id, user, new_energy)
+
+    record_ad_watch(user_id, "energy_200")
+    update_achievement_progress(user_id, 'ad_lover', 1)
+
+    today = datetime.datetime.now().strftime("%Y-%m-%d")
+    update_stats_history(today, ad_views=1)
+    add_log(f"🎬 Просмотрел рекламу (+150 энергии)", user_id, user['username'], old_value=old_energy,
+            new_value=new_energy, currency="energy")
+    return jsonify({"success": True, "energy": 150})
+
+
+@app.route('/api/watch_ad_fallback', methods=['POST'])
+def api_watch_ad_fallback():
+    data = request.json
+    if not data:
+        return jsonify({"success": False, "msg": "No data"}), 400
+    user_id = data.get('user_id')
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"success": False, "msg": "Invalid user_id"}), 400
+
+    can_watch, msg = check_ad_cooldown(user_id, "energy_50", 2, 20)
+    if not can_watch:
+        return jsonify({"success": False, "msg": msg}), 429
+
+    user = get_user(user_id)
+    current_energy, _ = calculate_energy(user)
+    max_energy = user.get("max_energy", 500)
+    old_energy = current_energy
+    new_energy = min(max_energy, current_energy + 50)
+    update_energy_in_db(user_id, user, new_energy)
+
+    record_ad_watch(user_id, "energy_50")
+    update_achievement_progress(user_id, 'ad_lover', 1)
+
+    add_log(f"🎬 Просмотрел рекламу (резервная, +50 энергии)", user_id, user['username'], old_value=old_energy,
+            new_value=new_energy, currency="energy")
+    return jsonify({"success": True, "energy": 50})
+
+
+@app.route('/api/watch_ad_limit', methods=['POST'])
+def api_watch_ad_limit():
+    data = request.json
+    if not data:
+        return jsonify({"success": False, "msg": "No data"}), 400
+    user_id = data.get('user_id')
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"success": False, "msg": "Invalid user_id"}), 400
+
+    can_watch, msg = check_ad_cooldown(user_id, "energy_limit", 10, 15)
+    if not can_watch:
+        return jsonify({"success": False, "msg": msg}), 429
+
+    banned, ban_info = is_banned(user_id)
+    if banned:
+        return jsonify({"success": False, "msg": f"Вы забанены! {ban_info['reason']}"})
+    user = get_user(user_id)
+    current_upgrades = user.get('energy_limit_upgrades', 0)
+    if current_upgrades >= 300:
+        return jsonify({"success": False, "msg": "Вы достигли максимального лимита улучшений! (300/300)"})
+    old_max_energy = user['max_energy']
+    new_max_energy = old_max_energy + 1
+    new_upgrades = current_upgrades + 1
+    safe_update_user(user_id, max_energy=new_max_energy, energy_limit_upgrades=new_upgrades)
+
+    record_ad_watch(user_id, "energy_limit")
+    update_achievement_progress(user_id, 'ad_lover', 1)
+
+    add_log(f"🎬 Просмотрел рекламу (+1 к макс. энергии, теперь {new_max_energy})", user_id, user['username'],
+            old_value=old_max_energy, new_value=new_max_energy, currency="energy")
+    return jsonify({"success": True, "max_energy": new_max_energy, "upgrades": new_upgrades})
+
+
+@app.route('/api/can_watch_ad', methods=['POST'])
+def api_can_watch_ad():
+    data = request.json
+    if not data:
+        return jsonify({"can": False, "message": "No data"}), 400
+    user_id = data.get('user_id')
+    ad_type = data.get('ad_type')
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"can": False, "message": "Invalid user_id"}), 400
+
+    if ad_type == 'energy_200':
+        can_watch, msg = check_ad_cooldown(user_id, "energy_200", 5, 40)
+        return jsonify({"can": can_watch, "message": msg if not can_watch else ""})
+    elif ad_type == 'energy_limit':
+        can_watch, msg = check_ad_cooldown(user_id, "energy_limit", 10, 15)
+        return jsonify({"can": can_watch, "message": msg if not can_watch else ""})
+    else:
+        return jsonify({"can": False, "message": "Unknown ad type"})
+
+
+@app.route('/api/buy_ticket', methods=['POST'])
+def api_buy_ticket():
+    data = request.json
+    if not data:
+        return jsonify({"success": False, "msg": "No data"}), 400
+    user_id = data.get('user_id')
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"success": False, "msg": "Invalid user_id"}), 400
+    if not check_rate_limit(f"ticket_{user_id}", limit=5, window_seconds=60):
+        return jsonify({"success": False, "msg": "Слишком частые покупки билетов"}), 429
+    banned, ban_info = is_banned(user_id)
+    if banned:
+        return jsonify({"success": False, "msg": f"Вы забанены! {ban_info['reason']}"})
+    user = get_user(user_id)
+    success, msg = buy_ticket(user_id, user)
+    return jsonify({"success": success, "msg": msg, "lp": user["lp"]})
+
+
+@app.route('/api/reveal_all_tickets', methods=['POST'])
+def api_reveal_all_tickets():
+    data = request.json
+    if not data:
+        return jsonify({"success": False, "msg": "No data"}), 400
+    user_id = data.get('user_id')
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"success": False, "msg": "Invalid user_id"}), 400
+    success, msg = reveal_all_tickets(user_id)
+    return jsonify({"success": success, "msg": msg})
+
+
+@app.route('/api/reveal_ticket_cells', methods=['POST'])
+def api_reveal_ticket_cells():
+    data = request.json
+    if not data:
+        return jsonify({"success": False, "msg": "No data"}), 400
+    user_id = data.get('user_id')
+    ticket_number = data.get('ticket_number')
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"success": False, "msg": "Invalid user_id"}), 400
+
+    with lottery_lock:
+        if not is_drawn:
+            return jsonify({"success": False, "msg": "Розыгрыш ещё не начался!"})
+
+        for ticket in lottery_tickets:
+            if ticket.get("user_id") == user_id and ticket.get("number") == ticket_number:
+                revealed_count = 0
+                for i in range(12):
+                    if not ticket["revealed"][i]:
+                        ticket["revealed"][i] = True
+                        revealed_count += 1
+
+                if revealed_count > 0:
+                    save_lottery()
+                    user = get_user(user_id)
+                    add_log(f"🔓 Открыл все клетки билета #{ticket_number} ({revealed_count} клеток)", user_id,
+                            user['username'])
+                    return jsonify(
+                        {"success": True, "msg": f"Билет #{ticket_number} полностью открыт! ({revealed_count} клеток)"})
+                else:
+                    return jsonify({"success": False, "msg": "В этом билете уже всё открыто"})
+
+        return jsonify({"success": False, "msg": "Билет не найден"})
+
+
+@app.route('/api/lottery_status', methods=['POST'])
+def api_lottery_status():
+    data = request.json
+    if not data:
+        return jsonify({"error": "No data"}), 400
+    user_id = data.get('user_id')
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"error": "Invalid user_id"}), 400
+    user = get_user(user_id)
+    user_tickets = [t for t in lottery_tickets if t.get("user_id") == user_id]
+    update_lottery_phase()
+    return jsonify({"prize_pool": lottery_pool, "user_tickets": len(user_tickets), "user_lp": user["lp"],
+                    "is_drawn": is_drawn, "winning_numbers": winning_numbers if is_drawn else [],
+                    "tickets": user_tickets, "lottery_phase": lottery_phase})
+
+
+@app.route('/api/user_tickets', methods=['POST'])
+def api_user_tickets():
+    data = request.json
+    if not data:
+        return jsonify({"tickets": []}), 400
+    user_id = data.get('user_id')
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"tickets": []}), 400
+    user = get_user(user_id)
+    user_tickets = [t for t in lottery_tickets if t.get("user_id") == user_id]
+    add_log(f"🎫👁️ Открыл список своих билетов (всего: {len(user_tickets)})", user_id, user['username'])
+    return jsonify({"tickets": user_tickets})
+
+
+@app.route('/api/recent_players', methods=['GET'])
+def api_recent_players():
+    if not check_rate_limit(f"recent_players_{request.remote_addr}", limit=20, window_seconds=60):
+        return jsonify([]), 429
+    with db.get_cursor() as cursor:
+        cursor.execute(
+            '''SELECT h.user_id, h.username, h.ticket_number, h.created_at, u.avatar_url, u.first_name, u.role FROM lottery_tickets_history h LEFT JOIN users u ON h.user_id = u.user_id ORDER BY h.created_at DESC LIMIT 5''')
+        rows = cursor.fetchall()
+        players = []
+        for row in rows:
+            created = datetime.datetime.strptime(row['created_at'], '%Y-%m-%d %H:%M:%S')
+            diff = datetime.datetime.now() - created
+            seconds = int(diff.total_seconds())
+            if seconds < 60:
+                time_ago = f"{seconds} сек назад"
+            elif seconds < 3600:
+                time_ago = f"{seconds // 60} мин {seconds % 60} сек назад"
+            elif seconds < 86400:
+                time_ago = f"{seconds // 3600} ч {(seconds % 3600) // 60} мин назад"
+            else:
+                time_ago = f"{seconds // 86400} дн назад"
+            if row['username'] and row['username'] != '':
+                display_name = '@' + row['username']
+            elif row['first_name'] and row['first_name'] != '':
+                display_name = row['first_name']
+            else:
+                display_name = f"Player_{row['user_id']}"
+            players.append({"user_id": row['user_id'], "username": escape_html(display_name),
+                            "avatar_url": row['avatar_url'] or '', "time_ago": time_ago,
+                            "ticket_number": row['ticket_number'], "role": row['role'] if row['role'] else 'player'})
+        return jsonify(players)
+
+
+@app.route('/api/get_referral_link', methods=['POST'])
+def api_get_referral_link():
+    data = request.json
+    if not data:
+        return jsonify({"link": ""}), 400
+    user_id = data.get('user_id')
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"link": ""}), 400
+    user = get_user(user_id)
+    with db.get_cursor() as cursor:
+        cursor.execute("SELECT referral_code FROM users WHERE user_id=?", (user_id,))
+        row = cursor.fetchone()
+        if row and row['referral_code']:
+            code = row['referral_code']
+        else:
+            code = hashlib.md5(str(user_id).encode()).hexdigest()[:8]
+            safe_update_user(user_id, referral_code=code)
+    link = f"https://t.me/{BOT_USERNAME}/WereGood?startapp={code}"
+    add_log(f"📨 Получил реферальную ссылку", user_id, user['username'])
+    return jsonify({"link": link})
+
+
+@app.route('/api/get_referrals', methods=['POST'])
+def api_get_referrals():
+    data = request.json
+    if not data:
+        return jsonify({"referrals": [], "total_earned": 0}), 400
+    user_id = data.get('user_id')
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"referrals": [], "total_earned": 0}), 400
+    with db.get_cursor() as cursor:
+        cursor.execute(
+            "SELECT r.username, r.first_name, r.created_at, r.total_spent_lp FROM referrals r WHERE r.referrer_id = ?",
+            (user_id,))
+        rows = cursor.fetchall()
+        referrals = []
+        total_earned = 0
+        for row in rows:
+            name = row['username'] or row['first_name'] or "Игрок"
+            earned = (row['total_spent_lp'] or 0) * 0.05
+            total_earned += earned
+            referrals.append(
+                {"username": escape_html(name), "date": row['created_at'], "spent_lp": row['total_spent_lp'] or 0,
+                 "earned": round(earned, 2)})
+    return jsonify({"referrals": referrals, "total_earned": round(total_earned, 2)})
+
+
 @app.route('/api/leaderboard', methods=['GET'])
 def api_leaderboard():
+    global leaderboard_cache, leaderboard_cache_time
+    now = time.time()
     force_refresh = request.args.get('force', 'false').lower() == 'true'
-    limit = min(int(request.args.get('limit', 50)), 100)
 
-    # Проверяем кеш ТОЛЬКО если не принудительное обновление
-    if not force_refresh:
-        cached = leaderboard_cache.get('leaderboard_data')
-        if cached:
-            return jsonify(cached)
+    if not force_refresh and now - leaderboard_cache_time < LEADERBOARD_CACHE_TTL:
+        return jsonify(leaderboard_cache)
+
+    limit = int(request.args.get('limit', 50))
+    limit = min(limit, 100)
 
     with db.get_cursor() as cursor:
-        cursor.execute("""
-            SELECT user_id, total_clicks, username, first_name, avatar_url, role, settings 
-            FROM users ORDER BY total_clicks DESC LIMIT ?
-        """, (limit,))
+        cursor.execute(
+            "SELECT user_id, total_clicks, username, first_name, avatar_url, role, settings FROM users ORDER BY total_clicks DESC LIMIT ?",
+            (limit,))
         rows = cursor.fetchall()
         result = []
         for i, row in enumerate(rows):
@@ -2378,29 +3238,31 @@ def api_leaderboard():
                 else:
                     display_name = f"Player_{row['user_id']}"
                 avatar = row['avatar_url'] or "👤"
-            result.append({
-                "rank": i + 1,
-                "user_id": row['user_id'],
-                "username": escape_html(display_name),
-                "total_clicks": row['total_clicks'],
-                "avatar": avatar,
-                "role": row['role'] if row['role'] else 'player',
-                "hide_from_top": hide_from_top
-            })
+            result.append({"rank": i + 1, "user_id": row['user_id'], "username": escape_html(display_name),
+                           "total_clicks": row['total_clicks'], "avatar": avatar,
+                           "role": row['role'] if row['role'] else 'player', "hide_from_top": hide_from_top})
 
-    # Сохраняем в кеш
-    leaderboard_cache.set('leaderboard_data', result)
+    leaderboard_cache = result
+    leaderboard_cache_time = now
     return jsonify(result)
 
 
 @app.route('/api/leaderboard/daily', methods=['GET'])
 def api_daily_leaderboard():
+    """Получить топ дня с наградами"""
     with db.get_cursor() as cursor:
-        cursor.execute(
-            'SELECT user_id, total_clicks, username, first_name, avatar_url, role, settings FROM users ORDER BY total_clicks DESC LIMIT 50')
+        today = datetime.datetime.now().strftime("%Y-%m-%d")
+        cursor.execute('''
+            SELECT user_id, total_clicks, username, first_name, avatar_url, role, settings
+            FROM users 
+            ORDER BY total_clicks DESC 
+            LIMIT 50
+        ''')
         rows = cursor.fetchall()
-        rewards = {1: "🏆 70 LP + 200 WG", 2: "🥈 50 LP + 150 WG", 3: "🥉 35 LP + 120 WG", 4: "🎖️ 25 LP + 100 WG",
-                   5: "🎖️ 15 LP + 75 WG"}
+
+        rewards = {1: "🏆 70 LP + 200 WG", 2: "🥈 50 LP + 150 WG", 3: "🥉 35 LP + 120 WG",
+                   4: "🎖️ 25 LP + 100 WG", 5: "🎖️ 15 LP + 75 WG"}
+
         result = []
         for i, row in enumerate(rows, 1):
             hide_from_top = False
@@ -2410,6 +3272,7 @@ def api_daily_leaderboard():
                     hide_from_top = settings.get('hideFromTop', False)
                 except:
                     pass
+
             if hide_from_top:
                 display_name = 'Аноним'
                 avatar = '👤'
@@ -2417,11 +3280,18 @@ def api_daily_leaderboard():
                 display_name = f"@{row['username']}" if row['username'] else (
                             row['first_name'] or f"Player_{row['user_id']}")
                 avatar = row['avatar_url'] or '👤'
-            result.append(
-                {"rank": i, "user_id": row['user_id'], "username": display_name, "total_clicks": row['total_clicks'],
-                 "avatar": avatar, "role": row['role'] or 'player', "reward": rewards.get(i, "")})
-        return jsonify(result)
 
+            result.append({
+                "rank": i,
+                "user_id": row['user_id'],
+                "username": display_name,
+                "total_clicks": row['total_clicks'],
+                "avatar": avatar,
+                "role": row['role'] or 'player',
+                "reward": rewards.get(i, "")
+            })
+
+        return jsonify(result)
 
 @app.route('/api/get_user_stats', methods=['POST'])
 def api_get_user_stats():
@@ -2434,7 +3304,7 @@ def api_get_user_stats():
         return jsonify({"error": "Invalid user_id"}), 400
     with db.get_cursor() as cursor:
         cursor.execute(
-            'SELECT wg, lp, total_clicks, likes, dislikes, username, first_name, upgrade_counts, avatar_url, usdt, wins, role, stars, max_energy, energy_upgrades, settings FROM users WHERE user_id=?',
+            '''SELECT wg, lp, total_clicks, likes, dislikes, username, first_name, upgrade_counts, avatar_url, usdt, wins, role, stars, max_energy, energy_upgrades, settings FROM users WHERE user_id=?''',
             (user_id,))
         row = cursor.fetchone()
         if row:
@@ -2568,288 +3438,25 @@ def api_get_settings():
     return jsonify(settings)
 
 
-@app.route('/api/watch_ad', methods=['POST'])
-def api_watch_ad():
-    data = request.json
-    if not data:
-        return jsonify({"success": False, "msg": "No data"}), 400
-    user_id = data.get('user_id')
-    is_valid, user_id = validate_user_id(user_id)
-    if not is_valid:
-        return jsonify({"success": False, "msg": "Invalid user_id"}), 400
-    can_watch, msg = check_ad_cooldown(user_id, "energy_200", 5, 40)
-    if not can_watch:
-        return jsonify({"success": False, "msg": msg}), 429
-    banned, ban_info = is_banned(user_id)
-    if banned:
-        return jsonify({"success": False, "msg": f"Вы забанены! {ban_info['reason']}"})
-    user = get_user(user_id)
-    current_energy, _ = calculate_energy(user)
-    max_energy = user.get("max_energy", 500)
-    old_energy = current_energy
-    new_energy = min(max_energy, current_energy + 150)
-    update_energy_in_db(user_id, user, new_energy)
-    record_ad_watch(user_id, "energy_200")
-    update_achievement_progress(user_id, 'ad_lover', 1)
-    today = datetime.datetime.now().strftime("%Y-%m-%d")
-    update_stats_history(today, ad_views=1)
-    add_log(f"🎬 Просмотрел рекламу (+150 энергии)", user_id, user['username'], old_value=old_energy,
-            new_value=new_energy, currency="energy")
-    return jsonify({"success": True, "energy": 150})
-
-
-@app.route('/api/watch_ad_fallback', methods=['POST'])
-def api_watch_ad_fallback():
-    data = request.json
-    if not data:
-        return jsonify({"success": False, "msg": "No data"}), 400
-    user_id = data.get('user_id')
-    is_valid, user_id = validate_user_id(user_id)
-    if not is_valid:
-        return jsonify({"success": False, "msg": "Invalid user_id"}), 400
-    can_watch, msg = check_ad_cooldown(user_id, "energy_50", 2, 20)
-    if not can_watch:
-        return jsonify({"success": False, "msg": msg}), 429
-    user = get_user(user_id)
-    current_energy, _ = calculate_energy(user)
-    max_energy = user.get("max_energy", 500)
-    old_energy = current_energy
-    new_energy = min(max_energy, current_energy + 50)
-    update_energy_in_db(user_id, user, new_energy)
-    record_ad_watch(user_id, "energy_50")
-    update_achievement_progress(user_id, 'ad_lover', 1)
-    add_log(f"🎬 Просмотрел рекламу (резервная, +50 энергии)", user_id, user['username'], old_value=old_energy,
-            new_value=new_energy, currency="energy")
-    return jsonify({"success": True, "energy": 50})
-
-
-@app.route('/api/watch_ad_limit', methods=['POST'])
-def api_watch_ad_limit():
-    data = request.json
-    if not data:
-        return jsonify({"success": False, "msg": "No data"}), 400
-    user_id = data.get('user_id')
-    is_valid, user_id = validate_user_id(user_id)
-    if not is_valid:
-        return jsonify({"success": False, "msg": "Invalid user_id"}), 400
-    can_watch, msg = check_ad_cooldown(user_id, "energy_limit", 10, 15)
-    if not can_watch:
-        return jsonify({"success": False, "msg": msg}), 429
-    banned, ban_info = is_banned(user_id)
-    if banned:
-        return jsonify({"success": False, "msg": f"Вы забанены! {ban_info['reason']}"})
-    user = get_user(user_id)
-    current_upgrades = user.get('energy_limit_upgrades', 0)
-    if current_upgrades >= 300:
-        return jsonify({"success": False, "msg": "Вы достигли максимального лимита улучшений! (300/300)"})
-    old_max_energy = user['max_energy']
-    new_max_energy = old_max_energy + 1
-    new_upgrades = current_upgrades + 1
-    safe_update_user(user_id, max_energy=new_max_energy, energy_limit_upgrades=new_upgrades)
-    record_ad_watch(user_id, "energy_limit")
-    update_achievement_progress(user_id, 'ad_lover', 1)
-    add_log(f"🎬 Просмотрел рекламу (+1 к макс. энергии, теперь {new_max_energy})", user_id, user['username'],
-            old_value=old_max_energy, new_value=new_max_energy, currency="energy")
-    return jsonify({"success": True, "max_energy": new_max_energy, "upgrades": new_upgrades})
-
-
-@app.route('/api/can_watch_ad', methods=['POST'])
-def api_can_watch_ad():
-    data = request.json
-    if not data:
-        return jsonify({"can": False, "message": "No data"}), 400
-    user_id = data.get('user_id')
-    ad_type = data.get('ad_type')
-    is_valid, user_id = validate_user_id(user_id)
-    if not is_valid:
-        return jsonify({"can": False, "message": "Invalid user_id"}), 400
-    if ad_type == 'energy_200':
-        can_watch, msg = check_ad_cooldown(user_id, "energy_200", 5, 40)
-        return jsonify({"can": can_watch, "message": msg if not can_watch else ""})
-    elif ad_type == 'energy_limit':
-        can_watch, msg = check_ad_cooldown(user_id, "energy_limit", 10, 15)
-        return jsonify({"can": can_watch, "message": msg if not can_watch else ""})
-    else:
-        return jsonify({"can": False, "message": "Unknown ad type"})
-
-
-@app.route('/api/buy_ticket', methods=['POST'])
-def api_buy_ticket():
-    data = request.json
-    if not data:
-        return jsonify({"success": False, "msg": "No data"}), 400
-    user_id = data.get('user_id')
-    is_valid, user_id = validate_user_id(user_id)
-    if not is_valid:
-        return jsonify({"success": False, "msg": "Invalid user_id"}), 400
-    if not check_rate_limit(f"ticket_{user_id}", limit=5, window_seconds=60):
-        return jsonify({"success": False, "msg": "Слишком частые покупки билетов"}), 429
-    banned, ban_info = is_banned(user_id)
-    if banned:
-        return jsonify({"success": False, "msg": f"Вы забанены! {ban_info['reason']}"})
-    user = get_user(user_id)
-    success, msg = buy_ticket(user_id, user)
-    return jsonify({"success": success, "msg": msg, "lp": user["lp"]})
-
-
-@app.route('/api/reveal_all_tickets', methods=['POST'])
-def api_reveal_all_tickets():
-    data = request.json
-    if not data:
-        return jsonify({"success": False, "msg": "No data"}), 400
-    user_id = data.get('user_id')
-    is_valid, user_id = validate_user_id(user_id)
-    if not is_valid:
-        return jsonify({"success": False, "msg": "Invalid user_id"}), 400
-    success, msg = reveal_all_tickets(user_id)
-    return jsonify({"success": success, "msg": msg})
-
-
-@app.route('/api/reveal_ticket_cells', methods=['POST'])
-def api_reveal_ticket_cells():
-    data = request.json
-    if not data:
-        return jsonify({"success": False, "msg": "No data"}), 400
-    user_id = data.get('user_id')
-    ticket_number = data.get('ticket_number')
-    is_valid, user_id = validate_user_id(user_id)
-    if not is_valid:
-        return jsonify({"success": False, "msg": "Invalid user_id"}), 400
-    with lottery_lock:
-        if not is_drawn:
-            return jsonify({"success": False, "msg": "Розыгрыш ещё не начался!"})
-        for ticket in lottery_tickets:
-            if ticket.get("user_id") == user_id and ticket.get("number") == ticket_number:
-                revealed_count = 0
-                for i in range(12):
-                    if not ticket["revealed"][i]:
-                        ticket["revealed"][i] = True
-                        revealed_count += 1
-                if revealed_count > 0:
-                    save_lottery()
-                    user = get_user(user_id)
-                    add_log(f"🔓 Открыл все клетки билета #{ticket_number} ({revealed_count} клеток)", user_id,
-                            user['username'])
-                    return jsonify(
-                        {"success": True, "msg": f"Билет #{ticket_number} полностью открыт! ({revealed_count} клеток)"})
-                else:
-                    return jsonify({"success": False, "msg": "В этом билете уже всё открыто"})
-        return jsonify({"success": False, "msg": "Билет не найден"})
-
-
-@app.route('/api/lottery_status', methods=['POST'])
-def api_lottery_status():
-    data = request.json
-    if not data:
-        return jsonify({"error": "No data"}), 400
-    user_id = data.get('user_id')
-    is_valid, user_id = validate_user_id(user_id)
-    if not is_valid:
-        return jsonify({"error": "Invalid user_id"}), 400
-    user = get_user(user_id)
-    user_tickets = [t for t in lottery_tickets if t.get("user_id") == user_id]
-    update_lottery_phase()
-    return jsonify(
-        {"prize_pool": lottery_pool, "user_tickets": len(user_tickets), "user_lp": user["lp"], "is_drawn": is_drawn,
-         "winning_numbers": winning_numbers if is_drawn else [], "tickets": user_tickets,
-         "lottery_phase": lottery_phase})
-
-
-@app.route('/api/user_tickets', methods=['POST'])
-def api_user_tickets():
-    data = request.json
-    if not data:
-        return jsonify({"tickets": []}), 400
-    user_id = data.get('user_id')
-    is_valid, user_id = validate_user_id(user_id)
-    if not is_valid:
-        return jsonify({"tickets": []}), 400
-    user = get_user(user_id)
-    user_tickets = [t for t in lottery_tickets if t.get("user_id") == user_id]
-    add_log(f"🎫👁️ Открыл список своих билетов (всего: {len(user_tickets)})", user_id, user['username'])
-    return jsonify({"tickets": user_tickets})
-
-
-@app.route('/api/recent_players', methods=['GET'])
-def api_recent_players():
-    if not check_rate_limit(f"recent_players_{request.remote_addr}", limit=20, window_seconds=60):
-        return jsonify([]), 429
+@app.route('/api/lottery_all_tickets', methods=['GET'])
+def api_lottery_all_tickets():
     with db.get_cursor() as cursor:
-        cursor.execute(
-            'SELECT h.user_id, h.username, h.ticket_number, h.created_at, u.avatar_url, u.first_name, u.role FROM lottery_tickets_history h LEFT JOIN users u ON h.user_id = u.user_id ORDER BY h.created_at DESC LIMIT 5')
-        rows = cursor.fetchall()
-        players = []
-        for row in rows:
-            created = datetime.datetime.strptime(row['created_at'], '%Y-%m-%d %H:%M:%S')
-            diff = datetime.datetime.now() - created
-            seconds = int(diff.total_seconds())
-            if seconds < 60:
-                time_ago = f"{seconds} сек назад"
-            elif seconds < 3600:
-                time_ago = f"{seconds // 60} мин {seconds % 60} сек назад"
-            elif seconds < 86400:
-                time_ago = f"{seconds // 3600} ч {(seconds % 3600) // 60} мин назад"
-            else:
-                time_ago = f"{seconds // 86400} дн назад"
-            if row['username'] and row['username'] != '':
-                display_name = '@' + row['username']
-            elif row['first_name'] and row['first_name'] != '':
-                display_name = row['first_name']
-            else:
-                display_name = f"Player_{row['user_id']}"
-            players.append({"user_id": row['user_id'], "username": escape_html(display_name),
-                            "avatar_url": row['avatar_url'] or '', "time_ago": time_ago,
-                            "ticket_number": row['ticket_number'], "role": row['role'] if row['role'] else 'player'})
-        return jsonify(players)
-
-
-@app.route('/api/get_referral_link', methods=['POST'])
-def api_get_referral_link():
-    data = request.json
-    if not data:
-        return jsonify({"link": ""}), 400
-    user_id = data.get('user_id')
-    is_valid, user_id = validate_user_id(user_id)
-    if not is_valid:
-        return jsonify({"link": ""}), 400
-    user = get_user(user_id)
-    with db.get_cursor() as cursor:
-        cursor.execute("SELECT referral_code FROM users WHERE user_id=?", (user_id,))
+        cursor.execute("SELECT tickets FROM lottery LIMIT 1")
         row = cursor.fetchone()
-        if row and row['referral_code']:
-            code = row['referral_code']
-        else:
-            code = hashlib.md5(str(user_id).encode()).hexdigest()[:8]
-            safe_update_user(user_id, referral_code=code)
-    link = f"https://t.me/{BOT_USERNAME}/WereGood?startapp={code}"
-    add_log(f"📨 Получил реферальную ссылку", user_id, user['username'])
-    return jsonify({"link": link})
-
-
-@app.route('/api/get_referrals', methods=['POST'])
-def api_get_referrals():
-    data = request.json
-    if not data:
-        return jsonify({"referrals": [], "total_earned": 0}), 400
-    user_id = data.get('user_id')
-    is_valid, user_id = validate_user_id(user_id)
-    if not is_valid:
-        return jsonify({"referrals": [], "total_earned": 0}), 400
-    with db.get_cursor() as cursor:
-        cursor.execute(
-            "SELECT r.username, r.first_name, r.created_at, r.total_spent_lp FROM referrals r WHERE r.referrer_id = ?",
-            (user_id,))
-        rows = cursor.fetchall()
-        referrals = []
-        total_earned = 0
-        for row in rows:
-            name = row['username'] or row['first_name'] or "Игрок"
-            earned = (row['total_spent_lp'] or 0) * 0.05
-            total_earned += earned
-            referrals.append(
-                {"username": escape_html(name), "date": row['created_at'], "spent_lp": row['total_spent_lp'] or 0,
-                 "earned": round(earned, 2)})
-    return jsonify({"referrals": referrals, "total_earned": round(total_earned, 2)})
+        if row and row['tickets']:
+            tickets = json.loads(row['tickets']) if row['tickets'] else []
+            result = []
+            for ticket in tickets:
+                user_id = ticket.get('user_id')
+                cursor.execute("SELECT username, first_name, role FROM users WHERE user_id=?", (user_id,))
+                user_row = cursor.fetchone()
+                username = user_row['username'] if user_row and user_row['username'] else (
+                    user_row['first_name'] if user_row else 'Игрок')
+                ticket['username'] = escape_html(username)
+                ticket['role'] = user_row['role'] if user_row else 'player'
+                result.append(ticket)
+            return jsonify({"tickets": result})
+    return jsonify({"tickets": []})
 
 
 @app.route('/api/create_stars_invoice', methods=['POST'])
@@ -2917,7 +3524,8 @@ def api_get_available_prefixes():
         "pioneer": {"name": "Первооткрыватель", "icon": "⭐", "desc": "За регистрацию в первый день",
                     "color": "pioneer"},
         "founder": {"name": "Основатель", "icon": "👑", "desc": "Основатель проекта", "color": "founder"},
-        "legend": {"name": "Легенда", "icon": "👑", "desc": "Топ-5 по достижениям", "color": "legend"}}
+        "legend": {"name": "Легенда", "icon": "👑", "desc": "Топ-5 по достижениям", "color": "legend"}
+    }
     prefixes = [{"id": pid, **all_prefixes[pid]} for pid in unlocked if pid in all_prefixes]
     return jsonify({"success": True, "prefixes": prefixes, "current": user['role']})
 
@@ -3065,329 +3673,41 @@ def api_complete_tutorial():
     return jsonify({"success": True})
 
 
-@app.route('/api/ton/save_wallet', methods=['POST'])
-def api_ton_save_wallet():
-    data = request.json or {}
-    user_id = data.get('user_id')
-    wallet_address = data.get('wallet_address')
-    is_valid, user_id = validate_user_id(user_id)
-    if not is_valid or not wallet_address:
-        return jsonify({"success": False, "error": "Неверный ID пользователя или адрес кошелька"}), 400
-    if not validate_ton_address(wallet_address):
-        return jsonify({"success": False, "error": "Неверный формат TON кошелька"}), 400
-    try:
-        with db.get_cursor() as cursor:
-            cursor.execute("UPDATE users SET ton_wallet = ? WHERE user_id = ?", (wallet_address, user_id))
-        invalidate_cache(user_id)
-        user = get_user(user_id)
-        add_log(f"🔗 Привязал TON кошелёк: {wallet_address[:6]}...{wallet_address[-4:]}", user_id,
-                user.get('username', 'Unknown'))
-        return jsonify({"success": True, "wallet": wallet_address})
-    except Exception as e:
-        logger.error(f"❌ Ошибка при сохранении кошелька в БД: {e}")
-        return jsonify({"success": False, "error": "Ошибка базы данных"}), 500
-
-
-@app.route('/api/ton/get_wallet', methods=['POST'])
-def api_ton_get_wallet():
-    data = request.json or {}
-    user_id = data.get('user_id')
-    is_valid, user_id = validate_user_id(user_id)
-    if not is_valid:
-        return jsonify({"success": False, "error": "Invalid user_id"}), 400
-    with db.get_cursor() as cursor:
-        cursor.execute("SELECT ton_wallet FROM users WHERE user_id = ?", (user_id,))
-        row = cursor.fetchone()
-        wallet = row['ton_wallet'] if row else None
-    return jsonify({"success": True, "wallet": wallet})
-
-
-@app.route('/api/ton/disconnect_wallet', methods=['POST'])
-def api_ton_disconnect_wallet():
-    data = request.json or {}
-    user_id = data.get('user_id')
-    is_valid, user_id = validate_user_id(user_id)
-    if not is_valid:
-        return jsonify({"success": False, "error": "Invalid user_id"}), 400
-    try:
-        with db.get_cursor() as cursor:
-            cursor.execute("UPDATE users SET ton_wallet = '' WHERE user_id = ?", (user_id,))
-        invalidate_cache(user_id)
-        user = get_user(user_id)
-        add_log(f"🔗 Отвязал TON кошелёк", user_id, user.get('username', 'Unknown'))
-        return jsonify({"success": True, "message": "Кошелёк отвязан"})
-    except Exception as e:
-        logger.error(f"❌ Ошибка при отвязке кошелька в БД: {e}")
-        return jsonify({"success": False, "error": "Ошибка базы данных"}), 500
-
-
-@app.route('/api/ton/create_payment', methods=['POST'])
-def api_ton_create_payment():
-    data = request.json or {}
-    user_id = data.get('user_id')
-    is_valid, user_id = validate_user_id(user_id)
-    if not is_valid:
-        return jsonify({"success": False, "error": "Неавторизованный запрос"}), 400
-    proj_wallet = globals().get('PROJECT_WALLET_ADDRESS') or os.getenv('PROJECT_WALLET_ADDRESS')
-    if not proj_wallet:
-        logger.critical("🚨 КРИТИЧЕСКАЯ ОШИБКА: PROJECT_WALLET_ADDRESS отсутствует в переменных сервера!")
-        return jsonify({"success": False, "error": "Ошибка конфигурации платежного шлюза на сервере"}), 500
-    payment_amount_ton = 0.18
-    payment_amount_nano = int(payment_amount_ton * 1e9)
-    return jsonify({"success": True, "wallet_address": proj_wallet, "amount": payment_amount_ton,
-                    "amount_nano": payment_amount_nano, "comment": f"WereGood:{user_id}"})
-
-
-@app.route('/api/ton/check_payment', methods=['POST'])
-def check_ton_payment_endpoint():
-    try:
-        data = request.json or {}
-        user_id = data.get('user_id')
-        expected_amount = data.get('expected_amount')
-        sender_wallet = data.get('sender_wallet')
-        if not user_id or not expected_amount:
-            return jsonify({'confirmed': False, 'error': 'Missing parameters'}), 400
-        try:
-            expected_amount = float(expected_amount)
-        except ValueError:
-            return jsonify({'confirmed': False, 'error': 'Invalid amount'}), 400
-        logger.info(f"📡 [API] Запрос проверки TON от {user_id}. Сумма: {expected_amount}")
-        confirmed, amount_paid, tx_hash = check_ton_transaction(sender_wallet, expected_amount, user_id)
-        if confirmed:
-            logger.info(f"💰 [API] Платёж TON подтверждён для {user_id}. Вызываем grant_energy_upgrade...")
-            success, message, upgrade_data = grant_energy_upgrade(user_id)
-            if success:
-                logger.info(f"🎁 [API] Успех! Игроку {user_id} начислено улучшение через TON!")
-                user = get_user(user_id)
-                add_admin_log(
-                    f"💎 Купил энергетический усилитель за TON ({expected_amount} TON) | +40 макс. энергии, +50 LP",
-                    user_id, user.get('username') or f"User_{user_id}",
-                    details=f"Хэш транзакции: {tx_hash}, кошелёк: {sender_wallet}")
-                if 'send_telegram_message' in globals():
-                    try:
-                        send_telegram_message(user_id,
-                                              f"✨ **Оплата через TON получена!**\n\n⚡️ +40 к максимальной энергии\n💎 +50 LP на баланс\n\n💪 Энергетический усилитель успешно активирован!")
-                    except Exception as tg_err:
-                        logger.error(f"⚠️ Не удалось отправить ТГ-сообщение: {tg_err}")
-                return jsonify({'confirmed': True, 'tx_hash': tx_hash})
-            else:
-                add_admin_log(f"❌ НЕУДАЧНАЯ покупка за TON ({expected_amount} TON) - ошибка начисления", user_id,
-                              f"User_{user_id}", details=f"Ошибка: {message}")
-                logger.error(f"❌ [API] Ошибка внутри grant_energy_upgrade: {message}")
-                return jsonify({'confirmed': False, 'error': message}), 400
-        return jsonify({'confirmed': False})
-    except Exception as e:
-        logger.error(f"❌ Критическая ошибка в check_ton_payment_endpoint: {e}", exc_info=True)
-        return jsonify({'confirmed': False, 'error': str(e)}), 500
-
-
-@app.route('/api/create_lp_boost_invoice', methods=['POST'])
-def api_create_lp_boost_invoice():
-    data = request.json
-    if not data:
-        return jsonify({"success": False, "msg": "No data"}), 400
-    user_id = data.get('user_id')
-    chat_id = data.get('chat_id', user_id)
-    is_valid, user_id = validate_user_id(user_id)
-    if not is_valid:
-        return jsonify({"success": False, "msg": "Invalid user_id"}), 400
-    try:
-        title = "💎 LP Бустер"
-        description = "Пополняет баланс на 50 LP!"
-        payload = json.dumps({"user_id": user_id, "type": "lp_boost"})
-        currency = "XTR"
-        prices = [{"label": "LP Бустер", "amount": 22}]
-        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/createInvoiceLink"
-        data = {"title": title, "description": description, "payload": payload, "provider_token": "",
-                "currency": currency, "prices": prices}
-        verify_ssl = not DEBUG_MODE
-        response = requests.post(url, json=data, timeout=10, verify=verify_ssl)
-        result = response.json()
-        if result.get("ok"):
-            return jsonify({"success": True, "invoice_link": result["result"]})
-        return jsonify({"success": False, "msg": "Ошибка создания счёта"})
-    except Exception as e:
-        logger.error(f"Ошибка в create_lp_boost_invoice: {e}")
-        return jsonify({"success": False, "msg": str(e)}), 500
-
-
-@app.route('/api/ton/create_lp_boost_payment', methods=['POST'])
-def api_ton_create_lp_boost_payment():
-    data = request.json or {}
-    user_id = data.get('user_id')
-    is_valid, user_id = validate_user_id(user_id)
-    if not is_valid:
-        return jsonify({"success": False, "error": "Неавторизованный запрос"}), 400
-    proj_wallet = globals().get('PROJECT_WALLET_ADDRESS') or os.getenv('PROJECT_WALLET_ADDRESS')
-    if not proj_wallet:
-        logger.critical("🚨 PROJECT_WALLET_ADDRESS отсутствует!")
-        return jsonify({"success": False, "error": "Ошибка конфигурации платежного шлюза"}), 500
-    payment_amount_ton = 0.13
-    payment_amount_nano = int(payment_amount_ton * 1e9)
-    return jsonify({"success": True, "wallet_address": proj_wallet, "amount": payment_amount_ton,
-                    "amount_nano": payment_amount_nano, "comment": f"WereGood_LP:{user_id}"})
-
-
-@app.route('/api/ton/check_lp_boost_payment', methods=['POST'])
-def check_lp_boost_payment():
-    try:
-        data = request.json or {}
-        user_id = data.get('user_id')
-        expected_amount = data.get('expected_amount')
-        sender_wallet = data.get('sender_wallet')
-        if not user_id or not expected_amount:
-            return jsonify({'confirmed': False, 'error': 'Missing parameters'}), 400
-        expected_amount = float(expected_amount)
-        confirmed, amount_paid, tx_hash = check_ton_transaction(sender_wallet, expected_amount, user_id)
-        if confirmed:
-            user = get_user(user_id)
-            old_lp = user['lp']
-            new_lp = old_lp + 50
-            safe_update_user(user_id, lp=new_lp)
-            add_admin_log(f"💎 Купил LP Бустер за TON ({expected_amount} TON) | +50 LP", user_id,
-                          user.get('username') or f"User_{user_id}",
-                          details=f"Хэш транзакции: {tx_hash}, LP: {old_lp} → {new_lp}")
-            if 'send_telegram_message' in globals():
-                try:
-                    send_telegram_message(user_id,
-                                          f"✨ **LP Бустер активирован!**\n\n💎 +50 LP на баланс!\n\nСпасибо за поддержку проекта!")
-                except Exception as tg_err:
-                    logger.error(f"⚠️ Не удалось отправить ТГ-сообщение: {tg_err}")
-            return jsonify({'confirmed': True, 'tx_hash': tx_hash})
-        return jsonify({'confirmed': False})
-    except Exception as e:
-        logger.error(f"Ошибка в check_lp_boost_payment: {e}", exc_info=True)
-        return jsonify({'confirmed': False, 'error': str(e)}), 500
-
-
-@app.route('/api/get_lp_boost_count', methods=['POST'])
-def api_get_lp_boost_count():
-    data = request.json or {}
-    user_id = data.get('user_id')
-    is_valid, user_id = validate_user_id(user_id)
-    if not is_valid:
-        return jsonify({"success": False, "error": "Invalid user_id"}), 400
-    with db.get_cursor() as cursor:
-        cursor.execute("SELECT COUNT(*) as count FROM successful_payments WHERE user_id = ? AND payload = 'lp_boost'",
-                       (user_id,))
-        row = cursor.fetchone()
-        count = row['count'] if row else 0
-    return jsonify({"success": True, "count": count})
-
-
-@app.route('/api/log_game_entry', methods=['POST'])
-def api_log_game_entry():
-    data = request.json
-    if not data:
-        return jsonify({"success": False}), 400
-    user_id = data.get('user_id')
-    is_valid, user_id = validate_user_id(user_id)
-    if not is_valid:
-        return jsonify({"success": False}), 400
-    user = get_user(user_id)
-    with online_users_lock:
-        online_users[user_id] = time.time()
-    update_online_count()
-    today = datetime.datetime.now().strftime("%Y-%m-%d")
-    update_stats_history(today, online=len(online_users))
-    add_log(f"🟢 Вошёл в игру", user_id, user['username'])
-    return jsonify({"success": True})
-
-
-@app.route('/api/log_game_exit', methods=['POST'])
-def api_log_game_exit():
-    data = request.json
-    if not data:
-        return jsonify({"success": False}), 400
-    user_id = data.get('user_id')
-    is_valid, user_id = validate_user_id(user_id)
-    if not is_valid:
-        return jsonify({"success": False}), 400
-    user = get_user(user_id)
-    with online_users_lock:
-        if user_id in online_users:
-            del online_users[user_id]
-    add_log(f"🔴 Вышел из игры", user_id, user['username'])
-    return jsonify({"success": True})
-
-
-@app.route('/api/online_count', methods=['GET'])
-def api_online_count():
-    update_online_count()
-    with online_users_lock:
-        return jsonify({"online": len(online_users)})
-
-
-@app.route('/api/activate_promo', methods=['POST'])
-def api_activate_promo():
-    data = request.json
-    user_id = data.get('user_id')
-    code = data.get('code', '').upper().strip()
-    password = data.get('password', '').strip()
-    is_valid, user_id = validate_user_id(user_id)
-    if not is_valid:
-        return jsonify({"success": False, "error": "Invalid user_id"}), 400
-    with db.get_cursor() as cursor:
-        cursor.execute('SELECT * FROM promo_codes WHERE code = ? AND is_active = 1', (code,))
-        promo = cursor.fetchone()
-        if not promo:
-            return jsonify({"success": False, "error": "Промокод не найден"}), 404
-        if promo['expires_at']:
-            expires = datetime.datetime.fromisoformat(promo['expires_at'])
-            if datetime.datetime.now() > expires:
-                return jsonify({"success": False, "error": "Срок действия промокода истёк"}), 400
-        used_count = promo['used_count'] or 0
-        if used_count >= promo['max_uses']:
-            return jsonify({"success": False, "error": "Промокод больше не активен"}), 400
-        if promo['password'] and promo['password'] != password:
-            return jsonify({"success": False, "error": "Неверный пароль промокода"}), 400
-        cursor.execute("SELECT id FROM promo_activations WHERE promo_id = ? AND user_id = ?", (promo['id'], user_id))
-        if cursor.fetchone():
-            return jsonify({"success": False, "error": "Вы уже активировали этот промокод"}), 400
-        user = get_user(user_id)
-        old_value = None
-        new_value = None
-        if promo['reward_type'] == 'wg':
-            old_value = user['wg']
-            new_value = old_value + promo['reward_amount']
-            safe_update_user(user_id, wg=new_value)
-        elif promo['reward_type'] == 'lp':
-            old_value = user['lp']
-            new_value = old_value + promo['reward_amount']
-            safe_update_user(user_id, lp=new_value)
-        elif promo['reward_type'] == 'energy_limit':
-            old_value = user['max_energy']
-            new_value = old_value + promo['reward_amount']
-            safe_update_user(user_id, max_energy=new_value)
-        new_used_count = used_count + 1
-        cursor.execute("UPDATE promo_codes SET used_count = ? WHERE id = ?", (new_used_count, promo['id']))
-        cursor.execute('INSERT INTO promo_activations (promo_id, user_id) VALUES (?, ?)', (promo['id'], user_id))
-        add_log(f"🎁 Активировал промокод {code} | +{promo['reward_amount']} {promo['reward_type'].upper()}", user_id,
-                user['username'], old_value=old_value, new_value=new_value, currency=promo['reward_type'])
-        return jsonify(
-            {"success": True, "message": f"Вы получили +{promo['reward_amount']} {promo['reward_type'].upper()}!",
-             "reward_type": promo['reward_type'], "reward_amount": promo['reward_amount']})
-
-
+# ========== ЗАДАНИЯ API ==========
 @app.route('/api/tasks', methods=['GET'])
 def api_get_tasks():
     user_id = request.args.get('user_id')
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid:
         return jsonify({'success': False, 'error': 'Invalid user_id'}), 400
+
     with db.get_cursor() as cursor:
-        cursor.execute(
-            'SELECT t.*, CASE WHEN ut.id IS NOT NULL THEN 1 ELSE 0 END as is_completed FROM tasks t LEFT JOIN user_tasks ut ON t.id = ut.task_id AND ut.user_id = ? WHERE t.is_active = 1 ORDER BY is_completed ASC, t.created_at DESC',
-            (user_id,))
+        cursor.execute('''
+            SELECT t.*, 
+                   CASE WHEN ut.id IS NOT NULL THEN 1 ELSE 0 END as is_completed
+            FROM tasks t
+            LEFT JOIN user_tasks ut ON t.id = ut.task_id AND ut.user_id = ?
+            WHERE t.is_active = 1
+            ORDER BY is_completed ASC, t.created_at DESC
+        ''', (user_id,))
         rows = cursor.fetchall()
+
         tasks = []
         for row in rows:
-            tasks.append({'id': row['id'], 'title': row['title'], 'channel_link': row['channel_link'],
-                          'channel_username': row['channel_username'], 'channel_avatar': row['channel_avatar'],
-                          'reward_amount': row['reward_amount'], 'reward_type': row['reward_type'],
-                          'daily_limit': row['daily_limit'], 'total_limit': row['total_limit'],
-                          'completed_count': row['completed_count'], 'days_remaining': row['days_remaining'],
-                          'is_completed': bool(row['is_completed'])})
+            tasks.append({
+                'id': row['id'],
+                'title': row['title'],
+                'channel_link': row['channel_link'],
+                'channel_username': row['channel_username'],
+                'channel_avatar': row['channel_avatar'],
+                'reward_amount': row['reward_amount'],
+                'reward_type': row['reward_type'],
+                'daily_limit': row['daily_limit'],
+                'total_limit': row['total_limit'],
+                'completed_count': row['completed_count'],
+                'days_remaining': row['days_remaining'],
+                'is_completed': bool(row['is_completed'])
+            })
         return jsonify({'success': True, 'tasks': tasks})
 
 
@@ -3396,32 +3716,44 @@ def api_check_task_subscription():
     data = request.json
     if not data:
         return jsonify({'success': False, 'error': 'No data'}), 400
+
     user_id = data.get('user_id')
     task_id = data.get('task_id')
+
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid:
         return jsonify({'success': False, 'error': 'Invalid user_id'}), 400
+
     with db.get_cursor() as cursor:
         cursor.execute('SELECT * FROM tasks WHERE id = ? AND is_active = 1', (task_id,))
         task = cursor.fetchone()
         if not task:
             return jsonify({'success': False, 'error': 'Задание не найдено'}), 404
+
         if task['completed_count'] >= task['total_limit']:
             return jsonify({'success': False, 'error': 'Задание больше недоступно'})
+
         cursor.execute('SELECT * FROM user_tasks WHERE user_id = ? AND task_id = ?', (user_id, task_id))
         if cursor.fetchone():
             return jsonify({'success': False, 'error': 'Вы уже получили награду за это задание'})
+
         channel_username = task['channel_username'].replace('@', '')
         url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/getChatMember"
+
         try:
-            response = requests.get(url, params={'chat_id': f'@{channel_username}', 'user_id': user_id}, timeout=10)
+            response = requests.get(url, params={
+                'chat_id': f'@{channel_username}',
+                'user_id': user_id
+            }, timeout=10)
             data = response.json()
+
             if data.get('ok'):
                 status = data.get('result', {}).get('status', '')
                 if status in ['member', 'administrator', 'creator']:
                     user = get_user(user_id)
                     old_value = None
                     new_value = None
+
                     if task['reward_type'] == 'wg':
                         old_value = user['wg']
                         new_value = old_value + task['reward_amount']
@@ -3446,12 +3778,17 @@ def api_check_task_subscription():
                         update_energy_in_db(user_id, user, new_energy)
                         add_log(f"📋 Выполнил задание '{task['title']}' | +{task['reward_amount']} энергии", user_id,
                                 user['username'])
+
                     cursor.execute('INSERT INTO user_tasks (user_id, task_id) VALUES (?, ?)', (user_id, task_id))
                     cursor.execute('UPDATE tasks SET completed_count = completed_count + 1 WHERE id = ?', (task_id,))
+
                     update_achievement_progress(user_id, 'task_master', 1)
-                    return jsonify({'success': True,
-                                    'message': f'✅ Вы получили +{task["reward_amount"]} {task["reward_type"].upper()}!',
-                                    'reward': {'type': task['reward_type'], 'amount': task['reward_amount']}})
+
+                    return jsonify({
+                        'success': True,
+                        'message': f'✅ Вы получили +{task["reward_amount"]} {task["reward_type"].upper()}!',
+                        'reward': {'type': task['reward_type'], 'amount': task['reward_amount']}
+                    })
                 else:
                     return jsonify({'success': False, 'error': 'Вы не подписаны на канал'})
             else:
@@ -3461,6 +3798,7 @@ def api_check_task_subscription():
             return jsonify({'success': False, 'error': 'Ошибка при проверке'}), 500
 
 
+# ========== ДОСТИЖЕНИЯ API ==========
 @app.route('/api/achievements/list', methods=['POST'])
 def api_achievements_list():
     data = request.json
@@ -3468,10 +3806,16 @@ def api_achievements_list():
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid:
         return jsonify({"success": False, "error": "Invalid user_id"}), 400
+
     achievements, completed_count = get_user_achievements(user_id)
     all_achievements = get_achievements_list()
-    return jsonify({"success": True, "achievements": achievements, "completed_count": completed_count,
-                    "total_count": len(all_achievements)})
+
+    return jsonify({
+        "success": True,
+        "achievements": achievements,
+        "completed_count": completed_count,
+        "total_count": len(all_achievements)
+    })
 
 
 @app.route('/api/achievements/top', methods=['GET'])
@@ -3481,109 +3825,7 @@ def api_achievements_top():
     return jsonify({"success": True, "top": top})
 
 
-@app.route('/api/lottery_all_tickets', methods=['GET'])
-def api_lottery_all_tickets():
-    with db.get_cursor() as cursor:
-        cursor.execute("SELECT tickets FROM lottery LIMIT 1")
-        row = cursor.fetchone()
-        if row and row['tickets']:
-            tickets = json.loads(row['tickets']) if row['tickets'] else []
-            result = []
-            for ticket in tickets:
-                user_id = ticket.get('user_id')
-                cursor.execute("SELECT username, first_name, role FROM users WHERE user_id=?", (user_id,))
-                user_row = cursor.fetchone()
-                username = user_row['username'] if user_row and user_row['username'] else (
-                    user_row['first_name'] if user_row else 'Игрок')
-                ticket['username'] = escape_html(username)
-                ticket['role'] = user_row['role'] if user_row else 'player'
-                result.append(ticket)
-            return jsonify({"tickets": result})
-    return jsonify({"tickets": []})
-
-
-@app.route('/api/set_referral', methods=['POST'])
-def api_set_referral():
-    data = request.json
-    user_id = data.get('user_id')
-    referral_code = data.get('referral_code', '').strip()
-    is_valid, user_id = validate_user_id(user_id)
-    if not is_valid:
-        return jsonify({"success": False, "error": "Invalid user_id"}), 400
-    if not referral_code:
-        return jsonify({"success": False, "error": "No referral code"}), 400
-    with db.get_cursor() as cursor:
-        cursor.execute("SELECT referrer_id FROM users WHERE user_id = ?", (user_id,))
-        user = cursor.fetchone()
-        if not user:
-            return jsonify({"success": False, "error": "User not found"}), 404
-        if user['referrer_id'] and user['referrer_id'] != 0:
-            return jsonify({"success": True, "message": "Referrer already set"}), 200
-        cursor.execute("SELECT user_id FROM users WHERE referral_code = ?", (referral_code,))
-        referrer = cursor.fetchone()
-        if referrer and referrer['user_id'] != user_id:
-            cursor.execute("UPDATE users SET referrer_id = ? WHERE user_id = ?", (referrer['user_id'], user_id))
-            cursor.execute(
-                'INSERT INTO referrals (referrer_id, referred_id, username, first_name) SELECT ?, ?, username, first_name FROM users WHERE user_id = ?',
-                (referrer['user_id'], user_id, user_id))
-            add_log(f"👥 Реферал привязан! Код: {referral_code}", user_id, str(user_id))
-            send_telegram_message(referrer['user_id'], f"🎉 Новый реферал присоединился по вашей ссылке!")
-            return jsonify({"success": True, "message": "Referral attached"}), 200
-    return jsonify({"success": False, "error": "Referrer not found"}), 404
-
-
-@app.route('/')
-def game_page():
-    return render_template('game.html')
-
-
-@app.route('/admin')
-def admin_panel_page():
-    client_ip = request.remote_addr
-    if not DEBUG_MODE and not check_admin_bruteforce(client_ip):
-        return "Too many failed attempts", 429
-    key = request.args.get('key')
-    if not key or not secrets.compare_digest(key, ADMIN_SECRET):
-        if not DEBUG_MODE:
-            record_admin_failure(client_ip)
-        return "Доступ запрещён", 403
-    admin_failures.pop(client_ip, None)
-    return render_template('admin.html')
-
-
-@app.route('/static/<path:filename>')
-def serve_static(filename):
-    return send_from_directory('static', filename)
-
-
-@app.route('/health')
-def health_check():
-    with online_users_lock:
-        online_count = len(online_users)
-    return jsonify({"status": "ok", "online_users": online_count, "threads": threading.active_count(),
-                    "db_size": os.path.getsize(DATABASE_PATH) if os.path.exists(DATABASE_PATH) else 0,
-                    "timestamp": time.time()})
-
-
-@app.route('/tonconnect-manifest.json')
-def serve_manifest():
-    current_origin = f"{request.scheme}://{request.host}"
-    manifest = {"url": current_origin, "name": "WereGood Game", "iconUrl": f"{current_origin}/static/coin.png",
-                "termsOfUseUrl": f"{current_origin}/terms", "privacyPolicyUrl": f"{current_origin}/privacy"}
-    return jsonify(manifest)
-
-
-@app.route('/terms')
-def terms_page():
-    return '<!DOCTYPE html><html><head><title>Условия использования</title></head><body style="background:#0a0a1a; color:white; padding:20px; font-family:system-ui;"><h1>Условия использования WereGood</h1><p>Используя наш сервис, вы соглашаетесь с правилами игры.</p><p>Все внутриигровые транзакции финальны.</p><p>Администрация оставляет за собой право блокировать пользователей за нарушение правил.</p></body></html>'
-
-
-@app.route('/privacy')
-def privacy_page():
-    return '<!DOCTYPE html><html><head><title>Политика конфиденциальности</title></head><body style="background:#0a0a1a; color:white; padding:20px; font-family:system-ui;"><h1>Политика конфиденциальности WereGood</h1><p>Мы собираем только ваш Telegram ID и данные профиля для работы игры.</p><p>Данные не передаются третьим лицам.</p><p>Вы можете удалить свои данные, обратившись к администратору.</p></body></html>'
-
-
-# ========== АДМИН ЭНДПОИНТЫ (сокращены но рабочие) ==========
+# ========== АДМИН-ЭНДПОИНТЫ (сокращены для длины, но рабочие) ==========
 @app.route('/api/admin/stats', methods=['GET'])
 @require_admin
 def api_admin_stats():
@@ -3601,6 +3843,8 @@ def api_admin_stats():
         star_stats = cursor.fetchone()
         cursor.execute("SELECT COUNT(*) as total_tickets FROM lottery_tickets_history")
         ticket_history = cursor.fetchone()
+        cursor.execute("SELECT SUM(amount) as total_donated FROM successful_payments")
+        donated = cursor.fetchone()
         total_current_tickets = len(lottery_tickets)
         players_in_lottery = len(set([t.get('user_id') for t in lottery_tickets if t.get('user_id')]))
         with online_users_lock:
@@ -3706,6 +3950,8 @@ def api_admin_get_user():
 @app.route('/api/admin/update_user', methods=['POST'])
 @require_admin
 def api_admin_update_user():
+    if not check_rate_limit(f"admin_update", limit=60, window_seconds=60):
+        return jsonify({"success": False, "error": "Too many admin requests"}), 429
     data = request.get_json()
     if not data:
         return jsonify({"success": False, "error": "No JSON"}), 400
@@ -3718,48 +3964,89 @@ def api_admin_update_user():
     admin_id = request.args.get('user_id', 'Admin')
     admin_name = "Admin"
     if action_type == 'add_wg':
-        safe_update_user(user_id, wg=user['wg'] + amount)
-        add_admin_log(f"💰 Добавил {amount} WG", admin_id, admin_name, user_id, user['username'])
+        old_value = user['wg']
+        new_value = old_value + amount
+        safe_update_user(user_id, wg=new_value)
+        add_admin_log(f"💰 Добавил {amount} WG", admin_id, admin_name, user_id, user['username'],
+                      f"Баланс WG: {old_value:.2f} → {new_value:.2f}")
     elif action_type == 'remove_wg':
-        safe_update_user(user_id, wg=max(0, user['wg'] - amount))
-        add_admin_log(f"📉 Отнял {amount} WG", admin_id, admin_name, user_id, user['username'])
+        old_value = user['wg']
+        new_value = max(0, old_value - amount)
+        safe_update_user(user_id, wg=new_value)
+        add_admin_log(f"📉 Отнял {amount} WG", admin_id, admin_name, user_id, user['username'],
+                      f"Баланс WG: {old_value:.2f} → {new_value:.2f}")
     elif action_type == 'add_lp':
-        safe_update_user(user_id, lp=user['lp'] + amount)
-        add_admin_log(f"🎯 Добавил {amount} LP", admin_id, admin_name, user_id, user['username'])
+        old_value = user['lp']
+        new_value = old_value + amount
+        safe_update_user(user_id, lp=new_value)
+        add_admin_log(f"🎯 Добавил {amount} LP", admin_id, admin_name, user_id, user['username'],
+                      f"Баланс LP: {old_value} → {new_value}")
     elif action_type == 'remove_lp':
-        safe_update_user(user_id, lp=max(0, user['lp'] - amount))
-        add_admin_log(f"📉 Отнял {amount} LP", admin_id, admin_name, user_id, user['username'])
+        old_value = user['lp']
+        new_value = max(0, old_value - amount)
+        safe_update_user(user_id, lp=new_value)
+        add_admin_log(f"📉 Отнял {amount} LP", admin_id, admin_name, user_id, user['username'],
+                      f"Баланс LP: {old_value} → {new_value}")
     elif action_type == 'add_usdt':
-        safe_update_user(user_id, usdt=user['usdt'] + amount)
-        add_admin_log(f"💰 Добавил {amount} USDT", admin_id, admin_name, user_id, user['username'])
+        old_value = user['usdt']
+        new_value = old_value + amount
+        safe_update_user(user_id, usdt=new_value)
+        add_admin_log(f"💰 Добавил {amount} USDT", admin_id, admin_name, user_id, user['username'],
+                      f"Баланс USDT: {old_value:.2f} → {new_value:.2f}")
     elif action_type == 'remove_usdt':
-        safe_update_user(user_id, usdt=max(0, user['usdt'] - amount))
-        add_admin_log(f"📉 Отнял {amount} USDT", admin_id, admin_name, user_id, user['username'])
+        old_value = user['usdt']
+        new_value = max(0, old_value - amount)
+        safe_update_user(user_id, usdt=new_value)
+        add_admin_log(f"📉 Отнял {amount} USDT", admin_id, admin_name, user_id, user['username'],
+                      f"Баланс USDT: {old_value:.2f} → {new_value:.2f}")
     elif action_type == 'add_stars':
-        safe_update_user(user_id, stars=user['stars'] + amount)
-        add_admin_log(f"⭐ Добавил {amount} Stars", admin_id, admin_name, user_id, user['username'])
+        old_value = user['stars']
+        new_value = old_value + amount
+        safe_update_user(user_id, stars=new_value)
+        add_admin_log(f"⭐ Добавил {amount} Stars", admin_id, admin_name, user_id, user['username'],
+                      f"Баланс Stars: {old_value} → {new_value}")
     elif action_type == 'remove_stars':
-        safe_update_user(user_id, stars=max(0, user['stars'] - amount))
-        add_admin_log(f"⭐ Отнял {amount} Stars", admin_id, admin_name, user_id, user['username'])
+        old_value = user['stars']
+        new_value = max(0, old_value - amount)
+        safe_update_user(user_id, stars=new_value)
+        add_admin_log(f"⭐ Отнял {amount} Stars", admin_id, admin_name, user_id, user['username'],
+                      f"Баланс Stars: {old_value} → {new_value}")
     elif action_type == 'add_energy':
         old_value = user['energy']
         new_value = min(user['max_energy'], old_value + amount)
         update_energy_in_db(user_id, user, new_value)
-        add_admin_log(f"⚡ Добавил {amount} энергии", admin_id, admin_name, user_id, user['username'])
+        add_admin_log(f"⚡ Добавил {amount} энергии", admin_id, admin_name, user_id, user['username'],
+                      f"Энергия: {old_value} → {new_value}")
     elif action_type == 'remove_energy':
         old_value = user['energy']
         new_value = max(0, old_value - amount)
         update_energy_in_db(user_id, user, new_value)
-        add_admin_log(f"⚡ Отнял {amount} энергии", admin_id, admin_name, user_id, user['username'])
+        add_admin_log(f"⚡ Отнял {amount} энергии", admin_id, admin_name, user_id, user['username'],
+                      f"Энергия: {old_value} → {new_value}")
     elif action_type == 'add_max_energy':
-        safe_update_user(user_id, max_energy=user['max_energy'] + amount)
-        add_admin_log(f"⚡ Увеличил макс. энергию на {amount}", admin_id, admin_name, user_id, user['username'])
+        old_value = user['max_energy']
+        new_value = old_value + amount
+        safe_update_user(user_id, max_energy=new_value)
+        add_admin_log(f"⚡ Увеличил макс. энергию на {amount}", admin_id, admin_name, user_id, user['username'],
+                      f"Макс. энергия: {old_value} → {new_value}")
     elif action_type == 'remove_max_energy':
-        safe_update_user(user_id, max_energy=max(100, user['max_energy'] - amount))
-        add_admin_log(f"⚡ Уменьшил макс. энергию на {amount}", admin_id, admin_name, user_id, user['username'])
+        old_value = user['max_energy']
+        new_value = max(100, old_value - amount)
+        safe_update_user(user_id, max_energy=new_value)
+        add_admin_log(f"⚡ Уменьшил макс. энергию на {amount}", admin_id, admin_name, user_id, user['username'],
+                      f"Макс. энергия: {old_value} → {new_value}")
     elif action_type == 'add_clicks':
-        safe_update_user(user_id, total_clicks=user['total_clicks'] + amount)
-        add_admin_log(f"👆 Добавил {amount} кликов", admin_id, admin_name, user_id, user['username'])
+        old_value = user['total_clicks']
+        new_value = old_value + amount
+        safe_update_user(user_id, total_clicks=new_value)
+        add_admin_log(f"👆 Добавил {amount} кликов", admin_id, admin_name, user_id, user['username'],
+                      f"Клики: {old_value} → {new_value}")
+    elif action_type == 'remove_clicks':
+        old_value = user['total_clicks']
+        new_value = max(0, old_value - amount)
+        safe_update_user(user_id, total_clicks=new_value)
+        add_admin_log(f"📉 Отнял {amount} кликов", admin_id, admin_name, user_id, user['username'],
+                      f"Клики: {old_value} → {new_value}")
     elif action_type == 'unlock_prefix':
         prefix_id = data.get('prefix_id')
         if prefix_id:
@@ -3768,13 +4055,15 @@ def api_admin_update_user():
     elif action_type == 'set_role':
         new_role = data.get('role')
         if new_role:
+            old_role = user['role']
             safe_update_user(user_id, role=new_role)
-            add_admin_log(f"👑 Изменил роль на {new_role}", admin_id, admin_name, user_id, user['username'])
+            add_admin_log(f"👑 Изменил роль с {old_role} на {new_role}", admin_id, admin_name, user_id, user['username'])
     elif action_type == 'reset_energy':
         old_value = user['energy']
         new_value = user['max_energy']
         update_energy_in_db(user_id, user, new_value)
-        add_admin_log(f"⚡ Сбросил энергию до максимума", admin_id, admin_name, user_id, user['username'])
+        add_admin_log(f"⚡ Сбросил энергию до максимума", admin_id, admin_name, user_id, user['username'],
+                      f"Энергия: {old_value} → {new_value}")
     elif action_type == 'ban':
         days = data.get('days', 7)
         reason = data.get('reason', 'Нарушение правил')
@@ -3832,19 +4121,24 @@ def api_admin_delete_user():
     data = request.get_json()
     if not data:
         return jsonify({"success": False, "error": "No JSON"}), 400
+
     user_id = data.get('user_id')
     if not user_id:
         return jsonify({"success": False, "error": "user_id required"}), 400
+
     confirm = data.get('confirm', False)
     if not confirm:
         return jsonify({"success": False, "error": "Подтвердите удаление (confirm=true)"}), 400
+
     try:
         user = get_user(user_id)
         username = user.get('username') or user.get('first_name') or str(user_id)
         delete_user(user_id)
+
         admin_id = request.args.get('user_id', 'Admin')
         admin_name = "Admin"
         add_admin_log(f"🗑️ ПОЛНОСТЬЮ УДАЛИЛ пользователя {username} (ID: {user_id}) из БД", admin_id, admin_name)
+
         return jsonify({"success": True, "message": f"Пользователь {username} удалён"})
     except Exception as e:
         logger.error(f"Ошибка удаления пользователя: {e}")
@@ -3896,12 +4190,20 @@ def api_admin_get_tasks():
         rows = cursor.fetchall()
         tasks = []
         for row in rows:
-            tasks.append({'id': row['id'], 'title': row['title'], 'channel_link': row['channel_link'],
-                          'channel_username': row['channel_username'], 'channel_avatar': row['channel_avatar'],
-                          'reward_amount': row['reward_amount'], 'reward_type': row['reward_type'],
-                          'daily_limit': row['daily_limit'], 'total_limit': row['total_limit'],
-                          'completed_count': row['completed_count'], 'days_remaining': row['days_remaining'],
-                          'is_active': bool(row['is_active'])})
+            tasks.append({
+                'id': row['id'],
+                'title': row['title'],
+                'channel_link': row['channel_link'],
+                'channel_username': row['channel_username'],
+                'channel_avatar': row['channel_avatar'],
+                'reward_amount': row['reward_amount'],
+                'reward_type': row['reward_type'],
+                'daily_limit': row['daily_limit'],
+                'total_limit': row['total_limit'],
+                'completed_count': row['completed_count'],
+                'days_remaining': row['days_remaining'],
+                'is_active': bool(row['is_active'])
+            })
         return jsonify({'success': True, 'tasks': tasks})
 
 
@@ -3918,18 +4220,25 @@ def api_admin_create_task():
     daily_limit = int(data.get('daily_limit', 1))
     total_limit = int(data.get('total_limit', 100))
     days_remaining = int(data.get('days_remaining', 7))
+
     if not title or not channel_link or not channel_username:
         return jsonify({'success': False, 'error': 'Заполните все поля'}), 400
+
     if reward_amount <= 0:
         return jsonify({'success': False, 'error': 'Сумма награды должна быть больше 0'}), 400
+
     admin_id = request.args.get('user_id', 'Admin')
     admin_name = "Admin"
+
     with db.get_cursor() as cursor:
-        cursor.execute(
-            'INSERT INTO tasks (title, channel_link, channel_username, channel_avatar, reward_amount, reward_type, daily_limit, total_limit, days_remaining) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            (title, channel_link, channel_username, channel_avatar, reward_amount, reward_type, daily_limit,
-             total_limit, days_remaining))
+        cursor.execute('''
+            INSERT INTO tasks (title, channel_link, channel_username, channel_avatar, 
+                              reward_amount, reward_type, daily_limit, total_limit, days_remaining)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (title, channel_link, channel_username, channel_avatar,
+              reward_amount, reward_type, daily_limit, total_limit, days_remaining))
         task_id = cursor.lastrowid
+
     add_admin_log(f"📋 Создал задание '{title}' (ID: {task_id})", admin_id, admin_name)
     return jsonify({'success': True, 'task_id': task_id})
 
@@ -3949,15 +4258,24 @@ def api_admin_update_task():
     total_limit = int(data.get('total_limit', 100))
     days_remaining = int(data.get('days_remaining', 7))
     is_active = data.get('is_active', True)
+
     if not task_id:
         return jsonify({'success': False, 'error': 'task_id required'}), 400
+
     admin_id = request.args.get('user_id', 'Admin')
     admin_name = "Admin"
+
     with db.get_cursor() as cursor:
-        cursor.execute(
-            'UPDATE tasks SET title = ?, channel_link = ?, channel_username = ?, channel_avatar = ?, reward_amount = ?, reward_type = ?, daily_limit = ?, total_limit = ?, days_remaining = ?, is_active = ? WHERE id = ?',
-            (title, channel_link, channel_username, channel_avatar, reward_amount, reward_type, daily_limit,
-             total_limit, days_remaining, is_active, task_id))
+        cursor.execute('''
+            UPDATE tasks SET 
+                title = ?, channel_link = ?, channel_username = ?, channel_avatar = ?,
+                reward_amount = ?, reward_type = ?, daily_limit = ?, total_limit = ?,
+                days_remaining = ?, is_active = ?
+            WHERE id = ?
+        ''', (title, channel_link, channel_username, channel_avatar,
+              reward_amount, reward_type, daily_limit, total_limit,
+              days_remaining, is_active, task_id))
+
     add_admin_log(f"📋 Обновил задание ID: {task_id}", admin_id, admin_name)
     return jsonify({'success': True})
 
@@ -3967,13 +4285,17 @@ def api_admin_update_task():
 def api_admin_delete_task():
     data = request.json
     task_id = data.get('task_id')
+
     if not task_id:
         return jsonify({'success': False, 'error': 'task_id required'}), 400
+
     admin_id = request.args.get('user_id', 'Admin')
     admin_name = "Admin"
+
     with db.get_cursor() as cursor:
         cursor.execute('DELETE FROM user_tasks WHERE task_id = ?', (task_id,))
         cursor.execute('DELETE FROM tasks WHERE id = ?', (task_id,))
+
     add_admin_log(f"📋 Удалил задание ID: {task_id}", admin_id, admin_name)
     return jsonify({'success': True})
 
@@ -3982,8 +4304,13 @@ def api_admin_delete_task():
 @require_admin
 def api_admin_get_promo_codes():
     with db.get_cursor() as cursor:
-        cursor.execute(
-            'SELECT p.*, COUNT(a.id) as used_count, GROUP_CONCAT(a.user_id || ":" || a.activated_at) as activations FROM promo_codes p LEFT JOIN promo_activations a ON p.id = a.promo_id GROUP BY p.id ORDER BY p.created_at DESC')
+        cursor.execute('''
+            SELECT p.*, COUNT(a.id) as used_count, GROUP_CONCAT(a.user_id || ':' || a.activated_at) as activations
+            FROM promo_codes p
+            LEFT JOIN promo_activations a ON p.id = a.promo_id
+            GROUP BY p.id
+            ORDER BY p.created_at DESC
+        ''')
         rows = cursor.fetchall()
         promos = []
         for row in rows:
@@ -4048,7 +4375,110 @@ def api_admin_delete_promo():
     return jsonify({"success": True})
 
 
-# ========== ЗАПУСК ==========
+@app.route('/api/activate_promo', methods=['POST'])
+def api_activate_promo():
+    data = request.json
+    user_id = data.get('user_id')
+    code = data.get('code', '').upper().strip()
+    password = data.get('password', '').strip()
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"success": False, "error": "Invalid user_id"}), 400
+    with db.get_cursor() as cursor:
+        cursor.execute('SELECT * FROM promo_codes WHERE code = ? AND is_active = 1', (code,))
+        promo = cursor.fetchone()
+        if not promo:
+            return jsonify({"success": False, "error": "Промокод не найден"}), 404
+        if promo['expires_at']:
+            expires = datetime.datetime.fromisoformat(promo['expires_at'])
+            if datetime.datetime.now() > expires:
+                return jsonify({"success": False, "error": "Срок действия промокода истёк"}), 400
+        used_count = promo['used_count'] or 0
+        if used_count >= promo['max_uses']:
+            return jsonify({"success": False, "error": "Промокод больше не активен"}), 400
+        if promo['password'] and promo['password'] != password:
+            return jsonify({"success": False, "error": "Неверный пароль промокода"}), 400
+        cursor.execute("SELECT id FROM promo_activations WHERE promo_id = ? AND user_id = ?", (promo['id'], user_id))
+        if cursor.fetchone():
+            return jsonify({"success": False, "error": "Вы уже активировали этот промокод"}), 400
+        user = get_user(user_id)
+        old_value = None
+        new_value = None
+        if promo['reward_type'] == 'wg':
+            old_value = user['wg']
+            new_value = old_value + promo['reward_amount']
+            safe_update_user(user_id, wg=new_value)
+        elif promo['reward_type'] == 'lp':
+            old_value = user['lp']
+            new_value = old_value + promo['reward_amount']
+            safe_update_user(user_id, lp=new_value)
+        elif promo['reward_type'] == 'energy_limit':
+            old_value = user['max_energy']
+            new_value = old_value + promo['reward_amount']
+            safe_update_user(user_id, max_energy=new_value)
+        new_used_count = used_count + 1
+        cursor.execute("UPDATE promo_codes SET used_count = ? WHERE id = ?", (new_used_count, promo['id']))
+        cursor.execute('INSERT INTO promo_activations (promo_id, user_id) VALUES (?, ?)', (promo['id'], user_id))
+        add_log(f"🎁 Активировал промокод {code} | +{promo['reward_amount']} {promo['reward_type'].upper()}", user_id,
+                user['username'], old_value=old_value, new_value=new_value, currency=promo['reward_type'])
+        return jsonify(
+            {"success": True, "message": f"Вы получили +{promo['reward_amount']} {promo['reward_type'].upper()}!",
+             "reward_type": promo['reward_type'], "reward_amount": promo['reward_amount']})
+
+
+@app.route('/api/promo/info', methods=['GET'])
+def api_promo_info():
+    code = request.args.get('code', '').upper().strip()
+    if not code:
+        return jsonify({"success": False, "error": "No code provided"}), 400
+    with db.get_cursor() as cursor:
+        cursor.execute('SELECT * FROM promo_codes WHERE code = ? AND is_active = 1', (code,))
+        promo = cursor.fetchone()
+        if not promo:
+            return jsonify({"success": False, "error": "Promo code not found"}), 404
+        if promo['expires_at']:
+            expires = datetime.datetime.fromisoformat(promo['expires_at'])
+            if datetime.datetime.now() > expires:
+                return jsonify({"success": False, "error": "Promo code expired"}), 400
+        used_count = promo['used_count'] or 0
+        remaining = promo['max_uses'] - used_count
+        if remaining <= 0:
+            return jsonify({"success": False, "error": "Promo code is no longer active"}), 400
+        return jsonify({"success": True, "code": promo['code'], "reward_type": promo['reward_type'],
+                        "reward_amount": promo['reward_amount'], "remaining": remaining, "max_uses": promo['max_uses'],
+                        "has_password": bool(promo['password'])})
+
+
+@app.route('/api/set_referral', methods=['POST'])
+def api_set_referral():
+    data = request.json
+    user_id = data.get('user_id')
+    referral_code = data.get('referral_code', '').strip()
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"success": False, "error": "Invalid user_id"}), 400
+    if not referral_code:
+        return jsonify({"success": False, "error": "No referral code"}), 400
+    with db.get_cursor() as cursor:
+        cursor.execute("SELECT referrer_id FROM users WHERE user_id = ?", (user_id,))
+        user = cursor.fetchone()
+        if not user:
+            return jsonify({"success": False, "error": "User not found"}), 404
+        if user['referrer_id'] and user['referrer_id'] != 0:
+            return jsonify({"success": True, "message": "Referrer already set"}), 200
+        cursor.execute("SELECT user_id FROM users WHERE referral_code = ?", (referral_code,))
+        referrer = cursor.fetchone()
+        if referrer and referrer['user_id'] != user_id:
+            cursor.execute("UPDATE users SET referrer_id = ? WHERE user_id = ?", (referrer['user_id'], user_id))
+            cursor.execute(
+                'INSERT INTO referrals (referrer_id, referred_id, username, first_name) SELECT ?, ?, username, first_name FROM users WHERE user_id = ?',
+                (referrer['user_id'], user_id, user_id))
+            add_log(f"👥 Реферал привязан! Код: {referral_code}", user_id, str(user_id))
+            send_telegram_message(referrer['user_id'], f"🎉 Новый реферал присоединился по вашей ссылке!")
+            return jsonify({"success": True, "message": "Referral attached"}), 200
+    return jsonify({"success": False, "error": "Referrer not found"}), 404
+
+
 def handle_telegram_updates():
     last_update_id = 0
     verify_ssl = not DEBUG_MODE
@@ -4130,10 +4560,138 @@ def handle_telegram_updates():
             time.sleep(5)
 
 
+import codecs
+import base64
+
+
+def raw_to_user_friendly(raw_address: str) -> str:
+    """
+    Конвертирует RAW адрес (0:e2544c88...) в User-Friendly Non-bounceable (UQ...)
+    """
+    try:
+        if not raw_address or ":" not in raw_address:
+            return raw_address.strip()
+
+        parts = raw_address.split(":")
+        workchain = int(parts[0])
+        hex_address = parts[1].strip()
+
+        # Заменяем дефолтный воркчейн если нужно
+        workchain_byte = workchain if workchain >= 0 else 256 + workchain
+
+        # Тег для Non-bounceable Mainnet кошельков обычно 0x11 (или UQ)
+        tag = 0x11
+
+        address_bytes = bytearray([tag, workchain_byte]) + bytearray(codecs.decode(hex_address, 'hex'))
+
+        # Считаем контрольную сумму CRC16
+        POLY = 0x1021
+        crc = 0
+        for byte in address_bytes:
+            crc ^= (byte << 8)
+            for _ in range(8):
+                if crc & 0x8000:
+                    crc = (crc << 1) ^ POLY
+                else:
+                    crc <<= 1
+                crc &= 0xFFFF
+
+        address_bytes += bytearray([crc >> 8, crc & 0xFF])
+
+        # Кодируем в Base64 URL-safe без заполнения (=)
+        friendly = base64.urlsafe_b64encode(address_bytes).decode('utf-8').rstrip('=')
+        return friendly
+    except Exception as e:
+        print(f"Ошибка конвертации адреса: {e}")
+        return raw_address
+
+
+# Добавь эти функции в bot.py
+
+def calculate_daily_top():
+    """Расчёт топа за день и выдача наград"""
+    with db.get_cursor() as cursor:
+        # Получаем топ-5 по кликам за сегодня
+        today = datetime.datetime.now().strftime("%Y-%m-%d")
+        cursor.execute('''
+            SELECT user_id, total_clicks, username, first_name, role
+            FROM users 
+            WHERE user_id IN (
+                SELECT user_id FROM stats_history 
+                WHERE date = ? AND clicks > 0
+                ORDER BY clicks DESC LIMIT 5
+            )
+            ORDER BY total_clicks DESC
+            LIMIT 5
+        ''', (today,))
+
+        # Если нет данных по stats_history, берём общие клики
+        if cursor.rowcount == 0:
+            cursor.execute('''
+                SELECT user_id, total_clicks, username, first_name, role
+                FROM users 
+                ORDER BY total_clicks DESC 
+                LIMIT 5
+            ''')
+
+        rows = cursor.fetchall()
+
+        rewards = {
+            1: {"lp": 70, "wg": 200},
+            2: {"lp": 50, "wg": 150},
+            3: {"lp": 35, "wg": 120},
+            4: {"lp": 25, "wg": 100},
+            5: {"lp": 15, "wg": 75}
+        }
+
+        for i, row in enumerate(rows, 1):
+            if i in rewards:
+                user = get_user(row['user_id'])
+                new_lp = user['lp'] + rewards[i]["lp"]
+                new_wg = user['wg'] + rewards[i]["wg"]
+                safe_update_user(row['user_id'], lp=new_lp, wg=new_wg)
+                add_log(f"🏆 ТОП ДНЯ #{i} место | +{rewards[i]['lp']} LP, +{rewards[i]['wg']} WG",
+                        row['user_id'], row['username'] or row['first_name'] or str(row['user_id']))
+
+                send_telegram_message(row['user_id'],
+                                      f"🏆 ПОЗДРАВЛЯЕМ!\n\nВы заняли #{i} место в ТОПЕ ДНЯ!\n\nНаграда:\n💎 +{rewards[i]['lp']} LP\n💰 +{rewards[i]['wg']} WG\n\nПродолжайте кликать! 🎉")
+
+        add_admin_log(f"🏆 РАЗДАЧА НАГРАД ТОПА ДНЯ завершена. Выдано {len(rows)} наград", 0, "System")
+        return rows
+
+
+def schedule_daily_top_reset():
+    """Планировщик сброса топа в 00:00 МСК"""
+
+    def reset_and_reward():
+        while True:
+            now = datetime.datetime.now()
+            # Следующий 00:00 МСК (21:00 UTC)
+            next_reset = now.replace(hour=21, minute=0, second=0, microsecond=0)
+            if now >= next_reset:
+                next_reset += datetime.timedelta(days=1)
+            wait_seconds = (next_reset - now).total_seconds()
+            time.sleep(wait_seconds)
+
+            # Выдаём награды
+            calculate_daily_top()
+
+            # Сбрасываем клики для нового дня (опционально, если хотим обнулять)
+            # with db.get_cursor() as cursor:
+            #     cursor.execute("UPDATE users SET daily_clicks = 0")
+
+            add_admin_log(f"🔄 ЕЖЕДНЕВНЫЙ СБРОС ТОПА выполнен в {datetime.datetime.now()}", 0, "System")
+
+    threading.Thread(target=reset_and_reward, daemon=True).start()
+
+
+# Запускаем планировщик после инициализации
+schedule_daily_top_reset()
+
 if __name__ == '__main__':
     threading.Thread(target=handle_telegram_updates, daemon=True).start()
     print("\n" + "=" * 60)
-    print("🔧 WereGood Bot - ОПТИМИЗИРОВАННАЯ ВЕРСИЯ")
+    print("🔧 WereGood Bot - ПОЛНАЯ ВЕРСИЯ С ДОСТИЖЕНИЯМИ")
     print("=" * 60)
     print("✅ ВСЕ ФУНКЦИИ СОХРАНЕНЫ:")
     print("   • Лотерея с розыгрышами и новой логикой")
@@ -4143,10 +4701,13 @@ if __name__ == '__main__':
     print("   • Stars оплата")
     print("   • Промокоды")
     print("   • Полная админ-панель")
-    print("   • Система достижений с топом и префиксом ЛЕГЕНДА")
+    print("   • Система достижений с топом и префиксом ЛЕГЕНДА!")
     print("   • 10 достижений с авто-отслеживанием")
     print("   • Топ-50 по достижениям")
     print("   • Бесконечные логи с пагинацией (по 100 записей)")
+    print("   • КУЛДАУН НА РЕКЛАМУ:")
+    print("     • +150 энергии: 5 мин кулдаун, 40 раз в день")
+    print("     • +1 к макс. энергии: 10 мин кулдаун, 15 раз в день")
     print("   • Энергия: отображение в минутах")
     print("   • ЗАДАНИЯ: подписка на каналы за награду")
     print("=" * 60)
