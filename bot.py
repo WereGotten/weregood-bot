@@ -135,10 +135,11 @@ used_transaction_lock = threading.Lock()
 lottery_lock = threading.Lock()
 purchase_lock = threading.Lock()
 energy_lock = threading.Lock()
+# Добавляем словарь для локеров пользователей
+user_energy_locks = defaultdict(threading.Lock)
 
 click_queue = Queue()
-click_workers = 2
-
+click_workers = 25
 
 def process_click_worker():
     while True:
@@ -154,6 +155,54 @@ for _ in range(click_workers):
     t = threading.Thread(target=process_click_worker, daemon=True)
     t.start()
 
+# ========== БУФЕР ДЛЯ КЛИКОВ (ОПТИМИЗАЦИЯ) ==========
+click_buffer = {}
+click_buffer_lock = threading.Lock()
+BUFFER_FLUSH_INTERVAL = 3
+
+
+def flush_click_buffer():
+    """Периодическая запись накопленных кликов в БД"""
+    while True:
+        time.sleep(BUFFER_FLUSH_INTERVAL)
+        with click_buffer_lock:
+            if not click_buffer:
+                continue
+            to_update = list(click_buffer.items())
+            click_buffer.clear()
+
+        try:
+            with db.get_cursor() as cursor:
+                for user_id, total_clicks in to_update:
+                    cursor.execute(
+                        "UPDATE users SET total_clicks = total_clicks + ? WHERE user_id = ?",
+                        (total_clicks, user_id)
+                    )
+                    invalidate_cache(user_id)
+        except Exception as e:
+            logger.error(f"Flush buffer error: {e}")
+
+
+def async_click_tasks(user_id, user, earning, old_wg, new_wg, today):
+    """Фоновые задачи клика (логи, статистика, достижения)"""
+    try:
+        update_achievement_progress(user_id, 'autoclicker', 1)
+        update_stats_history(today, clicks=1)
+
+        if user["total_clicks"] == 0:
+            add_log(f"🆕👆 ПЕРВЫЙ КЛИК в игре! +{earning:.4f} WG", user_id, user['username'],
+                    old_wg, new_wg, "wg")
+        else:
+            add_log(f"🖱️ Клик по монете +{earning:.4f} WG", user_id, user['username'],
+                    old_wg, new_wg, "wg")
+
+        click_queue.put({"user_id": user_id})
+    except Exception as e:
+        logger.error(f"Async click tasks error: {e}")
+
+
+# Запускаем фоновый поток для сброса буфера
+threading.Thread(target=flush_click_buffer, daemon=True).start()
 
 # ========== АВТОМАТИЧЕСКИЙ БЭКАП ==========
 def backup_database():
@@ -192,7 +241,7 @@ admin_failures = defaultdict(int)
 
 def check_rate_limit(key: str, limit: int = 30, window_seconds: int = 10) -> bool:
     if key.startswith("click_"):
-        limit = 250
+        limit = 1000
     elif key.startswith("ticket_"):
         limit = 10
         window_seconds = 60
@@ -1492,12 +1541,22 @@ def update_energy_in_db(user_id, user_data, new_energy):
 
 
 def spend_energy(user_id, user_data, amount=1):
-    with energy_lock:
+    with user_energy_locks[user_id]:
         current_energy, _ = calculate_energy(user_data)
         if current_energy < amount:
             return False, current_energy
         new_energy = current_energy - amount
-        update_energy_in_db(user_id, user_data, new_energy)
+
+        # Оптимизированное обновление через прямые SQL запросы
+        now = time.time()
+        with db.get_cursor() as cursor:
+            cursor.execute(
+                "UPDATE users SET energy=?, last_energy_update=? WHERE user_id=?",
+                (new_energy, now, user_id)
+            )
+        user_data["energy"] = new_energy
+        user_data["last_energy_update"] = now
+        invalidate_cache(user_id)
         return True, new_energy
 
 
@@ -2785,48 +2844,75 @@ def api_click():
     data = request.json
     if not data:
         return jsonify({"error": "No data"}), 400
+
     user_id = data.get('user_id')
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid:
         return jsonify({"error": "Invalid user_id"}), 400
-    if not check_rate_limit(f"click_{user_id}", limit=30, window_seconds=10):
+
+    # Rate limit: 200 кликов в 5 секунд
+    if not check_rate_limit(f"click_{user_id}", limit=200, window_seconds=5):
         return jsonify({"error": "Слишком много кликов! Подождите."}), 429
+
     banned, ban_info = is_banned(user_id)
     if banned:
-        return jsonify(
-            {"error": f"Вы забанены! Причина: {ban_info['reason']}. До: {ban_info['until_date']}", "banned": True})
+        return jsonify({
+            "error": f"Вы забанены! Причина: {ban_info['reason']}. До: {ban_info['until_date']}",
+            "banned": True
+        })
+
     user = get_user(user_id)
+
+    # Проверка энергии с локером пользователя
     success, new_energy = spend_energy(user_id, user, 1)
     if not success:
-        return jsonify({"error": "Нет энергии", "energy": new_energy, "wg": user["wg"], "lp": user["lp"]})
+        return jsonify({
+            "error": "Нет энергии",
+            "energy": new_energy,
+            "wg": user["wg"],
+            "lp": user["lp"]
+        })
+
     earning = get_total_earning(user["upgrade_counts"])
     old_wg = user["wg"]
     new_wg = old_wg + earning
-    new_clicks = user["total_clicks"] + 1
-    safe_update_user(user_id, wg=new_wg, total_clicks=new_clicks)
+
+    # ⚡ ОПТИМИЗАЦИЯ: буферизация кликов
+    with click_buffer_lock:
+        click_buffer[user_id] = click_buffer.get(user_id, 0) + 1
+
+    # Обновляем WG сразу
+    safe_update_user(user_id, wg=new_wg)
+
     today = datetime.datetime.now().strftime("%Y-%m-%d")
-    update_stats_history(today, clicks=1)
-    update_achievement_progress(user_id, 'autoclicker', 1)
-    if user["total_clicks"] == 0:
-        add_log(f"🆕👆 ПЕРВЫЙ КЛИК в игре! +{earning:.4f} WG", user_id, user['username'], old_value=old_wg,
-                new_value=new_wg, currency="wg")
-    else:
-        add_log(f"🖱️ Клик по монете +{earning:.4f} WG", user_id, user['username'], old_value=old_wg, new_value=new_wg,
-                currency="wg")
+
+    # Асинхронный вызов тяжёлых операций (не блокирует ответ)
+    threading.Thread(
+        target=async_click_tasks,
+        args=(user_id, user, earning, old_wg, new_wg, today)
+    ).start()
+
+    # LP дроп (только если выпал)
+    new_lp_value = user["lp"]
     lp_reward = False
     if random.random() < 0.0025:
-        old_lp = user["lp"]
-        new_lp = old_lp + 0.5
-        safe_update_user(user_id, lp=new_lp)
         lp_reward = True
-        add_log(f"🎲 Редкий дроп! +0.5 LP", user_id, user['username'], old_value=old_lp, new_value=new_lp, currency="lp")
-        new_lp_value = new_lp
-    else:
-        new_lp_value = user["lp"]
-    click_queue.put({"user_id": user_id})
-    return jsonify(
-        {"energy": new_energy, "wg": new_wg, "lp": new_lp_value, "total_clicks": new_clicks, "earned": earning,
-         "lp_reward": lp_reward, "earning_per_click": earning})
+        new_lp_value = user["lp"] + 0.5
+        safe_update_user(user_id, lp=new_lp_value)
+        threading.Thread(
+            target=add_log,
+            args=(f"🎲 Редкий дроп! +0.5 LP", user_id, user['username'], user["lp"], new_lp_value, "lp")
+        ).start()
+
+    return jsonify({
+        "energy": new_energy,
+        "wg": new_wg,
+        "lp": new_lp_value,
+        "total_clicks": user["total_clicks"] + 1,  # приблизительное значение
+        "earned": earning,
+        "lp_reward": lp_reward,
+        "earning_per_click": earning
+    })
 
 
 @app.route('/api/status', methods=['POST'])
