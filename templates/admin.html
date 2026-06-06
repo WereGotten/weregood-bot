@@ -874,11 +874,14 @@
                     </div>
                 </div>
                 <div class="search-box">
-                    <button class="btn" onclick="forceDraw()">🎲 Принудительный розыгрыш</button>
-                    <button class="btn btn-secondary" onclick="resetLottery()">🔄 Сбросить лотерею</button>
-                    <button class="btn btn-secondary" id="setPoolBtn">💰 Изменить фонд</button>
-                    <button class="btn btn-danger" onclick="clearAllWallets()">🗑️ Очистить все кошельки</button>
-                </div>
+    <button class="btn" onclick="forceDraw()">🎲 Принудительный розыгрыш</button>
+    <button class="btn btn-secondary" onclick="resetLottery()">🔄 Сбросить лотерею</button>
+    <button class="btn btn-secondary" id="setPoolBtn">💰 Изменить фонд</button>
+    <button class="btn btn-danger" onclick="clearAllWallets()">🗑️ Очистить все кошельки</button>
+    <button class="btn btn-danger" onclick="resetDailyClicks()" style="background: rgba(244,67,54,0.2); color: #f44336; border: 1px solid #f44336;">
+        🔄 Сбросить ТОП ДНЯ
+    </button>
+</div>
                 <div class="chart-card">
                     <h3>📋 Участники лотереи</h3>
                     <div style="overflow-x: auto;">
@@ -1377,6 +1380,31 @@ function getYAxisLabel() {
             alert('Лотерея сброшена');
             loadLotteryStats();
         }
+
+        async function resetDailyClicks() {
+    if (!confirm('⚠️ ВНИМАНИЕ! Это действие обнулит daily_clicks (клики за сегодня) у ВСЕХ игроков!\n\nТоп дня начнётся с нуля.\n\nВы уверены?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/admin/reset_daily_clicks?key=' + adminKey, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const result = await response.json();
+
+        if (result.success) {
+            alert(`✅ ${result.message}`);
+            // Обновляем статистику, если нужно
+            if (typeof loadStats === 'function') loadStats();
+        } else {
+            alert(`❌ Ошибка: ${result.error}`);
+        }
+    } catch(e) {
+        console.error('Reset daily clicks error:', e);
+        alert('❌ Ошибка при сбросе топа дня');
+    }
+}
 
         function openPoolModal() {
             document.getElementById('poolModal').classList.add('active');

@@ -4358,6 +4358,30 @@ def api_clear_user_wallet():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+@app.route('/api/admin/reset_daily_clicks', methods=['POST'])
+@require_admin
+def api_admin_reset_daily_clicks():
+    """Сброс daily_clicks у всех игроков (топ дня)"""
+    try:
+        with db.get_cursor() as cursor:
+            cursor.execute("UPDATE users SET daily_clicks = 0")
+            count = cursor.rowcount
+
+        add_admin_log(
+            f"🔄 СБРОС ТОПА ДНЯ: обнулил daily_clicks у {count} игроков",
+            request.args.get('user_id', 'Admin'),
+            "Admin"
+        )
+
+        return jsonify({
+            "success": True,
+            "message": f"Топ дня сброшен! Обнулено {count} игроков",
+            "count": count
+        })
+    except Exception as e:
+        logger.error(f"Ошибка сброса daily_clicks: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
 @app.route('/api/admin/delete_user', methods=['POST'])
 @require_admin
 def api_admin_delete_user():
