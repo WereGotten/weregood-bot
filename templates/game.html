@@ -4032,24 +4032,32 @@
     justify-content: center;
 }
 
-/* Джойстик прижатый к правому краю, выше */
+/* МОНЕТА — БОЛЬШЕ */
+.coin {
+    width: 260px;     /* Было 220px */
+    height: 260px;    /* Было 220px */
+    position: relative;
+    cursor: pointer;
+}
+
+/* ДЖОЙСТИК — МЕНЬШЕ, ПРИЖАТ К ПРАВОМУ КРАЮ, ВЫШЕ */
 .joystick-corner {
     position: absolute;
     right: 0;
-    top: -10px;  /* Подняли выше (было 50% с translate) */
+    top: -15px;       /* Чуть выше */
     cursor: pointer;
     z-index: 10;
 }
 
 .joystick-small {
-    width: 55px;   /* Было 44px */
-    height: 55px;  /* Было 44px */
+    width: 48px;      /* Было 55px */
+    height: 48px;     /* Было 55px */
     background: rgba(255,215,0,0.15);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 30px;  /* Было 24px */
+    font-size: 26px;  /* Было 30px */
     border: 1px solid rgba(255,215,0,0.3);
     transition: all 0.1s ease;
     backdrop-filter: blur(4px);
@@ -4062,18 +4070,28 @@
 
 /* Адаптация для маленьких экранов */
 @media (max-width: 480px) {
+    .coin {
+        width: 200px;     /* Было 180px */
+        height: 200px;
+    }
+
     .joystick-small {
-        width: 48px;   /* Было 38px */
-        height: 48px;  /* Было 38px */
-        font-size: 26px;  /* Было 20px */
+        width: 42px;
+        height: 42px;
+        font-size: 22px;
     }
 }
 
 @media (max-width: 380px) {
+    .coin {
+        width: 170px;
+        height: 170px;
+    }
+
     .joystick-small {
-        width: 44px;   /* Было 34px */
-        height: 44px;  /* Было 34px */
-        font-size: 24px;  /* Было 18px */
+        width: 38px;
+        height: 38px;
+        font-size: 20px;
     }
 }
     </style>
