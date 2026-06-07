@@ -5102,7 +5102,6 @@ def process_message_in_thread(update):
         if text.startswith("/ставка") or text.startswith("ставка"):
             user_id = update["message"]["from"]["id"]
 
-            # Парсим сумму
             parts = original_text.split()
             if len(parts) < 2:
                 send_telegram_message(chat_id, "❌ Укажите сумму ставки. Пример: `/ставка 100`")
@@ -5125,19 +5124,55 @@ def process_message_in_thread(update):
             send_telegram_message(chat_id, msg)
             return
 
-        # ========== КОМАНДА: ЛОТЕРЕЯ / СТАТУС ==========
+        # ========== КОМАНДА: СТАТУС ЛОТЕРЕИ ==========
         if text in ["/лотерея", "/лот", "лотерея", "лот"]:
             if not chat_lottery_active:
-                success, msg = start_chat_lottery(CHAT_LOTTERY_DURATION)
-                send_telegram_message(chat_id, msg)
-                if success:
-                    threading.Timer(CHAT_LOTTERY_DURATION, lambda: auto_end_chat_lottery(chat_id)).start()
+                status = "❌ **Лотерея в чате не активна**\n\n"
+                status += "Для запуска используйте команду:\n"
+                status += "🔹 `/старт` - запустить новую лотерею"
+                send_telegram_message(chat_id, status, parse_mode="Markdown")
             else:
-                status = get_chat_lottery_status()
+                remaining_time = max(0, int(chat_lottery_end_time - time.time()))
+                minutes = remaining_time // 60
+                seconds = remaining_time % 60
+
+                top_participants = sorted(
+                    chat_lottery_participants.items(),
+                    key=lambda x: x[1]['amount'],
+                    reverse=True
+                )[:5]
+
+                participants_list = ""
+                for user_id, data in top_participants:
+                    participants_list += f"👤 {data['username']}: {data['amount']:.2f} WG\n"
+
+                if not participants_list:
+                    participants_list = "😢 Пока нет участников\n"
+
+                status = (
+                    f"🎲 **ЛОТЕРЕЯ В ЧАТЕ** 🎲\n\n"
+                    f"💰 **Общий фонд:** {chat_lottery_pool:.2f} WG\n"
+                    f"👥 **Участников:** {len(chat_lottery_participants)}\n"
+                    f"⏰ **Окончания:** {minutes:02d}:{seconds:02d}\n\n"
+                    f"🏆 **Топ участники:**\n{participants_list}\n"
+                    f"💡 *Чтобы участвовать, напишите:* `/ставка СУММА`"
+                )
                 send_telegram_message(chat_id, status, parse_mode="Markdown")
             return
 
-        # ========== КОМАНДА: ЗАКОНЧИТЬ ЛОТЕРЕЮ (ТОЛЬКО АДМИН) ==========
+        # ========== КОМАНДА: СТАРТ ЛОТЕРЕИ ==========
+        if text in ["/старт", "старт"]:
+            if chat_lottery_active:
+                send_telegram_message(chat_id, "❌ Лотерея уже активна! Дождитесь её завершения.")
+                return
+
+            success, msg = start_chat_lottery(CHAT_LOTTERY_DURATION)
+            send_telegram_message(chat_id, msg)
+            if success:
+                threading.Timer(CHAT_LOTTERY_DURATION, lambda: auto_end_chat_lottery(chat_id)).start()
+            return
+
+        # ========== КОМАНДА: ЗАКОНЧИТЬ ЛОТЕРЕЮ (АДМИН) ==========
         if text in ["/закончить", "закончить"]:
             if chat_id in ADMIN_IDS:
                 result = end_chat_lottery(chat_id)
@@ -5146,7 +5181,7 @@ def process_message_in_thread(update):
                 send_telegram_message(chat_id, "⛔ У вас нет прав для завершения лотереи")
             return
 
-        # ========== КОМАНДА: /START ==========
+        # ========== ОСТАЛЬНЫЕ КОМАНДЫ ==========
         if text.startswith("/start"):
             parts = original_text.split()
             ref_code = parts[1] if len(parts) > 1 else None
@@ -5180,7 +5215,6 @@ def process_message_in_thread(update):
                                   keyboard)
             return
 
-        # ========== КОМАНДА: /HELP ==========
         if text.startswith("/help"):
             keyboard = {
                 "inline_keyboard": [[{"text": "💰 Открыть игру", "web_app": {"url": WEBHOOK_URL}}]]}
@@ -5194,13 +5228,13 @@ def process_message_in_thread(update):
                                   "💎 **TON** - покупай улучшения за TON\n\n"
                                   "📊 **Команды в чате:**\n"
                                   "• `/баланс` - показать баланс\n"
-                                  "• `/ставка 100` - сделать ставку в лотерею\n"
-                                  "• `/лотерея` - запустить или показать статус лотереи\n\n"
+                                  "• `/ставка 100` - сделать ставку\n"
+                                  "• `/лотерея` - статус лотереи\n"
+                                  "• `/старт` - запустить лотерею\n\n"
                                   f"🔗 **Ссылка на игру:** @{BOT_USERNAME}",
                                   keyboard)
             return
 
-        # ========== КОМАНДА: /ADMIN ==========
         if text.startswith("/admin"):
             if chat_id in ADMIN_IDS:
                 admin_url = f"{WEBHOOK_URL}/admin?key={ADMIN_SECRET}&user_id={chat_id}"
