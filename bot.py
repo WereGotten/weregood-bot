@@ -5055,7 +5055,7 @@ def handle_telegram_updates():
     while True:
         try:
             url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/getUpdates"
-            params = {"offset": last_update_id + 1, "timeout": 30}
+            params = {"offset": last_update_id + 1, "timeout": 5}
             response = requests.get(url, params=params, timeout=35, verify=verify_ssl)
             updates = response.json()
             if updates.get("ok"):
@@ -5111,9 +5111,11 @@ def handle_telegram_updates():
 
                         # ========== КОМАНДЫ ЛОТЕРЕИ В ЧАТЕ ==========
                         elif text.startswith("/баланс") or text.startswith("/бал") or text == "баланс" or text == "бал":
-                            user = get_user(chat_id)
+                            # ВАЖНО: используем user_id отправителя, а не chat_id
+                            user_id = update["message"]["from"]["id"]  # ← ЭТО ВАЖНО!
+                            user = get_user(user_id)
                             send_telegram_message(
-                                chat_id,
+                                chat_id,  # ← chat_id для отправки сообщения
                                 f"💰 **Ваш баланс:** {user['wg']:.2f} WG Coin\n"
                                 f"💎 **LP:** {user['lp']}\n"
                                 f"⚡ **Энергия:** {user['energy']}/{user['max_energy']}"
@@ -5179,7 +5181,7 @@ def handle_telegram_updates():
                         chat_id = update["message"]["chat"]["id"]
                         handle_successful_payment(chat_id, update["message"]["successful_payment"])
 
-            time.sleep(1)
+            time.sleep(0.05)
         except Exception as e:
             logger.error(f"Ошибка в polling: {e}")
             time.sleep(5)
