@@ -163,18 +163,6 @@ click_buffer = {}
 click_buffer_lock = threading.Lock()
 BUFFER_FLUSH_INTERVAL = 5
 
-
-# ========== ЛОТЕРЕЯ В ЧАТЕ ==========
-chat_lottery_active = False
-chat_lottery_pool = 0
-chat_lottery_participants = {}  # {user_id: {"amount": сумма_ставки, "username": имя}}
-chat_lottery_start_time = None
-chat_lottery_end_time = None
-chat_lottery_lock = threading.Lock()
-CHAT_LOTTERY_COMMISSION = 0.07  # 7% комиссия
-CHAT_LOTTERY_MIN_BET = 10  # минимальная ставка
-CHAT_LOTTERY_DURATION = 300  # 5 минут по умолчанию
-
 # Используйте атомарные операции или более безопасный подход
 def flush_click_buffer():
     while True:
@@ -4858,444 +4846,86 @@ def api_set_referral():
     return jsonify({"success": False, "error": "Referrer not found"}), 404
 
 
-def get_chat_lottery_status():
-    """Возвращает статус лотереи в чате для отображения"""
-    if not chat_lottery_active:
-        return "❌ Лотерея в чате не активна. Запустите командой /лотерея"
-
-    remaining_time = max(0, int(chat_lottery_end_time - time.time()))
-    minutes = remaining_time // 60
-    seconds = remaining_time % 60
-
-    # Сортируем участников по сумме ставки
-    top_participants = sorted(
-        chat_lottery_participants.items(),
-        key=lambda x: x[1]['amount'],
-        reverse=True
-    )[:5]
-
-    participants_list = ""
-    for user_id, data in top_participants:
-        participants_list += f"👤 {data['username']}: {data['amount']} WG\n"
-
-    if not participants_list:
-        participants_list = "😢 Пока нет участников\n"
-
-    return (
-        f"🎲 **ЛОТЕРЕЯ В ЧАТЕ** 🎲\n\n"
-        f"💰 **Общий фонд:** {chat_lottery_pool:.2f} WG\n"
-        f"👥 **Участников:** {len(chat_lottery_participants)}\n"
-        f"⏰ **Длится:** {minutes:02d}:{seconds:02d}\n\n"
-        f"🏆 **Топ участники:**\n{participants_list}\n"
-        f"💡 *Чтобы участвовать, напишите:* `/ставка СУММА`"
-    )
-
-
-def add_chat_bet(user_id, username, amount):
-    """Добавляет ставку пользователя в лотерею"""
-    global chat_lottery_pool, chat_lottery_participants
-
-    with chat_lottery_lock:
-        if not chat_lottery_active:
-            return False, "❌ Лотерея не активна. Запустите командой /лотерея"
-
-        if amount < CHAT_LOTTERY_MIN_BET:
-            return False, f"❌ Минимальная ставка: {CHAT_LOTTERY_MIN_BET} WG"
-
-        # 🔥 ПРОВЕРКА: существует ли пользователь в БД
-        user = get_user(user_id, force_refresh=True)
-
-        # Если пользователь новый (wg = 0 и total_clicks = 0) — регистрируем
-        if user['wg'] == 0 and user['total_clicks'] == 0 and user['user_id'] != 12345678:
-            # Авторегистрация пользователя
-            with db.get_cursor() as cursor:
-                cursor.execute("SELECT user_id FROM users WHERE user_id = ?", (user_id,))
-                if not cursor.fetchone():
-                    now = time.time()
-                    ref_code = hashlib.md5(str(user_id).encode()).hexdigest()[:8]
-                    role = "player"
-                    unlocked = json.dumps(["player"])
-                    cursor.execute('''
-                        INSERT INTO users (
-                            user_id, wg, lp, energy, last_energy_update, tickets, total_clicks,
-                            upgrade_counts, ticket_counter, referral_code, referrer_id, likes, dislikes,
-                            settings, username, first_name, last_name, avatar_url, usdt, wins, role, stars,
-                            max_energy, energy_upgrades, energy_limit_upgrades, unlocked_prefixes,
-                            tutorial_completed, ton_wallet, banned_until, ban_reason, banned_by, completed_achievements
-                        ) VALUES (?, 0, 0, 500, ?, '[]', 0, '{"1":0,"2":0,"3":0}', 0, ?, 0, 0, 0,
-                                  '{"theme":"dark"}', ?, ?, ?, '', 0, 0, ?, 0, 500, 0, 0, ?, 0, '', 0, '', 0, 0)
-                    ''', (user_id, now, ref_code, username, '', '', role, unlocked))
-                    invalidate_cache(user_id)
-                    user = get_user(user_id, force_refresh=True)
-                    add_log(f"📝 Авторегистрация из чат-лотереи", user_id, username)
-
-        # Проверяем баланс
-        if user['wg'] < amount:
-            return False, f"❌ Недостаточно WG! Ваш баланс: {user['wg']:.2f} WG"
-
-        # Списываем WG
-        new_wg = round(user['wg'] - amount, 2)
-        safe_update_user(user_id, wg=new_wg)
-        invalidate_cache(user_id)  # Принудительный сброс кэша
-
-        # Начисляем в фонд
-        commission = amount * CHAT_LOTTERY_COMMISSION
-        amount_to_pool = round(amount - commission, 2)
-        chat_lottery_pool = round(chat_lottery_pool + amount_to_pool, 2)
-
-        # Обновляем участника
-        if user_id in chat_lottery_participants:
-            chat_lottery_participants[user_id]['amount'] = round(chat_lottery_participants[user_id]['amount'] + amount,
-                                                                 2)
-        else:
-            chat_lottery_participants[user_id] = {
-                'amount': amount,
-                'username': username,
-                'first_bet_time': time.time()
-            }
-
-        add_log(
-            f"🎲 Ставка в чат-лотерее: {amount} WG (в фонд пошло {amount_to_pool:.2f} WG)",
-            user_id, username,
-            old_value=user['wg'],
-            new_value=new_wg,
-            currency="wg"
-        )
-
-        return True, f"✅ Ставка {amount} WG принята! Остаток: {new_wg:.2f} WG"
-
-
-def calculate_winner():
-    """Определяет победителя на основе весов (размеров ставок)"""
-    if not chat_lottery_participants:
-        return None, 0
-
-    total_bets = sum(data['amount'] for data in chat_lottery_participants.values())
-
-    # Создаём массив весов для случайного выбора
-    import random
-    winner_id = None
-    rand = random.uniform(0, total_bets)
-    current = 0
-
-    for user_id, data in chat_lottery_participants.items():
-        current += data['amount']
-        if rand <= current:
-            winner_id = user_id
-            break
-
-    winner_amount = chat_lottery_participants.get(winner_id, {}).get('amount', 0)
-    return winner_id, winner_amount
-
-
-def end_chat_lottery(chat_id=None):
-    """Завершает лотерею и выдаёт приз победителю"""
-    global chat_lottery_active, chat_lottery_pool, chat_lottery_participants
-    global chat_lottery_start_time, chat_lottery_end_time
-
-    with chat_lottery_lock:
-        if not chat_lottery_active:
-            return "❌ Лотерея уже не активна"
-
-        if not chat_lottery_participants:
-            chat_lottery_active = False
-            chat_lottery_pool = 0
-            chat_lottery_participants = {}
-            return "❌ Лотерея завершена без победителя (не было участников)"
-
-        winner_id, winner_bet = calculate_winner()
-
-        if winner_id:
-            prize = round(chat_lottery_pool, 2)
-            user = get_user(winner_id, force_refresh=True)  # ← force_refresh
-            new_wg = round(user['wg'] + prize, 2)
-            safe_update_user(winner_id, wg=new_wg)
-            invalidate_cache(winner_id)  # ← принудительный сброс кэша
-
-            add_log(
-                f"🏆 ПОБЕДА в чат-лотерее! Выиграл {prize:.2f} WG (ставка была {winner_bet} WG)",
-                winner_id, user.get('username', str(winner_id)),
-                old_value=user['wg'],
-                new_value=new_wg,
-                currency="wg"
-            )
-
-            winner_name = chat_lottery_participants[winner_id]['username']
-            total_participants = len(chat_lottery_participants)
-
-            # Отправляем результат в чат
-            if chat_id:
-                send_telegram_message(
-                    chat_id,
-                    f"🎉 **ЛОТЕРЕЯ ЗАВЕРШЕНА!** 🎉\n\n"
-                    f"🏆 **Победитель:** {winner_name}\n"
-                    f"💰 **Выигрыш:** {prize:.2f} WG\n"
-                    f"🎲 **Ставка победителя:** {winner_bet} WG\n"
-                    f"👥 **Всего участников:** {total_participants}\n\n"
-                    f"✨ *Поздравляем победителя!* ✨"
-                )
-        else:
-            result = "❌ Лотерея завершена, но победитель не определён"
-
-        chat_lottery_active = False
-        chat_lottery_pool = 0
-        chat_lottery_participants = {}
-        chat_lottery_start_time = None
-        chat_lottery_end_time = None
-
-        return result
-
-
-def start_chat_lottery(duration_seconds=300):
-    """Запускает новую лотерею в чате"""
-    global chat_lottery_active, chat_lottery_pool, chat_lottery_participants
-    global chat_lottery_start_time, chat_lottery_end_time
-
-    with chat_lottery_lock:
-        if chat_lottery_active:
-            return False, "❌ Лотерея уже активна! Дождитесь её завершения."
-
-        chat_lottery_active = True
-        chat_lottery_pool = 0
-        chat_lottery_participants = {}
-        chat_lottery_start_time = time.time()
-        chat_lottery_end_time = chat_lottery_start_time + duration_seconds
-
-        return True, f"✅ Лотерея запущена! Длится {duration_seconds // 60} минут. Делайте ставки командой /ставка СУММА"
-
-
-
-def auto_end_chat_lottery():
-    """Автоматически завершает лотерею по таймеру"""
-    time.sleep(CHAT_LOTTERY_DURATION)
-    if chat_lottery_active:
-        result = end_chat_lottery()
-        # Отправляем результат в чат (нужно будет добавить chat_id)
-        # Для этого нужно сохранять chat_id при запуске лотереи
-        return result
-
-
-def process_message_in_thread(update):
-    """Обработка одного сообщения в отдельном потоке"""
-    try:
-        text = update["message"]["text"].lower().strip()
-        original_text = update["message"]["text"]
-        chat_id = update["message"]["chat"]["id"]
-        username = sanitize_string(update["message"]["chat"].get("username", ""))
-        first_name = sanitize_string(update["message"]["chat"].get("first_name", ""))
-        last_name = sanitize_string(update["message"]["chat"].get("last_name", ""))
-
-        # ========== КОМАНДА: БАЛАНС ==========
-        if text in ["/баланс", "/бал", "баланс", "бал"]:
-            user_id = update["message"]["from"]["id"]
-            user = get_user(user_id, force_refresh=True)
-            send_telegram_message(
-                chat_id,
-                f"💰 **Ваш баланс:** {user['wg']:.2f} WG Coin\n"
-                f"💎 **LP:** {user['lp']}\n"
-                f"⚡ **Энергия:** {user['energy']}/{user['max_energy']}\n\n"
-                f"🎮 Играть: @{BOT_USERNAME}"
-            )
-            return
-
-        # ========== КОМАНДА: СТАВКА ==========
-        if text.startswith("/ставка") or text.startswith("ставка"):
-            user_id = update["message"]["from"]["id"]
-
-            parts = original_text.split()
-            if len(parts) < 2:
-                send_telegram_message(chat_id, "❌ Укажите сумму ставки. Пример: `/ставка 100`")
-                return
-
-            try:
-                amount = float(parts[1])
-                if amount <= 0:
-                    send_telegram_message(chat_id, "❌ Сумма ставки должна быть больше 0")
-                    return
-                if amount < CHAT_LOTTERY_MIN_BET:
-                    send_telegram_message(chat_id, f"❌ Минимальная ставка: {CHAT_LOTTERY_MIN_BET} WG")
-                    return
-            except ValueError:
-                send_telegram_message(chat_id, "❌ Введите корректную сумму")
-                return
-
-            player_name = username or first_name or str(user_id)
-            success, msg = add_chat_bet(user_id, player_name, amount)
-            send_telegram_message(chat_id, msg)
-            return
-
-        # ========== КОМАНДА: СТАТУС ЛОТЕРЕИ ==========
-        if text in ["/лотерея", "/лот", "лотерея", "лот"]:
-            if not chat_lottery_active:
-                status = "❌ **Лотерея в чате не активна**\n\n"
-                status += "Для запуска используйте команду:\n"
-                status += "🔹 `/старт` - запустить новую лотерею"
-                send_telegram_message(chat_id, status, parse_mode="Markdown")
-            else:
-                remaining_time = max(0, int(chat_lottery_end_time - time.time()))
-                minutes = remaining_time // 60
-                seconds = remaining_time % 60
-
-                top_participants = sorted(
-                    chat_lottery_participants.items(),
-                    key=lambda x: x[1]['amount'],
-                    reverse=True
-                )[:5]
-
-                participants_list = ""
-                for user_id, data in top_participants:
-                    participants_list += f"👤 {data['username']}: {data['amount']:.2f} WG\n"
-
-                if not participants_list:
-                    participants_list = "😢 Пока нет участников\n"
-
-                status = (
-                    f"🎲 **ЛОТЕРЕЯ В ЧАТЕ** 🎲\n\n"
-                    f"💰 **Общий фонд:** {chat_lottery_pool:.2f} WG\n"
-                    f"👥 **Участников:** {len(chat_lottery_participants)}\n"
-                    f"⏰ **Окончания:** {minutes:02d}:{seconds:02d}\n\n"
-                    f"🏆 **Топ участники:**\n{participants_list}\n"
-                    f"💡 *Чтобы участвовать, напишите:* `/ставка СУММА`"
-                )
-                send_telegram_message(chat_id, status, parse_mode="Markdown")
-            return
-
-        # ========== КОМАНДА: СТАРТ ЛОТЕРЕИ ==========
-        if text in ["/старт", "старт"]:
-            if chat_lottery_active:
-                send_telegram_message(chat_id, "❌ Лотерея уже активна! Дождитесь её завершения.")
-                return
-
-            success, msg = start_chat_lottery(CHAT_LOTTERY_DURATION)
-            send_telegram_message(chat_id, msg)
-            if success:
-                threading.Timer(CHAT_LOTTERY_DURATION, lambda: auto_end_chat_lottery(chat_id)).start()
-            return
-
-        # ========== КОМАНДА: ЗАКОНЧИТЬ ЛОТЕРЕЮ (АДМИН) ==========
-        if text in ["/закончить", "закончить"]:
-            if chat_id in ADMIN_IDS:
-                result = end_chat_lottery(chat_id)
-                send_telegram_message(chat_id, result, parse_mode="Markdown")
-            else:
-                send_telegram_message(chat_id, "⛔ У вас нет прав для завершения лотереи")
-            return
-
-        # ========== ОСТАЛЬНЫЕ КОМАНДЫ ==========
-        if text.startswith("/start"):
-            parts = original_text.split()
-            ref_code = parts[1] if len(parts) > 1 else None
-            with db.get_cursor() as cursor:
-                cursor.execute("SELECT * FROM users WHERE user_id=?", (chat_id,))
-                existing = cursor.fetchone()
-                if not existing:
-                    now = time.time()
-                    ref_code_new = hashlib.md5(str(chat_id).encode()).hexdigest()[:8]
-                    role = "founder" if chat_id == 5264622363 else "player"
-                    unlocked = json.dumps(["player", "founder"]) if role == "founder" else json.dumps(["player"])
-                    referrer_id = 0
-                    if ref_code:
-                        cursor.execute("SELECT user_id, username FROM users WHERE referral_code=?", (ref_code,))
-                        referrer_row = cursor.fetchone()
-                        if referrer_row:
-                            referrer_id = referrer_row['user_id']
-                            cursor.execute(
-                                'INSERT INTO referrals (referrer_id, referred_id, username, first_name) VALUES (?, ?, ?, ?)',
-                                (referrer_id, chat_id, username, first_name))
-                            send_telegram_message(referrer_id,
-                                                  f"🎉 Новый реферал! {first_name or username} присоединился по вашей ссылке!")
-                    cursor.execute(
-                        '''INSERT INTO users (user_id, wg, lp, energy, last_energy_update, tickets, total_clicks, upgrade_counts, ticket_counter, referral_code, referrer_id, likes, dislikes, settings, username, first_name, last_name, avatar_url, usdt, wins, role, stars, max_energy, energy_upgrades, energy_limit_upgrades, unlocked_prefixes, tutorial_completed, ton_wallet, banned_until, ban_reason, banned_by, completed_achievements) VALUES (?, 0, 0, 500, ?, '[]', 0, '{"1":0,"2":0,"3":0}', 0, ?, ?, 0, 0, '{"theme":"dark"}', ?, ?, ?, ?, 0, 0, ?, 0, 500, 0, 0, ?, 0, '', 0, '', 0, 0)''',
-                        (chat_id, now, ref_code_new, referrer_id, username, first_name, last_name, "",
-                         role, unlocked))
-            keyboard = {
-                "inline_keyboard": [[{"text": "💰 Открыть игру", "web_app": {"url": WEBHOOK_URL}}]]}
-            send_telegram_message(chat_id,
-                                  "✨ Добро пожаловать в WereGood!\n\n💰 Кликай по монете, улучшай заработок и участвуй в вызовах!\n\n⬇️ Нажми на кнопку ниже, чтобы начать!",
-                                  keyboard)
-            return
-
-        if text.startswith("/help"):
-            keyboard = {
-                "inline_keyboard": [[{"text": "💰 Открыть игру", "web_app": {"url": WEBHOOK_URL}}]]}
-            send_telegram_message(chat_id,
-                                  "🎮 **WereGood - Помощь**\n\n"
-                                  "💰 **Клик по монете** - зарабатывай WG\n"
-                                  "⚡ **Энергия** - восстанавливается со временем\n"
-                                  "🎲 **Лотерея** - участвуй за 100 LP в 21:00\n"
-                                  "👥 **Рефералы** - приглашай друзей и получай 5%\n"
-                                  "⭐ **Stars** - покупай улучшения за Telegram Stars\n"
-                                  "💎 **TON** - покупай улучшения за TON\n\n"
-                                  "📊 **Команды в чате:**\n"
-                                  "• `/баланс` - показать баланс\n"
-                                  "• `/ставка 100` - сделать ставку\n"
-                                  "• `/лотерея` - статус лотереи\n"
-                                  "• `/старт` - запустить лотерею\n\n"
-                                  f"🔗 **Ссылка на игру:** @{BOT_USERNAME}",
-                                  keyboard)
-            return
-
-        if text.startswith("/admin"):
-            if chat_id in ADMIN_IDS:
-                admin_url = f"{WEBHOOK_URL}/admin?key={ADMIN_SECRET}&user_id={chat_id}"
-                keyboard = {"inline_keyboard": [
-                    [{"text": "👑 Открыть админ-панель", "web_app": {"url": admin_url}}]]}
-                send_telegram_message(chat_id,
-                                      "👑 Админ-панель WereGood\n\n"
-                                      "• 📊 Статистика\n"
-                                      "• 💰 Выдача валюты\n"
-                                      "• 🎲 Управление лотереей\n"
-                                      "• 👑 Управление префиксами\n"
-                                      "• 💸 Заявки на вывод\n"
-                                      "• 🎫 Промокоды\n\n"
-                                      "⬇️ Нажми на кнопку",
-                                      keyboard)
-            else:
-                send_telegram_message(chat_id, "⛔ У вас нет доступа к админ-панели")
-            return
-
-    except Exception as e:
-        logger.error(f"Ошибка обработки сообщения: {e}")
-
 
 def handle_telegram_updates():
-    """Основной цикл polling с многопоточной обработкой"""
     last_update_id = 0
     verify_ssl = not DEBUG_MODE
     while True:
         try:
             url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/getUpdates"
-            params = {"offset": last_update_id + 1, "timeout": 10}  # timeout 10 секунд
-            response = requests.get(url, params=params, timeout=15, verify=verify_ssl)
+            params = {"offset": last_update_id + 1, "timeout": 30}
+            response = requests.get(url, params=params, timeout=35, verify=verify_ssl)
             updates = response.json()
-
             if updates.get("ok"):
                 for update in updates.get("result", []):
                     last_update_id = update["update_id"]
-
-                    # Обрабатываем pre_checkout_query (быстро)
-                    if "pre_checkout_query" in update:
+                    if "message" in update and "text" in update["message"]:
+                        text = update["message"]["text"]
+                        chat_id = update["message"]["chat"]["id"]
+                        username = sanitize_string(update["message"]["chat"].get("username", ""))
+                        first_name = sanitize_string(update["message"]["chat"].get("first_name", ""))
+                        last_name = sanitize_string(update["message"]["chat"].get("last_name", ""))
+                        if text.startswith("/start"):
+                            parts = text.split()
+                            ref_code = parts[1] if len(parts) > 1 else None
+                            with db.get_cursor() as cursor:
+                                cursor.execute("SELECT * FROM users WHERE user_id=?", (chat_id,))
+                                existing = cursor.fetchone()
+                                if not existing:
+                                    now = time.time()
+                                    ref_code_new = hashlib.md5(str(chat_id).encode()).hexdigest()[:8]
+                                    role = "founder" if chat_id == 5264622363 else "player"
+                                    unlocked = json.dumps(["player", "founder"]) if role == "founder" else json.dumps(
+                                        ["player"])
+                                    referrer_id = 0
+                                    if ref_code:
+                                        cursor.execute("SELECT user_id, username FROM users WHERE referral_code=?",
+                                                       (ref_code,))
+                                        referrer_row = cursor.fetchone()
+                                        if referrer_row:
+                                            referrer_id = referrer_row['user_id']
+                                            cursor.execute(
+                                                'INSERT INTO referrals (referrer_id, referred_id, username, first_name) VALUES (?, ?, ?, ?)',
+                                                (referrer_id, chat_id, username, first_name))
+                                            send_telegram_message(referrer_id,
+                                                                  f"🎉 Новый реферал! {first_name or username} присоединился по вашей ссылке!")
+                                    cursor.execute(
+                                        '''INSERT INTO users (user_id, wg, lp, energy, last_energy_update, tickets, total_clicks, upgrade_counts, ticket_counter, referral_code, referrer_id, likes, dislikes, settings, username, first_name, last_name, avatar_url, usdt, wins, role, stars, max_energy, energy_upgrades, energy_limit_upgrades, unlocked_prefixes, tutorial_completed, ton_wallet, banned_until, ban_reason, banned_by, completed_achievements) VALUES (?, 0, 0, 500, ?, '[]', 0, '{"1":0,"2":0,"3":0}', 0, ?, ?, 0, 0, '{"theme":"dark"}', ?, ?, ?, ?, 0, 0, ?, 0, 500, 0, 0, ?, 0, '', 0, '', 0, 0)''',
+                                        (chat_id, now, ref_code_new, referrer_id, username, first_name, last_name, "",
+                                         role, unlocked))
+                            keyboard = {
+                                "inline_keyboard": [[{"text": "💰 Открыть игру", "web_app": {"url": WEBHOOK_URL}}]]}
+                            send_telegram_message(chat_id,
+                                                  "✨ Добро пожаловать в WereGood!\n\n💰 Кликай по монете, улучшай заработок и участвуй в вызовах!\n\n⬇️ Нажми на кнопку ниже, чтобы начать!",
+                                                  keyboard)
+                        elif text.startswith("/help"):
+                            keyboard = {
+                                "inline_keyboard": [[{"text": "💰 Открыть игру", "web_app": {"url": WEBHOOK_URL}}]]}
+                            send_telegram_message(chat_id,
+                                                  "🎮 **WereGood - Помощь**\n\n💰 **Клик по монете** - зарабатывай WG\n⚡ **Энергия** - восстанавливается со временем\n🎲 **Лотерея** - участвуй за 100 LP в 21:00\n👥 **Рефералы** - приглашай друзей и получай 5%\n⭐ **Stars** - покупай улучшения за Telegram Stars\n💎 **TON** - покупай улучшения за TON\n\n🔗 **Ссылка на игру:**",
+                                                  keyboard)
+                        elif text.startswith("/admin"):
+                            if chat_id in ADMIN_IDS:
+                                admin_url = f"{WEBHOOK_URL}/admin?key={ADMIN_SECRET}&user_id={chat_id}"
+                                keyboard = {"inline_keyboard": [
+                                    [{"text": "👑 Открыть админ-панель", "web_app": {"url": admin_url}}]]}
+                                send_telegram_message(chat_id,
+                                                      "👑 Админ-панель WereGood\n\n• 📊 Статистика\n• 💰 Выдача валюты\n• 🎲 Управление лотереей\n• 👑 Управление префиксами\n• 💸 Заявки на вывод\n• 🎫 Промокоды\n\n⬇️ Нажми на кнопку",
+                                                      keyboard)
+                            else:
+                                send_telegram_message(chat_id, "⛔ У вас нет доступа к админ-панели")
+                    elif "pre_checkout_query" in update:
                         query = update["pre_checkout_query"]
                         answer_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/answerPreCheckoutQuery"
-                        requests.post(answer_url, json={"pre_checkout_query_id": query["id"], "ok": True}, timeout=5)
-                        continue
-
-                    # Обрабатываем successful_payment
-                    if "message" in update and "successful_payment" in update["message"]:
+                        requests.post(answer_url, json={"pre_checkout_query_id": query["id"], "ok": True}, timeout=5,
+                                      verify=verify_ssl)
+                    elif "message" in update and "successful_payment" in update["message"]:
                         chat_id = update["message"]["chat"]["id"]
                         handle_successful_payment(chat_id, update["message"]["successful_payment"])
-                        continue
-
-                    # Обрабатываем текстовые сообщения в отдельном потоке (НЕ БЛОКИРУЕМ ЦИКЛ)
-                    if "message" in update and "text" in update["message"]:
-                        threading.Thread(target=process_message_in_thread, args=(update,), daemon=True).start()
-
-            # Маленькая задержка, чтобы не нагружать CPU
-            time.sleep(0.01)
-
+            time.sleep(1)
         except Exception as e:
             logger.error(f"Ошибка в polling: {e}")
-            time.sleep(1)
+            time.sleep(5)
 
 
 import codecs
