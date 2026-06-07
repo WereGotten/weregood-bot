@@ -4865,18 +4865,91 @@
     <audio id="settingsSound" preload="auto"><source src="/static/settings.mp3" type="audio/mpeg"></audio>
     <audio id="purchaseSound" preload="auto"><source src="/static/purchase.mp3" type="audio/mpeg"></audio>
     <script>
-        // ==================== ИНИЦИАЛИЗАЦИЯ ====================
+                // ==================== ИНИЦИАЛИЗАЦИЯ ====================
         let tg = window.Telegram?.WebApp;
         let user = tg?.initDataUnsafe?.user;
-let userId = user ? user.id : 12345678;
-let username = user ? (user.username || '') : '';
-let firstName = user ? (user.first_name || '') : '';
-let lastName = user ? (user.last_name || '') : '';
-let photoUrl = user && user.photo_url ? user.photo_url : '';
-let chatId = user ? user.id : userId;
 
-// Для отображения в приветствии используем first_name или username или 'Игрок'
-let displayName = firstName || username || 'Игрок';
+        // 🔥 ФИКС: пробуем получить ID из localStorage, если Telegram не дал
+        let savedUserId = localStorage.getItem('weregood_user_id');
+        let userId;
+
+        if (user && user.id && user.id !== 12345678) {
+            // Получили реальный ID от Telegram
+            userId = user.id;
+            // Сохраняем в localStorage
+            localStorage.setItem('weregood_user_id', userId);
+            console.log('✅ ID получен из Telegram:', userId);
+        } else if (savedUserId && savedUserId !== '12345678' && savedUserId !== 'null') {
+            // Восстанавливаем ID из localStorage (если там есть нормальный ID)
+            userId = parseInt(savedUserId);
+            console.log('✅ ID восстановлен из localStorage:', userId);
+            // Пытаемся обновить данные из Telegram
+            if (user && user.id && user.id !== userId) {
+                console.log('⚠️ ID из Telegram отличается от сохранённого:', user.id, '→', userId);
+            }
+        } else {
+            // Всё плохо — используем дефолтный ID, но показываем предупреждение
+            userId = 12345678;
+            console.warn('⚠️ ВНИМАНИЕ! Используется дефолтный ID 12345678. Игрок может потерять прогресс!');
+            console.warn('⚠️ Попросите игрока перезапустить Telegram или нажать кнопку "Восстановить аккаунт"');
+        }
+
+        let username = user ? (user.username || '') : '';
+        let firstName = user ? (user.first_name || '') : '';
+        let lastName = user ? (user.last_name || '') : '';
+        let photoUrl = user && user.photo_url ? user.photo_url : '';
+        let chatId = userId;
+
+        // Для отображения в приветствии используем first_name или username или 'Игрок'
+        let displayName = firstName || username || 'Игрок';
+
+        // Функция для принудительного восстановления аккаунта (добавь кнопку в профиль)
+        window.forceBindAccount = async function() {
+            if (!tg) {
+                showToast('❌ Telegram WebApp не доступен', 'error');
+                return;
+            }
+
+            tg.expand();
+
+            // Пытаемся получить свежие данные
+            const freshUser = tg.initDataUnsafe?.user;
+
+            if (freshUser && freshUser.id && freshUser.id !== 12345678) {
+                const newUserId = freshUser.id;
+
+                if (confirm(`⚠️ Обнаружен ваш реальный аккаунт (ID: ${newUserId}).\n\nПривязать его к игре? Весь ваш прогресс сохранится.`)) {
+                    // Сохраняем реальный ID
+                    userId = newUserId;
+                    localStorage.setItem('weregood_user_id', userId);
+
+                    // Обновляем данные профиля
+                    username = freshUser.username || '';
+                    firstName = freshUser.first_name || '';
+                    lastName = freshUser.last_name || '';
+                    photoUrl = freshUser.photo_url || '';
+                    displayName = firstName || username || 'Игрок';
+
+                    // Перерегистрируемся с правильным ID
+                    await autoRegister();
+
+                    // Обновляем все данные
+                    await updateStatus();
+                    await updateLottery();
+                    await updateLeaderboard();
+
+                    showToast('✅ Аккаунт привязан! Страница будет обновлена...', 'success');
+                    setTimeout(() => location.reload(), 1500);
+                }
+            } else {
+                showToast('❌ Не удалось получить данные аккаунта. Попробуйте перезапустить Telegram.', 'error');
+            }
+        };
+
+        // Восстанавливаем приветствие, если есть сохранённое имя
+        if (localStorage.getItem('weregood_display_name')) {
+            displayName = localStorage.getItem('weregood_display_name');
+        }
 
         let currentTickets = [];
         let socket = null;
