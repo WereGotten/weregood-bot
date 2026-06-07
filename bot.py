@@ -5087,7 +5087,7 @@ def process_message_in_thread(update):
         # /баланс
         if text.startswith("/баланс") or text.startswith("/бал") or text == "баланс" or text == "бал":
             user_id = update["message"]["from"]["id"]
-            user = get_user(user_id)
+            user = get_user(user_id, force_refresh=True)
             send_telegram_message(
                 chat_id,
                 f"💰 **Ваш баланс:** {user['wg']:.2f} WG Coin\n"
@@ -5099,6 +5099,9 @@ def process_message_in_thread(update):
 
         # /ставка
         if text.startswith("/ставка") or text.startswith("ставка"):
+            # ✅ ВАЖНО: используем from.id, а не chat_id!
+            user_id = update["message"]["from"]["id"]
+
             parts = text.split()
             if len(parts) < 2:
                 send_telegram_message(chat_id, "❌ Укажите сумму ставки. Пример: /ставка 100")
@@ -5111,8 +5114,9 @@ def process_message_in_thread(update):
             except ValueError:
                 send_telegram_message(chat_id, "❌ Введите корректную сумму")
                 return
-            player_name = username or first_name or str(chat_id)
-            success, msg = add_chat_bet(chat_id, player_name, amount)
+
+            player_name = username or first_name or str(user_id)
+            success, msg = add_chat_bet(user_id, player_name, amount)  # ← user_id, а не chat_id!
             send_telegram_message(chat_id, msg)
             return
 
@@ -5131,7 +5135,7 @@ def process_message_in_thread(update):
         # /закончить (только админ)
         if text.startswith("/закончить") or text == "закончить":
             if chat_id in ADMIN_IDS:
-                result = end_chat_lottery()
+                result = end_chat_lottery(chat_id)
                 send_telegram_message(chat_id, result, parse_mode="Markdown")
             else:
                 send_telegram_message(chat_id, "⛔ У вас нет прав для завершения лотереи")
