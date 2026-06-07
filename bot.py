@@ -4326,6 +4326,103 @@ def api_admin_update_user():
     return jsonify({"success": True, "msg": "Обновлено"})
 
 
+@app.route('/api/admin/manage_energy_upgrades', methods=['POST'])
+@require_admin
+def api_admin_manage_energy_upgrades():
+    """Управление покупками энергетического усилителя"""
+    data = request.get_json()
+    if not data:
+        return jsonify({"success": False, "error": "No JSON"}), 400
+
+    user_id = data.get('user_id')
+    if not user_id:
+        return jsonify({"success": False, "error": "user_id required"}), 400
+
+    action = data.get('action')  # 'add' или 'remove'
+    amount = int(data.get('amount', 1))
+    give_reward = data.get('give_reward', False)  # галочка "Выдать награду"
+
+    admin_id = request.args.get('user_id', 'Admin')
+    admin_name = "Admin"
+
+    try:
+        user = get_user(user_id)
+        current_upgrades = user.get('energy_upgrades', 0)
+
+        if action == 'add':
+            new_upgrades = min(current_upgrades + amount, 15)
+            added = new_upgrades - current_upgrades
+        elif action == 'remove':
+            new_upgrades = max(0, current_upgrades - amount)
+            added = new_upgrades - current_upgrades  # будет отрицательным
+        else:
+            return jsonify({"success": False, "error": "Invalid action"}), 400
+
+        # Если added == 0, значит лимит достигнут или уже 0
+        if added == 0:
+            if action == 'add' and current_upgrades >= 15:
+                return jsonify({"success": False, "error": "У игрока уже максимум покупок (15/15)"}), 400
+            elif action == 'remove' and current_upgrades <= 0:
+                return jsonify({"success": False, "error": "У игрока уже 0 покупок"}), 400
+
+        # Новая максимальная энергия
+        new_max_energy = 500 + (new_upgrades * 40)
+
+        # Начисляем награды только если стоит галочка и мы ДОБАВЛЯЕМ покупки
+        reward_applied = False
+        reward_text = ""
+
+        if action == 'add' and give_reward and added > 0:
+            # Выдаём награду за каждую добавленную покупку
+            lp_reward = added * 50
+            old_lp = user['lp']
+            new_lp = old_lp + lp_reward
+            safe_update_user(user_id, lp=new_lp, max_energy=new_max_energy, energy_upgrades=new_upgrades)
+            reward_applied = True
+            reward_text = f", выдано {lp_reward} LP"
+            add_log(
+                f"👑 Админ добавил {added} покупок усилителя (+{lp_reward} LP)",
+                user_id,
+                user.get('username') or f"User_{user_id}",
+                old_value=old_lp,
+                new_value=new_lp,
+                currency="lp"
+            )
+        elif action == 'add' and not give_reward and added > 0:
+            # Только увеличиваем счётчик, без наград
+            safe_update_user(user_id, max_energy=new_max_energy, energy_upgrades=new_upgrades)
+            reward_text = " (без выдачи наград)"
+            add_admin_log(
+                f"➕ Добавил {added} покупок усилителя игроку (без выдачи наград)",
+                admin_id, admin_name, user_id, user.get('username') or f"User_{user_id}"
+            )
+        elif action == 'remove':
+            # Убавляем покупки, энергию тоже уменьшаем
+            safe_update_user(user_id, max_energy=new_max_energy, energy_upgrades=new_upgrades)
+            add_admin_log(
+                f"➖ Убавил {abs(added)} покупок усилителя у игрока",
+                admin_id, admin_name, user_id, user.get('username') or f"User_{user_id}"
+            )
+
+        # Инвалидируем кэш
+        invalidate_cache(user_id)
+
+        # Получаем обновлённые данные
+        updated_user = get_user(user_id, force_refresh=True)
+
+        return jsonify({
+            "success": True,
+            "message": f"Покупки изменены: {current_upgrades} → {new_upgrades}/15{reward_text}",
+            "old_upgrades": current_upgrades,
+            "new_upgrades": new_upgrades,
+            "new_max_energy": new_max_energy,
+            "reward_applied": reward_applied
+        })
+
+    except Exception as e:
+        logger.error(f"Ошибка управления покупками: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
 @app.route('/api/admin/clear_wallets', methods=['POST'])
 @require_admin
 def api_clear_wallets():

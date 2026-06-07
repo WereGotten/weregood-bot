@@ -2157,26 +2157,49 @@ function getYAxisLabel() {
                     </div>
                 </div>
                 <div id="profileTabActions" class="profile-tab-content">
-                    <div class="form-group"><label>➕ Добавить WG</label><div class="form-row"><input type="number" class="form-input" id="actionAmount" placeholder="Количество"><button class="btn" onclick="adminAction('add_wg')">Добавить</button></div></div>
-                    <div class="form-group"><label>📉 Отнять WG</label><div class="form-row"><input type="number" class="form-input" id="actionAmountRemove" placeholder="Количество"><button class="btn btn-danger" onclick="adminAction('remove_wg')">Отнять</button></div></div>
-                    <div class="form-group"><label>➕ Добавить LP</label><div class="form-row"><input type="number" class="form-input" id="actionAmountLP" placeholder="Количество"><button class="btn" onclick="adminAction('add_lp')">Добавить</button></div></div>
-                    <div class="form-group"><label>📉 Отнять LP</label><div class="form-row"><input type="number" class="form-input" id="actionAmountRemoveLP" placeholder="Количество"><button class="btn btn-danger" onclick="adminAction('remove_lp')">Отнять</button></div></div>
-                    <div class="form-group"><label>➕ Добавить USDT</label><div class="form-row"><input type="number" class="form-input" id="actionAmountUSDT" step="0.01" placeholder="Количество"><button class="btn" onclick="adminAction('add_usdt')">Добавить</button></div></div>
-                    <div class="form-group"><label>📉 Отнять USDT</label><div class="form-row"><input type="number" class="form-input" id="actionAmountRemoveUSDT" step="0.01" placeholder="Количество"><button class="btn btn-danger" onclick="adminAction('remove_usdt')">Отнять</button></div></div>
-                    <div class="form-group"><label>⭐ Добавить Stars</label><div class="form-row"><input type="number" class="form-input" id="actionAmountStars" placeholder="Количество"><button class="btn" onclick="adminAction('add_stars')">Добавить</button></div></div>
-                    <div class="form-group"><label>⭐ Отнять Stars</label><div class="form-row"><input type="number" class="form-input" id="actionAmountRemoveStars" placeholder="Количество"><button class="btn btn-danger" onclick="adminAction('remove_stars')">Отнять</button></div></div>
-                    <div class="form-group"><label>⚡ Добавить энергию</label><div class="form-row"><input type="number" class="form-input" id="actionAmountEnergy" placeholder="Количество"><button class="btn" onclick="adminAction('add_energy')">Добавить</button></div></div>
-                    <div class="form-group"><label>⚡ Отнять энергию</label><div class="form-row"><input type="number" class="form-input" id="actionAmountRemoveEnergy" placeholder="Количество"><button class="btn btn-danger" onclick="adminAction('remove_energy')">Отнять</button></div></div>
-                    <div class="form-group"><label>⚡ Увеличить макс. энергию</label><div class="form-row"><input type="number" class="form-input" id="actionAmountMaxEnergy" placeholder="+50"><button class="btn" onclick="adminAction('add_max_energy')">Увеличить</button></div></div>
-                    <div class="form-group"><label>👆 Добавить кликов</label><div class="form-row"><input type="number" class="form-input" id="actionAmountClicks" placeholder="Количество"><button class="btn" onclick="adminAction('add_clicks')">Добавить</button></div></div>
-                    <div class="form-group"><label>⚡ Сбросить энергию</label><button class="btn btn-secondary" onclick="adminAction('reset_energy')">Сбросить до максимума</button></div>
-                    <div class="form-group"><label>👑 Выдать префикс</label><div class="form-row"><select class="form-select" id="actionPrefix"><option value="pioneer">⭐ Первооткрыватель</option><option value="founder">👑 Основатель</option></select><button class="btn" onclick="adminAction('unlock_prefix')">Выдать</button></div></div>
-                    <div class="form-group"><label>🎭 Сменить роль</label><div class="form-row"><select class="form-select" id="actionRole"><option value="player">Игрок</option><option value="pioneer">Первооткрыватель</option><option value="founder">Основатель</option></select><button class="btn" onclick="adminAction('set_role')">Сменить</button></div></div>
-                    <div class="form-group"><label>🔨 Блокировка</label><button class="btn btn-danger" onclick="openBanModal(${currentUserData.user_id})">🔨 Заблокировать</button></div>
-                    ${currentUserData.is_banned ? `<div class="form-group"><label>🔓 Разблокировка</label><button class="btn btn-secondary" onclick="adminAction('unban')">🔓 Разблокировать</button></div>` : ''}
-                    <div class="form-group"><label>🗑️ TON кошелёк</label><button class="btn btn-danger" onclick="clearUserWallet(${currentUserData.user_id})" style="width:100%;">🗑️ Отвязать кошелёк</button></div>
-                    <div class="form-group"><label style="color: #f44336;">⚠️ ОПАСНАЯ ЗОНА</label><button class="btn btn-danger" onclick="openDeleteUserModal()" style="width:100%; background: rgba(244,67,54,0.2); border: 1px solid #f44336; color: #f44336;">🗑️ ПОЛНОСТЬЮ УДАЛИТЬ ИГРОКА</button><p style="font-size:0.6rem; opacity:0.5; margin-top:5px;">ВНИМАНИЕ! Это действие нельзя отменить. Будут удалены: прогресс, достижения, билеты, рефералы, заявки на вывод и вся история.</p></div>
-                </div>
+    <div class="form-group"><label>➕ Добавить WG</label><div class="form-row"><input type="number" class="form-input" id="actionAmount" placeholder="Количество"><button class="btn" onclick="adminAction('add_wg')">Добавить</button></div></div>
+    <div class="form-group"><label>📉 Отнять WG</label><div class="form-row"><input type="number" class="form-input" id="actionAmountRemove" placeholder="Количество"><button class="btn btn-danger" onclick="adminAction('remove_wg')">Отнять</button></div></div>
+    <div class="form-group"><label>➕ Добавить LP</label><div class="form-row"><input type="number" class="form-input" id="actionAmountLP" placeholder="Количество"><button class="btn" onclick="adminAction('add_lp')">Добавить</button></div></div>
+    <div class="form-group"><label>📉 Отнять LP</label><div class="form-row"><input type="number" class="form-input" id="actionAmountRemoveLP" placeholder="Количество"><button class="btn btn-danger" onclick="adminAction('remove_lp')">Отнять</button></div></div>
+    <div class="form-group"><label>➕ Добавить USDT</label><div class="form-row"><input type="number" class="form-input" id="actionAmountUSDT" step="0.01" placeholder="Количество"><button class="btn" onclick="adminAction('add_usdt')">Добавить</button></div></div>
+    <div class="form-group"><label>📉 Отнять USDT</label><div class="form-row"><input type="number" class="form-input" id="actionAmountRemoveUSDT" step="0.01" placeholder="Количество"><button class="btn btn-danger" onclick="adminAction('remove_usdt')">Отнять</button></div></div>
+    <div class="form-group"><label>⭐ Добавить Stars</label><div class="form-row"><input type="number" class="form-input" id="actionAmountStars" placeholder="Количество"><button class="btn" onclick="adminAction('add_stars')">Добавить</button></div></div>
+    <div class="form-group"><label>⭐ Отнять Stars</label><div class="form-row"><input type="number" class="form-input" id="actionAmountRemoveStars" placeholder="Количество"><button class="btn btn-danger" onclick="adminAction('remove_stars')">Отнять</button></div></div>
+    <div class="form-group"><label>⚡ Добавить энергию</label><div class="form-row"><input type="number" class="form-input" id="actionAmountEnergy" placeholder="Количество"><button class="btn" onclick="adminAction('add_energy')">Добавить</button></div></div>
+    <div class="form-group"><label>⚡ Отнять энергию</label><div class="form-row"><input type="number" class="form-input" id="actionAmountRemoveEnergy" placeholder="Количество"><button class="btn btn-danger" onclick="adminAction('remove_energy')">Отнять</button></div></div>
+    <div class="form-group"><label>⚡ Увеличить макс. энергию</label><div class="form-row"><input type="number" class="form-input" id="actionAmountMaxEnergy" placeholder="+50"><button class="btn" onclick="adminAction('add_max_energy')">Увеличить</button></div></div>
+    <div class="form-group"><label>👆 Добавить кликов</label><div class="form-row"><input type="number" class="form-input" id="actionAmountClicks" placeholder="Количество"><button class="btn" onclick="adminAction('add_clicks')">Добавить</button></div></div>
+    <div class="form-group"><label>⚡ Сбросить энергию</label><button class="btn btn-secondary" onclick="adminAction('reset_energy')">Сбросить до максимума</button></div>
+    <div class="form-group"><label>👑 Выдать префикс</label><div class="form-row"><select class="form-select" id="actionPrefix"><option value="pioneer">⭐ Первооткрыватель</option><option value="founder">👑 Основатель</option></select><button class="btn" onclick="adminAction('unlock_prefix')">Выдать</button></div></div>
+    <div class="form-group"><label>🎭 Сменить роль</label><div class="form-row"><select class="form-select" id="actionRole"><option value="player">Игрок</option><option value="pioneer">Первооткрыватель</option><option value="founder">Основатель</option></select><button class="btn" onclick="adminAction('set_role')">Сменить</button></div></div>
+
+    <!-- ========== НОВЫЙ БЛОК: УПРАВЛЕНИЕ ЭНЕРГЕТИЧЕСКИМ УСИЛИТЕЛЕМ ========== -->
+    <div class="form-group" style="border-top: 1px solid rgba(255,215,0,0.2); padding-top: 15px; margin-top: 15px;">
+        <label style="color: #FFD700;">⚡ Управление энергетическим усилителем</label>
+        <div style="display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 30px;">
+                <button class="btn-sm" onclick="manageEnergyUpgrades('add', 1, true)" style="background: rgba(34,197,94,0.2); color: #22c55e;">+1 (с наградой)</button>
+                <button class="btn-sm" onclick="manageEnergyUpgrades('add', 1, false)" style="background: rgba(255,215,0,0.2); color: #FFD700;">+1 (без награды)</button>
+                <button class="btn-sm" onclick="manageEnergyUpgrades('remove', 1, false)" style="background: rgba(244,67,54,0.2); color: #f44336;">-1</button>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <input type="number" id="energyUpgradeAmount" value="1" min="1" max="15" style="width: 60px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,215,0,0.3); border-radius: 8px; padding: 4px 8px; color: white;">
+                <button class="btn-sm" onclick="manageEnergyUpgrades('add', parseInt(document.getElementById('energyUpgradeAmount').value), true)" style="background: rgba(34,197,94,0.2); color: #22c55e;">➕ Добавить (с наградой)</button>
+                <button class="btn-sm" onclick="manageEnergyUpgrades('add', parseInt(document.getElementById('energyUpgradeAmount').value), false)" style="background: rgba(255,215,0,0.2); color: #FFD700;">➕ Добавить (без награды)</button>
+                <button class="btn-sm" onclick="manageEnergyUpgrades('remove', parseInt(document.getElementById('energyUpgradeAmount').value), false)" style="background: rgba(244,67,54,0.2); color: #f44336;">➖ Убавить</button>
+            </div>
+        </div>
+        <div style="font-size: 0.65rem; color: rgba(255,255,255,0.5); margin-top: 8px;">
+            📊 Текущий прогресс: <span id="currentEnergyUpgrades">0</span>/15
+        </div>
+    </div>
+    <!-- ========== КОНЕЦ БЛОКА ========== -->
+
+    <div class="form-group"><label>🔨 Блокировка</label><button class="btn btn-danger" onclick="openBanModal(${currentUserData.user_id})">🔨 Заблокировать</button></div>
+    ${currentUserData.is_banned ? `<div class="form-group"><label>🔓 Разблокировка</label><button class="btn btn-secondary" onclick="adminAction('unban')">🔓 Разблокировать</button></div>` : ''}
+    <div class="form-group"><label>🗑️ TON кошелёк</label><button class="btn btn-danger" onclick="clearUserWallet(${currentUserData.user_id})" style="width:100%;">🗑️ Отвязать кошелёк</button></div>
+    <div class="form-group"><label style="color: #f44336;">⚠️ ОПАСНАЯ ЗОНА</label><button class="btn btn-danger" onclick="openDeleteUserModal()" style="width:100%; background: rgba(244,67,54,0.2); border: 1px solid #f44336; color: #f44336;">🗑️ ПОЛНОСТЬЮ УДАЛИТЬ ИГРОКА</button><p style="font-size:0.6rem; opacity:0.5; margin-top:5px;">ВНИМАНИЕ! Это действие нельзя отменить. Будут удалены: прогресс, достижения, билеты, рефералы, заявки на вывод и вся история.</p></div>
+</div>
                 <div id="profileTabReferrals" class="profile-tab-content">
                     ${currentUserData.referrals && currentUserData.referrals.length ?
                         currentUserData.referrals.map(r => `<div class="log-entry">👥 ${escapeHtml(r.username)} | Потрачено LP: ${r.spent_lp} | Заработано: ${r.earned} LP | ${r.date}</div>`).join('') :
@@ -2199,6 +2222,55 @@ function getYAxisLabel() {
             const playerModal = document.getElementById('playerModal');
             if (playerModal) playerModal.classList.add('active');
         }
+
+async function manageEnergyUpgrades(action, amount, giveReward) {
+    if (!currentUserData) {
+        alert('Сначала выберите игрока');
+        return;
+    }
+
+    if (amount <= 0 || isNaN(amount)) {
+        alert('Введите корректное количество');
+        return;
+    }
+
+    let confirmMsg = '';
+    if (action === 'add' && giveReward) {
+        confirmMsg = `Добавить ${amount} покупок с выдачей награды (${amount * 50} LP + ${amount * 40} к макс. энергии)?`;
+    } else if (action === 'add' && !giveReward) {
+        confirmMsg = `Добавить ${amount} покупок БЕЗ выдачи награды?`;
+    } else {
+        confirmMsg = `Убавить ${amount} покупок?`;
+    }
+
+    if (!confirm(confirmMsg)) return;
+
+    try {
+        const response = await fetch('/api/admin/manage_energy_upgrades?key=' + adminKey, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id: currentUserData.user_id,
+                action: action,
+                amount: amount,
+                give_reward: giveReward
+            })
+        });
+        const result = await response.json();
+
+        if (result.success) {
+            alert(`✅ ${result.message}`);
+            // Обновляем данные игрока
+            await openPlayerProfile(currentUserData.user_id);
+            if (typeof loadStats === 'function') loadStats();
+        } else {
+            alert(`❌ Ошибка: ${result.error}`);
+        }
+    } catch(e) {
+        console.error('Error managing energy upgrades:', e);
+        alert('❌ Ошибка при управлении покупками');
+    }
+}
 
         async function adminAction(actionType) {
             const userId = currentUserData.user_id;
