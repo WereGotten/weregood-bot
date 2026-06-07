@@ -4024,32 +4024,58 @@
             }
         }
 
-        /* ========== ДЖОЙСТИК ВНИЗУ СПРАВА ========== */
-.joystick-bottom {
+        /* Контейнер с монетой и джойстиком справа */
+.game-container {
+    position: relative;
     display: flex;
-    justify-content: flex-end;
-    margin-top: 10px;
-    margin-right: 16px;
+    justify-content: center;
+    align-items: center;
+    margin: 15px 0;
+}
+
+
+
+/* ДЖОЙСТИК — МЕНЬШЕ, ПРИЖАТ К ПРАВОМУ КРАЮ, ВЫШЕ */
+.joystick-corner {
+    position: absolute;
+    right: 0;
+    top: -15px;       /* Чуть выше */
     cursor: pointer;
+    z-index: 10;
 }
 
 .joystick-small {
-    width: 48px;
-    height: 48px;
-    background: rgba(255, 215, 0, 0.15);
+    width: 48px;      /* Было 55px */
+    height: 48px;     /* Было 55px */
+    background: rgba(255,215,0,0.15);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 26px;
-    border: 1px solid rgba(255, 215, 0, 0.3);
+    font-size: 26px;  /* Было 30px */
+    border: 1px solid rgba(255,215,0,0.3);
     transition: all 0.1s ease;
     backdrop-filter: blur(4px);
 }
 
 .joystick-small:active {
     transform: scale(0.9);
-    background: rgba(255, 215, 0, 0.25);
+    background: rgba(255,215,0,0.25);
+}
+
+    .joystick-small {
+        width: 42px;
+        height: 42px;
+        font-size: 22px;
+    }
+}
+
+
+    .joystick-small {
+        width: 38px;
+        height: 38px;
+        font-size: 20px;
+    }
 }
     </style>
 </head>
@@ -4099,16 +4125,14 @@
 
                 <div class="game-container">
     <div class="coin-wrapper">
-    <div class="coin" id="coin">
-        <div class="coin-inner"></div>
-        <div class="click-plus" id="clickPlus">+<span id="clickAmount">0.01</span></div>
+        <div class="coin" id="coin">
+            <div class="coin-inner"></div>
+            <div class="click-plus" id="clickPlus">+<span id="clickAmount">0.01</span></div>
+        </div>
     </div>
-</div>
-
-<!-- ДЖОЙСТИК ВНИЗУ СПРАВА -->
-<div class="joystick-bottom" onclick="showComingSoon()">
-    <div class="joystick-small">🎮</div>
-</div>
+    <div class="joystick-corner" onclick="showComingSoon()">
+        <div class="joystick-small">🎮</div>
+    </div>
 </div>
 
                 <div class="earnings-info">
