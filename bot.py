@@ -5078,14 +5078,15 @@ def auto_end_chat_lottery():
 def process_message_in_thread(update):
     """Обработка одного сообщения в отдельном потоке"""
     try:
-        text = update["message"]["text"]
+        text = update["message"]["text"].lower().strip()
+        original_text = update["message"]["text"]
         chat_id = update["message"]["chat"]["id"]
         username = sanitize_string(update["message"]["chat"].get("username", ""))
         first_name = sanitize_string(update["message"]["chat"].get("first_name", ""))
         last_name = sanitize_string(update["message"]["chat"].get("last_name", ""))
 
-        # /баланс
-        if text.startswith("/баланс") or text.startswith("/бал") or text == "баланс" or text == "бал":
+        # ========== КОМАНДА: БАЛАНС ==========
+        if text in ["/баланс", "/бал", "баланс", "бал"]:
             user_id = update["message"]["from"]["id"]
             user = get_user(user_id, force_refresh=True)
             send_telegram_message(
@@ -5097,31 +5098,35 @@ def process_message_in_thread(update):
             )
             return
 
-        # /ставка
+        # ========== КОМАНДА: СТАВКА ==========
         if text.startswith("/ставка") or text.startswith("ставка"):
-            # ✅ ВАЖНО: используем from.id, а не chat_id!
             user_id = update["message"]["from"]["id"]
 
-            parts = text.split()
+            # Парсим сумму
+            parts = original_text.split()
             if len(parts) < 2:
-                send_telegram_message(chat_id, "❌ Укажите сумму ставки. Пример: /ставка 100")
+                send_telegram_message(chat_id, "❌ Укажите сумму ставки. Пример: `/ставка 100`")
                 return
+
             try:
                 amount = float(parts[1])
                 if amount <= 0:
                     send_telegram_message(chat_id, "❌ Сумма ставки должна быть больше 0")
+                    return
+                if amount < CHAT_LOTTERY_MIN_BET:
+                    send_telegram_message(chat_id, f"❌ Минимальная ставка: {CHAT_LOTTERY_MIN_BET} WG")
                     return
             except ValueError:
                 send_telegram_message(chat_id, "❌ Введите корректную сумму")
                 return
 
             player_name = username or first_name or str(user_id)
-            success, msg = add_chat_bet(user_id, player_name, amount)  # ← user_id, а не chat_id!
+            success, msg = add_chat_bet(user_id, player_name, amount)
             send_telegram_message(chat_id, msg)
             return
 
-        # /лотерея
-        if text.startswith("/лотерея") or text.startswith("/лот") or text == "лотерея" or text == "лот":
+        # ========== КОМАНДА: ЛОТЕРЕЯ / СТАТУС ==========
+        if text in ["/лотерея", "/лот", "лотерея", "лот"]:
             if not chat_lottery_active:
                 success, msg = start_chat_lottery(CHAT_LOTTERY_DURATION)
                 send_telegram_message(chat_id, msg)
@@ -5132,8 +5137,8 @@ def process_message_in_thread(update):
                 send_telegram_message(chat_id, status, parse_mode="Markdown")
             return
 
-        # /закончить (только админ)
-        if text.startswith("/закончить") or text == "закончить":
+        # ========== КОМАНДА: ЗАКОНЧИТЬ ЛОТЕРЕЮ (ТОЛЬКО АДМИН) ==========
+        if text in ["/закончить", "закончить"]:
             if chat_id in ADMIN_IDS:
                 result = end_chat_lottery(chat_id)
                 send_telegram_message(chat_id, result, parse_mode="Markdown")
@@ -5141,9 +5146,9 @@ def process_message_in_thread(update):
                 send_telegram_message(chat_id, "⛔ У вас нет прав для завершения лотереи")
             return
 
-        # /start
+        # ========== КОМАНДА: /START ==========
         if text.startswith("/start"):
-            parts = text.split()
+            parts = original_text.split()
             ref_code = parts[1] if len(parts) > 1 else None
             with db.get_cursor() as cursor:
                 cursor.execute("SELECT * FROM users WHERE user_id=?", (chat_id,))
@@ -5175,23 +5180,41 @@ def process_message_in_thread(update):
                                   keyboard)
             return
 
-        # /help
+        # ========== КОМАНДА: /HELP ==========
         if text.startswith("/help"):
             keyboard = {
                 "inline_keyboard": [[{"text": "💰 Открыть игру", "web_app": {"url": WEBHOOK_URL}}]]}
             send_telegram_message(chat_id,
-                                  "🎮 **WereGood - Помощь**\n\n💰 **Клик по монете** - зарабатывай WG\n⚡ **Энергия** - восстанавливается со временем\n🎲 **Лотерея** - участвуй за 100 LP в 21:00\n👥 **Рефералы** - приглашай друзей и получай 5%\n⭐ **Stars** - покупай улучшения за Telegram Stars\n💎 **TON** - покупай улучшения за TON\n\n🔗 **Ссылка на игру:**",
+                                  "🎮 **WereGood - Помощь**\n\n"
+                                  "💰 **Клик по монете** - зарабатывай WG\n"
+                                  "⚡ **Энергия** - восстанавливается со временем\n"
+                                  "🎲 **Лотерея** - участвуй за 100 LP в 21:00\n"
+                                  "👥 **Рефералы** - приглашай друзей и получай 5%\n"
+                                  "⭐ **Stars** - покупай улучшения за Telegram Stars\n"
+                                  "💎 **TON** - покупай улучшения за TON\n\n"
+                                  "📊 **Команды в чате:**\n"
+                                  "• `/баланс` - показать баланс\n"
+                                  "• `/ставка 100` - сделать ставку в лотерею\n"
+                                  "• `/лотерея` - запустить или показать статус лотереи\n\n"
+                                  f"🔗 **Ссылка на игру:** @{BOT_USERNAME}",
                                   keyboard)
             return
 
-        # /admin
+        # ========== КОМАНДА: /ADMIN ==========
         if text.startswith("/admin"):
             if chat_id in ADMIN_IDS:
                 admin_url = f"{WEBHOOK_URL}/admin?key={ADMIN_SECRET}&user_id={chat_id}"
                 keyboard = {"inline_keyboard": [
                     [{"text": "👑 Открыть админ-панель", "web_app": {"url": admin_url}}]]}
                 send_telegram_message(chat_id,
-                                      "👑 Админ-панель WereGood\n\n• 📊 Статистика\n• 💰 Выдача валюты\n• 🎲 Управление лотереей\n• 👑 Управление префиксами\n• 💸 Заявки на вывод\n• 🎫 Промокоды\n\n⬇️ Нажми на кнопку",
+                                      "👑 Админ-панель WereGood\n\n"
+                                      "• 📊 Статистика\n"
+                                      "• 💰 Выдача валюты\n"
+                                      "• 🎲 Управление лотереей\n"
+                                      "• 👑 Управление префиксами\n"
+                                      "• 💸 Заявки на вывод\n"
+                                      "• 🎫 Промокоды\n\n"
+                                      "⬇️ Нажми на кнопку",
                                       keyboard)
             else:
                 send_telegram_message(chat_id, "⛔ У вас нет доступа к админ-панели")
