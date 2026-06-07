@@ -6604,98 +6604,152 @@ function updateRecentPlayers(players) {
         }
 
         window.watchAd = async () => {
-            try {
-                const checkRes = await fetch('/api/can_watch_ad', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: userId, ad_type: 'energy_200' })
-                });
-                const checkData = await checkRes.json();
-                if (!checkData.can) {
-                    showToast(checkData.message, 'error');
-                    return;
-                }
-            } catch(e) {
-                console.log('Check error:', e);
-            }
-            if (!adController) {
-                initAds();
-                await new Promise(resolve => setTimeout(resolve, 500));
-            }
-            if (!adController) {
-                showToast('❌ Реклама недоступна, попробуйте позже или включите VPN', 'error');
-                return;
-            }
-            try {
-                const result = await adController.show();
-                if (result.done && !result.error) {
-                    let resp = await fetch('/api/watch_ad', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ user_id: userId })
-                    });
-                    let data = await resp.json();
-                    if (data.success) {
-                        showToast(`+150 энергии! Спасибо! 🎬`, 'success');
-                        updateStatus();
-                    } else if (data.msg) {
-                        showToast(data.msg, 'error');
-                    }
-                } else {
-                    showToast('Реклама не загружена, попробуйте позже', 'error');
-                }
-            } catch (error) {
-                console.error('Ad error:', error);
-                showToast('Ошибка рекламы, попробуйте через VPN', 'error');
-            }
-        };
+    try {
+        const checkRes = await fetch('/api/can_watch_ad', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId, ad_type: 'energy_200' })
+        });
+        const checkData = await checkRes.json();
+        if (!checkData.can) {
+            showToast(checkData.message || 'Реклама временно недоступна', 'error');
+            return;
+        }
+    } catch(e) {
+        console.log('Check error:', e);
+    }
 
-        window.watchAdLimit = async () => {
-            try {
-                const checkRes = await fetch('/api/can_watch_ad', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: userId, ad_type: 'energy_limit' })
-                });
-                const checkData = await checkRes.json();
-                if (!checkData.can) {
-                    showToast(checkData.message, 'error');
-                    return;
-                }
-            } catch(e) {
-                console.log('Check error:', e);
+    if (!adController) {
+        initAds();
+        await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
+    if (!adController) {
+        showToast('❌ Реклама недоступна, попробуйте позже или включите VPN', 'error');
+        return;
+    }
+
+    try {
+        const result = await adController.show();
+
+        // ✅ ФИКС: даже если есть error, но done === true — реклама показана
+        if (result.done === true) {
+            // Реклама успешно показана
+            let resp = await fetch('/api/watch_ad', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: userId })
+            });
+            let data = await resp.json();
+
+            if (data.success) {
+                showToast(`✅ +${data.energy || 150} энергии! Спасибо! 🎬`, 'success');
+                await syncData(true);
+            } else if (data.msg) {
+                showToast(data.msg, 'error');
             }
-            if (!adLimitController) {
-                initAds();
-                await new Promise(resolve => setTimeout(resolve, 500));
+        } else if (result.error) {
+            // Реклама возможно показалась, но Adsgram вернул ошибку
+            console.warn('Ad returned error but might have worked:', result.error);
+
+            // Всё равно проверяем, не зачислилась ли награда
+            let resp = await fetch('/api/watch_ad', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: userId })
+            });
+            let data = await resp.json();
+
+            if (data.success) {
+                showToast(`✅ +${data.energy || 150} энергии! Награда зачислена! 🎬`, 'success');
+                await syncData(true);
+            } else {
+                showToast('⚠️ Реклама не засчитана, попробуйте ещё раз', 'error');
             }
-            if (!adLimitController) {
-                showToast('❌ Реклама недоступна, попробуйте позже или включите VPN', 'error');
-                return;
+        } else {
+            showToast('⚠️ Реклама не загружена, попробуйте позже', 'error');
+        }
+    } catch (error) {
+        console.error('Ad error:', error);
+        showToast('⚠️ Ошибка рекламы, проверьте баланс — возможно награда зачислена', 'info');
+        // Всё равно обновляем данные на всякий случай
+        await syncData(true);
+    }
+};
+
+window.watchAdLimit = async () => {
+    try {
+        const checkRes = await fetch('/api/can_watch_ad', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId, ad_type: 'energy_limit' })
+        });
+        const checkData = await checkRes.json();
+        if (!checkData.can) {
+            showToast(checkData.message || 'Реклама временно недоступна', 'error');
+            return;
+        }
+    } catch(e) {
+        console.log('Check error:', e);
+    }
+
+    if (!adLimitController) {
+        initAds();
+        await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
+    if (!adLimitController) {
+        showToast('❌ Реклама недоступна, попробуйте позже или включите VPN', 'error');
+        return;
+    }
+
+    try {
+        const result = await adLimitController.show();
+
+        // ✅ ФИКС: даже если есть error, но done === true — реклама показана
+        if (result.done === true) {
+            // Реклама успешно показана
+            let resp = await fetch('/api/watch_ad_limit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: userId })
+            });
+            let data = await resp.json();
+
+            if (data.success) {
+                showToast(`⚡ +1 к макс. энергии! Теперь лимит: ${data.max_energy}`, 'success');
+                await syncData(true);
+            } else if (data.msg) {
+                showToast(data.msg, 'error');
             }
-            try {
-                const result = await adLimitController.show();
-                if (result.done && !result.error) {
-                    let resp = await fetch('/api/watch_ad_limit', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ user_id: userId })
-                    });
-                    let data = await resp.json();
-                    if (data.success) {
-                        showToast(`⚡ +1 к макс. энергии! Теперь лимит: ${data.max_energy}`, 'success');
-                        updateStatus();
-                    } else if (data.msg) {
-                        showToast(data.msg, 'error');
-                    }
-                } else {
-                    showToast('Реклама не загружена', 'error');
-                }
-            } catch (error) {
-                console.error('Ad limit error:', error);
-                showToast('Ошибка рекламы', 'error');
+        } else if (result.error) {
+            // Реклама возможно показалась, но Adsgram вернул ошибку
+            console.warn('Ad limit returned error but might have worked:', result.error);
+
+            // Всё равно проверяем, не зачислилась ли награда
+            let resp = await fetch('/api/watch_ad_limit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: userId })
+            });
+            let data = await resp.json();
+
+            if (data.success) {
+                showToast(`✅ +1 к макс. энергии! Награда зачислена!`, 'success');
+                await syncData(true);
+            } else {
+                showToast('⚠️ Реклама не засчитана, попробуйте ещё раз', 'error');
             }
-        };
+        } else {
+            showToast('⚠️ Реклама не загружена, попробуйте позже', 'error');
+        }
+    } catch (error) {
+        console.error('Ad limit error:', error);
+        showToast('⚠️ Ошибка рекламы, проверьте баланс', 'info');
+        // Всё равно обновляем данные на всякий случай
+        await syncData(true);
+    }
+};
 
         window.donate = function() {
             window.open('https://t.me/WereGoodSupport', '_blank');
@@ -7578,41 +7632,71 @@ function updateRecentPlayers(players) {
         }
 
         async function activatePromoCode() {
-            const code = document.getElementById('promoCodeInput').value.toUpperCase().trim();
-            const messageDiv = document.getElementById('promoMessage');
-            const btn = document.getElementById('activatePromoBtn');
-            if (!code) {
-                messageDiv.innerHTML = 'Введите промокод';
-                return;
-            }
-            btn.disabled = true;
-            btn.textContent = '⏳ Проверка...';
-            messageDiv.innerHTML = '';
-            try {
-                const res = await fetch('/api/activate_promo', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: userId, code: code })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    messageDiv.innerHTML = `✅ ${data.message}`;
-                    messageDiv.classList.add('success');
-                    updateStatus();
-                    setTimeout(() => closePromoModal(), 2000);
-                } else {
-                    messageDiv.innerHTML = `❌ ${data.error}`;
-                    messageDiv.classList.remove('success');
-                }
-            } catch (e) {
-                messageDiv.innerHTML = '❌ Ошибка при активации';
-            } finally {
-                btn.disabled = false;
-                btn.textContent = '🎁 Активировать';
-            }
+    const code = document.getElementById('promoCodeInput').value.toUpperCase().trim();
+    const messageDiv = document.getElementById('promoMessage');
+    const btn = document.getElementById('activatePromoBtn');
+
+    if (!code) {
+        messageDiv.innerHTML = '❌ Введите промокод';
+        messageDiv.classList.remove('success');
+        return;
+    }
+
+    // Блокируем кнопку, пока идёт запрос
+    btn.disabled = true;
+    btn.textContent = '⏳ Проверка...';
+    messageDiv.innerHTML = '';
+    messageDiv.classList.remove('success');
+
+    try {
+        const res = await fetch('/api/activate_promo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId, code: code })
+        });
+
+        const data = await res.json();
+
+        // ✅ ФИКС: проверяем оба варианта успешного ответа
+        // Сервер может вернуть success: true или просто ok: true
+        const isSuccess = data.success === true || data.ok === true;
+
+        if (isSuccess) {
+            // Успешная активация
+            const successMessage = data.message || data.msg || 'Промокод успешно активирован!';
+            messageDiv.innerHTML = `✅ ${successMessage}`;
+            messageDiv.classList.add('success');
+
+            // Показываем уведомление
+            showToast(`🎉 ${successMessage}`, 'success');
+
+            // Обновляем данные игрока (баланс должен обновиться)
+            await syncData(true);
+
+            // Закрываем модальное окно через 2 секунды
+            setTimeout(() => closePromoModal(), 2000);
+        } else {
+            // Ошибка активации
+            const errorMessage = data.error || data.msg || 'Неизвестная ошибка';
+            messageDiv.innerHTML = `❌ ${errorMessage}`;
+            messageDiv.classList.remove('success');
+            showToast(errorMessage, 'error');
         }
 
-        document.getElementById('activatePromoBtn').onclick = activatePromoCode;
+    } catch (e) {
+        console.error('Activate promo error:', e);
+        messageDiv.innerHTML = '❌ Ошибка соединения с сервером';
+        messageDiv.classList.remove('success');
+        showToast('Ошибка соединения, попробуйте позже', 'error');
+    } finally {
+        // Разблокируем кнопку
+        btn.disabled = false;
+        btn.textContent = '🎁 Активировать';
+    }
+}
+
+// Назначаем обработчик (лучше через addEventListener, но оставим как было для совместимости)
+document.getElementById('activatePromoBtn').onclick = activatePromoCode;
 
         // ==================== TON CONNECT ====================
         let tonConnectUI = null;
