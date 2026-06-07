@@ -5164,6 +5164,182 @@
             }, 80);
         }
 
+// ========== НОВЫЙ ОБЪЕДИНЁННЫЙ ЗАПРОС ==========
+let syncInterval = null;
+let lastSyncTime = 0;
+const SYNC_DELAY = 3000; // 3 секунды между синхронизациями
+
+async function syncData(force = false) {
+    const now = Date.now();
+    if (!force && now - lastSyncTime < SYNC_DELAY) {
+        // Слишком часто - пропускаем
+        return;
+    }
+
+    lastSyncTime = now;
+
+    try {
+        const response = await fetch('/api/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId }),
+            signal: AbortSignal.timeout(5000)
+        });
+
+        const data = await response.json();
+
+        if (data.error) {
+            console.error('Sync error:', data.error);
+            if (data.banned) {
+                showToast(`⚠️ Вы забанены! Причина: ${data.reason}`, 'error');
+            }
+            return;
+        }
+
+        if (data.success) {
+            // ===== 1. ОБНОВЛЯЕМ СТАТУС ИГРОКА =====
+            const s = data.status;
+            localWG = s.wg;
+            localLP = s.lp;
+            localEnergy = s.energy;
+            localClicks = s.total_clicks;
+            localEarning = s.earning_per_click;
+            localUSDT = s.usdt || 0;
+            localWins = s.wins || 0;
+            localRole = s.role || 'player';
+            localStars = s.stars || 0;
+            localMaxEnergy = s.max_energy || 500;
+            localEnergyUpgrades = s.energy_upgrades || 0;
+            if (s.upgrade_counts) upgradeCounts = s.upgrade_counts;
+
+            // Пересчитываем стоимости улучшений
+            if (upgradeCounts) {
+                upgradeCosts[1] = getUpgradeCost(1, upgradeCounts[1] || 0);
+                upgradeCosts[2] = getUpgradeCost(2, upgradeCounts[2] || 0);
+                upgradeCosts[3] = getUpgradeCost(3, upgradeCounts[3] || 0);
+            }
+
+            updateUI();
+
+            // Обновляем информацию о восстановлении энергии
+            const regenText = s.regen_text || '';
+            const regenInfo = document.getElementById('regenInfo');
+            if (regenInfo && regenText) regenInfo.innerHTML = regenText;
+
+            // ===== 2. ОБНОВЛЯЕМ ЛОТЕРЕЮ =====
+            const l = data.lottery;
+            document.getElementById('prizePool').innerText = (l.prize_pool || 0).toFixed(2);
+            document.getElementById('ticketsCount').innerText = l.user_tickets || 0;
+            document.getElementById('totalTickets').innerText = l.user_tickets || 0;
+            document.getElementById('totalTicketsMini').innerText = l.user_tickets || 0;
+
+            if (l.is_drawn !== undefined) {
+                isDrawn = l.is_drawn;
+                winningNumbers = l.winning_numbers || [];
+                updateDrawUI();
+            }
+
+            // ===== 3. ОБНОВЛЯЕМ ТОП ИГРОКОВ =====
+            if (data.leaderboard && data.leaderboard.length > 0) {
+                updateLeaderboardMini(data.leaderboard);
+            }
+
+            // ===== 4. ОБНОВЛЯЕМ ПОСЛЕДНИХ УЧАСТНИКОВ =====
+            if (data.recent_players && data.recent_players.length > 0) {
+                updateRecentPlayers(data.recent_players);
+            }
+
+            // ===== 5. ОБНОВЛЯЕМ ОНЛАЙН =====
+            const onlineCount = document.getElementById('onlineCount');
+            if (onlineCount && data.online_count !== undefined) {
+                onlineCount.innerHTML = `🟢 Онлайн: ${data.online_count}`;
+            }
+        }
+
+    } catch(e) {
+        console.error('Sync error:', e);
+        // Если синхронизация упала, пробуем через 5 секунд
+        setTimeout(() => syncData(true), 5000);
+    }
+}
+
+// Новая функция для обновления мини-топа
+function updateLeaderboardMini(leaderboardData) {
+    const container = document.getElementById('leaderboardMini');
+    if (!container) return;
+
+    if (!leaderboardData || leaderboardData.length === 0) {
+        container.innerHTML = '<div>Нет данных</div>';
+        return;
+    }
+
+    let html = '';
+    for (let user of leaderboardData) {
+        let avatar = user.avatar && user.avatar !== '👤' && user.avatar !== ''
+            ? `<img src="${user.avatar}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;">`
+            : '👤';
+
+        let userName = user.username;
+        let roleBadge = '';
+        if (user.role === 'founder' && !user.hide_from_top) {
+            roleBadge = '<span class="leaderboard-founder-badge">👑</span>';
+        } else if (user.role === 'legend' && !user.hide_from_top) {
+            roleBadge = '<span class="leaderboard-legend-badge">👑</span>';
+        } else if (user.role === 'pioneer' && !user.hide_from_top) {
+            roleBadge = '<span class="leaderboard-pioneer-badge">⭐</span>';
+        }
+
+        html += `<div class="leaderboard-mini-item">
+            <span class="rank">${user.rank}</span>
+            <span class="avatar-mini">${avatar}</span>
+            <span class="name">${userName}${roleBadge}</span>
+            <span class="clicks">${(user.total_clicks || 0).toLocaleString()} кликов</span>
+        </div>`;
+    }
+
+    container.innerHTML = html;
+}
+
+// Новая функция для обновления последних участников
+function updateRecentPlayers(players) {
+    const container = document.getElementById('recentPlayersList');
+    if (!container) return;
+
+    if (!players || players.length === 0) {
+        container.innerHTML = '<div class="empty-state">😢 Пока нет участников</div>';
+        return;
+    }
+
+    let html = '';
+    for (let p of players) {
+        let avatarHtml = '';
+        if (p.avatar_url && p.avatar_url !== '') {
+            avatarHtml = `<img src="${p.avatar_url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+        } else {
+            avatarHtml = '👤';
+        }
+
+        let playerName = p.username || 'Игрок';
+        if (playerName.startsWith('@')) playerName = playerName.substring(1);
+
+        let roleBadge = '';
+        if (p.role === 'founder') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#ef4444;">👑</span>';
+        else if (p.role === 'pioneer') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#00b4d8;">⭐</span>';
+        else if (p.role === 'legend') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#FFD700;">👑</span>';
+
+        html += `<div class="recent-player-item" onclick="openPlayerProfile(${p.user_id}, 0)">
+            <div class="recent-player-avatar">${avatarHtml}</div>
+            <div class="recent-player-info">
+                <div class="recent-player-name">${escapeHtml(playerName)}${roleBadge}</div>
+                <div class="recent-player-time">🕐 ${p.time_ago || 'только что'}</div>
+            </div>
+            <div class="recent-player-ticket">🎫 #${p.ticket_number}</div>
+        </div>`;
+    }
+
+    container.innerHTML = html;
+}
+
         // ==================== API ЗАПРОСЫ ====================
         async function autoRegister() {
     try {
@@ -5244,212 +5420,6 @@
         document.getElementById('soundsToggle').onchange = (e) => saveSetting('sounds', e.target.checked);
         document.getElementById('vibrationToggle').onchange = (e) => saveSetting('vibration', e.target.checked);
         document.getElementById('hideFromTopToggle').onchange = (e) => saveSetting('hideFromTop', e.target.checked);
-
-        async function updateStatus() {
-            const now = Date.now();
-            if (now - lastStatusUpdate < STATUS_UPDATE_DELAY) return;
-            if (isUpdatingStatus) return;
-            isUpdatingStatus = true;
-            lastStatusUpdate = now;
-            try {
-                let res = await fetch('/api/status', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: userId }),
-                    signal: AbortSignal.timeout(5000)
-                });
-                let data = await res.json();
-                dataCache.status = data;
-                if (data.banned) {
-                    showToast(`⚠️ Вы забанены! Причина: ${data.reason}. До: ${data.until}`, 'error');
-                    return;
-                }
-                localWG = data.wg;
-                localLP = data.lp;
-                localEnergy = data.energy;
-                localClicks = data.total_clicks;
-                localEarning = data.earning_per_click;
-                localUSDT = data.usdt || 0;
-                localWins = data.wins || 0;
-                localRole = data.role || 'player';
-                localStars = data.stars || 0;
-                localMaxEnergy = data.max_energy || 500;
-                localEnergyUpgrades = data.energy_upgrades || 0;
-                if (data.upgrade_counts) upgradeCounts = data.upgrade_counts;
-                if (upgradeCounts) {
-                    upgradeCosts[1] = getUpgradeCost(1, upgradeCounts[1] || 0);
-                    upgradeCosts[2] = getUpgradeCost(2, upgradeCounts[2] || 0);
-                    upgradeCosts[3] = getUpgradeCost(3, upgradeCounts[3] || 0);
-                }
-                updateUI();
-
-                let regenMinutes = Math.ceil((localMaxEnergy - localEnergy) / (localMaxEnergy / 7200) / 60);
-                if (regenMinutes < 60) {
-                    document.getElementById('regenInfo').innerHTML = `🕐 Осталось ${regenMinutes} мин`;
-                } else {
-                    let hours = Math.floor(regenMinutes / 60);
-                    let minutes = regenMinutes % 60;
-                    if (minutes > 0) {
-                        document.getElementById('regenInfo').innerHTML = `🕐 Осталось ${hours} ч ${minutes} мин`;
-                    } else {
-                        document.getElementById('regenInfo').innerHTML = `🕐 Осталось ${hours} ч`;
-                    }
-                }
-            } catch(e) {
-                console.error('Status update error:', e);
-                if (dataCache.status) {
-                    let data = dataCache.status;
-                    localWG = data.wg;
-                    localLP = data.lp;
-                    localEnergy = data.energy;
-                    localClicks = data.total_clicks;
-                    localEarning = data.earning_per_click;
-                    localUSDT = data.usdt || 0;
-                    localWins = data.wins || 0;
-                    localRole = data.role || 'player';
-                    localStars = data.stars || 0;
-                    localMaxEnergy = data.max_energy || 500;
-                    localEnergyUpgrades = data.energy_upgrades || 0;
-                    if (data.upgrade_counts) upgradeCounts = data.upgrade_counts;
-                    updateUI();
-                }
-            } finally {
-                isUpdatingStatus = false;
-            }
-        }
-
-        async function updateLottery() {
-            const now = Date.now();
-            if (now - lastLotteryUpdate < LOTTERY_UPDATE_DELAY) return;
-            if (isUpdatingLottery) return;
-            isUpdatingLottery = true;
-            lastLotteryUpdate = now;
-            try {
-                let res = await fetch('/api/lottery_status', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: userId })
-                });
-                let data = await res.json();
-                dataCache.lottery = data;
-                document.getElementById('prizePool').innerText = data.prize_pool.toFixed(2);
-                document.getElementById('ticketsCount').innerText = data.user_tickets;
-                localLP = data.user_lp;
-                updateUI();
-                if (data.is_drawn !== undefined) {
-                    isDrawn = data.is_drawn;
-                    winningNumbers = data.winning_numbers || [];
-                    updateDrawUI();
-                }
-            } catch(e) {
-                console.error('Lottery update error:', e);
-                if (dataCache.lottery) {
-                    let data = dataCache.lottery;
-                    document.getElementById('prizePool').innerText = data.prize_pool.toFixed(2);
-                    document.getElementById('ticketsCount').innerText = data.user_tickets;
-                    localLP = data.user_lp;
-                    updateUI();
-                    if (data.is_drawn !== undefined) {
-                        isDrawn = data.is_drawn;
-                        winningNumbers = data.winning_numbers || [];
-                        updateDrawUI();
-                    }
-                }
-            } finally {
-                isUpdatingLottery = false;
-            }
-        }
-
-        let leaderboardUpdateTimeout = null;
-        let leaderboardUpdatePromise = null;
-
-       async function updateLeaderboard() {
-    if (leaderboardUpdatePromise) return leaderboardUpdatePromise;
-    if (leaderboardUpdateTimeout) clearTimeout(leaderboardUpdateTimeout);
-    leaderboardUpdatePromise = new Promise((resolve) => {
-        leaderboardUpdateTimeout = setTimeout(async () => {
-            try {
-                // Используем API топа дня (daily_clicks) вместо общего топа
-                let res = await fetch('/api/leaderboard/daily?limit=5');
-                let data = await res.json();
-                let html = '';
-                for (let user of data) {
-                    let avatar = user.avatar && user.avatar !== '👤'
-                        ? `<img src="${user.avatar}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;">`
-                        : '👤';
-                    let userName = user.username;
-                    let roleBadge = '';
-                    if (user.role === 'founder' && !user.hide_from_top) roleBadge = '<span class="leaderboard-founder-badge">👑</span>';
-                    else if (user.role === 'legend' && !user.hide_from_top) roleBadge = '<span class="leaderboard-legend-badge">👑</span>';
-                    else if (user.role === 'pioneer' && !user.hide_from_top) roleBadge = '<span class="leaderboard-pioneer-badge">⭐</span>';
-                    html += `<div class="leaderboard-mini-item">
-                        <span class="rank">${user.rank}</span>
-                        <span class="avatar-mini">${avatar}</span>
-                        <span class="name">${userName}${roleBadge}</span>
-                        <span class="clicks">${user.daily_clicks || 0} кликов</span>
-                    </div>`;
-                }
-                document.getElementById('leaderboardMini').innerHTML = html || '<div>Нет данных за сегодня</div>';
-                resolve(true);
-            } catch(e) {
-                console.error('Leaderboard error:', e);
-                resolve(false);
-            } finally {
-                leaderboardUpdateTimeout = null;
-                leaderboardUpdatePromise = null;
-            }
-        }, 2000);
-    });
-    return leaderboardUpdatePromise;
-}
-
-        async function loadRecentPlayers() {
-            try {
-                let res = await fetch('/api/recent_players');
-                let data = await res.json();
-                let html = '';
-
-                if (!data || data.length === 0) {
-                    document.getElementById('recentPlayersList').innerHTML = '<div class="empty-state">😢 Пока нет участников</div>';
-                    return;
-                }
-
-                for (let p of data) {
-                    let avatarHtml = '';
-                    if (p.avatar_url && p.avatar_url !== '') {
-                        avatarHtml = `<img src="${p.avatar_url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
-                    } else {
-                        avatarHtml = '👤';
-                    }
-
-                    let playerName = p.username || p.first_name || 'Игрок';
-                    if (playerName.startsWith('@')) playerName = playerName.substring(1);
-                    if (localHideFromTop && p.user_id == userId) playerName = 'Anonim';
-
-                    let timeAgo = p.time_ago || 'только что';
-
-                    let roleBadge = '';
-                    if (p.role === 'founder') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#ef4444;">👑</span>';
-                    else if (p.role === 'pioneer') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#00b4d8;">⭐</span>';
-                    else if (p.role === 'legend') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#FFD700;">👑</span>';
-
-                    html += `<div class="recent-player-item" onclick="openPlayerProfile(${p.user_id}, 0)">
-                                <div class="recent-player-avatar">${avatarHtml}</div>
-                                <div class="recent-player-info">
-                                    <div class="recent-player-name">${escapeHtml(playerName)}${roleBadge}</div>
-                                    <div class="recent-player-time">🕐 ${timeAgo}</div>
-                                </div>
-                                <div class="recent-player-ticket">🎫 #${p.ticket_number}</div>
-                            </div>`;
-                }
-
-                document.getElementById('recentPlayersList').innerHTML = html;
-
-            } catch(e) {
-                console.error('Error loading recent players:', e);
-                document.getElementById('recentPlayersList').innerHTML = '<div class="empty-state">Ошибка загрузки</div>';
-            }
-        }
 
         async function loadReferralLink() {
             try {
@@ -8043,28 +8013,34 @@
             }
         }
 
-        // ==================== DOMCONTENTLOADED ====================
+                // ==================== DOMCONTENTLOADED ====================
         document.addEventListener("DOMContentLoaded", () => {
             initTonConnect();
             initSocket();
             autoRegister();
             loadAvatar();
             logGameEntry();
-            updateStatus();
-            updateLottery();
-            updateLeaderboard();
+
+            // ========== НОВЫЙ ОБЪЕДИНЁННЫЙ ЗАПРОС ==========
+            // Вместо 4 отдельных запросов (status, lottery, leaderboard, recent) - 1 запрос!
+            syncData(true);  // Принудительная синхронизация при загрузке
+
             loadReferralLink();
             loadReferrals();
-            loadRecentPlayers();
             loadSettings();
             loadDailyStatus();
             setTimeout(checkAndStartTutorial, 2000);
-            setInterval(updateStatus, 10000);
-            setInterval(updateLottery, 30000);
-            setInterval(loadRecentPlayers, 15000);
-            setInterval(() => updateLeaderboard(), 8000);
+
+            // ========== ТАЙМЕРЫ (ОПТИМИЗИРОВАННЫЕ) ==========
+            // ОДИН таймер вместо четырёх!
+            setInterval(() => syncData(), 5000);        // Основная синхронизация каждые 5 секунд
+            setInterval(() => loadReferrals(), 30000);  // Рефералы реже (30 сек)
+            setInterval(() => syncData(true), 30000);   // Принудительное обновление раз в 30 сек
+
             startDailyLeaderboardTimer();
             updateLPBoostCount();
+
+            // ========== ОБРАБОТКА ПРОМОКОДОВ И РЕФЕРАЛОВ ==========
             if (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
                 const startParam = tg.initDataUnsafe.start_param;
                 if (startParam && startParam.startsWith('claim_')) {
@@ -8092,6 +8068,8 @@
                     }, 1500);
                 }
             }
+
+            // ========== TELEGRAM WEBAPP ==========
             if (tg) {
                 tg.ready();
                 tg.expand();

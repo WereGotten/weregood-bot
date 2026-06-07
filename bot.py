@@ -27,6 +27,8 @@ from flask_cors import CORS
 import requests
 from dotenv import load_dotenv
 
+from cachetools import TTLCache, cached
+
 # ========== ОПТИМИЗАЦИЯ ==========
 sqlite3.enable_callback_tracebacks(True)
 
@@ -558,7 +560,7 @@ class Database:
             self.local.conn = sqlite3.connect(self.db_file, check_same_thread=False, timeout=10)
             self.local.conn.row_factory = sqlite3.Row
             self.local.conn.execute("PRAGMA journal_mode=WAL")
-            self.local.conn.execute("PRAGMA busy_timeout=10000")
+            self.local.conn.execute("PRAGMA busy_timeout=30000")
             self.local.conn.execute("PRAGMA synchronous=NORMAL")
             self.local.conn.execute("PRAGMA cache_size=-204800")
             self.local.conn.execute("PRAGMA mmap_size=536870912")
@@ -5088,6 +5090,219 @@ def schedule_daily_top_reset():
 
 # Запускаем планировщик после инициализации
 schedule_daily_top_reset()
+
+
+@app.route('/api/sync', methods=['POST'])
+def api_sync():
+    """
+    ОБЪЕДИНЁННЫЙ ЭНДПОИНТ - возвращает всё сразу!
+    Статус игрока + лотерею + топ игроков за 1 запрос
+    """
+    data = request.json
+    if not data:
+        return jsonify({"error": "No data"}), 400
+
+    user_id = data.get('user_id')
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"error": "Invalid user_id"}), 400
+
+    # Проверяем rate limit для синхронизации (90 запросов в минуту)
+    if not check_rate_limit(f"sync_{user_id}", limit=90, window_seconds=60):
+        return jsonify({"error": "Too many requests"}), 429
+
+    # Проверяем бан
+    banned, ban_info = is_banned(user_id)
+    if banned:
+        return jsonify({
+            "error": f"Вы забанены!",
+            "banned": True,
+            "reason": ban_info['reason'],
+            "until": ban_info['until_date']
+        })
+
+    # ===== 1. ПОЛУЧАЕМ СТАТУС ИГРОКА =====
+    user = get_user(user_id)
+    current_energy, seconds_passed = calculate_energy(user)
+    earning = get_total_earning(user["upgrade_counts"])
+    regen_text = get_energy_regen_text(user["max_energy"], current_energy)
+
+    # Обновляем онлайн
+    with online_users_lock:
+        online_users[user_id] = time.time()
+    update_online_count()
+
+    status_data = {
+        "wg": user["wg"],
+        "lp": user["lp"],
+        "energy": current_energy,
+        "total_clicks": user["total_clicks"],
+        "earning_per_click": earning,
+        "upgrade_counts": user["upgrade_counts"],
+        "likes": user["likes"],
+        "dislikes": user["dislikes"],
+        "username": user["username"],
+        "first_name": user["first_name"],
+        "avatar_url": user["avatar_url"],
+        "settings": user["settings"],
+        "usdt": user["usdt"],
+        "wins": user["wins"],
+        "role": user["role"],
+        "stars": user["stars"],
+        "max_energy": user["max_energy"],
+        "energy_upgrades": user["energy_upgrades"],
+        "regen_text": regen_text
+    }
+
+    # ===== 2. ПОЛУЧАЕМ ЛОТЕРЕЮ =====
+    user_tickets = [t for t in lottery_tickets if t.get("user_id") == user_id]
+    update_lottery_phase()
+
+    lottery_data = {
+        "prize_pool": lottery_pool,
+        "user_tickets": len(user_tickets),
+        "user_lp": user["lp"],
+        "is_drawn": is_drawn,
+        "winning_numbers": winning_numbers if is_drawn else [],
+        "tickets": user_tickets,
+        "lottery_phase": lottery_phase
+    }
+
+    # ===== 3. ПОЛУЧАЕМ ТОП-5 ИГРОКОВ =====
+    leaderboard_data = get_leaderboard_top_fast(limit=5)
+
+    # ===== 4. ПОЛУЧАЕМ ПОСЛЕДНИХ УЧАСТНИКОВ =====
+    recent_players = get_recent_players_fast(limit=5)
+
+    # ===== 5. ВОЗВРАЩАЕМ ВСЁ ВМЕСТЕ =====
+    return jsonify({
+        "success": True,
+        "status": status_data,
+        "lottery": lottery_data,
+        "leaderboard": leaderboard_data,
+        "recent_players": recent_players,
+        "online_count": len(online_users),
+        "server_time": time.time()
+    })
+
+
+def get_leaderboard_top_fast(limit=5):
+    """Быстрое получение топа (с кешированием)"""
+    global leaderboard_cache, leaderboard_cache_time
+    now = time.time()
+
+    # Кеш на 5 секунд
+    if now - leaderboard_cache_time < 5:
+        return leaderboard_cache[:limit]
+
+    with db.get_cursor() as cursor:
+        cursor.execute("""
+            SELECT user_id, total_clicks, username, first_name, avatar_url, role, settings 
+            FROM users 
+            ORDER BY total_clicks DESC 
+            LIMIT ?
+        """, (limit,))
+        rows = cursor.fetchall()
+
+        result = []
+        for i, row in enumerate(rows):
+            hide_from_top = False
+            if row['settings']:
+                try:
+                    settings = json.loads(row['settings'])
+                    hide_from_top = settings.get('hideFromTop', False)
+                except:
+                    pass
+
+            if hide_from_top:
+                display_name = 'Аноним'
+                avatar = ''
+            else:
+                if row['username'] and row['username'] != '':
+                    display_name = '@' + row['username']
+                elif row['first_name'] and row['first_name'] != '':
+                    display_name = row['first_name']
+                else:
+                    display_name = f"Player_{row['user_id']}"
+                avatar = row['avatar_url'] or ''
+
+            result.append({
+                "rank": i + 1,
+                "user_id": row['user_id'],
+                "username": display_name,
+                "total_clicks": row['total_clicks'],
+                "avatar": avatar,
+                "role": row['role'] if row['role'] else 'player',
+                "hide_from_top": hide_from_top
+            })
+
+        leaderboard_cache = result
+        leaderboard_cache_time = now
+        return result
+
+
+def get_recent_players_fast(limit=5):
+    """Быстрое получение последних участников лотереи (с кешированием)"""
+    cache_key = "recent_players_cache"
+    cache_time_key = "recent_players_time"
+
+    # Простой кеш в памяти (можно вынести в глобальные переменные)
+    if not hasattr(get_recent_players_fast, 'cache'):
+        get_recent_players_fast.cache = {}
+
+    now = time.time()
+    if cache_key in get_recent_players_fast.cache:
+        cache_time = get_recent_players_fast.cache.get(cache_time_key, 0)
+        if now - cache_time < 10:  # Кеш на 10 секунд
+            return get_recent_players_fast.cache[cache_key]
+
+    with db.get_cursor() as cursor:
+        cursor.execute("""
+            SELECT h.user_id, h.username, h.ticket_number, h.created_at, 
+                   u.avatar_url, u.first_name, u.role 
+            FROM lottery_tickets_history h 
+            LEFT JOIN users u ON h.user_id = u.user_id 
+            ORDER BY h.created_at DESC 
+            LIMIT ?
+        """, (limit,))
+        rows = cursor.fetchall()
+
+        players = []
+        for row in rows:
+            created = datetime.datetime.strptime(row['created_at'], '%Y-%m-%d %H:%M:%S')
+            diff = datetime.datetime.now() - created
+            seconds = int(diff.total_seconds())
+
+            if seconds < 60:
+                time_ago = f"{seconds} сек назад"
+            elif seconds < 3600:
+                time_ago = f"{seconds // 60} мин назад"
+            elif seconds < 86400:
+                time_ago = f"{seconds // 3600} ч назад"
+            else:
+                time_ago = f"{seconds // 86400} дн назад"
+
+            if row['username'] and row['username'] != '':
+                display_name = '@' + row['username']
+            elif row['first_name'] and row['first_name'] != '':
+                display_name = row['first_name']
+            else:
+                display_name = f"Player_{row['user_id']}"
+
+            players.append({
+                "user_id": row['user_id'],
+                "username": display_name,
+                "avatar_url": row['avatar_url'] or '',
+                "time_ago": time_ago,
+                "ticket_number": row['ticket_number'],
+                "role": row['role'] if row['role'] else 'player'
+            })
+
+        # Сохраняем в кеш
+        get_recent_players_fast.cache[cache_key] = players
+        get_recent_players_fast.cache[cache_time_key] = now
+
+        return players
 
 if __name__ == '__main__':
     threading.Thread(target=handle_telegram_updates, daemon=True).start()
