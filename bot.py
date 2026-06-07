@@ -4902,22 +4902,48 @@ def add_chat_bet(user_id, username, amount):
         if amount < CHAT_LOTTERY_MIN_BET:
             return False, f"❌ Минимальная ставка: {CHAT_LOTTERY_MIN_BET} WG"
 
-        # Принудительно получаем свежие данные (без кэша)
+        # 🔥 ПРОВЕРКА: существует ли пользователь в БД
         user = get_user(user_id, force_refresh=True)
 
+        # Если пользователь новый (wg = 0 и total_clicks = 0) — регистрируем
+        if user['wg'] == 0 and user['total_clicks'] == 0 and user['user_id'] != 12345678:
+            # Авторегистрация пользователя
+            with db.get_cursor() as cursor:
+                cursor.execute("SELECT user_id FROM users WHERE user_id = ?", (user_id,))
+                if not cursor.fetchone():
+                    now = time.time()
+                    ref_code = hashlib.md5(str(user_id).encode()).hexdigest()[:8]
+                    role = "player"
+                    unlocked = json.dumps(["player"])
+                    cursor.execute('''
+                        INSERT INTO users (
+                            user_id, wg, lp, energy, last_energy_update, tickets, total_clicks,
+                            upgrade_counts, ticket_counter, referral_code, referrer_id, likes, dislikes,
+                            settings, username, first_name, last_name, avatar_url, usdt, wins, role, stars,
+                            max_energy, energy_upgrades, energy_limit_upgrades, unlocked_prefixes,
+                            tutorial_completed, ton_wallet, banned_until, ban_reason, banned_by, completed_achievements
+                        ) VALUES (?, 0, 0, 500, ?, '[]', 0, '{"1":0,"2":0,"3":0}', 0, ?, 0, 0, 0,
+                                  '{"theme":"dark"}', ?, ?, ?, '', 0, 0, ?, 0, 500, 0, 0, ?, 0, '', 0, '', 0, 0)
+                    ''', (user_id, now, ref_code, username, '', '', role, unlocked))
+                    invalidate_cache(user_id)
+                    user = get_user(user_id, force_refresh=True)
+                    add_log(f"📝 Авторегистрация из чат-лотереи", user_id, username)
+
+        # Проверяем баланс
         if user['wg'] < amount:
             return False, f"❌ Недостаточно WG! Ваш баланс: {user['wg']:.2f} WG"
 
         # Списываем WG
         new_wg = round(user['wg'] - amount, 2)
         safe_update_user(user_id, wg=new_wg)
+        invalidate_cache(user_id)  # Принудительный сброс кэша
 
-        # Начисляем в фонд (93% от ставки, 7% комиссия)
+        # Начисляем в фонд
         commission = amount * CHAT_LOTTERY_COMMISSION
         amount_to_pool = round(amount - commission, 2)
         chat_lottery_pool = round(chat_lottery_pool + amount_to_pool, 2)
 
-        # Обновляем или добавляем участника
+        # Обновляем участника
         if user_id in chat_lottery_participants:
             chat_lottery_participants[user_id]['amount'] = round(chat_lottery_participants[user_id]['amount'] + amount,
                                                                  2)
@@ -4936,7 +4962,7 @@ def add_chat_bet(user_id, username, amount):
             currency="wg"
         )
 
-        return True, f"✅ Ставка {amount} WG принята! Ваш шанс на победу увеличился!"
+        return True, f"✅ Ставка {amount} WG принята! Остаток: {new_wg:.2f} WG"
 
 
 def calculate_winner():
