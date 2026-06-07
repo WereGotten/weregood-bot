@@ -237,17 +237,23 @@
         }
 
         .coin-wrapper {
-            display: flex;
-            justify-content: center;
-            margin: 15px 0;
-        }
+    display: flex;
+    justify-content: center;
+    margin: 20px 0 30px 0;
+}
 
-        .coin {
-            width: 280px;
-            height: 280px;
-            position: relative;
-            cursor: pointer;
-        }
+.coin {
+    width: 280px;
+    height: 280px;
+    position: relative;
+    cursor: pointer;
+    transition: transform 0.1s ease;
+}
+
+/* Дополнительно: небольшой эффект при наведении (опционально) */
+.coin:hover {
+    transform: scale(1.02);
+}
 
         .coin-inner {
             position: absolute;
