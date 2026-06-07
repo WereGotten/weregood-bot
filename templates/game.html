@@ -4017,6 +4017,23 @@
                 font-size: 0.7rem;
             }
         }
+
+        .joystick-icon {
+    background: rgba(255,215,0,0.15);
+    border-radius: 50%;
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 22px;
+}
+
+.joystick-icon:active {
+    transform: scale(0.95);
+}
     </style>
 </head>
 <body>
@@ -4030,15 +4047,19 @@
                 <span class="logo-badge"></span>
             </div>
             <div class="user-stats">
-                <div class="tasks-icon" onclick="openTasksModal()">🎯</div>
-                <div class="daily-icon" onclick="openDailyModal()">
-                    <img src="/static/gift.png" alt="Ежедневные награды" style="width: 36px; height: 36px;">
-                </div>
-                <div class="stat-badge">
-                    <img src="/static/lightning.png" alt="Энергия" style="width: 16px; height: 16px;">
-                    <span id="energyHeader">500</span>
-                </div>
-            </div>
+    <div class="tasks-icon" onclick="openTasksModal()">🎯</div>
+    <div class="daily-icon" onclick="openDailyModal()">
+        <img src="/static/gift.png" alt="Ежедневные награды" style="width: 36px; height: 36px;">
+    </div>
+    <!-- НОВАЯ КНОПКА ДЖОЙСТИКА -->
+    <div class="joystick-icon" onclick="showComingSoon()">
+        🎮
+    </div>
+    <div class="stat-badge">
+        <img src="/static/lightning.png" alt="Энергия" style="width: 16px; height: 16px;">
+        <span id="energyHeader">500</span>
+    </div>
+</div>
         </header>
 
         <main class="main-content">
@@ -4994,6 +5015,18 @@
             6: { reward: "150 WG" },
             7: { reward: "20 LP" }
         };
+
+// Функция для кнопки "В разработке"
+function showComingSoon() {
+    showToast('🚧 В разработке! Скоро появится...', 'info');
+
+    // Дополнительно: вибрация если включена
+    const vibrationToggle = document.getElementById('vibrationToggle');
+    const vibrationEnabled = vibrationToggle ? vibrationToggle.checked : true;
+    if (navigator.vibrate && vibrationEnabled) {
+        navigator.vibrate(50);
+    }
+}
 
         // ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
         function showToast(msg, type = 'info') {
