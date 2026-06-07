@@ -5042,7 +5042,7 @@ def calculate_daily_top():
                         row['user_id'],
                         f"🏆 **ПОЗДРАВЛЯЕМ!**\n\n"
                         f"Вы заняли #{i} место в **ТОПЕ ДНЯ**!\n\n"
-                        f"📊 Кликов за день: {row['daily_clicks']}\n\n"
+                        f" Кликов за день: {row['daily_clicks']}\n\n"
                         f"**Награда:**\n"
                         f"💎 +{rewards[i]['lp']} LP\n"
                         f"💰 +{rewards[i]['wg']} WG\n\n"
