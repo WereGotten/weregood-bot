@@ -5370,7 +5370,7 @@ function updateLeaderboardMini(leaderboardData) {
         let dailyClicks = user.daily_clicks || user.clicks || 0;
 
         // Добавляем иконку дня для наглядности
-        let clicksIcon = '📊';
+        let clicksIcon = '';
 
         html += `<div class="leaderboard-mini-item">
             <span class="rank">${user.rank}</span>
