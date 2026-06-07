@@ -4902,24 +4902,25 @@ def add_chat_bet(user_id, username, amount):
         if amount < CHAT_LOTTERY_MIN_BET:
             return False, f"❌ Минимальная ставка: {CHAT_LOTTERY_MIN_BET} WG"
 
-        # Проверяем баланс пользователя
-        user = get_user(user_id)
+        # Принудительно получаем свежие данные (без кэша)
+        user = get_user(user_id, force_refresh=True)
+
         if user['wg'] < amount:
             return False, f"❌ Недостаточно WG! Ваш баланс: {user['wg']:.2f} WG"
 
         # Списываем WG
-        new_wg = user['wg'] - amount
+        new_wg = round(user['wg'] - amount, 2)
         safe_update_user(user_id, wg=new_wg)
 
         # Начисляем в фонд (93% от ставки, 7% комиссия)
         commission = amount * CHAT_LOTTERY_COMMISSION
-        amount_to_pool = amount - commission
-
-        chat_lottery_pool += amount_to_pool
+        amount_to_pool = round(amount - commission, 2)
+        chat_lottery_pool = round(chat_lottery_pool + amount_to_pool, 2)
 
         # Обновляем или добавляем участника
         if user_id in chat_lottery_participants:
-            chat_lottery_participants[user_id]['amount'] += amount
+            chat_lottery_participants[user_id]['amount'] = round(chat_lottery_participants[user_id]['amount'] + amount,
+                                                                 2)
         else:
             chat_lottery_participants[user_id] = {
                 'amount': amount,
@@ -4961,7 +4962,7 @@ def calculate_winner():
     return winner_id, winner_amount
 
 
-def end_chat_lottery():
+def end_chat_lottery(chat_id=None):
     """Завершает лотерею и выдаёт приз победителю"""
     global chat_lottery_active, chat_lottery_pool, chat_lottery_participants
     global chat_lottery_start_time, chat_lottery_end_time
@@ -4976,16 +4977,15 @@ def end_chat_lottery():
             chat_lottery_participants = {}
             return "❌ Лотерея завершена без победителя (не было участников)"
 
-        # Определяем победителя
         winner_id, winner_bet = calculate_winner()
 
         if winner_id:
-            # Начисляем приз победителю
-            prize = chat_lottery_pool
-            user = get_user(winner_id)
-            new_wg = user['wg'] + prize
-
+            prize = round(chat_lottery_pool, 2)
+            user = get_user(winner_id, force_refresh=True)  # ← force_refresh
+            new_wg = round(user['wg'] + prize, 2)
             safe_update_user(winner_id, wg=new_wg)
+            invalidate_cache(winner_id)  # ← принудительный сброс кэша
+
             add_log(
                 f"🏆 ПОБЕДА в чат-лотерее! Выиграл {prize:.2f} WG (ставка была {winner_bet} WG)",
                 winner_id, user.get('username', str(winner_id)),
@@ -4997,19 +4997,20 @@ def end_chat_lottery():
             winner_name = chat_lottery_participants[winner_id]['username']
             total_participants = len(chat_lottery_participants)
 
-            result = (
-                f"🎉 **ЛОТЕРЕЯ ЗАВЕРШЕНА!** 🎉\n\n"
-                f"🏆 **Победитель:** {winner_name}\n"
-                f"💰 **Выигрыш:** {prize:.2f} WG\n"
-                f"🎲 **Ставка победителя:** {winner_bet} WG\n"
-                f"👥 **Всего участников:** {total_participants}\n"
-                f"📊 **Общий фонд:** {chat_lottery_pool:.2f} WG\n\n"
-                f"✨ *Поздравляем победителя!* ✨"
-            )
+            # Отправляем результат в чат
+            if chat_id:
+                send_telegram_message(
+                    chat_id,
+                    f"🎉 **ЛОТЕРЕЯ ЗАВЕРШЕНА!** 🎉\n\n"
+                    f"🏆 **Победитель:** {winner_name}\n"
+                    f"💰 **Выигрыш:** {prize:.2f} WG\n"
+                    f"🎲 **Ставка победителя:** {winner_bet} WG\n"
+                    f"👥 **Всего участников:** {total_participants}\n\n"
+                    f"✨ *Поздравляем победителя!* ✨"
+                )
         else:
             result = "❌ Лотерея завершена, но победитель не определён"
 
-        # Сбрасываем лотерею
         chat_lottery_active = False
         chat_lottery_pool = 0
         chat_lottery_participants = {}
