@@ -5137,6 +5137,7 @@ def api_sync():
         "lp": user["lp"],
         "energy": current_energy,
         "total_clicks": user["total_clicks"],
+        "daily_clicks": user.get("daily_clicks", 0),  # ← ДОБАВЛЕНО
         "earning_per_click": earning,
         "upgrade_counts": user["upgrade_counts"],
         "likes": user["likes"],
@@ -5168,8 +5169,9 @@ def api_sync():
         "lottery_phase": lottery_phase
     }
 
-    # ===== 3. ПОЛУЧАЕМ ТОП-5 ИГРОКОВ =====
-    leaderboard_data = get_leaderboard_top_fast(limit=5)
+    # ===== 3. ПОЛУЧАЕМ ТОП-5 ИГРОКОВ (ТОП ДНЯ) =====
+    # ✅ ИСПРАВЛЕНО: используем get_daily_leaderboard_top_fast вместо get_leaderboard_top_fast
+    leaderboard_data = get_daily_leaderboard_top_fast(limit=5)
 
     # ===== 4. ПОЛУЧАЕМ ПОСЛЕДНИХ УЧАСТНИКОВ =====
     recent_players = get_recent_players_fast(limit=5)
@@ -5186,20 +5188,31 @@ def api_sync():
     })
 
 
-def get_leaderboard_top_fast(limit=5):
-    """Быстрое получение топа (с кешированием)"""
+def get_daily_leaderboard_top_fast(limit=5):
+    """Быстрое получение ТОПА ДНЯ по daily_clicks (с кешированием)"""
     global leaderboard_cache, leaderboard_cache_time
     now = time.time()
 
     # Кеш на 5 секунд
     if now - leaderboard_cache_time < 5:
-        return leaderboard_cache[:limit]
+        if leaderboard_cache and len(leaderboard_cache) >= limit:
+            return leaderboard_cache[:limit]
 
     with db.get_cursor() as cursor:
+        # Проверяем, есть ли колонка daily_clicks
+        cursor.execute("PRAGMA table_info(users)")
+        columns = [col[1] for col in cursor.fetchall()]
+
+        if 'daily_clicks' not in columns:
+            # Если нет колонки - создаём
+            cursor.execute('ALTER TABLE users ADD COLUMN daily_clicks INTEGER DEFAULT 0')
+            return []
+
         cursor.execute("""
-            SELECT user_id, total_clicks, username, first_name, avatar_url, role, settings 
+            SELECT user_id, daily_clicks, username, first_name, avatar_url, role, settings 
             FROM users 
-            ORDER BY total_clicks DESC 
+            WHERE daily_clicks > 0
+            ORDER BY daily_clicks DESC 
             LIMIT ?
         """, (limit,))
         rows = cursor.fetchall()
@@ -5230,7 +5243,8 @@ def get_leaderboard_top_fast(limit=5):
                 "rank": i + 1,
                 "user_id": row['user_id'],
                 "username": display_name,
-                "total_clicks": row['total_clicks'],
+                "daily_clicks": row['daily_clicks'] or 0,  # ← ключевое поле
+                "total_clicks": 0,  # для совместимости, но не используется
                 "avatar": avatar,
                 "role": row['role'] if row['role'] else 'player',
                 "hide_from_top": hide_from_top

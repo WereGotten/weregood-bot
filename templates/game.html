@@ -5340,13 +5340,13 @@ async function syncData(force = false) {
     }
 }
 
-// Новая функция для обновления мини-топа
+// Новая функция для обновления мини-топа (ТОП ДНЯ)
 function updateLeaderboardMini(leaderboardData) {
     const container = document.getElementById('leaderboardMini');
     if (!container) return;
 
     if (!leaderboardData || leaderboardData.length === 0) {
-        container.innerHTML = '<div>Нет данных</div>';
+        container.innerHTML = '<div>Нет данных за сегодня</div>';
         return;
     }
 
@@ -5366,11 +5366,17 @@ function updateLeaderboardMini(leaderboardData) {
             roleBadge = '<span class="leaderboard-pioneer-badge">⭐</span>';
         }
 
+        // ✅ ИСПРАВЛЕНО: используем daily_clicks вместо total_clicks
+        let dailyClicks = user.daily_clicks || user.clicks || 0;
+
+        // Добавляем иконку дня для наглядности
+        let clicksIcon = '📊';
+
         html += `<div class="leaderboard-mini-item">
             <span class="rank">${user.rank}</span>
             <span class="avatar-mini">${avatar}</span>
             <span class="name">${userName}${roleBadge}</span>
-            <span class="clicks">${(user.total_clicks || 0).toLocaleString()} кликов</span>
+            <span class="clicks">${clicksIcon} ${dailyClicks.toLocaleString()} кликов за сегодня</span>
         </div>`;
     }
 
