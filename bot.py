@@ -4141,6 +4141,95 @@ def api_admin_withdrawals():
     return jsonify({"success": True, "withdrawals": withdrawals})
 
 
+@app.route('/api/admin/reset_ad_limits', methods=['POST'])
+@require_admin
+def api_admin_reset_ad_limits():
+    """
+    Сброс дневных лимитов просмотра рекламы для всех игроков
+    """
+    try:
+        with db.get_cursor() as cursor:
+            # Удаляем все записи о просмотре рекламы за сегодня
+            # Это автоматически обнулит счётчики, так как при следующем просмотре
+            # будет считаться, что сегодня реклама ещё не смотрелась
+            cursor.execute("DELETE FROM ad_watch_history WHERE date(watched_at) = date('now')")
+            deleted_count = cursor.rowcount
+
+            # Дополнительно: можно также удалить старые записи за предыдущие дни (опционально)
+            # Оставляем только записи за последние 7 дней для статистики
+            cursor.execute("DELETE FROM ad_watch_history WHERE watched_at < datetime('now', '-7 days')")
+            old_deleted = cursor.rowcount
+
+        admin_id = request.args.get('user_id', 'Admin')
+        admin_name = "Admin"
+
+        add_admin_log(
+            f"🔄 СБРОС ЛИМИТОВ РЕКЛАМЫ: удалено {deleted_count} записей за сегодня, "
+            f"очищено старых записей: {old_deleted}",
+            admin_id,
+            admin_name
+        )
+
+        return jsonify({
+            "success": True,
+            "message": f"Лимиты рекламы сброшены для всех игроков! Удалено {deleted_count} записей за сегодня.",
+            "deleted_today": deleted_count,
+            "deleted_old": old_deleted
+        })
+
+    except Exception as e:
+        logger.error(f"Ошибка сброса лимитов рекламы: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/admin/reset_ad_limits_user', methods=['POST'])
+@require_admin
+def api_admin_reset_ad_limits_user():
+    """
+    Сброс дневных лимитов просмотра рекламы для конкретного игрока
+    """
+    data = request.get_json()
+    if not data:
+        return jsonify({"success": False, "error": "No JSON"}), 400
+
+    user_id = data.get('user_id')
+    if not user_id:
+        return jsonify({"success": False, "error": "user_id required"}), 400
+
+    try:
+        with db.get_cursor() as cursor:
+            # Удаляем записи о просмотре рекламы за сегодня для конкретного пользователя
+            cursor.execute(
+                "DELETE FROM ad_watch_history WHERE user_id = ? AND date(watched_at) = date('now')",
+                (user_id,)
+            )
+            deleted_count = cursor.rowcount
+
+        admin_id = request.args.get('user_id', 'Admin')
+        admin_name = "Admin"
+
+        # Получаем информацию о пользователе для лога
+        user = get_user(user_id)
+        username = user.get('username') or user.get('first_name') or str(user_id)
+
+        add_admin_log(
+            f"🔄 СБРОС ЛИМИТОВ РЕКЛАМЫ для игрока {username} (ID: {user_id}): удалено {deleted_count} записей",
+            admin_id,
+            admin_name,
+            user_id,
+            username
+        )
+
+        return jsonify({
+            "success": True,
+            "message": f"Лимиты рекламы сброшены для игрока {username}! Удалено {deleted_count} записей за сегодня.",
+            "deleted": deleted_count
+        })
+
+    except Exception as e:
+        logger.error(f"Ошибка сброса лимитов рекламы для пользователя {user_id}: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
 @app.route('/api/admin/search_users', methods=['POST'])
 @require_admin
 def api_admin_search_users():

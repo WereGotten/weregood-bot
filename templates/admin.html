@@ -881,6 +881,11 @@
     <button class="btn btn-danger" onclick="resetDailyClicks()" style="background: rgba(244,67,54,0.2); color: #f44336; border: 1px solid #f44336;">
         🔄 Сбросить ТОП ДНЯ
     </button>
+    <!-- 👇 НОВАЯ КНОПКА ТУТ -->
+    <button class="btn btn-danger" onclick="resetAllAdLimits()" style="background: rgba(255,165,0,0.2); color: #FFA500; border: 1px solid #FFA500;">
+        🎬 Сбросить лимиты рекламы ВСЕМ
+    </button>
+</div>
 </div>
                 <div class="chart-card">
                     <h3>📋 Участники лотереи</h3>
@@ -1403,6 +1408,59 @@ function getYAxisLabel() {
     } catch(e) {
         console.error('Reset daily clicks error:', e);
         alert('❌ Ошибка при сбросе топа дня');
+    }
+}
+
+// Сброс лимитов рекламы для всех игроков
+async function resetAllAdLimits() {
+    if (!confirm('⚠️ ВНИМАНИЕ! Это действие сбросит ДНЕВНЫЕ ЛИМИТЫ ПРОСМОТРА РЕКЛАМЫ для ВСЕХ игроков!\n\nОни смогут снова смотреть рекламу сегодня.\n\nВы уверены?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/admin/reset_ad_limits?key=' + adminKey, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const result = await response.json();
+
+        if (result.success) {
+            alert(`✅ ${result.message}`);
+            if (typeof loadStats === 'function') loadStats();
+        } else {
+            alert(`❌ Ошибка: ${result.error}`);
+        }
+    } catch(e) {
+        console.error('Reset ad limits error:', e);
+        alert('❌ Ошибка при сбросе лимитов рекламы');
+    }
+}
+
+// Сброс лимитов рекламы для конкретного игрока
+async function resetUserAdLimits(userId) {
+    if (!confirm(`Сбросить дневные лимиты рекламы для игрока ID: ${userId}?\n\nОн сможет снова смотреть рекламу сегодня.`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/admin/reset_ad_limits_user?key=' + adminKey, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId })
+        });
+        const result = await response.json();
+
+        if (result.success) {
+            alert(`✅ ${result.message}`);
+            if (typeof openPlayerProfile === 'function') {
+                openPlayerProfile(userId);
+            }
+        } else {
+            alert(`❌ Ошибка: ${result.error}`);
+        }
+    } catch(e) {
+        console.error('Reset user ad limits error:', e);
+        alert('❌ Ошибка при сбросе лимитов рекламы');
     }
 }
 
