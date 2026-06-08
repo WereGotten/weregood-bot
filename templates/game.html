@@ -4077,257 +4077,6 @@
         font-size: 20px;
     }
 }
-        /* ГЕЙМПАД МЕНЮ - ПОЛНЫЙ ЭКРАН */
-.gamepad-modal {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(145deg, #0a0a1a 0%, #0d0d20 100%);
-    z-index: 3000;
-    overflow-y: auto;
-    animation: fadeIn 0.3s ease;
-}
-
-.gamepad-modal.active {
-    display: block;
-}
-
-.gamepad-modal-content {
-    min-height: 100vh;
-    padding: 20px;
-    max-width: 500px;
-    margin: 0 auto;
-}
-
-.gamepad-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px 0 30px 0;
-    border-bottom: 1px solid rgba(255,215,0,0.2);
-    margin-bottom: 30px;
-}
-
-.gamepad-header h2 {
-    font-size: 1.5rem;
-    font-weight: 800;
-    background: linear-gradient(135deg, #FFD700, #FFA500);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-}
-
-.gamepad-close {
-    background: rgba(255,255,255,0.1);
-    border: none;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    font-size: 1.2rem;
-    color: white;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.gamepad-close:active {
-    transform: scale(0.95);
-}
-
-.gamepad-games {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    margin-bottom: 30px;
-}
-
-.game-card {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    background: rgba(255,255,255,0.05);
-    border-radius: 24px;
-    padding: 20px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    border: 1px solid rgba(255,215,0,0.1);
-}
-
-.game-card:active {
-    transform: scale(0.98);
-    background: rgba(255,215,0,0.1);
-}
-
-.game-card.coming-soon {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-.game-card.coming-soon:active {
-    transform: none;
-}
-
-.game-card-icon {
-    font-size: 2.5rem;
-    width: 60px;
-    height: 60px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,165,0,0.08));
-    border-radius: 20px;
-}
-
-.game-card-info {
-    flex: 1;
-}
-
-.game-card-info h3 {
-    font-size: 1rem;
-    font-weight: 700;
-    margin-bottom: 4px;
-}
-
-.game-card-info p {
-    font-size: 0.7rem;
-    opacity: 0.6;
-}
-
-.game-card-arrow {
-    font-size: 1.2rem;
-    color: #FFD700;
-}
-
-.gamepad-footer {
-    text-align: center;
-    padding: 20px;
-    border-top: 1px solid rgba(255,255,255,0.05);
-    font-size: 0.7rem;
-    opacity: 0.5;
-}
-
-/* МОДАЛЬНОЕ ОКНО ИГРЫ */
-.game-modal {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.95);
-    z-index: 3100;
-    align-items: center;
-    justify-content: center;
-}
-
-.game-modal.active {
-    display: flex;
-}
-
-.game-modal-content {
-    background: linear-gradient(145deg, #1a1a2e, #0f0f20);
-    border-radius: 32px;
-    width: 90%;
-    max-width: 400px;
-    max-height: 80vh;
-    overflow-y: auto;
-    border: 1px solid rgba(255,215,0,0.2);
-    animation: fadeIn 0.2s ease;
-}
-
-.game-modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px;
-    border-bottom: 1px solid rgba(255,215,0,0.1);
-}
-
-.game-modal-header h2 {
-    font-size: 1.2rem;
-    font-weight: 700;
-    background: linear-gradient(135deg, #FFD700, #FFA500);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-}
-
-.game-modal-close {
-    background: rgba(255,255,255,0.1);
-    border: none;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    font-size: 1rem;
-    color: white;
-    cursor: pointer;
-}
-
-.game-modal-body {
-    padding: 30px 20px;
-    text-align: center;
-}
-
-.coming-soon-game {
-    text-align: center;
-}
-
-.game-icon-large {
-    font-size: 4rem;
-    margin-bottom: 20px;
-}
-
-.coming-soon-game h3 {
-    font-size: 1.3rem;
-    font-weight: 700;
-    margin-bottom: 16px;
-    color: #FFD700;
-}
-
-.coming-soon-game p {
-    font-size: 0.8rem;
-    opacity: 0.7;
-    margin-bottom: 8px;
-}
-
-.progress-bar-game {
-    background: rgba(255,255,255,0.1);
-    border-radius: 20px;
-    height: 8px;
-    margin: 20px 0 10px;
-    overflow: hidden;
-}
-
-.progress-fill {
-    background: linear-gradient(90deg, #FFD700, #FFA500);
-    height: 100%;
-    border-radius: 20px;
-    width: 0%;
-}
-
-.progress-text {
-    font-size: 0.7rem;
-    color: #FFD700;
-    margin-bottom: 20px;
-}
-
-.game-notify-btn {
-    background: linear-gradient(135deg, #FFD700, #FFA500);
-    border: none;
-    border-radius: 40px;
-    padding: 12px 24px;
-    font-weight: 700;
-    font-size: 0.8rem;
-    color: #0a0a1a;
-    cursor: pointer;
-    transition: transform 0.1s;
-}
-
-.game-notify-btn:active {
-    transform: scale(0.97);
-}
     </style>
 </head>
 <body>
@@ -5181,60 +4930,7 @@
     <audio id="settingsSound" preload="auto"><source src="/static/settings.mp3" type="audio/mpeg"></audio>
     <audio id="purchaseSound" preload="auto"><source src="/static/purchase.mp3" type="audio/mpeg"></audio>
 
-    <!-- ГЕЙМПАД МЕНЮ (ПОЛНЫЙ ЭКРАН) -->
-<div id="gamepadModal" class="gamepad-modal">
-    <div class="gamepad-modal-content">
-        <div class="gamepad-header">
-            <h2>🎮 Игровой центр</h2>
-            <button class="gamepad-close" onclick="closeGamepad()">✕</button>
-        </div>
-        <div class="gamepad-games">
-            <div class="game-card" onclick="openGame('fortune')">
-                <div class="game-card-icon">🎲</div>
-                <div class="game-card-info">
-                    <h3>Командная Фортуна</h3>
-                    <p>Играй с друзьями и выигрывай!</p>
-                </div>
-                <div class="game-card-arrow">→</div>
-            </div>
 
-            <div class="game-card coming-soon">
-                <div class="game-card-icon">❓</div>
-                <div class="game-card-info">
-                    <h3>Скоро...</h3>
-                    <p>Новая игра в разработке</p>
-                </div>
-                <div class="game-card-arrow">🔒</div>
-            </div>
-        </div>
-        <div class="gamepad-footer">
-            <p>✨ Новые игры будут появляться здесь</p>
-        </div>
-    </div>
-</div>
-
-<!-- МОДАЛЬНОЕ ОКНО КОМАНДНОЙ ФОРТУНЫ -->
-<div id="fortuneModal" class="game-modal">
-    <div class="game-modal-content">
-        <div class="game-modal-header">
-            <h2>🎲 Командная Фортуна</h2>
-            <button class="game-modal-close" onclick="closeFortuneGame()">✕</button>
-        </div>
-        <div class="game-modal-body">
-            <div class="coming-soon-game">
-                <div class="game-icon-large">🎲</div>
-                <h3>Командная Фортуна</h3>
-                <p>🎮 Режим: В разработке</p>
-                <p>🌟 Скоро вы сможете играть с друзьями!</p>
-                <div class="progress-bar-game">
-                    <div class="progress-fill" style="width: 30%"></div>
-                </div>
-                <p class="progress-text">Готовность: 30%</p>
-                <button class="game-notify-btn" onclick="notifyMe()">🔔 Уведомить о запуске</button>
-            </div>
-        </div>
-    </div>
-</div>
     <script>
                 // ==================== ИНИЦИАЛИЗАЦИЯ ====================
         let tg = window.Telegram?.WebApp;
@@ -5366,8 +5062,16 @@
             7: { reward: "20 LP" }
         };
 
+// Функция для кнопки "В разработке"
 function showComingSoon() {
-    openGamepad();  // Открывает геймпад меню
+    showToast('🚧 В разработке! Скоро появится...', 'info');
+
+    // Дополнительно: вибрация если включена
+    const vibrationToggle = document.getElementById('vibrationToggle');
+    const vibrationEnabled = vibrationToggle ? vibrationToggle.checked : true;
+    if (navigator.vibrate && vibrationEnabled) {
+        navigator.vibrate(50);
+    }
 }
 
         // ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
@@ -8388,45 +8092,6 @@ document.getElementById('activatePromoBtn').onclick = activatePromoCode;
 
         document.getElementById('tutorialNextBtn').onclick = () => nextTutorialStep();
         document.getElementById('tutorialSkipBtn').onclick = () => skipTutorial();
-
-        // ========== ГЕЙМПАД МЕНЮ ==========
-// ID создателя (твой Telegram ID)
-const CREATOR_ID = 5264622363;
-
-function openGamepad() {
-    const currentUserId = userId; // используем глобальную переменную userId
-
-    if (currentUserId === CREATOR_ID) {
-        // Создатель — полный доступ
-        document.getElementById('gamepadModal').classList.add('active');
-        document.body.style.overflow = 'hidden';
-    } else {
-        // Остальные — сообщение о разработке
-        showToast('🚧 Игровой центр в разработке! Скоро здесь появятся игры.', 'info');
-    }
-}
-
-function closeGamepad() {
-    document.getElementById('gamepadModal').classList.remove('active');
-    document.body.style.overflow = '';
-}
-
-function openGame(gameName) {
-    if (gameName === 'fortune') {
-        document.getElementById('fortuneModal').classList.add('active');
-        document.body.style.overflow = 'hidden';
-        closeGamepad();
-    }
-}
-
-function closeFortuneGame() {
-    document.getElementById('fortuneModal').classList.remove('active');
-    document.body.style.overflow = '';
-}
-
-function notifyMe() {
-    showToast('🔔 Мы уведомим вас о запуске игры в Telegram!', 'success');
-}
 
         // ==================== АНИМАЦИИ ====================
         let dailyIconElement = document.querySelector('.daily-icon');
