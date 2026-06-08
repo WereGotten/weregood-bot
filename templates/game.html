@@ -8914,11 +8914,12 @@ let yellowPoolAmount = 0;
 let redPoolAmount = 0;
 let userCurrentBet = { amount: 0, team: null };
 let fortuneHistory = [];
-let fortuneUIElements = {};
 
-// Кешируем DOM элементы
+// Кеширование DOM элементов для производительности
+let fortuneElements = {};
+
 function cacheFortuneElements() {
-    fortuneUIElements = {
+    fortuneElements = {
         yellowPool: document.getElementById('yellowPool'),
         redPool: document.getElementById('redPool'),
         fortuneTimer: document.getElementById('fortuneTimer'),
@@ -8933,34 +8934,36 @@ function initFortuneGame() {
     cacheFortuneElements();
     yellowPoolAmount = 0;
     redPoolAmount = 0;
-    userCurrentBet = { amount: 0, team: null };
     fortuneTimeLeft = 300;
+    userCurrentBet = { amount: 0, team: null };
+    if (fortuneElements.fortuneTimer) {
+        fortuneElements.fortuneTimer.style.color = '#FFD700';
+    }
     updateFortuneUI();
     startFortuneTimer();
 }
 
 function updateFortuneUI() {
-    // Обновляем только если элементы существуют и изменились
-    if (fortuneUIElements.yellowPool) fortuneUIElements.yellowPool.innerText = yellowPoolAmount;
-    if (fortuneUIElements.redPool) fortuneUIElements.redPool.innerText = redPoolAmount;
+    if (fortuneElements.yellowPool) fortuneElements.yellowPool.innerText = yellowPoolAmount;
+    if (fortuneElements.redPool) fortuneElements.redPool.innerText = redPoolAmount;
 
     const minutes = Math.floor(fortuneTimeLeft / 60);
     const seconds = fortuneTimeLeft % 60;
-    if (fortuneUIElements.fortuneTimer) {
-        fortuneUIElements.fortuneTimer.innerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    if (fortuneElements.fortuneTimer) {
+        fortuneElements.fortuneTimer.innerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
 
     const percent = (fortuneTimeLeft / 300) * 100;
-    if (fortuneUIElements.timerBarFill) {
-        fortuneUIElements.timerBarFill.style.width = percent + '%';
+    if (fortuneElements.timerBarFill) {
+        fortuneElements.timerBarFill.style.width = percent + '%';
     }
 
     if (userCurrentBet.amount > 0) {
-        if (fortuneUIElements.userBetAmount) fortuneUIElements.userBetAmount.innerText = userCurrentBet.amount;
-        if (fortuneUIElements.userBetTeam) fortuneUIElements.userBetTeam.innerText = userCurrentBet.team === 'yellow' ? '🟡 Жёлтые' : '🔴 Красные';
+        if (fortuneElements.userBetAmount) fortuneElements.userBetAmount.innerText = userCurrentBet.amount;
+        if (fortuneElements.userBetTeam) fortuneElements.userBetTeam.innerText = userCurrentBet.team === 'yellow' ? '🟡 Жёлтые' : '🔴 Красные';
     } else {
-        if (fortuneUIElements.userBetAmount) fortuneUIElements.userBetAmount.innerText = '0';
-        if (fortuneUIElements.userBetTeam) fortuneUIElements.userBetTeam.innerText = '—';
+        if (fortuneElements.userBetAmount) fortuneElements.userBetAmount.innerText = '0';
+        if (fortuneElements.userBetTeam) fortuneElements.userBetTeam.innerText = '—';
     }
 }
 
@@ -8971,17 +8974,18 @@ function startFortuneTimer() {
             fortuneTimeLeft--;
             updateFortuneUI();
 
-            if (fortuneTimeLeft <= 10 && fortuneUIElements.fortuneTimer) {
-                fortuneUIElements.fortuneTimer.style.color = '#ff4444';
+            if (fortuneTimeLeft <= 10 && fortuneElements.fortuneTimer) {
+                fortuneElements.fortuneTimer.style.color = '#ff4444';
             }
         } else {
             clearInterval(fortuneTimerInterval);
+            fortuneTimerInterval = null;
             endFortuneRound();
         }
     }, 1000);
 }
 
-function endFortuneRound() {
+async function endFortuneRound() {
     let winner = null;
 
     if (yellowPoolAmount > redPoolAmount) {
@@ -8993,7 +8997,7 @@ function endFortuneRound() {
         if (userCurrentBet.amount > 0) {
             localWG += userCurrentBet.amount;
             updateUI();
-            await syncData(true);
+            if (typeof syncData === 'function') await syncData(true);
         }
         saveFortuneHistory('draw', userCurrentBet.amount, userCurrentBet.team);
         resetFortuneRound();
@@ -9004,7 +9008,7 @@ function endFortuneRound() {
         const winAmount = userCurrentBet.amount * 2;
         localWG += winAmount;
         updateUI();
-        await syncData(true);
+        if (typeof syncData === 'function') await syncData(true);
         showToast(`🎉 ПОБЕДА! Вы выиграли ${winAmount} WG!`, 'success');
         saveFortuneHistory('win', userCurrentBet.amount, userCurrentBet.team, winAmount);
     } else if (userCurrentBet.amount > 0) {
@@ -9020,7 +9024,9 @@ function resetFortuneRound() {
     redPoolAmount = 0;
     userCurrentBet = { amount: 0, team: null };
     fortuneTimeLeft = 300;
-    if (fortuneUIElements.fortuneTimer) fortuneUIElements.fortuneTimer.style.color = '#FFD700';
+    if (fortuneElements.fortuneTimer) {
+        fortuneElements.fortuneTimer.style.color = '#FFD700';
+    }
     updateFortuneUI();
     startFortuneTimer();
 }
@@ -9040,7 +9046,7 @@ function saveFortuneHistory(result, amount, team, winAmount = 0) {
 }
 
 function renderFortuneHistory() {
-    const container = fortuneUIElements.fortuneHistoryList;
+    const container = fortuneElements.fortuneHistoryList;
     if (!container) return;
 
     if (fortuneHistory.length === 0) {
@@ -9093,7 +9099,7 @@ async function makeBet(team) {
 
     localWG -= betAmount;
     updateUI();
-    await syncData(true);
+    if (typeof syncData === 'function') await syncData(true);
 
     if (team === 'yellow') {
         yellowPoolAmount += betAmount;
@@ -9115,6 +9121,35 @@ async function makeBet(team) {
     showToast(`✅ Ставка ${betAmount} WG на команду ${team === 'yellow' ? 'Жёлтых 🟡' : 'Красных 🔴'} принята!`, 'success');
 }
 
+// Переключатель вкладок
+function initFortuneTabs() {
+    const tabs = document.querySelectorAll('.fortune-tab');
+    if (!tabs.length) return;
+
+    tabs.forEach(tab => {
+        tab.removeEventListener('click', fortuneTabHandler);
+        tab.addEventListener('click', fortuneTabHandler);
+    });
+}
+
+function fortuneTabHandler(e) {
+    const tab = e.currentTarget;
+    const target = tab.dataset.fortuneTab;
+
+    document.querySelectorAll('.fortune-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelectorAll('.fortune-tab-content').forEach(c => c.classList.remove('active'));
+
+    if (target === 'play') {
+        const playTab = document.getElementById('fortunePlayTab');
+        if (playTab) playTab.classList.add('active');
+    } else {
+        const historyTab = document.getElementById('fortuneHistoryTab');
+        if (historyTab) historyTab.classList.add('active');
+        renderFortuneHistory();
+    }
+}
+
 // Обновляем openGame для фортуны
 const originalOpenGame = window.openGame;
 window.openGame = function(gameName) {
@@ -9123,38 +9158,25 @@ window.openGame = function(gameName) {
         if (fortuneModal) {
             fortuneModal.classList.add('active');
             document.body.style.overflow = 'hidden';
-            closeGamepad();
+            if (typeof closeGamepad === 'function') closeGamepad();
             initFortuneGame();
+            initFortuneTabs();
         }
     } else if (originalOpenGame) {
         originalOpenGame(gameName);
     }
 };
 
+// Обновляем closeFortuneGame
 window.closeFortuneGame = function() {
     const fortuneModal = document.getElementById('fortuneModal');
     if (fortuneModal) fortuneModal.classList.remove('active');
     document.body.style.overflow = '';
-    if (fortuneTimerInterval) clearInterval(fortuneTimerInterval);
+    if (fortuneTimerInterval) {
+        clearInterval(fortuneTimerInterval);
+        fortuneTimerInterval = null;
+    }
 };
-
-// Переключатель вкладок (после загрузки DOM)
-if (document.querySelectorAll('.fortune-tab').length) {
-    document.querySelectorAll('.fortune-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            const target = tab.dataset.fortuneTab;
-            document.querySelectorAll('.fortune-tab').forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            document.querySelectorAll('.fortune-tab-content').forEach(c => c.classList.remove('active'));
-            if (target === 'play') {
-                document.getElementById('fortunePlayTab').classList.add('active');
-            } else {
-                document.getElementById('fortuneHistoryTab').classList.add('active');
-                renderFortuneHistory();
-            }
-        });
-    });
-}
 
         // ==================== DOMCONTENTLOADED ====================
         document.addEventListener("DOMContentLoaded", () => {
