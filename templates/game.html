@@ -4074,7 +4074,7 @@
         }
 
         /* ============================================
-   ГЕЙМПАД МЕНЮ - В СТИЛЕ WEREGOOD
+   ГЕЙМПАД МЕНЮ - WEREGOOD СТИЛЬ (КРУПНЫЕ КАРТОЧКИ)
    ============================================ */
 .gamepad-modal {
     display: none;
@@ -4086,7 +4086,7 @@
     background: linear-gradient(145deg, #0a0a1a 0%, #12122a 100%);
     z-index: 9999;
     overflow-y: auto;
-    animation: fadeInGamepad 0.25s ease;
+    animation: fadeInGamepad 0.3s ease;
 }
 
 .gamepad-modal.active {
@@ -4094,15 +4094,16 @@
 }
 
 @keyframes fadeInGamepad {
-    from { opacity: 0; transform: translateY(10px); }
+    from { opacity: 0; transform: translateY(15px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
 .gamepad-modal-content {
     min-height: 100vh;
-    padding: 20px 16px 30px;
+    padding: 24px 20px 40px;
     max-width: 500px;
     margin: 0 auto;
+    position: relative;
 }
 
 /* Шапка */
@@ -4110,30 +4111,31 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px 0 20px;
-    margin-bottom: 24px;
+    padding: 20px 0 25px;
+    margin-bottom: 30px;
     border-bottom: 1px solid rgba(255,215,0,0.12);
 }
 
 .gamepad-header h2 {
-    font-size: 1.4rem;
+    font-size: 1.5rem;
     font-weight: 700;
     background: linear-gradient(135deg, #FFD700, #FFA500);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
+    letter-spacing: -0.3px;
 }
 
 .gamepad-close {
     background: rgba(255,215,0,0.1);
     border: 1px solid rgba(255,215,0,0.15);
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
-    font-size: 1rem;
+    font-size: 1.1rem;
     color: #FFD700;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: all 0.2s ease;
 }
 
 .gamepad-close:active {
@@ -4145,55 +4147,75 @@
 .gamepad-games {
     display: flex;
     flex-direction: column;
-    gap: 14px;
-    margin-bottom: 30px;
+    gap: 20px;
+    margin-bottom: 40px;
 }
 
-/* Карточка игры */
+/* КАРТОЧКА ИГРЫ — УВЕЛИЧЕННАЯ */
 .game-card {
     display: flex;
     align-items: center;
-    gap: 16px;
-    background: rgba(255,255,255,0.04);
-    border-radius: 20px;
-    padding: 14px 18px;
+    gap: 20px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+    border-radius: 28px;
+    padding: 20px 24px;
     cursor: pointer;
-    transition: all 0.2s ease;
-    border: 1px solid rgba(255,215,0,0.08);
+    transition: all 0.25s ease;
+    border: 1px solid rgba(255,215,0,0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Эффект свечения при нажатии */
+.game-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,215,0,0.08), transparent);
+    transition: left 0.5s ease;
+    pointer-events: none;
+}
+
+.game-card:active::after {
+    left: 100%;
 }
 
 .game-card:active {
-    background: rgba(255,215,0,0.08);
     transform: scale(0.98);
-    border-color: rgba(255,215,0,0.2);
+    background: rgba(255,215,0,0.06);
+    border-color: rgba(255,215,0,0.25);
 }
 
 .game-card.coming-soon {
-    opacity: 0.5;
+    opacity: 0.55;
     cursor: not-allowed;
 }
 
 .game-card.coming-soon:active {
     transform: none;
-    background: rgba(255,255,255,0.04);
+    background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
 }
 
-/* Иконка игры */
+/* Иконка игры — увеличенная */
 .game-card-icon {
-    font-size: 2rem;
-    width: 52px;
-    height: 52px;
+    font-size: 2.8rem;
+    width: 70px;
+    height: 70px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(255,215,0,0.1);
-    border-radius: 18px;
+    background: rgba(255,215,0,0.12);
+    border-radius: 24px;
     transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
 
 .game-card:active .game-card-icon {
     background: rgba(255,215,0,0.2);
-    transform: scale(1.05);
+    transform: scale(1.03);
 }
 
 /* Информация об игре */
@@ -4202,41 +4224,62 @@
 }
 
 .game-card-info h3 {
-    font-size: 1rem;
-    font-weight: 600;
-    margin-bottom: 4px;
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 6px;
     color: #fff;
+    letter-spacing: -0.3px;
 }
 
 .game-card-info p {
-    font-size: 0.65rem;
+    font-size: 0.75rem;
     color: rgba(255,255,255,0.5);
+}
+
+/* Бейдж "Скоро" для второй карточки */
+.game-card-badge {
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    background: rgba(255,215,0,0.12);
+    padding: 4px 12px;
+    border-radius: 30px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: #FFD700;
+    letter-spacing: 0.5px;
 }
 
 /* Стрелка */
 .game-card-arrow {
-    font-size: 1.1rem;
+    font-size: 1.3rem;
     color: #FFD700;
-    opacity: 0.5;
-    transition: all 0.15s ease;
+    opacity: 0.6;
+    transition: all 0.2s ease;
 }
 
 .game-card:active .game-card-arrow {
     opacity: 1;
-    transform: translateX(3px);
+    transform: translateX(4px);
 }
 
 /* Футер */
 .gamepad-footer {
     text-align: center;
-    padding: 20px;
+    padding: 24px;
     border-top: 1px solid rgba(255,215,0,0.08);
-    font-size: 0.65rem;
+    font-size: 0.7rem;
     color: rgba(255,255,255,0.35);
 }
 
+.gamepad-footer p {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
 /* ============================================
-   МОДАЛЬНОЕ ОКНО ИГРЫ
+   МОДАЛЬНОЕ ОКНО ИГРЫ — УЛУЧШЕННОЕ
    ============================================ */
 .game-modal {
     display: none;
@@ -4246,7 +4289,7 @@
     width: 100%;
     height: 100%;
     background: rgba(10,10,26,0.96);
-    backdrop-filter: blur(4px);
+    backdrop-filter: blur(8px);
     z-index: 10000;
     align-items: center;
     justify-content: center;
@@ -4258,31 +4301,32 @@
 }
 
 @keyframes modalFade {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
 }
 
 .game-modal-content {
     background: linear-gradient(145deg, #1a1a2e, #0f0f20);
-    border-radius: 28px;
+    border-radius: 32px;
     width: 85%;
-    max-width: 340px;
+    max-width: 360px;
     max-height: 80vh;
     overflow-y: auto;
-    border: 1px solid rgba(255,215,0,0.15);
+    border: 1px solid rgba(255,215,0,0.2);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
 }
 
 .game-modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 18px 20px;
+    padding: 20px 24px;
     border-bottom: 1px solid rgba(255,215,0,0.1);
 }
 
 .game-modal-header h2 {
-    font-size: 1.1rem;
-    font-weight: 600;
+    font-size: 1.2rem;
+    font-weight: 700;
     background: linear-gradient(135deg, #FFD700, #FFA500);
     -webkit-background-clip: text;
     background-clip: text;
@@ -4292,12 +4336,13 @@
 .game-modal-close {
     background: rgba(255,215,0,0.1);
     border: none;
-    width: 32px;
-    height: 32px;
+    width: 34px;
+    height: 34px;
     border-radius: 50%;
-    font-size: 0.9rem;
+    font-size: 1rem;
     color: #FFD700;
     cursor: pointer;
+    transition: all 0.15s;
 }
 
 .game-modal-close:active {
@@ -4306,58 +4351,67 @@
 }
 
 .game-modal-body {
-    padding: 30px 20px;
+    padding: 35px 24px;
     text-align: center;
 }
 
 .game-icon-large {
-    font-size: 3.5rem;
-    margin-bottom: 16px;
-    opacity: 0.8;
+    font-size: 4rem;
+    margin-bottom: 20px;
+    filter: drop-shadow(0 4px 12px rgba(255,215,0,0.2));
 }
 
 .coming-soon-game h3 {
-    font-size: 1.2rem;
-    font-weight: 600;
+    font-size: 1.3rem;
+    font-weight: 700;
     margin-bottom: 12px;
-    color: #fff;
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
 }
 
 .coming-soon-game p {
-    font-size: 0.75rem;
-    color: rgba(255,255,255,0.5);
-    margin-bottom: 6px;
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.55);
+    margin-bottom: 8px;
 }
 
 .progress-bar-game {
     background: rgba(255,255,255,0.08);
-    border-radius: 20px;
+    border-radius: 30px;
     height: 6px;
-    margin: 20px 0 8px;
+    margin: 24px 0 10px;
     overflow: hidden;
 }
 
 .progress-fill {
     background: linear-gradient(90deg, #FFD700, #FFA500);
     height: 100%;
-    border-radius: 20px;
+    border-radius: 30px;
     width: 0%;
+    animation: fillWidth 0.8s ease forwards;
+}
+
+@keyframes fillWidth {
+    from { width: 0%; }
+    to { width: 30%; }
 }
 
 .progress-text {
-    font-size: 0.65rem;
+    font-size: 0.7rem;
     color: #FFD700;
-    margin-bottom: 20px;
-    opacity: 0.7;
+    margin-bottom: 24px;
+    opacity: 0.8;
 }
 
 .game-notify-btn {
-    background: rgba(255,215,0,0.1);
-    border: 1px solid rgba(255,215,0,0.2);
-    border-radius: 40px;
-    padding: 12px 20px;
-    font-weight: 500;
-    font-size: 0.75rem;
+    background: linear-gradient(135deg, rgba(255,215,0,0.12), rgba(255,165,0,0.06));
+    border: 1px solid rgba(255,215,0,0.25);
+    border-radius: 50px;
+    padding: 14px 24px;
+    font-weight: 600;
+    font-size: 0.8rem;
     color: #FFD700;
     cursor: pointer;
     transition: all 0.15s ease;
@@ -4366,26 +4420,44 @@
 
 .game-notify-btn:active {
     transform: scale(0.97);
-    background: rgba(255,215,0,0.15);
+    background: rgba(255,215,0,0.18);
 }
 
 @media (max-width: 480px) {
     .gamepad-header h2 {
-        font-size: 1.2rem;
+        font-size: 1.3rem;
+    }
+
+    .game-card {
+        padding: 16px 20px;
+        gap: 16px;
     }
 
     .game-card-icon {
-        width: 46px;
-        height: 46px;
-        font-size: 1.7rem;
+        width: 60px;
+        height: 60px;
+        font-size: 2.3rem;
+        border-radius: 20px;
     }
 
     .game-card-info h3 {
-        font-size: 0.9rem;
+        font-size: 1.05rem;
+    }
+
+    .game-card-info p {
+        font-size: 0.7rem;
+    }
+
+    .game-card-arrow {
+        font-size: 1.1rem;
     }
 
     .game-icon-large {
-        font-size: 3rem;
+        font-size: 3.3rem;
+    }
+
+    .coming-soon-game h3 {
+        font-size: 1.1rem;
     }
 }
     </style>
