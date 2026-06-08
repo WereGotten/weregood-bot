@@ -237,23 +237,22 @@
         }
 
         .coin-wrapper {
-    display: flex;
-    justify-content: center;
-    margin: 20px 0 30px 0;
-}
+            display: flex;
+            justify-content: center;
+            margin: 20px 0 30px 0;
+        }
 
-.coin {
-    width: 240px;
-    height: 240px;
-    position: relative;
-    cursor: pointer;
-    transition: transform 0.1s ease;
-}
+        .coin {
+            width: 240px;
+            height: 240px;
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.1s ease;
+        }
 
-/* Дополнительно: небольшой эффект при наведении (опционально) */
-.coin:hover {
-    transform: scale(1.02);
-}
+        .coin:hover {
+            transform: scale(1.02);
+        }
 
         .coin-inner {
             position: absolute;
@@ -674,52 +673,51 @@
             margin-top: 4px;
         }
 
-        /* КАРУСЕЛЬ ДЛЯ КАРТОЧЕК ДОНАТА - КРАСИВЫЕ СТРЕЛКИ */
-.donate-carousel-container {
-    overflow: hidden;
-    border-radius: 24px;
-    position: relative;
-}
+        .donate-carousel-container {
+            overflow: hidden;
+            border-radius: 24px;
+            position: relative;
+        }
 
-.donate-carousel-track {
-    display: flex;
-    transition: transform 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1);
-}
+        .donate-carousel-track {
+            display: flex;
+            transition: transform 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+        }
 
-.carousel-prev, .carousel-next {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    background: rgba(255,215,0,0.25);
-    border: 1px solid rgba(255,215,0,0.4);
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    color: #FFD700;
-    font-size: 1.1rem;
-    cursor: pointer;
-    z-index: 10;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    backdrop-filter: blur(8px);
-    transition: all 0.25s ease;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-}
+        .carousel-prev, .carousel-next {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,215,0,0.25);
+            border: 1px solid rgba(255,215,0,0.4);
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            color: #FFD700;
+            font-size: 1.1rem;
+            cursor: pointer;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(8px);
+            transition: all 0.25s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
 
-.carousel-prev { left: 8px; }
-.carousel-next { right: 8px; }
+        .carousel-prev { left: 8px; }
+        .carousel-next { right: 8px; }
 
-.carousel-prev:hover, .carousel-next:hover {
-    background: rgba(255,215,0,0.45);
-    transform: translateY(-50%) scale(1.08);
-    border-color: rgba(255,215,0,0.7);
-    box-shadow: 0 4px 12px rgba(255,215,0,0.3);
-}
+        .carousel-prev:hover, .carousel-next:hover {
+            background: rgba(255,215,0,0.45);
+            transform: translateY(-50%) scale(1.08);
+            border-color: rgba(255,215,0,0.7);
+            box-shadow: 0 4px 12px rgba(255,215,0,0.3);
+        }
 
-.carousel-prev:active, .carousel-next:active {
-    transform: translateY(-50%) scale(0.95);
-}
+        .carousel-prev:active, .carousel-next:active {
+            transform: translateY(-50%) scale(0.95);
+        }
 
         .star-upgrade-card {
             background: linear-gradient(145deg, #1a1a2e, #0f0f20);
@@ -4024,59 +4022,307 @@
             }
         }
 
-        /* Контейнер с монетой и джойстиком справа */
-.game-container {
-    position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin: 15px 0;
-}
+        .game-container {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 15px 0;
+        }
 
+        .joystick-corner {
+            position: absolute;
+            right: 0;
+            top: -15px;
+            cursor: pointer;
+            z-index: 10;
+        }
 
+        .joystick-small {
+            width: 48px;
+            height: 48px;
+            background: rgba(255,215,0,0.15);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            border: 1px solid rgba(255,215,0,0.3);
+            transition: all 0.1s ease;
+            backdrop-filter: blur(4px);
+        }
 
-/* ДЖОЙСТИК — МЕНЬШЕ, ПРИЖАТ К ПРАВОМУ КРАЮ, ВЫШЕ */
-.joystick-corner {
-    position: absolute;
-    right: 0;
-    top: -15px;       /* Чуть выше */
-    cursor: pointer;
-    z-index: 10;
-}
+        .joystick-small:active {
+            transform: scale(0.9);
+            background: rgba(255,215,0,0.25);
+        }
 
-.joystick-small {
-    width: 48px;      /* Было 55px */
-    height: 48px;     /* Было 55px */
-    background: rgba(255,215,0,0.15);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 26px;  /* Было 30px */
-    border: 1px solid rgba(255,215,0,0.3);
-    transition: all 0.1s ease;
-    backdrop-filter: blur(4px);
-}
+        @media (max-width: 480px) {
+            .joystick-small {
+                width: 42px;
+                height: 42px;
+                font-size: 22px;
+            }
+        }
 
-.joystick-small:active {
-    transform: scale(0.9);
-    background: rgba(255,215,0,0.25);
-}
+        @media (max-width: 380px) {
+            .joystick-small {
+                width: 38px;
+                height: 38px;
+                font-size: 20px;
+            }
+        }
 
-    .joystick-small {
-        width: 42px;
-        height: 42px;
-        font-size: 22px;
-    }
-}
+        /* ГЕЙМПАД МЕНЮ - ПОЛНЫЙ ЭКРАН - ИСПРАВЛЕННАЯ ВЕРСИЯ */
+        .gamepad-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(145deg, #0a0a1a 0%, #0d0d20 100%);
+            z-index: 9999;
+            overflow-y: auto;
+            animation: fadeIn 0.3s ease;
+        }
 
+        .gamepad-modal.active {
+            display: block;
+        }
 
-    .joystick-small {
-        width: 38px;
-        height: 38px;
-        font-size: 20px;
-    }
-}
+        .gamepad-modal-content {
+            min-height: 100vh;
+            padding: 20px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .gamepad-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0 30px 0;
+            border-bottom: 1px solid rgba(255,215,0,0.2);
+            margin-bottom: 30px;
+        }
+
+        .gamepad-header h2 {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .gamepad-close {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 1.2rem;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .gamepad-close:active {
+            transform: scale(0.95);
+        }
+
+        .gamepad-games {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin-bottom: 30px;
+        }
+
+        .game-card {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 24px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid rgba(255,215,0,0.1);
+        }
+
+        .game-card:active {
+            transform: scale(0.98);
+            background: rgba(255,215,0,0.1);
+        }
+
+        .game-card.coming-soon {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .game-card.coming-soon:active {
+            transform: none;
+        }
+
+        .game-card-icon {
+            font-size: 2.5rem;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,165,0,0.08));
+            border-radius: 20px;
+        }
+
+        .game-card-info {
+            flex: 1;
+        }
+
+        .game-card-info h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .game-card-info p {
+            font-size: 0.7rem;
+            opacity: 0.6;
+        }
+
+        .game-card-arrow {
+            font-size: 1.2rem;
+            color: #FFD700;
+        }
+
+        .gamepad-footer {
+            text-align: center;
+            padding: 20px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            font-size: 0.7rem;
+            opacity: 0.5;
+        }
+
+        .game-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .game-modal.active {
+            display: flex;
+        }
+
+        .game-modal-content {
+            background: linear-gradient(145deg, #1a1a2e, #0f0f20);
+            border-radius: 32px;
+            width: 90%;
+            max-width: 400px;
+            max-height: 80vh;
+            overflow-y: auto;
+            border: 1px solid rgba(255,215,0,0.2);
+            animation: fadeIn 0.2s ease;
+        }
+
+        .game-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid rgba(255,215,0,0.1);
+        }
+
+        .game-modal-header h2 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .game-modal-close {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            font-size: 1rem;
+            color: white;
+            cursor: pointer;
+        }
+
+        .game-modal-body {
+            padding: 30px 20px;
+            text-align: center;
+        }
+
+        .coming-soon-game {
+            text-align: center;
+        }
+
+        .game-icon-large {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+
+        .coming-soon-game h3 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: #FFD700;
+        }
+
+        .coming-soon-game p {
+            font-size: 0.8rem;
+            opacity: 0.7;
+            margin-bottom: 8px;
+        }
+
+        .progress-bar-game {
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            height: 8px;
+            margin: 20px 0 10px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            background: linear-gradient(90deg, #FFD700, #FFA500);
+            height: 100%;
+            border-radius: 20px;
+            width: 0%;
+        }
+
+        .progress-text {
+            font-size: 0.7rem;
+            color: #FFD700;
+            margin-bottom: 20px;
+        }
+
+        .game-notify-btn {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            border: none;
+            border-radius: 40px;
+            padding: 12px 24px;
+            font-weight: 700;
+            font-size: 0.8rem;
+            color: #0a0a1a;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        .game-notify-btn:active {
+            transform: scale(0.97);
+        }
     </style>
 </head>
 <body>
@@ -4090,15 +4336,15 @@
                 <span class="logo-badge"></span>
             </div>
             <div class="user-stats">
-    <div class="tasks-icon" onclick="openTasksModal()">🎯</div>
-    <div class="daily-icon" onclick="openDailyModal()">
-        <img src="/static/gift.png" alt="Ежедневные награды" style="width: 36px; height: 36px;">
-    </div>
-    <div class="stat-badge">
-        <img src="/static/lightning.png" alt="Энергия" style="width: 16px; height: 16px;">
-        <span id="energyHeader">500</span>
-    </div>
-</div>
+                <div class="tasks-icon" onclick="openTasksModal()">🎯</div>
+                <div class="daily-icon" onclick="openDailyModal()">
+                    <img src="/static/gift.png" alt="Ежедневные награды" style="width: 36px; height: 36px;">
+                </div>
+                <div class="stat-badge">
+                    <img src="/static/lightning.png" alt="Энергия" style="width: 16px; height: 16px;">
+                    <span id="energyHeader">500</span>
+                </div>
+            </div>
         </header>
 
         <main class="main-content">
@@ -4124,16 +4370,16 @@
                 </div>
 
                 <div class="game-container">
-    <div class="coin-wrapper">
-        <div class="coin" id="coin">
-            <div class="coin-inner"></div>
-            <div class="click-plus" id="clickPlus">+<span id="clickAmount">0.01</span></div>
-        </div>
-    </div>
-    <div class="joystick-corner" onclick="showComingSoon()">
-        <div class="joystick-small">🎮</div>
-    </div>
-</div>
+                    <div class="coin-wrapper">
+                        <div class="coin" id="coin">
+                            <div class="coin-inner"></div>
+                            <div class="click-plus" id="clickPlus">+<span id="clickAmount">0.01</span></div>
+                        </div>
+                    </div>
+                    <div class="joystick-corner" onclick="showComingSoon()">
+                        <div class="joystick-small">🎮</div>
+                    </div>
+                </div>
 
                 <div class="earnings-info">
                     <span>
@@ -4309,7 +4555,6 @@
                         </div>
                     </div>
 
-                    <!-- КАРУСЕЛЬ С ДВУМЯ КАРТОЧКАМИ -->
                     <div style="position: relative; margin-bottom: 20px;">
                         <button class="carousel-prev" id="donateCarouselPrev">←</button>
                         <button class="carousel-next" id="donateCarouselNext">→</button>
@@ -4317,7 +4562,6 @@
                         <div class="donate-carousel-container">
                             <div class="donate-carousel-track" id="donateCarouselTrack">
 
-                                <!-- КАРТОЧКА 1: Энергетический усилитель -->
                                 <div class="star-upgrade-card" id="energyUpgradeCard">
                                     <div class="star-upgrade-header">
                                         <div class="star-upgrade-icon">
@@ -4364,52 +4608,51 @@
                                     <button class="star-upgrade-btn btn-ton" id="tonDonateBtn" onclick="buyWithTon()">💎 Купить за 0.18 TON</button>
                                 </div>
 
-                                <!-- КАРТОЧКА 2: LP БУСТЕР (НОВАЯ) -->
-<div class="star-upgrade-card" id="lpBoostCard">
-    <div class="star-upgrade-header">
-        <div class="star-upgrade-icon">
-            <img src="/static/diamond.png" alt="LP" style="width: 44px; height: 44px;">
-        </div>
-        <div class="star-upgrade-title">
-            <h3>💎 LP Бустер</h3>
-            <p>Пополняет баланс LP</p>
-        </div>
-    </div>
-    <div class="star-upgrade-price">
-        <img src="/static/star_small.png" alt="Stars" style="width: 16px; height: 16px;">
-        22 Stars
-    </div>
-    <div class="star-upgrade-desc">
-        <div class="star-upgrade-desc-item">
-            <div class="desc-icon">
-                <img src="/static/diamond.png" alt="LP" style="width: 36px; height: 36px;">
-            </div>
-            <div class="desc-text">+50 LP</div>
-            <div class="desc-value">на баланс</div>
-        </div>
-        <div class="star-upgrade-desc-item">
-            <div class="desc-icon">
-                <img src="/static/withdraw.png" alt="Безлимит" style="width: 30px; height: 30px;">
-            </div>
-            <div class="desc-text">Безлимитная покупка</div>
-            <div class="desc-value">покупай сколько хочешь</div>
-        </div>
-    </div>
-    <div class="star-upgrade-progress">
-        <div class="progress-info">
-            <span> Куплено: <span id="lpBoostPurchaseCount">0</span> раз</span>
-            <span>⚡ Мгновенное зачисление</span>
-        </div>
-        <div class="progress-bar-bg">
-            <div class="progress-bar-fill" style="width: 100%; background: linear-gradient(90deg, #FFD700, #FFA500);"></div>
-        </div>
-    </div>
-    <button class="star-upgrade-btn btn-stars" id="lpBoostStarsBtn" onclick="buyLPBoostStars()">
-        <img src="/static/star_small.png" alt="Stars" style="width: 16px; height: 16px;">
-        Купить за 22 звёзд
-    </button>
-    <button class="star-upgrade-btn btn-ton" id="lpBoostTonBtn" onclick="buyLPBoostTon()">💎 Купить за 0.13 TON</button>
-</div>
+                                <div class="star-upgrade-card" id="lpBoostCard">
+                                    <div class="star-upgrade-header">
+                                        <div class="star-upgrade-icon">
+                                            <img src="/static/diamond.png" alt="LP" style="width: 44px; height: 44px;">
+                                        </div>
+                                        <div class="star-upgrade-title">
+                                            <h3>💎 LP Бустер</h3>
+                                            <p>Пополняет баланс LP</p>
+                                        </div>
+                                    </div>
+                                    <div class="star-upgrade-price">
+                                        <img src="/static/star_small.png" alt="Stars" style="width: 16px; height: 16px;">
+                                        22 Stars
+                                    </div>
+                                    <div class="star-upgrade-desc">
+                                        <div class="star-upgrade-desc-item">
+                                            <div class="desc-icon">
+                                                <img src="/static/diamond.png" alt="LP" style="width: 36px; height: 36px;">
+                                            </div>
+                                            <div class="desc-text">+50 LP</div>
+                                            <div class="desc-value">на баланс</div>
+                                        </div>
+                                        <div class="star-upgrade-desc-item">
+                                            <div class="desc-icon">
+                                                <img src="/static/withdraw.png" alt="Безлимит" style="width: 30px; height: 30px;">
+                                            </div>
+                                            <div class="desc-text">Безлимитная покупка</div>
+                                            <div class="desc-value">покупай сколько хочешь</div>
+                                        </div>
+                                    </div>
+                                    <div class="star-upgrade-progress">
+                                        <div class="progress-info">
+                                            <span> Куплено: <span id="lpBoostPurchaseCount">0</span> раз</span>
+                                            <span>⚡ Мгновенное зачисление</span>
+                                        </div>
+                                        <div class="progress-bar-bg">
+                                            <div class="progress-bar-fill" style="width: 100%; background: linear-gradient(90deg, #FFD700, #FFA500);"></div>
+                                        </div>
+                                    </div>
+                                    <button class="star-upgrade-btn btn-stars" id="lpBoostStarsBtn" onclick="buyLPBoostStars()">
+                                        <img src="/static/star_small.png" alt="Stars" style="width: 16px; height: 16px;">
+                                        Купить за 22 звёзд
+                                    </button>
+                                    <button class="star-upgrade-btn btn-ton" id="lpBoostTonBtn" onclick="buyLPBoostTon()">💎 Купить за 0.13 TON</button>
+                                </div>
 
                             </div>
                         </div>
@@ -4492,7 +4735,6 @@
                         <span class="recent-badge">5</span>
                     </div>
                     <div class="recent-players-list" id="recentPlayersList">
-                        <!-- Здесь будут элементы -->
                     </div>
                 </div>
 
@@ -4561,50 +4803,49 @@
                 </button>
 
                 <div class="referral-section">
-    <div class="referral-header">
-        <div class="referral-header-icon"><img src="/static/invite.png" alt="invite" style="width: 24px; height: 24px;"></div>
-        <div class="referral-header-info">
-            <div class="referral-title">Пригласи друга</div>
-            <div class="referral-subtitle">5% от трат LP + 10% от WG дохода друга → тебе</div>
-        </div>
-    </div>
+                    <div class="referral-header">
+                        <div class="referral-header-icon"><img src="/static/invite.png" alt="invite" style="width: 24px; height: 24px;"></div>
+                        <div class="referral-header-info">
+                            <div class="referral-title">Пригласи друга</div>
+                            <div class="referral-subtitle">5% от трат LP + 10% от WG дохода друга → тебе</div>
+                        </div>
+                    </div>
 
-    <!-- ДВЕ КАРТОЧКИ ДОХОДА -->
-    <div style="display: flex; gap: 12px; margin-bottom: 20px;">
-        <div style="flex: 1; background: rgba(255,215,0,0.08); border-radius: 16px; padding: 12px; text-align: center;">
-            <div style="font-size: 0.6rem; color: rgba(255,255,255,0.5); margin-bottom: 4px;">💰 Заработано WG</div>
-            <div style="font-size: 1.3rem; font-weight: 700; color: #FFD700;" id="totalEarnedWG">0</div>
-            <div style="font-size: 0.55rem; color: rgba(255,255,255,0.4);">10% от кликов друга</div>
-        </div>
-        <div style="flex: 1; background: rgba(255,215,0,0.08); border-radius: 16px; padding: 12px; text-align: center;">
-            <div style="font-size: 0.6rem; color: rgba(255,255,255,0.5); margin-bottom: 4px;">💎 Заработано LP</div>
-            <div style="font-size: 1.3rem; font-weight: 700; color: #00E5FF;" id="totalEarnedLP">0</div>
-            <div style="font-size: 0.55rem; color: rgba(255,255,255,0.4);">5% от трат LP друга</div>
-        </div>
-    </div>
+                    <div style="display: flex; gap: 12px; margin-bottom: 20px;">
+                        <div style="flex: 1; background: rgba(255,215,0,0.08); border-radius: 16px; padding: 12px; text-align: center;">
+                            <div style="font-size: 0.6rem; color: rgba(255,255,255,0.5); margin-bottom: 4px;">💰 Заработано WG</div>
+                            <div style="font-size: 1.3rem; font-weight: 700; color: #FFD700;" id="totalEarnedWG">0</div>
+                            <div style="font-size: 0.55rem; color: rgba(255,255,255,0.4);">10% от кликов друга</div>
+                        </div>
+                        <div style="flex: 1; background: rgba(255,215,0,0.08); border-radius: 16px; padding: 12px; text-align: center;">
+                            <div style="font-size: 0.6rem; color: rgba(255,255,255,0.5); margin-bottom: 4px;">💎 Заработано LP</div>
+                            <div style="font-size: 1.3rem; font-weight: 700; color: #00E5FF;" id="totalEarnedLP">0</div>
+                            <div style="font-size: 0.55rem; color: rgba(255,255,255,0.4);">5% от трат LP друга</div>
+                        </div>
+                    </div>
 
-    <div class="referral-link-row">
-        <input type="text" id="referralLinkInput" readonly>
-        <button class="referral-copy-btn" onclick="copyReferralLink()">
-            <img src="/static/copy.png" alt="copy" style="width: 14px; height: 14px;">
-            <span>Копировать</span>
-        </button>
-    </div>
+                    <div class="referral-link-row">
+                        <input type="text" id="referralLinkInput" readonly>
+                        <button class="referral-copy-btn" onclick="copyReferralLink()">
+                            <img src="/static/copy.png" alt="copy" style="width: 14px; height: 14px;">
+                            <span>Копировать</span>
+                        </button>
+                    </div>
 
-    <button class="referral-share-btn-full" onclick="shareReferral()">
-        <img src="/static/share.png" alt="share" style="width: 14px; height: 14px;">
-        <span>Поделиться ссылкой</span>
-    </button>
+                    <button class="referral-share-btn-full" onclick="shareReferral()">
+                        <img src="/static/share.png" alt="share" style="width: 14px; height: 14px;">
+                        <span>Поделиться ссылкой</span>
+                    </button>
 
-    <div class="referrals-list-header">
-        <span>👥 Рефералы</span>
-        <span class="referrals-count" id="referralsCount">0</span>
-    </div>
+                    <div class="referrals-list-header">
+                        <span>👥 Рефералы</span>
+                        <span class="referrals-count" id="referralsCount">0</span>
+                    </div>
 
-    <div class="referrals-list" id="referralsList">
-        <div class="empty-referrals">😢 Пока нет друзей</div>
-    </div>
-</div>
+                    <div class="referrals-list" id="referralsList">
+                        <div class="empty-referrals">😢 Пока нет друзей</div>
+                    </div>
+                </div>
 
                 <div class="settings-card">
                     <div class="settings-header">
@@ -4664,7 +4905,6 @@
             </div>
         </main>
 
-        <!-- НИЖНЯЯ НАВИГАЦИЯ -->
         <nav class="bottom-nav" id="bottomNav">
             <div class="nav-item active" data-tab="home">
                 <div class="nav-icon"><img src="/static/home_normal.png" alt="Главная" style="width: 24px; height: 24px;"></div>
@@ -4922,43 +5162,87 @@
 
     <div id="toast" class="toast"></div>
 
-    <!-- АУДИО -->
     <audio id="errorSound" preload="auto"><source src="/static/error.mp3" type="audio/mpeg"></audio>
     <audio id="clickSound" preload="auto"><source src="/static/click.mp3" type="audio/mpeg"></audio>
     <audio id="navSound" preload="auto"><source src="/static/nav.mp3" type="audio/mpeg"></audio>
     <audio id="lpDropSound" preload="auto"><source src="/static/lp_drop.mp3" type="audio/mpeg"></audio>
     <audio id="settingsSound" preload="auto"><source src="/static/settings.mp3" type="audio/mpeg"></audio>
     <audio id="purchaseSound" preload="auto"><source src="/static/purchase.mp3" type="audio/mpeg"></audio>
+    <!-- ГЕЙМПАД МЕНЮ (ПОЛНЫЙ ЭКРАН) -->
+    <div id="gamepadModal" class="gamepad-modal">
+        <div class="gamepad-modal-content">
+            <div class="gamepad-header">
+                <h2>🎮 Игровой центр</h2>
+                <button class="gamepad-close" onclick="closeGamepad()">✕</button>
+            </div>
+            <div class="gamepad-games">
+                <div class="game-card" onclick="openGame('fortune')">
+                    <div class="game-card-icon">🎲</div>
+                    <div class="game-card-info">
+                        <h3>Командная Фортуна</h3>
+                        <p>Играй с друзьями и выигрывай!</p>
+                    </div>
+                    <div class="game-card-arrow">→</div>
+                </div>
+                <div class="game-card coming-soon">
+                    <div class="game-card-icon">❓</div>
+                    <div class="game-card-info">
+                        <h3>Скоро...</h3>
+                        <p>Новая игра в разработке</p>
+                    </div>
+                    <div class="game-card-arrow">🔒</div>
+                </div>
+            </div>
+            <div class="gamepad-footer">
+                <p>✨ Новые игры будут появляться здесь</p>
+            </div>
+        </div>
+    </div>
 
+    <!-- МОДАЛЬНОЕ ОКНО КОМАНДНОЙ ФОРТУНЫ -->
+    <div id="fortuneModal" class="game-modal">
+        <div class="game-modal-content">
+            <div class="game-modal-header">
+                <h2>🎲 Командная Фортуна</h2>
+                <button class="game-modal-close" onclick="closeFortuneGame()">✕</button>
+            </div>
+            <div class="game-modal-body">
+                <div class="coming-soon-game">
+                    <div class="game-icon-large">🎲</div>
+                    <h3>Командная Фортуна</h3>
+                    <p>🎮 Режим: В разработке</p>
+                    <p>🌟 Скоро вы сможете играть с друзьями!</p>
+                    <div class="progress-bar-game">
+                        <div class="progress-fill" style="width: 30%"></div>
+                    </div>
+                    <p class="progress-text">Готовность: 30%</p>
+                    <button class="game-notify-btn" onclick="notifyMe()">🔔 Уведомить о запуске</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script>
-                // ==================== ИНИЦИАЛИЗАЦИЯ ====================
+        // ==================== ИНИЦИАЛИЗАЦИЯ ====================
         let tg = window.Telegram?.WebApp;
         let user = tg?.initDataUnsafe?.user;
 
-        // 🔥 ФИКС: пробуем получить ID из localStorage, если Telegram не дал
         let savedUserId = localStorage.getItem('weregood_user_id');
         let userId;
 
         if (user && user.id && user.id !== 12345678) {
-            // Получили реальный ID от Telegram
             userId = user.id;
-            // Сохраняем в localStorage
             localStorage.setItem('weregood_user_id', userId);
             console.log('✅ ID получен из Telegram:', userId);
         } else if (savedUserId && savedUserId !== '12345678' && savedUserId !== 'null') {
-            // Восстанавливаем ID из localStorage (если там есть нормальный ID)
             userId = parseInt(savedUserId);
             console.log('✅ ID восстановлен из localStorage:', userId);
-            // Пытаемся обновить данные из Telegram
             if (user && user.id && user.id !== userId) {
                 console.log('⚠️ ID из Telegram отличается от сохранённого:', user.id, '→', userId);
             }
         } else {
-            // Всё плохо — используем дефолтный ID, но показываем предупреждение
             userId = 12345678;
             console.warn('⚠️ ВНИМАНИЕ! Используется дефолтный ID 12345678. Игрок может потерять прогресс!');
-            console.warn('⚠️ Попросите игрока перезапустить Telegram или нажать кнопку "Восстановить аккаунт"');
         }
 
         let username = user ? (user.username || '') : '';
@@ -4966,45 +5250,29 @@
         let lastName = user ? (user.last_name || '') : '';
         let photoUrl = user && user.photo_url ? user.photo_url : '';
         let chatId = userId;
-
-        // Для отображения в приветствии используем first_name или username или 'Игрок'
         let displayName = firstName || username || 'Игрок';
 
-        // Функция для принудительного восстановления аккаунта (добавь кнопку в профиль)
         window.forceBindAccount = async function() {
             if (!tg) {
                 showToast('❌ Telegram WebApp не доступен', 'error');
                 return;
             }
-
             tg.expand();
-
-            // Пытаемся получить свежие данные
             const freshUser = tg.initDataUnsafe?.user;
-
             if (freshUser && freshUser.id && freshUser.id !== 12345678) {
                 const newUserId = freshUser.id;
-
                 if (confirm(`⚠️ Обнаружен ваш реальный аккаунт (ID: ${newUserId}).\n\nПривязать его к игре? Весь ваш прогресс сохранится.`)) {
-                    // Сохраняем реальный ID
                     userId = newUserId;
                     localStorage.setItem('weregood_user_id', userId);
-
-                    // Обновляем данные профиля
                     username = freshUser.username || '';
                     firstName = freshUser.first_name || '';
                     lastName = freshUser.last_name || '';
                     photoUrl = freshUser.photo_url || '';
                     displayName = firstName || username || 'Игрок';
-
-                    // Перерегистрируемся с правильным ID
                     await autoRegister();
-
-                    // Обновляем все данные
                     await updateStatus();
                     await updateLottery();
                     await updateLeaderboard();
-
                     showToast('✅ Аккаунт привязан! Страница будет обновлена...', 'success');
                     setTimeout(() => location.reload(), 1500);
                 }
@@ -5013,7 +5281,6 @@
             }
         };
 
-        // Восстанавливаем приветствие, если есть сохранённое имя
         if (localStorage.getItem('weregood_display_name')) {
             displayName = localStorage.getItem('weregood_display_name');
         }
@@ -5062,19 +5329,10 @@
             7: { reward: "20 LP" }
         };
 
-// Функция для кнопки "В разработке"
-function showComingSoon() {
-    showToast('🚧 В разработке! Скоро появится...', 'info');
+        function showComingSoon() {
+            openGamepad();
+        }
 
-    // Дополнительно: вибрация если включена
-    const vibrationToggle = document.getElementById('vibrationToggle');
-    const vibrationEnabled = vibrationToggle ? vibrationToggle.checked : true;
-    if (navigator.vibrate && vibrationEnabled) {
-        navigator.vibrate(50);
-    }
-}
-
-        // ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
         function showToast(msg, type = 'info') {
             let toast = document.getElementById('toast');
             toast.textContent = msg;
@@ -5243,218 +5501,173 @@ function showComingSoon() {
             }, 80);
         }
 
-// ========== НОВЫЙ ОБЪЕДИНЁННЫЙ ЗАПРОС ==========
-let syncInterval = null;
-let lastSyncTime = 0;
-const SYNC_DELAY = 3000; // 3 секунды между синхронизациями
+        // ========== НОВЫЙ ОБЪЕДИНЁННЫЙ ЗАПРОС ==========
+        let syncInterval = null;
+        let lastSyncTime = 0;
+        const SYNC_DELAY = 3000;
 
-async function syncData(force = false) {
-    const now = Date.now();
-    if (!force && now - lastSyncTime < SYNC_DELAY) {
-        // Слишком часто - пропускаем
-        return;
-    }
-
-    lastSyncTime = now;
-
-    try {
-        const response = await fetch('/api/sync', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId }),
-            signal: AbortSignal.timeout(5000)
-        });
-
-        const data = await response.json();
-
-        if (data.error) {
-            console.error('Sync error:', data.error);
-            if (data.banned) {
-                showToast(`⚠️ Вы забанены! Причина: ${data.reason}`, 'error');
+        async function syncData(force = false) {
+            const now = Date.now();
+            if (!force && now - lastSyncTime < SYNC_DELAY) {
+                return;
             }
-            return;
-        }
-
-        if (data.success) {
-            // ===== 1. ОБНОВЛЯЕМ СТАТУС ИГРОКА =====
-            const s = data.status;
-            localWG = s.wg;
-            localLP = s.lp;
-            localEnergy = s.energy;
-            localClicks = s.total_clicks;
-            localEarning = s.earning_per_click;
-            localUSDT = s.usdt || 0;
-            localWins = s.wins || 0;
-            localRole = s.role || 'player';
-            localStars = s.stars || 0;
-            localMaxEnergy = s.max_energy || 500;
-            localEnergyUpgrades = s.energy_upgrades || 0;
-            if (s.upgrade_counts) upgradeCounts = s.upgrade_counts;
-
-            // Пересчитываем стоимости улучшений
-            if (upgradeCounts) {
-                upgradeCosts[1] = getUpgradeCost(1, upgradeCounts[1] || 0);
-                upgradeCosts[2] = getUpgradeCost(2, upgradeCounts[2] || 0);
-                upgradeCosts[3] = getUpgradeCost(3, upgradeCounts[3] || 0);
-            }
-
-            updateUI();
-
-            // Обновляем информацию о восстановлении энергии
-            const regenText = s.regen_text || '';
-            const regenInfo = document.getElementById('regenInfo');
-            if (regenInfo && regenText) regenInfo.innerHTML = regenText;
-
-            // ===== 2. ОБНОВЛЯЕМ ЛОТЕРЕЮ =====
-            const l = data.lottery;
-            document.getElementById('prizePool').innerText = (l.prize_pool || 0).toFixed(2);
-            document.getElementById('ticketsCount').innerText = l.user_tickets || 0;
-            document.getElementById('totalTickets').innerText = l.user_tickets || 0;
-            document.getElementById('totalTicketsMini').innerText = l.user_tickets || 0;
-
-            if (l.is_drawn !== undefined) {
-                isDrawn = l.is_drawn;
-                winningNumbers = l.winning_numbers || [];
-                updateDrawUI();
-            }
-
-            // ===== 3. ОБНОВЛЯЕМ ТОП ИГРОКОВ =====
-            if (data.leaderboard && data.leaderboard.length > 0) {
-                updateLeaderboardMini(data.leaderboard);
-            }
-
-            // ===== 4. ОБНОВЛЯЕМ ПОСЛЕДНИХ УЧАСТНИКОВ =====
-            if (data.recent_players && data.recent_players.length > 0) {
-                updateRecentPlayers(data.recent_players);
-            }
-
-            // ===== 5. ОБНОВЛЯЕМ ОНЛАЙН =====
-            const onlineCount = document.getElementById('onlineCount');
-            if (onlineCount && data.online_count !== undefined) {
-                onlineCount.innerHTML = `🟢 Онлайн: ${data.online_count}`;
+            lastSyncTime = now;
+            try {
+                const response = await fetch('/api/sync', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId }),
+                    signal: AbortSignal.timeout(5000)
+                });
+                const data = await response.json();
+                if (data.error) {
+                    console.error('Sync error:', data.error);
+                    if (data.banned) {
+                        showToast(`⚠️ Вы забанены! Причина: ${data.reason}`, 'error');
+                    }
+                    return;
+                }
+                if (data.success) {
+                    const s = data.status;
+                    localWG = s.wg;
+                    localLP = s.lp;
+                    localEnergy = s.energy;
+                    localClicks = s.total_clicks;
+                    localEarning = s.earning_per_click;
+                    localUSDT = s.usdt || 0;
+                    localWins = s.wins || 0;
+                    localRole = s.role || 'player';
+                    localStars = s.stars || 0;
+                    localMaxEnergy = s.max_energy || 500;
+                    localEnergyUpgrades = s.energy_upgrades || 0;
+                    if (s.upgrade_counts) upgradeCounts = s.upgrade_counts;
+                    if (upgradeCounts) {
+                        upgradeCosts[1] = getUpgradeCost(1, upgradeCounts[1] || 0);
+                        upgradeCosts[2] = getUpgradeCost(2, upgradeCounts[2] || 0);
+                        upgradeCosts[3] = getUpgradeCost(3, upgradeCounts[3] || 0);
+                    }
+                    updateUI();
+                    const regenText = s.regen_text || '';
+                    const regenInfo = document.getElementById('regenInfo');
+                    if (regenInfo && regenText) regenInfo.innerHTML = regenText;
+                    const l = data.lottery;
+                    document.getElementById('prizePool').innerText = (l.prize_pool || 0).toFixed(2);
+                    document.getElementById('ticketsCount').innerText = l.user_tickets || 0;
+                    document.getElementById('totalTickets').innerText = l.user_tickets || 0;
+                    document.getElementById('totalTicketsMini').innerText = l.user_tickets || 0;
+                    if (l.is_drawn !== undefined) {
+                        isDrawn = l.is_drawn;
+                        winningNumbers = l.winning_numbers || [];
+                        updateDrawUI();
+                    }
+                    if (data.leaderboard && data.leaderboard.length > 0) {
+                        updateLeaderboardMini(data.leaderboard);
+                    }
+                    if (data.recent_players && data.recent_players.length > 0) {
+                        updateRecentPlayers(data.recent_players);
+                    }
+                    const onlineCount = document.getElementById('onlineCount');
+                    if (onlineCount && data.online_count !== undefined) {
+                        onlineCount.innerHTML = `🟢 Онлайн: ${data.online_count}`;
+                    }
+                }
+            } catch(e) {
+                console.error('Sync error:', e);
+                setTimeout(() => syncData(true), 5000);
             }
         }
 
-    } catch(e) {
-        console.error('Sync error:', e);
-        // Если синхронизация упала, пробуем через 5 секунд
-        setTimeout(() => syncData(true), 5000);
-    }
-}
-
-// Новая функция для обновления мини-топа (ТОП ДНЯ)
-function updateLeaderboardMini(leaderboardData) {
-    const container = document.getElementById('leaderboardMini');
-    if (!container) return;
-
-    if (!leaderboardData || leaderboardData.length === 0) {
-        container.innerHTML = '<div>Нет данных за сегодня</div>';
-        return;
-    }
-
-    let html = '';
-    for (let user of leaderboardData) {
-        let avatar = user.avatar && user.avatar !== '👤' && user.avatar !== ''
-            ? `<img src="${user.avatar}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;">`
-            : '👤';
-
-        let userName = user.username;
-        let roleBadge = '';
-        if (user.role === 'founder' && !user.hide_from_top) {
-            roleBadge = '<span class="leaderboard-founder-badge">👑</span>';
-        } else if (user.role === 'legend' && !user.hide_from_top) {
-            roleBadge = '<span class="leaderboard-legend-badge">👑</span>';
-        } else if (user.role === 'pioneer' && !user.hide_from_top) {
-            roleBadge = '<span class="leaderboard-pioneer-badge">⭐</span>';
+        function updateLeaderboardMini(leaderboardData) {
+            const container = document.getElementById('leaderboardMini');
+            if (!container) return;
+            if (!leaderboardData || leaderboardData.length === 0) {
+                container.innerHTML = '<div>Нет данных за сегодня</div>';
+                return;
+            }
+            let html = '';
+            for (let user of leaderboardData) {
+                let avatar = user.avatar && user.avatar !== '👤' && user.avatar !== ''
+                    ? `<img src="${user.avatar}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;">`
+                    : '👤';
+                let userName = user.username;
+                let roleBadge = '';
+                if (user.role === 'founder' && !user.hide_from_top) {
+                    roleBadge = '<span class="leaderboard-founder-badge">👑</span>';
+                } else if (user.role === 'legend' && !user.hide_from_top) {
+                    roleBadge = '<span class="leaderboard-legend-badge">👑</span>';
+                } else if (user.role === 'pioneer' && !user.hide_from_top) {
+                    roleBadge = '<span class="leaderboard-pioneer-badge">⭐</span>';
+                }
+                let dailyClicks = user.daily_clicks || user.clicks || 0;
+                html += `<div class="leaderboard-mini-item">
+                    <span class="rank">${user.rank}</span>
+                    <span class="avatar-mini">${avatar}</span>
+                    <span class="name">${userName}${roleBadge}</span>
+                    <span class="clicks"> ${dailyClicks.toLocaleString()} кликов</span>
+                </div>`;
+            }
+            container.innerHTML = html;
         }
 
-        // ✅ ИСПРАВЛЕНО: используем daily_clicks вместо total_clicks
-        let dailyClicks = user.daily_clicks || user.clicks || 0;
-
-        // Добавляем иконку дня для наглядности
-        let clicksIcon = '';
-
-        html += `<div class="leaderboard-mini-item">
-            <span class="rank">${user.rank}</span>
-            <span class="avatar-mini">${avatar}</span>
-            <span class="name">${userName}${roleBadge}</span>
-            <span class="clicks">${clicksIcon} ${dailyClicks.toLocaleString()} кликов</span>
-        </div>`;
-    }
-
-    container.innerHTML = html;
-}
-
-// Новая функция для обновления последних участников
-function updateRecentPlayers(players) {
-    const container = document.getElementById('recentPlayersList');
-    if (!container) return;
-
-    if (!players || players.length === 0) {
-        container.innerHTML = '<div class="empty-state">😢 Пока нет участников</div>';
-        return;
-    }
-
-    let html = '';
-    for (let p of players) {
-        let avatarHtml = '';
-        if (p.avatar_url && p.avatar_url !== '') {
-            avatarHtml = `<img src="${p.avatar_url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
-        } else {
-            avatarHtml = '👤';
+        function updateRecentPlayers(players) {
+            const container = document.getElementById('recentPlayersList');
+            if (!container) return;
+            if (!players || players.length === 0) {
+                container.innerHTML = '<div class="empty-state">😢 Пока нет участников</div>';
+                return;
+            }
+            let html = '';
+            for (let p of players) {
+                let avatarHtml = '';
+                if (p.avatar_url && p.avatar_url !== '') {
+                    avatarHtml = `<img src="${p.avatar_url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+                } else {
+                    avatarHtml = '👤';
+                }
+                let playerName = p.username || 'Игрок';
+                if (playerName.startsWith('@')) playerName = playerName.substring(1);
+                let roleBadge = '';
+                if (p.role === 'founder') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#ef4444;">👑</span>';
+                else if (p.role === 'pioneer') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#00b4d8;">⭐</span>';
+                else if (p.role === 'legend') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#FFD700;">👑</span>';
+                html += `<div class="recent-player-item" onclick="openPlayerProfile(${p.user_id}, 0)">
+                    <div class="recent-player-avatar">${avatarHtml}</div>
+                    <div class="recent-player-info">
+                        <div class="recent-player-name">${escapeHtml(playerName)}${roleBadge}</div>
+                        <div class="recent-player-time">🕐 ${p.time_ago || 'только что'}</div>
+                    </div>
+                    <div class="recent-player-ticket">🎫 #${p.ticket_number}</div>
+                </div>`;
+            }
+            container.innerHTML = html;
         }
-
-        let playerName = p.username || 'Игрок';
-        if (playerName.startsWith('@')) playerName = playerName.substring(1);
-
-        let roleBadge = '';
-        if (p.role === 'founder') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#ef4444;">👑</span>';
-        else if (p.role === 'pioneer') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#00b4d8;">⭐</span>';
-        else if (p.role === 'legend') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#FFD700;">👑</span>';
-
-        html += `<div class="recent-player-item" onclick="openPlayerProfile(${p.user_id}, 0)">
-            <div class="recent-player-avatar">${avatarHtml}</div>
-            <div class="recent-player-info">
-                <div class="recent-player-name">${escapeHtml(playerName)}${roleBadge}</div>
-                <div class="recent-player-time">🕐 ${p.time_ago || 'только что'}</div>
-            </div>
-            <div class="recent-player-ticket">🎫 #${p.ticket_number}</div>
-        </div>`;
-    }
-
-    container.innerHTML = html;
-}
 
         // ==================== API ЗАПРОСЫ ====================
         async function autoRegister() {
-    try {
-        let urlParams = new URLSearchParams(window.location.search);
-        let refCode = urlParams.get('startapp') || '';
-
-        // Отправляем оба поля: username (если есть) и first_name
-        const response = await fetch('/api/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                user_id: userId,
-                username: username || '',      // если нет username - пустая строка
-                first_name: firstName || '',   // если нет first_name - пустая строка
-                last_name: lastName || '',
-                avatar_url: photoUrl,
-                referral_code: refCode
-            })
-        });
-
-        const data = await response.json();
-        if (data.success) {
-            console.log('✅ Регистрация успешна');
-            // Обновляем приветствие
-            document.getElementById('userGreeting').innerText = firstName || username || 'Игрок';
+            try {
+                let urlParams = new URLSearchParams(window.location.search);
+                let refCode = urlParams.get('startapp') || '';
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        username: username || '',
+                        first_name: firstName || '',
+                        last_name: lastName || '',
+                        avatar_url: photoUrl,
+                        referral_code: refCode
+                    })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    console.log('✅ Регистрация успешна');
+                    document.getElementById('userGreeting').innerText = firstName || username || 'Игрок';
+                }
+            } catch(e) {
+                console.error('AutoRegister error:', e);
+            }
         }
-    } catch(e) {
-        console.error('AutoRegister error:', e);
-    }
-}
 
         async function loadSettings() {
             try {
@@ -5521,47 +5734,43 @@ function updateRecentPlayers(players) {
         }
 
         async function loadReferrals() {
-    try {
-        let res = await fetch('/api/get_referrals', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId })
-        });
-        let data = await res.json();
-
-        // Обновляем счётчики
-        document.getElementById('referralsCount').innerText = `(${data.referrals.length})`;
-        document.getElementById('totalEarnedLP').innerText = data.total_earned_lp.toFixed(2);
-        document.getElementById('totalEarnedWG').innerText = data.total_earned_wg.toFixed(2);
-
-        let container = document.getElementById('referralsList');
-        if (data.referrals.length === 0) {
-            container.innerHTML = '<div class="empty-referrals">😢 Пока нет друзей</div>';
-            return;
+            try {
+                let res = await fetch('/api/get_referrals', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId })
+                });
+                let data = await res.json();
+                document.getElementById('referralsCount').innerText = `(${data.referrals.length})`;
+                document.getElementById('totalEarnedLP').innerText = data.total_earned_lp.toFixed(2);
+                document.getElementById('totalEarnedWG').innerText = data.total_earned_wg.toFixed(2);
+                let container = document.getElementById('referralsList');
+                if (data.referrals.length === 0) {
+                    container.innerHTML = '<div class="empty-referrals">😢 Пока нет друзей</div>';
+                    return;
+                }
+                let html = '';
+                for (let ref of data.referrals) {
+                    let avatarLetter = (ref.username.charAt(0) || '👤').toUpperCase();
+                    html += `<div class="referral-item">
+                        <div class="referral-avatar">${avatarLetter}</div>
+                        <div class="referral-info">
+                            <div class="referral-name">${escapeHtml(ref.username)}</div>
+                            <div class="referral-date">${ref.date || 'Недавно'}</div>
+                        </div>
+                        <div class="referral-earned" style="text-align: right;">
+                            <div class="referral-earned-amount" style="color: #FFD700;">+${ref.earned_wg.toFixed(4)} WG</div>
+                            <div class="referral-earned-label">10% от кликов</div>
+                            <div class="referral-earned-amount" style="color: #00E5FF; margin-top: 4px;">+${ref.earned_lp.toFixed(2)} LP</div>
+                            <div class="referral-earned-label">5% от трат</div>
+                        </div>
+                    </div>`;
+                }
+                container.innerHTML = html;
+            } catch(e) {
+                console.error('Error loading referrals:', e);
+            }
         }
-
-        let html = '';
-        for (let ref of data.referrals) {
-            let avatarLetter = (ref.username.charAt(0) || '👤').toUpperCase();
-            html += `<div class="referral-item">
-                <div class="referral-avatar">${avatarLetter}</div>
-                <div class="referral-info">
-                    <div class="referral-name">${escapeHtml(ref.username)}</div>
-                    <div class="referral-date">${ref.date || 'Недавно'}</div>
-                </div>
-                <div class="referral-earned" style="text-align: right;">
-                    <div class="referral-earned-amount" style="color: #FFD700;">+${ref.earned_wg.toFixed(4)} WG</div>
-                    <div class="referral-earned-label">10% от кликов</div>
-                    <div class="referral-earned-amount" style="color: #00E5FF; margin-top: 4px;">+${ref.earned_lp.toFixed(2)} LP</div>
-                    <div class="referral-earned-label">5% от трат</div>
-                </div>
-            </div>`;
-        }
-        container.innerHTML = html;
-    } catch(e) {
-        console.error('Error loading referrals:', e);
-    }
-}
 
         async function loadWithdrawals() {
             try {
@@ -5656,55 +5865,42 @@ function updateRecentPlayers(players) {
 
         // ==================== МАГАЗИН И УЛУЧШЕНИЯ ====================
         window.buyUpgrade = async (id) => {
-    let cost = upgradeCosts[id];
-    if (localWG < cost) {
-        playErrorSound();
-        showToast(`Не хватает WG! Нужно ${cost.toFixed(2)} WG`, 'error');
-        return;
-    }
-
-    try {
-        let res = await fetch('/api/buy_upgrade', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId, upgrade_id: id })
-        });
-
-        let data = await res.json();
-
-        // ✅ ФИКС: проверяем успешность ответа
-        if (data.success === true) {
-            playPurchaseSound();
-            showToast(data.msg || 'Улучшение куплено!', 'success');
-
-            // Обновляем локальные данные
-            upgradeCounts[id] = data.new_count;
-            upgradeCosts[id] = data.next_cost;
-            localWG -= cost;
-
-            // Обновляем UI
-            document.getElementById(`upgradeCount${id}`).innerText = data.new_count;
-            document.getElementById(`upgradeCost${id}`).innerHTML = data.next_cost.toFixed(2);
-            document.getElementById('wgBalance').innerText = localWG.toFixed(2);
-
-            // ✅ Используем syncData вместо updateStatus (быстрее и полнее)
-            await syncData(true);
-            updateUI();
-
-        } else {
-            playErrorSound();
-            const errorMsg = data.msg || data.error || 'Ошибка при покупке';
-            showToast(errorMsg, 'error');
-        }
-
-    } catch(e) {
-        console.error('Buy upgrade error:', e);
-        playErrorSound();
-        showToast('Ошибка соединения, проверьте баланс', 'error');
-        // Всё равно обновляем данные на всякий случай
-        await syncData(true);
-    }
-};
+            let cost = upgradeCosts[id];
+            if (localWG < cost) {
+                playErrorSound();
+                showToast(`Не хватает WG! Нужно ${cost.toFixed(2)} WG`, 'error');
+                return;
+            }
+            try {
+                let res = await fetch('/api/buy_upgrade', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId, upgrade_id: id })
+                });
+                let data = await res.json();
+                if (data.success === true) {
+                    playPurchaseSound();
+                    showToast(data.msg || 'Улучшение куплено!', 'success');
+                    upgradeCounts[id] = data.new_count;
+                    upgradeCosts[id] = data.next_cost;
+                    localWG -= cost;
+                    document.getElementById(`upgradeCount${id}`).innerText = data.new_count;
+                    document.getElementById(`upgradeCost${id}`).innerHTML = data.next_cost.toFixed(2);
+                    document.getElementById('wgBalance').innerText = localWG.toFixed(2);
+                    await syncData(true);
+                    updateUI();
+                } else {
+                    playErrorSound();
+                    const errorMsg = data.msg || data.error || 'Ошибка при покупке';
+                    showToast(errorMsg, 'error');
+                }
+            } catch(e) {
+                console.error('Buy upgrade error:', e);
+                playErrorSound();
+                showToast('Ошибка соединения, проверьте баланс', 'error');
+                await syncData(true);
+            }
+        };
 
         window.buyEnergyUpgrade = async function() {
             if (localEnergyUpgrades >= 15) {
@@ -5762,7 +5958,7 @@ function updateRecentPlayers(players) {
             }
         };
 
-        // ==================== LP БУСТЕР (НОВЫЕ ФУНКЦИИ) ====================
+        // ==================== LP БУСТЕР ====================
         window.buyLPBoostStars = async function() {
             showToast('💰 Создаём счёт для оплаты...', 'info');
             try {
@@ -5789,7 +5985,7 @@ function updateRecentPlayers(players) {
                             }
                             setTimeout(() => {
                                 updateStatus();
-                                updateLPBoostCount();  // ← ДОБАВЛЕНО
+                                updateLPBoostCount();
                             }, 500);
                         } else if (status === 'failed' || status === 'cancelled') {
                             showToast('❌ Оплата отменена или не удалась', 'error');
@@ -5830,7 +6026,6 @@ function updateRecentPlayers(players) {
                 }
                 return;
             }
-
             let friendlyAddress = '';
             try {
                 const rawAddr = tonConnectUI.wallet.account.address;
@@ -5838,7 +6033,6 @@ function updateRecentPlayers(players) {
             } catch(e) {
                 friendlyAddress = tonConnectUI.wallet?.account?.address || '';
             }
-
             let paymentData = null;
             try {
                 showToast('💎 Создаём платёж на сервере...', 'info');
@@ -5856,7 +6050,6 @@ function updateRecentPlayers(players) {
                 showToast('❌ Сервер не ответил на запрос платежа', 'error');
                 return;
             }
-
             const transaction = {
                 validUntil: Math.floor(Date.now() / 1000) + 300,
                 messages: [{
@@ -5865,7 +6058,6 @@ function updateRecentPlayers(players) {
                     comment: paymentData.comment
                 }]
             };
-
             try {
                 await tonConnectUI.sendTransaction(transaction);
             } catch(e) {
@@ -5874,7 +6066,6 @@ function updateRecentPlayers(players) {
                     return;
                 }
             }
-
             showToast('💰 Проверяем зачисление транзакции...', 'info');
             startLPBoostPaymentCheck(paymentData.amount);
         };
@@ -5902,7 +6093,7 @@ function updateRecentPlayers(players) {
                         paymentCheckInterval = null;
                         showToast('✅ Награда получена! +50 LP зачислены!', 'success');
                         await updateStatus();
-                        await updateLPBoostCount();  // ← ДОБАВЛЕНО
+                        await updateLPBoostCount();
                         updateUI();
                     } else if (attempts >= maxAttempts) {
                         clearInterval(paymentCheckInterval);
@@ -5950,14 +6141,12 @@ function updateRecentPlayers(players) {
                     updateDonateCarousel();
                 }
             });
-
             nextBtn.addEventListener('click', () => {
                 if (currentDonateCard < donateCards.length - 1) {
                     currentDonateCard++;
                     updateDonateCarousel();
                 }
             });
-
             window.addEventListener('resize', () => updateDonateCarousel());
             setTimeout(() => updateDonateCarousel(), 100);
         }
@@ -6628,152 +6817,128 @@ function updateRecentPlayers(players) {
         }
 
         window.watchAd = async () => {
-    try {
-        const checkRes = await fetch('/api/can_watch_ad', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId, ad_type: 'energy_200' })
-        });
-        const checkData = await checkRes.json();
-        if (!checkData.can) {
-            showToast(checkData.message || 'Реклама временно недоступна', 'error');
-            return;
-        }
-    } catch(e) {
-        console.log('Check error:', e);
-    }
-
-    if (!adController) {
-        initAds();
-        await new Promise(resolve => setTimeout(resolve, 500));
-    }
-
-    if (!adController) {
-        showToast('❌ Реклама недоступна, попробуйте позже или включите VPN', 'error');
-        return;
-    }
-
-    try {
-        const result = await adController.show();
-
-        // ✅ ФИКС: даже если есть error, но done === true — реклама показана
-        if (result.done === true) {
-            // Реклама успешно показана
-            let resp = await fetch('/api/watch_ad', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: userId })
-            });
-            let data = await resp.json();
-
-            if (data.success) {
-                showToast(`✅ +${data.energy || 150} энергии! Спасибо! 🎬`, 'success');
-                await syncData(true);
-            } else if (data.msg) {
-                showToast(data.msg, 'error');
+            try {
+                const checkRes = await fetch('/api/can_watch_ad', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId, ad_type: 'energy_200' })
+                });
+                const checkData = await checkRes.json();
+                if (!checkData.can) {
+                    showToast(checkData.message || 'Реклама временно недоступна', 'error');
+                    return;
+                }
+            } catch(e) {
+                console.log('Check error:', e);
             }
-        } else if (result.error) {
-            // Реклама возможно показалась, но Adsgram вернул ошибку
-            console.warn('Ad returned error but might have worked:', result.error);
-
-            // Всё равно проверяем, не зачислилась ли награда
-            let resp = await fetch('/api/watch_ad', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: userId })
-            });
-            let data = await resp.json();
-
-            if (data.success) {
-                showToast(`✅ +${data.energy || 150} энергии! Награда зачислена! 🎬`, 'success');
-                await syncData(true);
-            } else {
-                showToast('⚠️ Реклама не засчитана, попробуйте ещё раз', 'error');
+            if (!adController) {
+                initAds();
+                await new Promise(resolve => setTimeout(resolve, 500));
             }
-        } else {
-            showToast('⚠️ Реклама не загружена, попробуйте позже', 'error');
-        }
-    } catch (error) {
-        console.error('Ad error:', error);
-        showToast('⚠️ Ошибка рекламы, проверьте баланс — возможно награда зачислена', 'info');
-        // Всё равно обновляем данные на всякий случай
-        await syncData(true);
-    }
-};
-
-window.watchAdLimit = async () => {
-    try {
-        const checkRes = await fetch('/api/can_watch_ad', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId, ad_type: 'energy_limit' })
-        });
-        const checkData = await checkRes.json();
-        if (!checkData.can) {
-            showToast(checkData.message || 'Реклама временно недоступна', 'error');
-            return;
-        }
-    } catch(e) {
-        console.log('Check error:', e);
-    }
-
-    if (!adLimitController) {
-        initAds();
-        await new Promise(resolve => setTimeout(resolve, 500));
-    }
-
-    if (!adLimitController) {
-        showToast('❌ Реклама недоступна, попробуйте позже или включите VPN', 'error');
-        return;
-    }
-
-    try {
-        const result = await adLimitController.show();
-
-        // ✅ ФИКС: даже если есть error, но done === true — реклама показана
-        if (result.done === true) {
-            // Реклама успешно показана
-            let resp = await fetch('/api/watch_ad_limit', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: userId })
-            });
-            let data = await resp.json();
-
-            if (data.success) {
-                showToast(`⚡ +1 к макс. энергии! Теперь лимит: ${data.max_energy}`, 'success');
-                await syncData(true);
-            } else if (data.msg) {
-                showToast(data.msg, 'error');
+            if (!adController) {
+                showToast('❌ Реклама недоступна, попробуйте позже или включите VPN', 'error');
+                return;
             }
-        } else if (result.error) {
-            // Реклама возможно показалась, но Adsgram вернул ошибку
-            console.warn('Ad limit returned error but might have worked:', result.error);
-
-            // Всё равно проверяем, не зачислилась ли награда
-            let resp = await fetch('/api/watch_ad_limit', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: userId })
-            });
-            let data = await resp.json();
-
-            if (data.success) {
-                showToast(`✅ +1 к макс. энергии! Награда зачислена!`, 'success');
+            try {
+                const result = await adController.show();
+                if (result.done === true) {
+                    let resp = await fetch('/api/watch_ad', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ user_id: userId })
+                    });
+                    let data = await resp.json();
+                    if (data.success) {
+                        showToast(`✅ +${data.energy || 150} энергии! Спасибо! 🎬`, 'success');
+                        await syncData(true);
+                    } else if (data.msg) {
+                        showToast(data.msg, 'error');
+                    }
+                } else if (result.error) {
+                    console.warn('Ad returned error but might have worked:', result.error);
+                    let resp = await fetch('/api/watch_ad', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ user_id: userId })
+                    });
+                    let data = await resp.json();
+                    if (data.success) {
+                        showToast(`✅ +${data.energy || 150} энергии! Награда зачислена! 🎬`, 'success');
+                        await syncData(true);
+                    } else {
+                        showToast('⚠️ Реклама не засчитана, попробуйте ещё раз', 'error');
+                    }
+                } else {
+                    showToast('⚠️ Реклама не загружена, попробуйте позже', 'error');
+                }
+            } catch (error) {
+                console.error('Ad error:', error);
+                showToast('⚠️ Ошибка рекламы, проверьте баланс — возможно награда зачислена', 'info');
                 await syncData(true);
-            } else {
-                showToast('⚠️ Реклама не засчитана, попробуйте ещё раз', 'error');
             }
-        } else {
-            showToast('⚠️ Реклама не загружена, попробуйте позже', 'error');
-        }
-    } catch (error) {
-        console.error('Ad limit error:', error);
-        showToast('⚠️ Ошибка рекламы, проверьте баланс', 'info');
-        // Всё равно обновляем данные на всякий случай
-        await syncData(true);
-    }
-};
+        };
+
+        window.watchAdLimit = async () => {
+            try {
+                const checkRes = await fetch('/api/can_watch_ad', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId, ad_type: 'energy_limit' })
+                });
+                const checkData = await checkRes.json();
+                if (!checkData.can) {
+                    showToast(checkData.message || 'Реклама временно недоступна', 'error');
+                    return;
+                }
+            } catch(e) {
+                console.log('Check error:', e);
+            }
+            if (!adLimitController) {
+                initAds();
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            if (!adLimitController) {
+                showToast('❌ Реклама недоступна, попробуйте позже или включите VPN', 'error');
+                return;
+            }
+            try {
+                const result = await adLimitController.show();
+                if (result.done === true) {
+                    let resp = await fetch('/api/watch_ad_limit', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ user_id: userId })
+                    });
+                    let data = await resp.json();
+                    if (data.success) {
+                        showToast(`⚡ +1 к макс. энергии! Теперь лимит: ${data.max_energy}`, 'success');
+                        await syncData(true);
+                    } else if (data.msg) {
+                        showToast(data.msg, 'error');
+                    }
+                } else if (result.error) {
+                    console.warn('Ad limit returned error but might have worked:', result.error);
+                    let resp = await fetch('/api/watch_ad_limit', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ user_id: userId })
+                    });
+                    let data = await resp.json();
+                    if (data.success) {
+                        showToast(`✅ +1 к макс. энергии! Награда зачислена!`, 'success');
+                        await syncData(true);
+                    } else {
+                        showToast('⚠️ Реклама не засчитана, попробуйте ещё раз', 'error');
+                    }
+                } else {
+                    showToast('⚠️ Реклама не загружена, попробуйте позже', 'error');
+                }
+            } catch (error) {
+                console.error('Ad limit error:', error);
+                showToast('⚠️ Ошибка рекламы, проверьте баланс', 'info');
+                await syncData(true);
+            }
+        };
 
         window.donate = function() {
             window.open('https://t.me/WereGoodSupport', '_blank');
@@ -6784,7 +6949,6 @@ window.watchAdLimit = async () => {
 
         window.openPlayerProfile = async function(targetId, rank) {
             selectedPlayerId = targetId;
-
             const modalUsername = document.getElementById('playerModalUsername');
             const modalClicks = document.getElementById('playerModalClicks');
             const modalWG = document.getElementById('playerModalWG');
@@ -6796,13 +6960,11 @@ window.watchAdLimit = async () => {
             const modalAvatar = document.getElementById('playerModalAvatar');
             const modalBadges = document.getElementById('playerModalBadges');
             const voteMessage = document.getElementById('voteMessage');
-
             if (!modalUsername || !modalClicks || !modalWG || !modalLP || !modalUSDT || !modalWins || !modalLikes || !modalDislikes) {
                 console.error('Profile modal elements not found');
                 showToast('Ошибка открытия профиля', 'error');
                 return;
             }
-
             try {
                 let res = await fetch('/api/get_user_stats', {
                     method: 'POST',
@@ -6810,22 +6972,18 @@ window.watchAdLimit = async () => {
                     body: JSON.stringify({user_id: targetId})
                 });
                 let data = await res.json();
-
                 if (data.error) {
                     showToast('Пользователь не найден', 'error');
                     return;
                 }
-
                 let userName = data.username || 'Игрок';
                 let avatar = (data.avatar_url && data.avatar_url !== '👤')
                     ? `<img src="${data.avatar_url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`
                     : '👤';
-
                 if (data.hide_from_top) {
                     avatar = '👤';
                     userName = 'Аноним';
                 }
-
                 modalUsername.innerText = userName;
                 modalClicks.innerText = data.total_clicks || 0;
                 modalWG.innerText = (data.wg || 0).toFixed(2);
@@ -6834,7 +6992,6 @@ window.watchAdLimit = async () => {
                 modalWins.innerText = data.wins || 0;
                 modalLikes.innerText = data.likes || 0;
                 modalDislikes.innerText = data.dislikes || 0;
-
                 if (modalAvatar) modalAvatar.innerHTML = avatar;
                 if (modalBadges) {
                     let role = data.role || 'player';
@@ -6845,12 +7002,9 @@ window.watchAdLimit = async () => {
                     else badgesHtml = '<span class="role-badge player">🎮 Игрок</span>';
                     modalBadges.innerHTML = badgesHtml;
                 }
-
                 if (voteMessage) voteMessage.innerHTML = '';
-
                 const modal = document.getElementById('playerModal');
                 if (modal) modal.classList.add('active');
-
             } catch(e) {
                 console.error('Error opening player profile:', e);
                 showToast('Ошибка загрузки профиля', 'error');
@@ -6988,85 +7142,70 @@ window.watchAdLimit = async () => {
         };
 
         async function loadLeaderboardData(period, forceRefresh = false) {
-    let listDiv = document.getElementById('leaderboardList');
-    if (!listDiv) return;
-
-    listDiv.innerHTML = '<div class="loading">Загрузка...</div>';
-
-    try {
-        let url;
-        if (period === 'day') {
-            // Топ дня использует API с daily_clicks
-            url = `/api/leaderboard/daily${forceRefresh ? '?force=true' : ''}`;
-        } else {
-            // Топ недели/месяца пока не реализованы
-            listDiv.innerHTML = '<div class="coming-soon" style="text-align:center; padding:40px;">🔄 Скоро появится!</div>';
-            return;
-        }
-
-        let res = await fetch(url);
-        let data = await res.json();
-
-        if (!data || data.length === 0) {
-            listDiv.innerHTML = '<div class="empty-state">😢 Нет данных за сегодня</div>';
-            return;
-        }
-
-        let html = '';
-        for (let userItem of data) {
-            let avatar = userItem.avatar && userItem.avatar !== '👤'
-                ? `<img src="${userItem.avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`
-                : '👤';
-
-            let userName = userItem.username;
-            let clicksCount = userItem.daily_clicks || 0;
-            let clicksLabel = 'кликов';
-
-            let roleBadge = '';
-            if (userItem.role === 'founder' && !userItem.hide_from_top) {
-                roleBadge = '<span class="leaderboard-founder-badge">👑</span>';
-            } else if (userItem.role === 'legend' && !userItem.hide_from_top) {
-                roleBadge = '<span class="leaderboard-legend-badge">👑</span>';
-            } else if (userItem.role === 'pioneer' && !userItem.hide_from_top) {
-                roleBadge = '<span class="leaderboard-pioneer-badge">⭐</span>';
+            let listDiv = document.getElementById('leaderboardList');
+            if (!listDiv) return;
+            listDiv.innerHTML = '<div class="loading">Загрузка...</div>';
+            try {
+                let url;
+                if (period === 'day') {
+                    url = `/api/leaderboard/daily${forceRefresh ? '?force=true' : ''}`;
+                } else {
+                    listDiv.innerHTML = '<div class="coming-soon" style="text-align:center; padding:40px;">🔄 Скоро появится!</div>';
+                    return;
+                }
+                let res = await fetch(url);
+                let data = await res.json();
+                if (!data || data.length === 0) {
+                    listDiv.innerHTML = '<div class="empty-state">😢 Нет данных за сегодня</div>';
+                    return;
+                }
+                let html = '';
+                for (let userItem of data) {
+                    let avatar = userItem.avatar && userItem.avatar !== '👤'
+                        ? `<img src="${userItem.avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`
+                        : '👤';
+                    let userName = userItem.username;
+                    let clicksCount = userItem.daily_clicks || 0;
+                    let clicksLabel = 'кликов';
+                    let roleBadge = '';
+                    if (userItem.role === 'founder' && !userItem.hide_from_top) {
+                        roleBadge = '<span class="leaderboard-founder-badge">👑</span>';
+                    } else if (userItem.role === 'legend' && !userItem.hide_from_top) {
+                        roleBadge = '<span class="leaderboard-legend-badge">👑</span>';
+                    } else if (userItem.role === 'pioneer' && !userItem.hide_from_top) {
+                        roleBadge = '<span class="leaderboard-pioneer-badge">⭐</span>';
+                    }
+                    let rewardHtml = '';
+                    if (userItem.reward) {
+                        rewardHtml = `<span class="reward">${userItem.reward}</span>`;
+                    }
+                    html += `
+                        <div class="leaderboard-item" onclick="openPlayerProfile(${userItem.user_id}, ${userItem.rank})">
+                            <div class="rank">${userItem.rank}</div>
+                            <div class="avatar">${avatar}</div>
+                            <div class="info">
+                                <div class="name">${escapeHtml(userName)}${roleBadge}</div>
+                                <div class="clicks"> ${clicksCount.toLocaleString()} ${clicksLabel}</div>
+                            </div>
+                            ${rewardHtml}
+                        </div>
+                    `;
+                }
+                listDiv.innerHTML = html;
+            } catch(e) {
+                console.error('Leaderboard error:', e);
+                listDiv.innerHTML = '<div class="empty-state">❌ Ошибка загрузки</div>';
             }
-
-            let rewardHtml = '';
-            if (userItem.reward) {
-                rewardHtml = `<span class="reward">${userItem.reward}</span>`;
-            }
-
-            html += `
-                <div class="leaderboard-item" onclick="openPlayerProfile(${userItem.user_id}, ${userItem.rank})">
-                    <div class="rank">${userItem.rank}</div>
-                    <div class="avatar">${avatar}</div>
-                    <div class="info">
-                        <div class="name">${escapeHtml(userName)}${roleBadge}</div>
-                        <div class="clicks"> ${clicksCount.toLocaleString()} ${clicksLabel}</div>
-                    </div>
-                    ${rewardHtml}
-                </div>
-            `;
         }
-
-        listDiv.innerHTML = html;
-
-    } catch(e) {
-        console.error('Leaderboard error:', e);
-        listDiv.innerHTML = '<div class="empty-state">❌ Ошибка загрузки</div>';
-    }
-}
 
         document.querySelectorAll('.leaderboard-tab').forEach(tab => {
             tab.onclick = () => {
                 const period = tab.dataset.period;
                 document.querySelectorAll('.leaderboard-tab').forEach(t => t.classList.remove('active'));
                 tab.classList.add('active');
-
                 const timerContainer = document.getElementById('dailyTimerContainer');
                 const comingSoonMsg = document.getElementById('comingSoonMsg');
                 const leaderboardList = document.getElementById('leaderboardList');
-
                 if (period === 'day') {
                     if (timerContainer) timerContainer.style.display = 'block';
                     if (comingSoonMsg) comingSoonMsg.style.display = 'none';
@@ -7176,7 +7315,6 @@ window.watchAdLimit = async () => {
                 dailyData = await res.json();
                 renderDailyGrid();
                 updateDailyTimer();
-
                 const claimBtn = document.getElementById('dailyClaimBtn');
                 if (claimBtn) {
                     if (dailyData.can_claim || dailyData.current_day === 1) {
@@ -7189,7 +7327,6 @@ window.watchAdLimit = async () => {
                         claimBtn.style.opacity = '0.6';
                     }
                 }
-
                 if (dailyData.can_claim || dailyData.current_day === 1) {
                     setTimeout(() => { openDailyModal(); }, 500);
                 }
@@ -7606,35 +7743,28 @@ window.watchAdLimit = async () => {
 
         function startDailyLeaderboardTimer() {
             if (dailyLeaderboardTimerInterval) clearInterval(dailyLeaderboardTimerInterval);
-
             function updateTimer() {
                 const now = new Date();
                 const nextMidnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 21, 0, 0));
                 let targetDate = new Date(nextMidnight);
-
                 if (now > targetDate) {
                     targetDate = new Date(targetDate.getTime() + 24 * 60 * 60 * 1000);
                 }
-
                 const diff = targetDate - now;
-
                 if (diff <= 0) {
                     if (dailyLeaderboardTimerInterval) clearInterval(dailyLeaderboardTimerInterval);
                     loadLeaderboardData('day', true);
                     startDailyLeaderboardTimer();
                     return;
                 }
-
                 const hours = Math.floor(diff / (1000 * 60 * 60));
                 const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
                 const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
                 const timerElement = document.getElementById('dailyLeaderboardTimer');
                 if (timerElement) {
                     timerElement.innerHTML = `${hours.toString().padStart(2, '0')} : ${minutes.toString().padStart(2, '0')} : ${seconds.toString().padStart(2, '0')}`;
                 }
             }
-
             updateTimer();
             dailyLeaderboardTimerInterval = setInterval(updateTimer, 1000);
         }
@@ -7656,71 +7786,51 @@ window.watchAdLimit = async () => {
         }
 
         async function activatePromoCode() {
-    const code = document.getElementById('promoCodeInput').value.toUpperCase().trim();
-    const messageDiv = document.getElementById('promoMessage');
-    const btn = document.getElementById('activatePromoBtn');
-
-    if (!code) {
-        messageDiv.innerHTML = '❌ Введите промокод';
-        messageDiv.classList.remove('success');
-        return;
-    }
-
-    // Блокируем кнопку, пока идёт запрос
-    btn.disabled = true;
-    btn.textContent = '⏳ Проверка...';
-    messageDiv.innerHTML = '';
-    messageDiv.classList.remove('success');
-
-    try {
-        const res = await fetch('/api/activate_promo', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId, code: code })
-        });
-
-        const data = await res.json();
-
-        // ✅ ФИКС: проверяем оба варианта успешного ответа
-        // Сервер может вернуть success: true или просто ok: true
-        const isSuccess = data.success === true || data.ok === true;
-
-        if (isSuccess) {
-            // Успешная активация
-            const successMessage = data.message || data.msg || 'Промокод успешно активирован!';
-            messageDiv.innerHTML = `✅ ${successMessage}`;
-            messageDiv.classList.add('success');
-
-            // Показываем уведомление
-            showToast(`🎉 ${successMessage}`, 'success');
-
-            // Обновляем данные игрока (баланс должен обновиться)
-            await syncData(true);
-
-            // Закрываем модальное окно через 2 секунды
-            setTimeout(() => closePromoModal(), 2000);
-        } else {
-            // Ошибка активации
-            const errorMessage = data.error || data.msg || 'Неизвестная ошибка';
-            messageDiv.innerHTML = `❌ ${errorMessage}`;
+            const code = document.getElementById('promoCodeInput').value.toUpperCase().trim();
+            const messageDiv = document.getElementById('promoMessage');
+            const btn = document.getElementById('activatePromoBtn');
+            if (!code) {
+                messageDiv.innerHTML = '❌ Введите промокод';
+                messageDiv.classList.remove('success');
+                return;
+            }
+            btn.disabled = true;
+            btn.textContent = '⏳ Проверка...';
+            messageDiv.innerHTML = '';
             messageDiv.classList.remove('success');
-            showToast(errorMessage, 'error');
+            try {
+                const res = await fetch('/api/activate_promo', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId, code: code })
+                });
+                const data = await res.json();
+                const isSuccess = data.success === true || data.ok === true;
+                if (isSuccess) {
+                    const successMessage = data.message || data.msg || 'Промокод успешно активирован!';
+                    messageDiv.innerHTML = `✅ ${successMessage}`;
+                    messageDiv.classList.add('success');
+                    showToast(`🎉 ${successMessage}`, 'success');
+                    await syncData(true);
+                    setTimeout(() => closePromoModal(), 2000);
+                } else {
+                    const errorMessage = data.error || data.msg || 'Неизвестная ошибка';
+                    messageDiv.innerHTML = `❌ ${errorMessage}`;
+                    messageDiv.classList.remove('success');
+                    showToast(errorMessage, 'error');
+                }
+            } catch (e) {
+                console.error('Activate promo error:', e);
+                messageDiv.innerHTML = '❌ Ошибка соединения с сервером';
+                messageDiv.classList.remove('success');
+                showToast('Ошибка соединения, попробуйте позже', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🎁 Активировать';
+            }
         }
 
-    } catch (e) {
-        console.error('Activate promo error:', e);
-        messageDiv.innerHTML = '❌ Ошибка соединения с сервером';
-        messageDiv.classList.remove('success');
-        showToast('Ошибка соединения, попробуйте позже', 'error');
-    } finally {
-        // Разблокируем кнопку
-        btn.disabled = false;
-        btn.textContent = '🎁 Активировать';
-    }
-}
-
-// Назначаем обработчик (лучше через addEventListener, но оставим как было для совместимости)
-document.getElementById('activatePromoBtn').onclick = activatePromoCode;
+        document.getElementById('activatePromoBtn').onclick = activatePromoCode;
 
         // ==================== TON CONNECT ====================
         let tonConnectUI = null;
@@ -8093,6 +8203,54 @@ document.getElementById('activatePromoBtn').onclick = activatePromoCode;
         document.getElementById('tutorialNextBtn').onclick = () => nextTutorialStep();
         document.getElementById('tutorialSkipBtn').onclick = () => skipTutorial();
 
+        // ========== ГЕЙМПАД МЕНЮ ==========
+        const CREATOR_ID = 5264622363;
+
+        function openGamepad() {
+            const modal = document.getElementById('gamepadModal');
+            if (!modal) {
+                console.error('gamepadModal not found');
+                return;
+            }
+            if (userId === CREATOR_ID) {
+                modal.classList.add('active');
+                document.body.style.overflow = 'hidden';
+                document.body.style.position = 'fixed';
+                document.body.style.width = '100%';
+            } else {
+                showToast('🚧 Игровой центр в разработке! Скоро здесь появятся игры.', 'info');
+            }
+        }
+
+        function closeGamepad() {
+            const modal = document.getElementById('gamepadModal');
+            if (modal) modal.classList.remove('active');
+            document.body.style.overflow = '';
+            document.body.style.position = '';
+            document.body.style.width = '';
+        }
+
+        function openGame(gameName) {
+            if (gameName === 'fortune') {
+                const fortuneModal = document.getElementById('fortuneModal');
+                if (fortuneModal) {
+                    fortuneModal.classList.add('active');
+                    document.body.style.overflow = 'hidden';
+                    closeGamepad();
+                }
+            }
+        }
+
+        function closeFortuneGame() {
+            const fortuneModal = document.getElementById('fortuneModal');
+            if (fortuneModal) fortuneModal.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        function notifyMe() {
+            showToast('🔔 Мы уведомим вас о запуске игры в Telegram!', 'success');
+        }
+
         // ==================== АНИМАЦИИ ====================
         let dailyIconElement = document.querySelector('.daily-icon');
         let energyBadgeElement = document.querySelector('.stat-badge');
@@ -8198,34 +8356,24 @@ document.getElementById('activatePromoBtn').onclick = activatePromoCode;
             }
         }
 
-                // ==================== DOMCONTENTLOADED ====================
+        // ==================== DOMCONTENTLOADED ====================
         document.addEventListener("DOMContentLoaded", () => {
             initTonConnect();
             initSocket();
             autoRegister();
             loadAvatar();
             logGameEntry();
-
-            // ========== НОВЫЙ ОБЪЕДИНЁННЫЙ ЗАПРОС ==========
-            // Вместо 4 отдельных запросов (status, lottery, leaderboard, recent) - 1 запрос!
-            syncData(true);  // Принудительная синхронизация при загрузке
-
+            syncData(true);
             loadReferralLink();
             loadReferrals();
             loadSettings();
             loadDailyStatus();
             setTimeout(checkAndStartTutorial, 2000);
-
-            // ========== ТАЙМЕРЫ (ОПТИМИЗИРОВАННЫЕ) ==========
-            // ОДИН таймер вместо четырёх!
-            setInterval(() => syncData(), 5000);        // Основная синхронизация каждые 5 секунд
-            setInterval(() => loadReferrals(), 30000);  // Рефералы реже (30 сек)
-            setInterval(() => syncData(true), 30000);   // Принудительное обновление раз в 30 сек
-
+            setInterval(() => syncData(), 5000);
+            setInterval(() => loadReferrals(), 30000);
+            setInterval(() => syncData(true), 30000);
             startDailyLeaderboardTimer();
             updateLPBoostCount();
-
-            // ========== ОБРАБОТКА ПРОМОКОДОВ И РЕФЕРАЛОВ ==========
             if (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
                 const startParam = tg.initDataUnsafe.start_param;
                 if (startParam && startParam.startsWith('claim_')) {
@@ -8253,8 +8401,6 @@ document.getElementById('activatePromoBtn').onclick = activatePromoCode;
                     }, 1500);
                 }
             }
-
-            // ========== TELEGRAM WEBAPP ==========
             if (tg) {
                 tg.ready();
                 tg.expand();
