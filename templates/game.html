@@ -5654,39 +5654,55 @@ function updateRecentPlayers(players) {
 
         // ==================== МАГАЗИН И УЛУЧШЕНИЯ ====================
         window.buyUpgrade = async (id) => {
-            let cost = upgradeCosts[id];
-            if (localWG < cost) {
-                playErrorSound();
-                showToast(`Не хватает WG! Нужно ${cost.toFixed(2)} WG`, 'error');
-                return;
-            }
-            try {
-                let res = await fetch('/api/buy_upgrade', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: userId, upgrade_id: id })
-                });
-                let data = await res.json();
-                if (data.success) {
-                    playPurchaseSound();
-                    showToast(data.msg, 'success');
-                    upgradeCounts[id] = data.new_count;
-                    upgradeCosts[id] = data.next_cost;
-                    localWG -= cost;
-                    document.getElementById(`upgradeCount${id}`).innerText = data.new_count;
-                    document.getElementById(`upgradeCost${id}`).innerHTML = data.next_cost.toFixed(2);
-                    document.getElementById('wgBalance').innerText = localWG.toFixed(2);
-                    await updateStatus();
-                    updateUI();
-                } else {
-                    playErrorSound();
-                    showToast(data.msg, 'error');
-                }
-            } catch(e) {
-                playErrorSound();
-                showToast('Ошибка!', 'error');
-            }
-        };
+    let cost = upgradeCosts[id];
+    if (localWG < cost) {
+        playErrorSound();
+        showToast(`Не хватает WG! Нужно ${cost.toFixed(2)} WG`, 'error');
+        return;
+    }
+
+    try {
+        let res = await fetch('/api/buy_upgrade', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId, upgrade_id: id })
+        });
+
+        let data = await res.json();
+
+        // ✅ ФИКС: проверяем успешность ответа
+        if (data.success === true) {
+            playPurchaseSound();
+            showToast(data.msg || 'Улучшение куплено!', 'success');
+
+            // Обновляем локальные данные
+            upgradeCounts[id] = data.new_count;
+            upgradeCosts[id] = data.next_cost;
+            localWG -= cost;
+
+            // Обновляем UI
+            document.getElementById(`upgradeCount${id}`).innerText = data.new_count;
+            document.getElementById(`upgradeCost${id}`).innerHTML = data.next_cost.toFixed(2);
+            document.getElementById('wgBalance').innerText = localWG.toFixed(2);
+
+            // ✅ Используем syncData вместо updateStatus (быстрее и полнее)
+            await syncData(true);
+            updateUI();
+
+        } else {
+            playErrorSound();
+            const errorMsg = data.msg || data.error || 'Ошибка при покупке';
+            showToast(errorMsg, 'error');
+        }
+
+    } catch(e) {
+        console.error('Buy upgrade error:', e);
+        playErrorSound();
+        showToast('Ошибка соединения, проверьте баланс', 'error');
+        // Всё равно обновляем данные на всякий случай
+        await syncData(true);
+    }
+};
 
         window.buyEnergyUpgrade = async function() {
             if (localEnergyUpgrades >= 15) {
