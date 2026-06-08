@@ -5366,16 +5366,8 @@
             7: { reward: "20 LP" }
         };
 
-// Функция для кнопки "В разработке"
 function showComingSoon() {
-    showToast('🚧 В разработке! Скоро появится...', 'info');
-
-    // Дополнительно: вибрация если включена
-    const vibrationToggle = document.getElementById('vibrationToggle');
-    const vibrationEnabled = vibrationToggle ? vibrationToggle.checked : true;
-    if (navigator.vibrate && vibrationEnabled) {
-        navigator.vibrate(50);
-    }
+    openGamepad();  // Открывает геймпад меню
 }
 
         // ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
