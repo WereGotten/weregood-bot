@@ -4461,7 +4461,7 @@
     }
 }
         /* ============================================
-   КОМАНДНАЯ ФОРТУНА - ПОЛНЫЙ ЭКРАН
+   КОМАНДНАЯ ФОРТУНА - ОБНОВЛЁННЫЙ СТИЛЬ
    ============================================ */
 .game-modal-full {
     display: none;
@@ -4473,8 +4473,6 @@
     background: linear-gradient(145deg, #0a0a1a 0%, #12122a 100%);
     z-index: 10000;
     overflow-y: auto;
-    overflow-x: hidden;
-    will-change: transform;
 }
 
 .game-modal-full.active {
@@ -4521,14 +4519,12 @@
     font-size: 1.1rem;
     color: #FFD700;
     cursor: pointer;
-    transition: transform 0.1s ease;
 }
 
 .game-modal-full-close:active {
     transform: scale(0.95);
 }
 
-/* Вкладки */
 .fortune-tabs {
     display: flex;
     gap: 10px;
@@ -4547,7 +4543,6 @@
     font-weight: 600;
     color: rgba(255,255,255,0.5);
     cursor: pointer;
-    transition: all 0.15s ease;
     border-radius: 50px;
 }
 
@@ -4560,7 +4555,6 @@
     transform: scale(0.97);
 }
 
-/* Контент вкладок */
 .fortune-tab-content {
     display: none;
 }
@@ -4575,7 +4569,6 @@
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* Таймер */
 .fortune-timer {
     background: rgba(0,0,0,0.3);
     border-radius: 24px;
@@ -4613,21 +4606,14 @@
     width: 100%;
     border-radius: 10px;
     transition: width 1s linear;
-    will-change: width;
 }
 
-/* Карточки команд */
 .team-card {
     background: rgba(255,255,255,0.04);
-    border-radius: 24px;
+    border-radius: 28px;
     padding: 20px;
-    margin-bottom: 16px;
+    margin-bottom: 20px;
     border: 1px solid rgba(255,215,0,0.08);
-    transition: transform 0.1s ease;
-}
-
-.team-card:active {
-    transform: scale(0.99);
 }
 
 .team-card.team-yellow {
@@ -4643,6 +4629,7 @@
     align-items: center;
     gap: 12px;
     margin-bottom: 14px;
+    flex-wrap: wrap;
 }
 
 .team-icon {
@@ -4653,6 +4640,16 @@
     font-size: 1.1rem;
     font-weight: 600;
     color: #fff;
+    flex: 1;
+}
+
+.team-chance {
+    background: rgba(0,0,0,0.4);
+    padding: 4px 12px;
+    border-radius: 30px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #FFD700;
 }
 
 .team-pool {
@@ -4675,12 +4672,74 @@
     font-weight: 700;
     color: #FFD700;
     margin-left: auto;
-    letter-spacing: -0.5px;
 }
 
 .pool-currency {
     font-size: 0.7rem;
     color: rgba(255,255,255,0.5);
+}
+
+/* Аватарки участников */
+.team-players {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 18px;
+    padding: 8px 0;
+    min-height: 80px;
+}
+
+.player-avatar-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 0.1s ease;
+    width: 60px;
+}
+
+.player-avatar-item:active {
+    transform: scale(0.95);
+}
+
+.player-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: rgba(255,215,0,0.15);
+    border: 2px solid rgba(255,215,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.player-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.player-avatar-placeholder {
+    font-size: 1.5rem;
+}
+
+.player-bet-amount {
+    font-size: 0.6rem;
+    font-weight: 600;
+    color: #FFD700;
+    background: rgba(0,0,0,0.4);
+    padding: 2px 6px;
+    border-radius: 20px;
+}
+
+.empty-players {
+    text-align: center;
+    padding: 20px;
+    color: rgba(255,255,255,0.3);
+    font-size: 0.7rem;
+    width: 100%;
 }
 
 .team-bet-btn {
@@ -4693,7 +4752,6 @@
     font-size: 0.85rem;
     color: #FFD700;
     cursor: pointer;
-    transition: all 0.1s ease;
 }
 
 .team-bet-btn:active {
@@ -4701,7 +4759,6 @@
     background: rgba(255,215,0,0.2);
 }
 
-/* Информация о ставке пользователя */
 .user-bet-info {
     background: rgba(255,215,0,0.06);
     border-radius: 20px;
@@ -4723,11 +4780,9 @@
     margin: 0 4px;
 }
 
-/* История */
 .history-list {
     max-height: 55vh;
     overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
 }
 
 .history-item {
@@ -4738,7 +4793,6 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border: 1px solid rgba(255,215,0,0.05);
 }
 
 .history-team {
@@ -4782,43 +4836,29 @@
     text-align: center;
     padding: 50px;
     color: rgba(255,255,255,0.4);
-    font-size: 0.8rem;
 }
 
-/* Оптимизация для маленьких экранов */
 @media (max-width: 480px) {
-    .game-modal-full-header h2 {
-        font-size: 1.2rem;
-    }
-
     .timer-value {
         font-size: 1.6rem;
-        letter-spacing: 2px;
     }
 
     .pool-value {
         font-size: 1.3rem;
     }
 
-    .team-card {
-        padding: 16px;
+    .player-avatar-item {
+        width: 50px;
     }
 
-    .team-icon {
-        font-size: 1.6rem;
+    .player-avatar {
+        width: 40px;
+        height: 40px;
     }
 
-    .team-name {
-        font-size: 0.95rem;
-    }
-
-    .team-bet-btn {
-        padding: 12px;
-        font-size: 0.8rem;
-    }
-
-    .user-bet-item {
-        font-size: 0.7rem;
+    .team-chance {
+        font-size: 0.65rem;
+        padding: 3px 8px;
     }
 }
     </style>
@@ -5697,7 +5737,7 @@
         </div>
     </div>
 
-    <!-- МОДАЛЬНОЕ ОКНО КОМАНДНОЙ ФОРТУНЫ (ПОЛНЫЙ ЭКРАН) -->
+    <!-- МОДАЛЬНОЕ ОКНО КОМАНДНОЙ ФОРТУНЫ -->
 <div id="fortuneModal" class="game-modal-full">
     <div class="game-modal-full-content">
         <div class="game-modal-full-header">
@@ -5727,12 +5767,19 @@
                 <div class="team-header">
                     <div class="team-icon">🟡</div>
                     <div class="team-name">Команда Жёлтых</div>
+                    <div class="team-chance" id="yellowChance">0%</div>
                 </div>
                 <div class="team-pool">
                     <span class="pool-label">Общий счёт:</span>
                     <span class="pool-value" id="yellowPool">0</span>
                     <span class="pool-currency">WG</span>
                 </div>
+
+                <!-- Аватарки участников -->
+                <div class="team-players" id="yellowPlayers">
+                    <div class="empty-players">Нет ставок</div>
+                </div>
+
                 <button class="team-bet-btn" onclick="makeBet('yellow')">💰 Сделать ставку</button>
             </div>
 
@@ -5741,12 +5788,19 @@
                 <div class="team-header">
                     <div class="team-icon">🔴</div>
                     <div class="team-name">Команда Красных</div>
+                    <div class="team-chance" id="redChance">0%</div>
                 </div>
                 <div class="team-pool">
                     <span class="pool-label">Общий счёт:</span>
                     <span class="pool-value" id="redPool">0</span>
                     <span class="pool-currency">WG</span>
                 </div>
+
+                <!-- Аватарки участников -->
+                <div class="team-players" id="redPlayers">
+                    <div class="empty-players">Нет ставок</div>
+                </div>
+
                 <button class="team-bet-btn" onclick="makeBet('red')">💰 Сделать ставку</button>
             </div>
 
@@ -8907,21 +8961,29 @@
             }
         }
 
-// ========== КОМАНДНАЯ ФОРТУНА (ОПТИМИЗИРОВАННАЯ) ==========
+// ========== КОМАНДНАЯ ФОРТУНА (НОВАЯ ЛОГИКА) ==========
 let fortuneTimerInterval = null;
 let fortuneTimeLeft = 300;
 let yellowPoolAmount = 0;
 let redPoolAmount = 0;
-let userCurrentBet = { amount: 0, team: null };
+let yellowPlayers = [];
+let redPlayers = [];
+let userCurrentBet = { amount: 0, team: null, netAmount: 0 };
 let fortuneHistory = [];
-
-// Кеширование DOM элементов для производительности
 let fortuneElements = {};
 
+// Константы
+const FORTUNE_COMMISSION = 0.07; // 7% комиссия
+
+// Кеширование DOM элементов
 function cacheFortuneElements() {
     fortuneElements = {
         yellowPool: document.getElementById('yellowPool'),
         redPool: document.getElementById('redPool'),
+        yellowChance: document.getElementById('yellowChance'),
+        redChance: document.getElementById('redChance'),
+        yellowPlayers: document.getElementById('yellowPlayers'),
+        redPlayers: document.getElementById('redPlayers'),
         fortuneTimer: document.getElementById('fortuneTimer'),
         timerBarFill: document.getElementById('timerBarFill'),
         userBetAmount: document.getElementById('userBetAmount'),
@@ -8930,12 +8992,75 @@ function cacheFortuneElements() {
     };
 }
 
+// Расчёт шансов
+function calculateChances() {
+    const total = yellowPoolAmount + redPoolAmount;
+    if (total === 0) {
+        return { yellow: 50, red: 50 };
+    }
+    return {
+        yellow: Math.round((yellowPoolAmount / total) * 100),
+        red: Math.round((redPoolAmount / total) * 100)
+    };
+}
+
+// Обновление шансов в UI
+function updateChances() {
+    const chances = calculateChances();
+    if (fortuneElements.yellowChance) fortuneElements.yellowChance.innerText = `${chances.yellow}%`;
+    if (fortuneElements.redChance) fortuneElements.redChance.innerText = `${chances.red}%`;
+}
+
+// Сортировка игроков по сумме ставки (от большего к меньшему)
+function sortPlayersByBet(players) {
+    return [...players].sort((a, b) => b.amount - a.amount);
+}
+
+// Рендер аватарок участников
+function renderPlayers() {
+    // Рендер жёлтой команды
+    if (fortuneElements.yellowPlayers) {
+        const sortedYellow = sortPlayersByBet(yellowPlayers);
+        if (sortedYellow.length === 0) {
+            fortuneElements.yellowPlayers.innerHTML = '<div class="empty-players">Нет ставок</div>';
+        } else {
+            fortuneElements.yellowPlayers.innerHTML = sortedYellow.map(player => `
+                <div class="player-avatar-item" onclick="openPlayerProfile(${player.userId})">
+                    <div class="player-avatar">
+                        ${player.avatarUrl ? `<img src="${player.avatarUrl}" onerror="this.parentElement.innerHTML='<div class=\'player-avatar-placeholder\'>🟡</div>'">` : '<div class="player-avatar-placeholder">🟡</div>'}
+                    </div>
+                    <div class="player-bet-amount">${player.amount} WG</div>
+                </div>
+            `).join('');
+        }
+    }
+
+    // Рендер красной команды
+    if (fortuneElements.redPlayers) {
+        const sortedRed = sortPlayersByBet(redPlayers);
+        if (sortedRed.length === 0) {
+            fortuneElements.redPlayers.innerHTML = '<div class="empty-players">Нет ставок</div>';
+        } else {
+            fortuneElements.redPlayers.innerHTML = sortedRed.map(player => `
+                <div class="player-avatar-item" onclick="openPlayerProfile(${player.userId})">
+                    <div class="player-avatar">
+                        ${player.avatarUrl ? `<img src="${player.avatarUrl}" onerror="this.parentElement.innerHTML='<div class=\'player-avatar-placeholder\'>🔴</div>'">` : '<div class="player-avatar-placeholder">🔴</div>'}
+                    </div>
+                    <div class="player-bet-amount">${player.amount} WG</div>
+                </div>
+            `).join('');
+        }
+    }
+}
+
 function initFortuneGame() {
     cacheFortuneElements();
     yellowPoolAmount = 0;
     redPoolAmount = 0;
+    yellowPlayers = [];
+    redPlayers = [];
+    userCurrentBet = { amount: 0, team: null, netAmount: 0 };
     fortuneTimeLeft = 300;
-    userCurrentBet = { amount: 0, team: null };
     if (fortuneElements.fortuneTimer) {
         fortuneElements.fortuneTimer.style.color = '#FFD700';
     }
@@ -8957,6 +9082,9 @@ function updateFortuneUI() {
     if (fortuneElements.timerBarFill) {
         fortuneElements.timerBarFill.style.width = percent + '%';
     }
+
+    updateChances();
+    renderPlayers();
 
     if (userCurrentBet.amount > 0) {
         if (fortuneElements.userBetAmount) fortuneElements.userBetAmount.innerText = userCurrentBet.amount;
@@ -8980,40 +9108,56 @@ function startFortuneTimer() {
         } else {
             clearInterval(fortuneTimerInterval);
             fortuneTimerInterval = null;
-            endFortuneRound();
+            determineWinner();
         }
     }, 1000);
 }
 
-async function endFortuneRound() {
+// Определение победителя на основе шансов
+function determineWinner() {
+    const chances = calculateChances();
+    const random = Math.random() * 100;
     let winner = null;
 
-    if (yellowPoolAmount > redPoolAmount) {
+    if (random <= chances.yellow) {
         winner = 'yellow';
-    } else if (redPoolAmount > yellowPoolAmount) {
-        winner = 'red';
     } else {
-        showToast('🤝 Ничья! Ставки возвращены.', 'info');
-        if (userCurrentBet.amount > 0) {
-            localWG += userCurrentBet.amount;
-            updateUI();
-            if (typeof syncData === 'function') await syncData(true);
-        }
-        saveFortuneHistory('draw', userCurrentBet.amount, userCurrentBet.team);
-        resetFortuneRound();
-        return;
+        winner = 'red';
     }
 
-    if (userCurrentBet.team === winner && userCurrentBet.amount > 0) {
-        const winAmount = userCurrentBet.amount * 2;
-        localWG += winAmount;
-        updateUI();
-        if (typeof syncData === 'function') await syncData(true);
-        showToast(`🎉 ПОБЕДА! Вы выиграли ${winAmount} WG!`, 'success');
-        saveFortuneHistory('win', userCurrentBet.amount, userCurrentBet.team, winAmount);
-    } else if (userCurrentBet.amount > 0) {
-        showToast(`😢 Проигрыш! Победила команда ${winner === 'yellow' ? 'Жёлтых' : 'Красных'}`, 'error');
-        saveFortuneHistory('lose', userCurrentBet.amount, userCurrentBet.team);
+    endFortuneRound(winner);
+}
+
+function endFortuneRound(winner) {
+    const winnerPlayers = winner === 'yellow' ? yellowPlayers : redPlayers;
+    const winnerPool = winner === 'yellow' ? yellowPoolAmount : redPoolAmount;
+    const loserPool = winner === 'yellow' ? redPoolAmount : yellowPoolAmount;
+
+    // Расчёт выплат (победители делят банк пропорционально своим ставкам)
+    for (const player of winnerPlayers) {
+        const playerShare = (player.amount / winnerPool) * (winnerPool + loserPool);
+        const winAmount = Math.floor(playerShare * 100) / 100;
+
+        if (player.userId === userId) {
+            localWG += winAmount;
+            updateUI();
+            if (typeof syncData === 'function') syncData(true);
+            showToast(`🎉 ПОБЕДА! Вы выиграли ${winAmount} WG!`, 'success');
+            saveFortuneHistory('win', player.amount, winner, winAmount);
+        } else {
+            // Для других игроков обновление через сервер (будет позже)
+            saveFortuneHistory('win', player.amount, winner, winAmount, player.userId);
+        }
+    }
+
+    // Обработка проигравших
+    const loserPlayers = winner === 'yellow' ? redPlayers : yellowPlayers;
+    for (const player of loserPlayers) {
+        if (player.userId === userId) {
+            saveFortuneHistory('lose', player.amount, winner === 'yellow' ? 'red' : 'yellow');
+        } else {
+            saveFortuneHistory('lose', player.amount, winner === 'yellow' ? 'red' : 'yellow', 0, player.userId);
+        }
     }
 
     resetFortuneRound();
@@ -9022,7 +9166,9 @@ async function endFortuneRound() {
 function resetFortuneRound() {
     yellowPoolAmount = 0;
     redPoolAmount = 0;
-    userCurrentBet = { amount: 0, team: null };
+    yellowPlayers = [];
+    redPlayers = [];
+    userCurrentBet = { amount: 0, team: null, netAmount: 0 };
     fortuneTimeLeft = 300;
     if (fortuneElements.fortuneTimer) {
         fortuneElements.fortuneTimer.style.color = '#FFD700';
@@ -9031,13 +9177,15 @@ function resetFortuneRound() {
     startFortuneTimer();
 }
 
-function saveFortuneHistory(result, amount, team, winAmount = 0) {
+function saveFortuneHistory(result, amount, team, winAmount = 0, playerId = null) {
+    const targetId = playerId || userId;
     const historyItem = {
         id: Date.now(),
         result: result,
         amount: amount,
         team: team,
         winAmount: winAmount,
+        userId: targetId,
         date: new Date().toLocaleTimeString()
     };
     fortuneHistory.unshift(historyItem);
@@ -9067,11 +9215,16 @@ function renderFortuneHistory() {
             resultHtml = `<span class="history-result" style="background: rgba(255,165,0,0.15); color: #FFA500;">↺ Возврат</span>`;
         }
 
+        // Показываем имя игрока в истории (если это не текущий игрок)
+        const isCurrentUser = item.userId === userId;
+        const playerName = isCurrentUser ? 'Вы' : `Игрок ${item.userId}`;
+
         html += `
             <div class="history-item">
                 <div class="history-team">
                     <span class="history-team-icon">${item.team === 'yellow' ? '🟡' : '🔴'}</span>
                     <span class="history-team-name">${teamName}</span>
+                    <span style="font-size:0.65rem; opacity:0.6;">${playerName}</span>
                 </div>
                 <div class="history-amount">${item.amount} WG</div>
                 ${resultHtml}
@@ -9082,43 +9235,66 @@ function renderFortuneHistory() {
 }
 
 async function makeBet(team) {
-    const amount = prompt(`💰 Введите сумму ставки на команду ${team === 'yellow' ? 'Жёлтых 🟡' : 'Красных 🔴'}\n(минимум 10 WG)`, "10");
+    const amount = prompt(`💰 Введите сумму ставки на команду ${team === 'yellow' ? 'Жёлтых 🟡' : 'Красных 🔴'}\n(минимум 10 WG)\n⚠️ Комиссия 7%`, "10");
 
     if (!amount) return;
 
-    const betAmount = parseFloat(amount);
+    let betAmount = parseFloat(amount);
     if (isNaN(betAmount) || betAmount < 10) {
         showToast('Минимальная ставка — 10 WG', 'error');
         return;
     }
+
+    // Расчёт с комиссией
+    const commission = betAmount * FORTUNE_COMMISSION;
+    const netAmount = betAmount - commission;
 
     if (betAmount > localWG) {
         showToast(`Не хватает WG! У вас ${localWG.toFixed(2)} WG`, 'error');
         return;
     }
 
+    // Снимаем полную сумму (с комиссией)
     localWG -= betAmount;
     updateUI();
     if (typeof syncData === 'function') await syncData(true);
 
+    // Добавляем чистую сумму в пул команды
     if (team === 'yellow') {
-        yellowPoolAmount += betAmount;
+        yellowPoolAmount += netAmount;
+        yellowPlayers.push({
+            userId: userId,
+            amount: netAmount,
+            avatarUrl: photoUrl,
+            username: username || firstName
+        });
     } else {
-        redPoolAmount += betAmount;
+        redPoolAmount += netAmount;
+        redPlayers.push({
+            userId: userId,
+            amount: netAmount,
+            avatarUrl: photoUrl,
+            username: username || firstName
+        });
     }
 
-    if (userCurrentBet.amount > 0) {
+    // Если у пользователя уже была ставка — удаляем её из другой команды
+    if (userCurrentBet.amount > 0 && userCurrentBet.team !== team) {
         if (userCurrentBet.team === 'yellow') {
-            yellowPoolAmount -= userCurrentBet.amount;
+            const index = yellowPlayers.findIndex(p => p.userId === userId);
+            if (index !== -1) yellowPlayers.splice(index, 1);
+            yellowPoolAmount -= userCurrentBet.netAmount;
         } else {
-            redPoolAmount -= userCurrentBet.amount;
+            const index = redPlayers.findIndex(p => p.userId === userId);
+            if (index !== -1) redPlayers.splice(index, 1);
+            redPoolAmount -= userCurrentBet.netAmount;
         }
     }
 
-    userCurrentBet = { amount: betAmount, team: team };
+    userCurrentBet = { amount: betAmount, team: team, netAmount: netAmount };
     updateFortuneUI();
 
-    showToast(`✅ Ставка ${betAmount} WG на команду ${team === 'yellow' ? 'Жёлтых 🟡' : 'Красных 🔴'} принята!`, 'success');
+    showToast(`✅ Ставка ${betAmount} WG (${netAmount} WG после комиссии) на команду ${team === 'yellow' ? 'Жёлтых 🟡' : 'Красных 🔴'} принята!`, 'success');
 }
 
 // Переключатель вкладок
@@ -9150,7 +9326,7 @@ function fortuneTabHandler(e) {
     }
 }
 
-// Обновляем openGame для фортуны
+// Обновляем openGame
 const originalOpenGame = window.openGame;
 window.openGame = function(gameName) {
     if (gameName === 'fortune') {
@@ -9167,7 +9343,6 @@ window.openGame = function(gameName) {
     }
 };
 
-// Обновляем closeFortuneGame
 window.closeFortuneGame = function() {
     const fortuneModal = document.getElementById('fortuneModal');
     if (fortuneModal) fortuneModal.classList.remove('active');
