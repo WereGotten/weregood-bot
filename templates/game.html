@@ -5953,18 +5953,6 @@
                 </div>
                 <button class="team-bet-btn" data-team="red">💰 Сделать ставку</button>
             </div>
-
-            <!-- ИНФОРМАЦИЯ О СТАВКЕ ПОЛЬЗОВАТЕЛЯ -->
-            <div class="user-bet-info" id="userBetInfo">
-                <div class="user-bet-item">
-                    <span>🎲 Ваша ставка:</span>
-                    <strong>0 WG</strong>
-                </div>
-                <div class="user-bet-item">
-                    <span>🏆 Команда:</span>
-                    <strong>—</strong>
-                </div>
-            </div>
         </div>
 
         <div id="fortuneHistoryTab" class="fortune-tab-content">
@@ -7743,68 +7731,84 @@
         let selectedPlayerId = null;
 
         window.openPlayerProfile = async function(targetId, rank) {
-            selectedPlayerId = targetId;
-            const modalUsername = document.getElementById('playerModalUsername');
-            const modalClicks = document.getElementById('playerModalClicks');
-            const modalWG = document.getElementById('playerModalWG');
-            const modalLP = document.getElementById('playerModalLP');
-            const modalUSDT = document.getElementById('playerModalUSDT');
-            const modalWins = document.getElementById('playerModalWins');
-            const modalLikes = document.getElementById('playerModalLikes');
-            const modalDislikes = document.getElementById('playerModalDislikes');
-            const modalAvatar = document.getElementById('playerModalAvatar');
-            const modalBadges = document.getElementById('playerModalBadges');
-            const voteMessage = document.getElementById('voteMessage');
-            if (!modalUsername || !modalClicks || !modalWG || !modalLP || !modalUSDT || !modalWins || !modalLikes || !modalDislikes) {
-                console.error('Profile modal elements not found');
-                showToast('Ошибка открытия профиля', 'error');
-                return;
-            }
-            try {
-                let res = await fetch('/api/get_user_stats', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({user_id: targetId})
-                });
-                let data = await res.json();
-                if (data.error) {
-                    showToast('Пользователь не найден', 'error');
-                    return;
-                }
-                let userName = data.username || 'Игрок';
-                let avatar = (data.avatar_url && data.avatar_url !== '👤')
-                    ? `<img src="${data.avatar_url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`
-                    : '👤';
-                if (data.hide_from_top) {
-                    avatar = '👤';
-                    userName = 'Аноним';
-                }
-                modalUsername.innerText = userName;
-                modalClicks.innerText = data.total_clicks || 0;
-                modalWG.innerText = (data.wg || 0).toFixed(2);
-                modalLP.innerText = data.lp || 0;
-                modalUSDT.innerHTML = `💰 ${(data.usdt || 0).toFixed(2)}`;
-                modalWins.innerText = data.wins || 0;
-                modalLikes.innerText = data.likes || 0;
-                modalDislikes.innerText = data.dislikes || 0;
-                if (modalAvatar) modalAvatar.innerHTML = avatar;
-                if (modalBadges) {
-                    let role = data.role || 'player';
-                    let badgesHtml = '';
-                    if (role === 'founder') badgesHtml = '<span class="role-badge founder">👑 ОСНОВАТЕЛЬ</span>';
-                    else if (role === 'legend') badgesHtml = '<span class="role-badge legend">ЛЕГЕНДА</span>';
-                    else if (role === 'pioneer') badgesHtml = '<span class="role-badge pioneer">⭐ ПЕРВООТКРЫВАТЕЛЬ</span>';
-                    else badgesHtml = '<span class="role-badge player">🎮 Игрок</span>';
-                    modalBadges.innerHTML = badgesHtml;
-                }
-                if (voteMessage) voteMessage.innerHTML = '';
-                const modal = document.getElementById('playerModal');
-                if (modal) modal.classList.add('active');
-            } catch(e) {
-                console.error('Error opening player profile:', e);
-                showToast('Ошибка загрузки профиля', 'error');
-            }
-        };
+    // Закрываем модальное окно фортуны, чтобы не было конфликта
+    const fortuneModal = document.getElementById('fortuneModal');
+    if (fortuneModal && fortuneModal.classList.contains('active')) {
+        // Не закрываем фортуну, а открываем профиль поверх
+    }
+
+    selectedPlayerId = targetId;
+    const modalUsername = document.getElementById('playerModalUsername');
+    const modalClicks = document.getElementById('playerModalClicks');
+    const modalWG = document.getElementById('playerModalWG');
+    const modalLP = document.getElementById('playerModalLP');
+    const modalUSDT = document.getElementById('playerModalUSDT');
+    const modalWins = document.getElementById('playerModalWins');
+    const modalLikes = document.getElementById('playerModalLikes');
+    const modalDislikes = document.getElementById('playerModalDislikes');
+    const modalAvatar = document.getElementById('playerModalAvatar');
+    const modalBadges = document.getElementById('playerModalBadges');
+    const voteMessage = document.getElementById('voteMessage');
+
+    if (!modalUsername || !modalClicks || !modalWG || !modalLP || !modalUSDT || !modalWins || !modalLikes || !modalDislikes) {
+        console.error('Profile modal elements not found');
+        showToast('Ошибка открытия профиля', 'error');
+        return;
+    }
+
+    try {
+        let res = await fetch('/api/get_user_stats', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({user_id: targetId})
+        });
+        let data = await res.json();
+
+        if (data.error) {
+            showToast('Пользователь не найден', 'error');
+            return;
+        }
+
+        let userName = data.username || 'Игрок';
+        let avatar = (data.avatar_url && data.avatar_url !== '👤')
+            ? `<img src="${data.avatar_url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`
+            : '👤';
+
+        if (data.hide_from_top) {
+            avatar = '👤';
+            userName = 'Аноним';
+        }
+
+        modalUsername.innerText = userName;
+        modalClicks.innerText = data.total_clicks || 0;
+        modalWG.innerText = (data.wg || 0).toFixed(2);
+        modalLP.innerText = data.lp || 0;
+        modalUSDT.innerHTML = `💰 ${(data.usdt || 0).toFixed(2)}`;
+        modalWins.innerText = data.wins || 0;
+        modalLikes.innerText = data.likes || 0;
+        modalDislikes.innerText = data.dislikes || 0;
+
+        if (modalAvatar) modalAvatar.innerHTML = avatar;
+        if (modalBadges) {
+            let role = data.role || 'player';
+            let badgesHtml = '';
+            if (role === 'founder') badgesHtml = '<span class="role-badge founder">👑 ОСНОВАТЕЛЬ</span>';
+            else if (role === 'legend') badgesHtml = '<span class="role-badge legend">ЛЕГЕНДА</span>';
+            else if (role === 'pioneer') badgesHtml = '<span class="role-badge pioneer">⭐ ПЕРВООТКРЫВАТЕЛЬ</span>';
+            else badgesHtml = '<span class="role-badge player">🎮 Игрок</span>';
+            modalBadges.innerHTML = badgesHtml;
+        }
+
+        if (voteMessage) voteMessage.innerHTML = '';
+
+        const modal = document.getElementById('playerModal');
+        if (modal) modal.classList.add('active');
+
+    } catch(e) {
+        console.error('Error opening player profile:', e);
+        showToast('Ошибка загрузки профиля', 'error');
+    }
+};
 
         window.closePlayerModal = function() {
             const modal = document.getElementById('playerModal');
@@ -9117,7 +9121,8 @@ let fortuneHistory = [];
     if (fortuneElements.timerBarFill) fortuneElements.timerBarFill.style.width = percent + '%';
 
     updateChances();
-    renderPlayers();
+    renderPlayers();  // ← Здесь отображаются аватарки
+}
 
     // ===== ОТОБРАЖЕНИЕ СТАВКИ ПОЛЬЗОВАТЕЛЯ =====
     const userBetContainer = document.getElementById('userBetInfo');
@@ -9351,6 +9356,49 @@ let fortuneHistory = [];
         return;
     }
 
+    // МГНОВЕННОЕ ОБНОВЛЕНИЕ UI (без ожидания сервера)
+    const commission = amount * 0.07;
+    const netAmount = amount - commission;
+
+    // Обновляем локальные данные сразу
+    localWG -= amount;
+
+    // Обновляем сумму ставки
+    if (currentBetTeam === selectedTeamForBet) {
+        currentBetAmount += amount;
+    } else {
+        currentBetTeam = selectedTeamForBet;
+        currentBetAmount = amount;
+    }
+
+    // Обновляем пул команды
+    if (selectedTeamForBet === 'yellow') {
+        yellowPoolAmount += netAmount;
+        // Добавляем свою аватарку в список
+        yellowPlayers.push({
+            userId: userId,
+            amount: netAmount,
+            avatarUrl: photoUrl,
+            username: username || firstName
+        });
+    } else {
+        redPoolAmount += netAmount;
+        redPlayers.push({
+            userId: userId,
+            amount: netAmount,
+            avatarUrl: photoUrl,
+            username: username || firstName
+        });
+    }
+
+    // Мгновенно обновляем UI
+    updateUI();
+    updateFortuneUI();
+
+    showToast(`✅ Ставка ${amount} WG (${netAmount.toFixed(0)} WG в пул) на команду ${selectedTeamForBet === 'yellow' ? 'Жёлтых 🟡' : 'Красных 🔴'} принята!`, 'success');
+    closeBetModal();
+
+    // Отправляем запрос на сервер в фоне (не блокируя UI)
     try {
         const response = await fetch('/api/fortune/bet', {
             method: 'POST',
@@ -9363,33 +9411,18 @@ let fortuneHistory = [];
         });
         const data = await response.json();
 
-        if (data.success) {
-            // Снимаем деньги
-            localWG -= amount;
-            updateUI();
-            await syncData(true);
-
-            // Обновляем сумму ставки (суммируем)
-            if (currentBetTeam === selectedTeamForBet) {
-                currentBetAmount += amount;
-            } else {
-                currentBetTeam = selectedTeamForBet;
-                currentBetAmount = amount;
-            }
-
-            // Обновляем отображение
-            updateFortuneUI();
-
-            const commission = amount * 0.07;
-            const netAmount = amount - commission;
-            showToast(`✅ Ставка ${amount} WG (${netAmount.toFixed(0)} WG в пул) на команду ${selectedTeamForBet === 'yellow' ? 'Жёлтых 🟡' : 'Красных 🔴'} принята!`, 'success');
-            closeBetModal();
-        } else {
+        if (!data.success) {
+            // Если сервер вернул ошибку — откатываем изменения
             showToast(data.error, 'error');
+            // Здесь можно добавить логику отката
+        } else {
+            // Синхронизируем с сервером для обновления чужих ставок
+            await syncData(true);
+            await loadFortuneStatus();
         }
     } catch(e) {
         console.error('Bet error:', e);
-        showToast('Ошибка при ставке', 'error');
+        showToast('Ошибка при сохранении ставки на сервере', 'error');
     }
 }
 
