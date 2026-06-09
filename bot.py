@@ -2837,17 +2837,17 @@ def api_fortune_status():
             "red_pool": current_fortune_round['red_pool'],
             "yellow_bets": [{
                 "userId": bet['user_id'],
-                "amount": bet['net_amount'],
-                "fullAmount": bet['amount'],
-                "username": bet.get('username', ''),
-                "avatarUrl": bet.get('avatar_url', '')
+                "amount": bet['amount'],
+                "netAmount": bet['net_amount'],
+                "avatarUrl": bet.get('avatar_url', ''),
+                "username": bet.get('username', '')
             } for bet in yellow_bets_sorted],
             "red_bets": [{
                 "userId": bet['user_id'],
-                "amount": bet['net_amount'],
-                "fullAmount": bet['amount'],
-                "username": bet.get('username', ''),
-                "avatarUrl": bet.get('avatar_url', '')
+                "amount": bet['amount'],
+                "netAmount": bet['net_amount'],
+                "avatarUrl": bet.get('avatar_url', ''),
+                "username": bet.get('username', '')
             } for bet in red_bets_sorted]
         })
 

@@ -9071,15 +9071,23 @@ function renderPlayersFast() {
         if (!yellowPlayers || yellowPlayers.length === 0) {
             fortuneElements.yellowPlayers.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
         } else {
-            const sorted = [...yellowPlayers].sort((a, b) => b.netAmount - a.netAmount).slice(0, 8);
-            fortuneElements.yellowPlayers.innerHTML = sorted.map(player => `
-                <div class="player-card-premium" onclick="event.stopPropagation(); openPlayerProfileInFortune(${player.userId})">
-                    <div class="player-avatar-premium">
-                        ${player.avatarUrl ? `<img src="${player.avatarUrl}" onerror="this.parentElement.innerHTML='🟡'">` : '🟡'}
+            const sorted = [...yellowPlayers].sort((a, b) => {
+                const aAmount = a.netAmount || a.amount || a.fullAmount || 0;
+                const bAmount = b.netAmount || b.amount || b.fullAmount || 0;
+                return bAmount - aAmount;
+            }).slice(0, 8);
+
+            fortuneElements.yellowPlayers.innerHTML = sorted.map(player => {
+                const betAmount = player.netAmount || player.amount || player.fullAmount || 0;
+                return `
+                    <div class="player-card-premium" onclick="event.stopPropagation(); openPlayerProfileInFortune(${player.userId})">
+                        <div class="player-avatar-premium">
+                            ${player.avatarUrl ? `<img src="${player.avatarUrl}" onerror="this.parentElement.innerHTML='🟡'">` : '🟡'}
+                        </div>
+                        <div class="player-bet-premium">${betAmount} WG</div>
                     </div>
-                    <div class="player-bet-premium">${player.netAmount} WG</div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
     }
 
@@ -9087,15 +9095,23 @@ function renderPlayersFast() {
         if (!redPlayers || redPlayers.length === 0) {
             fortuneElements.redPlayers.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
         } else {
-            const sorted = [...redPlayers].sort((a, b) => b.netAmount - a.netAmount).slice(0, 8);
-            fortuneElements.redPlayers.innerHTML = sorted.map(player => `
-                <div class="player-card-premium" onclick="event.stopPropagation(); openPlayerProfileInFortune(${player.userId})">
-                    <div class="player-avatar-premium">
-                        ${player.avatarUrl ? `<img src="${player.avatarUrl}" onerror="this.parentElement.innerHTML='🔴'">` : '🔴'}
+            const sorted = [...redPlayers].sort((a, b) => {
+                const aAmount = a.netAmount || a.amount || a.fullAmount || 0;
+                const bAmount = b.netAmount || b.amount || b.fullAmount || 0;
+                return bAmount - aAmount;
+            }).slice(0, 8);
+
+            fortuneElements.redPlayers.innerHTML = sorted.map(player => {
+                const betAmount = player.netAmount || player.amount || player.fullAmount || 0;
+                return `
+                    <div class="player-card-premium" onclick="event.stopPropagation(); openPlayerProfileInFortune(${player.userId})">
+                        <div class="player-avatar-premium">
+                            ${player.avatarUrl ? `<img src="${player.avatarUrl}" onerror="this.parentElement.innerHTML='🔴'">` : '🔴'}
+                        </div>
+                        <div class="player-bet-premium">${betAmount} WG</div>
                     </div>
-                    <div class="player-bet-premium">${player.netAmount} WG</div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
     }
 }
