@@ -205,14 +205,20 @@ body {
 .coin-wrapper {
     display: flex;
     justify-content: center;
-    margin: var(--spacing-lg) 0;
+    margin: 20px 0 30px 0;
 }
 
 .coin {
-    width: 200px;
-    height: 200px;
+    width: 240px;
+    height: 240px;
     position: relative;
     cursor: pointer;
+    transition: transform 0.1s ease;
+}
+
+/* Дополнительно: небольшой эффект при наведении (опционально) */
+.coin:hover {
+    transform: scale(1.02);
 }
 
 .coin-inner {
