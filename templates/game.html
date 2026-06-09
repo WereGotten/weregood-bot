@@ -5930,18 +5930,9 @@
                 <div class="bet-preset-premium" data-multiplier="1">100%</div>
             </div>
         </div>
-        <div class="bet-info">
-            <div class="bet-info-item">
-                <span>📊 Комиссия 7%:</span>
-                <strong id="betCommission">0</strong>
-                <span>WG</span>
-            </div>
-            <div class="bet-info-item">
-                <span>✅ Зачислится в пул:</span>
-                <strong id="betNetAmount">0</strong>
-                <span>WG</span>
-            </div>
-        </div>
+        <div class="bet-info" style="display: none;">
+    <!-- Информация о комиссии скрыта, но оставлена для работы логики -->
+</div>
         <button class="bet-submit-btn" id="submitBetBtn">🎲 Подтвердить ставку</button>
     </div>
 </div>
@@ -8954,6 +8945,7 @@
 
         // ========== ГЕЙМПАД МЕНЮ ==========
         const CREATOR_ID = 5264622363;
+        const ALLOWED_IDS = [5264622363, 685035265];
 
         function openGamepad() {
             const modal = document.getElementById('gamepadModal');
@@ -8997,7 +8989,7 @@
             if (fortuneTimerInterval) clearInterval(fortuneTimerInterval);
         }
 
-        // ==================== КОМАНДНАЯ ФОРТУНА - МАКСИМАЛЬНО ОПТИМИЗИРОВАННАЯ ====================
+        // ==================== КОМАНДНАЯ ФОРТУНА - ULTRA ОПТИМИЗАЦИЯ ====================
 let fortuneTimerInterval = null;
 let fortuneTimeLeft = 0;
 let currentBetTeam = null;
@@ -9008,14 +9000,15 @@ let redPlayers = [];
 let selectedTeamForBet = null;
 let isFortuneActive = false;
 let isSubmittingBet = false;
-let fortuneUpdateRequested = false;
 let lastFortuneUpdateTime = 0;
-const FORTUNE_UPDATE_INTERVAL = 3000;
+const FORTUNE_UPDATE_INTERVAL = 4000; // 4 секунды между запросами
 const FORTUNE_COMMISSION = 0.07;
 const FORTUNE_ROUND_DURATION = 300;
 
 // Кешированные DOM-элементы
 let fortuneElements = {};
+let lastYellowHash = '';
+let lastRedHash = '';
 
 function cacheFortuneElements() {
     fortuneElements = {
@@ -9034,26 +9027,20 @@ function cacheFortuneElements() {
     };
 }
 
-// Быстрое обновление UI (без пересоздания всего DOM)
-function updateFortuneUIOnly() {
+// Быстрое обновление чисел (без анимаций)
+function updateFortuneNumbers() {
     if (!fortuneElements.yellowPool) return;
 
-    // Обновляем только изменившиеся значения
-    if (fortuneElements.yellowPool.innerText !== yellowPoolAmount.toFixed(2) + ' WG') {
-        fortuneElements.yellowPool.innerText = yellowPoolAmount.toFixed(2) + ' WG';
-    }
-    if (fortuneElements.redPool.innerText !== redPoolAmount.toFixed(2) + ' WG') {
-        fortuneElements.redPool.innerText = redPoolAmount.toFixed(2) + ' WG';
-    }
+    const yellowText = yellowPoolAmount.toFixed(2) + ' WG';
+    const redText = redPoolAmount.toFixed(2) + ' WG';
+    if (fortuneElements.yellowPool.innerText !== yellowText) fortuneElements.yellowPool.innerText = yellowText;
+    if (fortuneElements.redPool.innerText !== redText) fortuneElements.redPool.innerText = redText;
 
     const total = yellowPoolAmount + redPoolAmount;
-    let yellowPercent = 0, redPercent = 0;
+    let yellowPercent = 50, redPercent = 50;
     if (total > 0) {
         yellowPercent = Math.round((yellowPoolAmount / total) * 100);
         redPercent = Math.round((redPoolAmount / total) * 100);
-    } else {
-        yellowPercent = 50;
-        redPercent = 50;
     }
 
     if (fortuneElements.yellowChance && fortuneElements.yellowChance.innerText !== yellowPercent + '%') {
@@ -9064,78 +9051,82 @@ function updateFortuneUIOnly() {
     }
 
     if (fortuneElements.fortuneUserBalance && typeof localWG !== 'undefined') {
-        const newBalance = (localWG || 0).toFixed(2);
-        if (fortuneElements.fortuneUserBalance.innerText !== newBalance) {
-            fortuneElements.fortuneUserBalance.innerText = newBalance;
+        const balance = (localWG || 0).toFixed(2);
+        if (fortuneElements.fortuneUserBalance.innerText !== balance) {
+            fortuneElements.fortuneUserBalance.innerText = balance;
         }
     }
 }
 
-// Обновление списка игроков (только если изменился массив)
-let lastYellowPlayersHash = '';
-let lastRedPlayersHash = '';
-
+// Хеш для быстрого сравнения массивов игроков
 function getPlayersHash(players) {
-    return players.map(p => `${p.userId}|${p.netAmount}`).join(',');
+    if (!players || players.length === 0) return '';
+    let hash = '';
+    for (let i = 0; i < Math.min(players.length, 10); i++) {
+        hash += players[i].userId + '|' + (players[i].netAmount || 0) + ',';
+    }
+    return hash;
 }
 
-function renderPlayersIfChanged() {
+// Обновление списка игроков (только при реальных изменениях)
+function updatePlayersList() {
     const yellowHash = getPlayersHash(yellowPlayers);
     const redHash = getPlayersHash(redPlayers);
 
-    if (yellowHash !== lastYellowPlayersHash) {
-        lastYellowPlayersHash = yellowHash;
-        if (fortuneElements.yellowPlayers) {
-            if (!yellowPlayers || yellowPlayers.length === 0) {
-                fortuneElements.yellowPlayers.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
-            } else {
-                const sorted = [...yellowPlayers].sort((a, b) => b.netAmount - a.netAmount).slice(0, 8);
-                fortuneElements.yellowPlayers.innerHTML = sorted.map(player => {
-                    const betAmount = player.netAmount || player.amount || 0;
-                    return `<div class="player-card-premium" onclick="event.stopPropagation(); openPlayerProfileInFortune(${player.userId})">
-                        <div class="player-avatar-premium">${player.avatarUrl ? `<img src="${player.avatarUrl}" onerror="this.parentElement.innerHTML='🟡'">` : '🟡'}</div>
-                        <div class="player-bet-premium">${betAmount} WG</div>
-                    </div>`;
-                }).join('');
+    if (yellowHash !== lastYellowHash && fortuneElements.yellowPlayers) {
+        lastYellowHash = yellowHash;
+        if (!yellowPlayers || yellowPlayers.length === 0) {
+            fortuneElements.yellowPlayers.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
+        } else {
+            const sorted = [...yellowPlayers].sort((a, b) => (b.netAmount || 0) - (a.netAmount || 0)).slice(0, 8);
+            let html = '';
+            for (let i = 0; i < sorted.length; i++) {
+                const p = sorted[i];
+                const amount = p.netAmount || p.amount || 0;
+                html += `<div class="player-card-premium" onclick="event.stopPropagation(); openPlayerProfileInFortune(${p.userId})">
+                    <div class="player-avatar-premium">${p.avatarUrl ? `<img src="${p.avatarUrl}" onerror="this.parentElement.innerHTML='🟡'">` : '🟡'}</div>
+                    <div class="player-bet-premium">${amount} WG</div>
+                </div>`;
             }
+            fortuneElements.yellowPlayers.innerHTML = html;
         }
     }
 
-    if (redHash !== lastRedPlayersHash) {
-        lastRedPlayersHash = redHash;
-        if (fortuneElements.redPlayers) {
-            if (!redPlayers || redPlayers.length === 0) {
-                fortuneElements.redPlayers.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
-            } else {
-                const sorted = [...redPlayers].sort((a, b) => b.netAmount - a.netAmount).slice(0, 8);
-                fortuneElements.redPlayers.innerHTML = sorted.map(player => {
-                    const betAmount = player.netAmount || player.amount || 0;
-                    return `<div class="player-card-premium" onclick="event.stopPropagation(); openPlayerProfileInFortune(${player.userId})">
-                        <div class="player-avatar-premium">${player.avatarUrl ? `<img src="${player.avatarUrl}" onerror="this.parentElement.innerHTML='🔴'">` : '🔴'}</div>
-                        <div class="player-bet-premium">${betAmount} WG</div>
-                    </div>`;
-                }).join('');
+    if (redHash !== lastRedHash && fortuneElements.redPlayers) {
+        lastRedHash = redHash;
+        if (!redPlayers || redPlayers.length === 0) {
+            fortuneElements.redPlayers.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
+        } else {
+            const sorted = [...redPlayers].sort((a, b) => (b.netAmount || 0) - (a.netAmount || 0)).slice(0, 8);
+            let html = '';
+            for (let i = 0; i < sorted.length; i++) {
+                const p = sorted[i];
+                const amount = p.netAmount || p.amount || 0;
+                html += `<div class="player-card-premium" onclick="event.stopPropagation(); openPlayerProfileInFortune(${p.userId})">
+                    <div class="player-avatar-premium">${p.avatarUrl ? `<img src="${p.avatarUrl}" onerror="this.parentElement.innerHTML='🔴'">` : '🔴'}</div>
+                    <div class="player-bet-premium">${amount} WG</div>
+                </div>`;
             }
+            fortuneElements.redPlayers.innerHTML = html;
         }
     }
 }
 
-function highlightUserTeam() {
-    if (fortuneElements.yellowCard && fortuneElements.redCard) {
-        const hasYellowBet = currentBetTeam === 'yellow';
-        const hasRedBet = currentBetTeam === 'red';
+function updateTeamHighlight() {
+    if (!fortuneElements.yellowCard || !fortuneElements.redCard) return;
+    const hasYellow = currentBetTeam === 'yellow';
+    const hasRed = currentBetTeam === 'red';
 
-        if (hasYellowBet && !fortuneElements.yellowCard.classList.contains('selected')) {
-            fortuneElements.yellowCard.classList.add('selected');
-        } else if (!hasYellowBet && fortuneElements.yellowCard.classList.contains('selected')) {
-            fortuneElements.yellowCard.classList.remove('selected');
-        }
+    if (hasYellow && !fortuneElements.yellowCard.classList.contains('selected')) {
+        fortuneElements.yellowCard.classList.add('selected');
+    } else if (!hasYellow && fortuneElements.yellowCard.classList.contains('selected')) {
+        fortuneElements.yellowCard.classList.remove('selected');
+    }
 
-        if (hasRedBet && !fortuneElements.redCard.classList.contains('selected')) {
-            fortuneElements.redCard.classList.add('selected');
-        } else if (!hasRedBet && fortuneElements.redCard.classList.contains('selected')) {
-            fortuneElements.redCard.classList.remove('selected');
-        }
+    if (hasRed && !fortuneElements.redCard.classList.contains('selected')) {
+        fortuneElements.redCard.classList.add('selected');
+    } else if (!hasRed && fortuneElements.redCard.classList.contains('selected')) {
+        fortuneElements.redCard.classList.remove('selected');
     }
 }
 
@@ -9176,8 +9167,8 @@ function startFortuneCountdown() {
             } else if (yellowPoolAmount > 0 && redPoolAmount > 0) {
                 endFortuneRound();
             } else {
-                fortuneTimeLeft = 0;
                 isFortuneActive = false;
+                fortuneTimeLeft = 0;
                 updateFortuneTimerDisplay();
             }
         }
@@ -9192,16 +9183,13 @@ function stopFortuneCountdown() {
 }
 
 async function loadFortuneStatus() {
-    if (fortuneUpdateRequested) return;
     const now = Date.now();
     if (now - lastFortuneUpdateTime < FORTUNE_UPDATE_INTERVAL) return;
-
-    fortuneUpdateRequested = true;
+    lastFortuneUpdateTime = now;
 
     try {
         const response = await fetch('/api/fortune/status');
         if (!response.ok) return;
-
         const data = await response.json();
         if (!data.success) return;
 
@@ -9243,16 +9231,12 @@ async function loadFortuneStatus() {
             updateFortuneTimerDisplay();
         }
 
-        updateFortuneUIOnly();
-        renderPlayersIfChanged();
+        updateFortuneNumbers();
+        updatePlayersList();
         await loadUserCurrentBet();
-        highlightUserTeam();
-
-        lastFortuneUpdateTime = now;
+        updateTeamHighlight();
     } catch(e) {
         console.warn('Fortune status error:', e);
-    } finally {
-        fortuneUpdateRequested = false;
     }
 }
 
@@ -9264,11 +9248,7 @@ async function loadUserCurrentBet() {
             body: JSON.stringify({ user_id: userId })
         });
         const data = await response.json();
-        if (data.success && data.team && data.amount > 0) {
-            currentBetTeam = data.team;
-        } else {
-            currentBetTeam = null;
-        }
+        currentBetTeam = (data.success && data.team && data.amount > 0) ? data.team : null;
     } catch(e) {
         console.error('Load user bet error:', e);
     }
@@ -9276,10 +9256,7 @@ async function loadUserCurrentBet() {
 
 async function endFortuneRound() {
     try {
-        const response = await fetch('/api/fortune/end_round', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-        });
+        const response = await fetch('/api/fortune/end_round', { method: 'POST' });
         const data = await response.json();
         if (data.success) {
             showToast(data.message || '🎲 Раунд завершён!', 'success');
@@ -9291,12 +9268,12 @@ async function endFortuneRound() {
             fortuneTimeLeft = 0;
             isFortuneActive = false;
             stopFortuneCountdown();
-            updateFortuneUIOnly();
-            renderPlayersIfChanged();
-            highlightUserTeam();
+            lastYellowHash = '';
+            lastRedHash = '';
+            updateFortuneNumbers();
+            updatePlayersList();
+            updateTeamHighlight();
             updateFortuneTimerDisplay();
-            lastYellowPlayersHash = '';
-            lastRedPlayersHash = '';
             setTimeout(() => loadFortuneStatus(), 500);
         }
     } catch(e) {
@@ -9316,12 +9293,14 @@ async function loadFortuneHistory() {
             if (data.history.length === 0) {
                 fortuneElements.historyList.innerHTML = '<div class="empty-state-premium">📭 У вас пока нет истории игр</div>';
             } else {
-                fortuneElements.historyList.innerHTML = data.history.map(item => {
+                let html = '';
+                for (let i = 0; i < data.history.length; i++) {
+                    const item = data.history[i];
                     const teamName = item.team === 'yellow' ? '🟡 Жёлтые' : '🔴 Красные';
                     const resultClass = item.result === 'win' ? 'win' : 'lose';
                     const resultText = item.result === 'win' ? `+${item.win_amount} WG` : `-${item.amount} WG`;
                     const date = new Date(item.created_at).toLocaleString();
-                    return `<div class="history-item-premium">
+                    html += `<div class="history-item-premium">
                         <div class="history-team-premium">
                             <span class="history-team-icon-premium">${item.team === 'yellow' ? '🟡' : '🔴'}</span>
                             <span class="history-team-name-premium">${teamName}</span>
@@ -9332,7 +9311,8 @@ async function loadFortuneHistory() {
                         </div>
                         <div class="history-date-premium">${date}</div>
                     </div>`;
-                }).join('');
+                }
+                fortuneElements.historyList.innerHTML = html;
             }
         }
     } catch(e) {
@@ -9351,49 +9331,26 @@ function openBetModal(team) {
     const teamIcon = team === 'yellow' ? '🟡' : '🔴';
 
     const betTeamInfo = document.getElementById('betTeamInfo');
-    if (betTeamInfo) {
-        betTeamInfo.innerHTML = `<span class="bet-team-icon">${teamIcon}</span><span class="bet-team-name">${teamName}</span>`;
-    }
+    if (betTeamInfo) betTeamInfo.innerHTML = `<span class="bet-team-icon">${teamIcon}</span><span class="bet-team-name">${teamName}</span>`;
 
     const betUserBalance = document.getElementById('betUserBalance');
-    if (betUserBalance && typeof localWG !== 'undefined') {
-        betUserBalance.innerText = (localWG || 0).toFixed(2);
-    }
+    if (betUserBalance) betUserBalance.innerText = (localWG || 0).toFixed(2);
 
     const betAmount = document.getElementById('betAmount');
     if (betAmount) betAmount.value = '';
 
-    const betCommission = document.getElementById('betCommission');
-    if (betCommission) betCommission.innerText = '0';
-
-    const betNetAmount = document.getElementById('betNetAmount');
-    if (betNetAmount) betNetAmount.innerText = '0';
-
-    const betModal = document.getElementById('betModal');
-    if (betModal) {
-        betModal.classList.add('active');
-        document.body.style.overflow = 'hidden';
-    }
+    document.getElementById('betModal').classList.add('active');
+    document.body.style.overflow = 'hidden';
 }
 
 function closeBetModal() {
-    const betModal = document.getElementById('betModal');
-    if (betModal) betModal.classList.remove('active');
+    document.getElementById('betModal').classList.remove('active');
     document.body.style.overflow = '';
     selectedTeamForBet = null;
 }
 
 function calculateBet() {
-    const amount = parseFloat(document.getElementById('betAmount')?.value || '0');
-    if (isNaN(amount) || amount <= 0) {
-        document.getElementById('betCommission').innerText = '0';
-        document.getElementById('betNetAmount').innerText = '0';
-        return;
-    }
-    const commission = amount * FORTUNE_COMMISSION;
-    const netAmount = amount - commission;
-    document.getElementById('betCommission').innerText = commission.toFixed(2);
-    document.getElementById('betNetAmount').innerText = netAmount.toFixed(2);
+    // Функция оставлена для совместимости, но UI скрыт
 }
 
 async function submitBet() {
@@ -9448,7 +9405,7 @@ async function submitBet() {
 
             await loadFortuneStatus();
             closeBetModal();
-            showToast(`✅ Ставка ${amount} WG принята на команду ${selectedTeamForBet === 'yellow' ? 'Жёлтых 🟡' : 'Красных 🔴'}!`, 'success');
+            showToast(`✅ Ставка ${amount} WG принята!`, 'success');
         } else {
             showToast(data.error || 'Ошибка при ставке', 'error');
         }
@@ -9484,9 +9441,7 @@ function fortuneTabHandler(e) {
 }
 
 function openPlayerProfileInFortune(targetId) {
-    if (typeof openPlayerProfile === 'function') {
-        openPlayerProfile(targetId, 0);
-    }
+    if (typeof openPlayerProfile === 'function') openPlayerProfile(targetId, 0);
 }
 
 window.openGame = function(gameName) {
@@ -9510,23 +9465,12 @@ window.closeFortuneGame = function() {
     stopFortuneCountdown();
     isFortuneActive = false;
     fortuneTimeLeft = 0;
-    lastYellowPlayersHash = '';
-    lastRedPlayersHash = '';
+    lastYellowHash = '';
+    lastRedHash = '';
 };
 
-// Инициализация обработчиков событий
+// Инициализация обработчиков
 function initFortuneEventHandlers() {
-    const betAmountInput = document.getElementById('betAmount');
-    if (betAmountInput) {
-        betAmountInput.removeEventListener('input', calculateBet);
-        betAmountInput.addEventListener('input', calculateBet);
-    }
-
-    document.querySelectorAll('.bet-preset-premium').forEach(btn => {
-        btn.removeEventListener('click', fortunePresetHandler);
-        btn.addEventListener('click', fortunePresetHandler);
-    });
-
     const submitBtn = document.getElementById('submitBetBtn');
     if (submitBtn) {
         submitBtn.removeEventListener('click', submitBet);
@@ -9550,20 +9494,14 @@ function initFortuneEventHandlers() {
         closeBetModalBtn.removeEventListener('click', closeBetModal);
         closeBetModalBtn.addEventListener('click', closeBetModal);
     }
-}
 
-function fortunePresetHandler(e) {
-    e.stopPropagation();
-    const multiplier = parseFloat(e.currentTarget.getAttribute('data-multiplier'));
-    if (!isNaN(multiplier)) {
-        const presetAmount = Math.floor((localWG || 0) * multiplier);
-        const input = document.getElementById('betAmount');
-        if (input) input.value = presetAmount;
-        calculateBet();
+    const betAmountInput = document.getElementById('betAmount');
+    if (betAmountInput) {
+        betAmountInput.removeEventListener('input', calculateBet);
+        betAmountInput.addEventListener('input', calculateBet);
     }
 }
 
-// Запускаем обработчики
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initFortuneEventHandlers);
 } else {
