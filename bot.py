@@ -3033,6 +3033,65 @@ def api_fortune_user_bet():
         return jsonify({"success": True, "bet": None, "team": None, "amount": 0})
 
 
+# ========== ДОПОЛНИТЕЛЬНЫЕ ЭНДПОИНТЫ ДЛЯ ФОРТУНЫ ==========
+
+@app.route('/api/fortune/user_total_bet', methods=['POST'])
+def api_fortune_user_total_bet():
+    """Получить общую сумму ставки пользователя в текущем раунде"""
+    data = request.json
+    if not data:
+        return jsonify({"success": False, "error": "No data"}), 400
+
+    user_id = data.get('user_id')
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"success": False, "error": "Invalid user_id"}), 400
+
+    with fortune_lock:
+        total_yellow = sum(bet.get('net_amount', 0) for bet in current_fortune_round.get('yellow_bets', []) if
+                           bet.get('user_id') == user_id)
+        total_red = sum(bet.get('net_amount', 0) for bet in current_fortune_round.get('red_bets', []) if
+                        bet.get('user_id') == user_id)
+
+        if total_yellow > 0:
+            return jsonify({"success": True, "team": "yellow", "amount": total_yellow})
+        elif total_red > 0:
+            return jsonify({"success": True, "team": "red", "amount": total_red})
+        else:
+            return jsonify({"success": True, "team": None, "amount": 0})
+
+
+@app.route('/api/fortune/winning_history', methods=['GET'])
+def api_fortune_winning_history():
+    """Получить историю побед (всех игроков)"""
+    limit = request.args.get('limit', 20, type=int)
+    with db.get_cursor() as cursor:
+        cursor.execute('''
+            SELECT fh.*, u.username, u.first_name, u.avatar_url 
+            FROM fortune_history fh
+            LEFT JOIN users u ON fh.user_id = u.user_id
+            WHERE fh.result = 'win'
+            ORDER BY fh.id DESC 
+            LIMIT ?
+        ''', (limit,))
+        rows = cursor.fetchall()
+
+        history = []
+        for row in rows:
+            history.append({
+                "id": row['id'],
+                "user_id": row['user_id'],
+                "round_id": row['round_id'],
+                "team": row['team'],
+                "amount": row['amount'],
+                "win_amount": row['win_amount'],
+                "created_at": row['created_at'],
+                "username": row['username'] or row['first_name'] or f"Player_{row['user_id']}",
+                "avatar_url": row['avatar_url'] or ''
+            })
+
+        return jsonify({"success": True, "history": history})
+
 @app.route('/api/fortune/history_all', methods=['GET'])
 def api_fortune_history_all():
     """Получить общую историю всех раундов (для админ-панели)"""
@@ -3059,6 +3118,8 @@ def api_fortune_history_all():
             })
 
         return jsonify({"success": True, "history": history})
+
+
 
 # ========== ОСНОВНЫЕ API ==========
 @app.route('/api/log_game_entry', methods=['POST'])
