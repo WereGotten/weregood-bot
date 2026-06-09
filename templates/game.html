@@ -6216,135 +6216,220 @@
             }, 80);
         }
 
-        // ========== НОВЫЙ ОБЪЕДИНЁННЫЙ ЗАПРОС ==========
-        let syncInterval = null;
-        let lastSyncTime = 0;
-        const SYNC_DELAY = 3000;
+        // ========== ОПТИМИЗИРОВАННЫЙ СИНХРОНИЗАТОР (ОДИН ЗАПРОС) ==========
+let syncInterval = null;
+let lastSyncTime = 0;
+let isSyncing = false;
+const SYNC_DELAY = 5000; // 5 секунд
 
-        async function syncData(force = false) {
-            const now = Date.now();
-            if (!force && now - lastSyncTime < SYNC_DELAY) {
-                return;
-            }
-            lastSyncTime = now;
+async function syncData(force = false) {
+    // Защита от одновременных вызовов
+    if (isSyncing) return;
 
-            try {
-                // 1. Получаем статус игрока
-                const statusResponse = await fetch('/api/status', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: userId }),
-                    signal: AbortSignal.timeout(5000)
-                });
-                const statusData = await statusResponse.json();
+    const now = Date.now();
+    if (!force && now - lastSyncTime < SYNC_DELAY) return;
 
-                if (statusData.error) {
-                    console.error('Status error:', statusData.error);
-                    if (statusData.banned) {
-                        showToast(`⚠️ Вы забанены! Причина: ${statusData.reason}`, 'error');
-                    }
-                    return;
-                }
+    isSyncing = true;
+    lastSyncTime = now;
 
-                // Обновляем локальные данные из статуса
-                localWG = statusData.wg || 0;
-                localLP = statusData.lp || 0;
-                localEnergy = statusData.energy || 0;
-                localClicks = statusData.total_clicks || 0;
-                localEarning = statusData.earning_per_click || 0.01;
-                localUSDT = statusData.usdt || 0;
-                localWins = statusData.wins || 0;
-                localRole = statusData.role || 'player';
-                localStars = statusData.stars || 0;
-                localMaxEnergy = statusData.max_energy || 500;
-                localEnergyUpgrades = statusData.energy_upgrades || 0;
+    try {
+        // ВСЕ ДАННЫЕ ЗА ОДИН ЗАПРОС
+        const response = await fetch('/api/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId }),
+            signal: AbortSignal.timeout(5000)
+        });
 
-                if (statusData.upgrade_counts) {
-                    upgradeCounts = statusData.upgrade_counts;
-                    upgradeCosts[1] = getUpgradeCost(1, upgradeCounts[1] || 0);
-                    upgradeCosts[2] = getUpgradeCost(2, upgradeCounts[2] || 0);
-                    upgradeCosts[3] = getUpgradeCost(3, upgradeCounts[3] || 0);
-                }
+        if (!response.ok) throw new Error('Sync failed');
 
-                updateUI();
+        const data = await response.json();
 
-                const regenText = statusData.regen_text || '';
-                const regenInfo = document.getElementById('regenInfo');
-                if (regenInfo && regenText) regenInfo.innerHTML = regenText;
+        if (!data.success || !data.status) {
+            console.error('Sync error: invalid response');
+            return;
+        }
 
-                // 2. Получаем статус лотереи
-                const lotteryResponse = await fetch('/api/lottery_status', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: userId })
-                });
-                const lotteryData = await lotteryResponse.json();
+        const status = data.status;
 
-                document.getElementById('prizePool').innerText = (lotteryData.prize_pool || 0).toFixed(2);
-                document.getElementById('ticketsCount').innerText = lotteryData.user_tickets || 0;
-                document.getElementById('totalTickets').innerText = lotteryData.user_tickets || 0;
-                document.getElementById('totalTicketsMini').innerText = lotteryData.user_tickets || 0;
+        // ====== БЫСТРОЕ ОБНОВЛЕНИЕ DOM (кешируем элементы) ======
+        const wgBalance = document.getElementById('wgBalance');
+        const lpBalance = document.getElementById('lpBalance');
+        const energyValue = document.getElementById('energyValue');
+        const maxEnergyValue = document.getElementById('maxEnergyValue');
+        const energyBar = document.getElementById('energyBar');
+        const totalWG = document.getElementById('totalWG');
+        const totalLP = document.getElementById('totalLP');
+        const totalWGmini = document.getElementById('totalWGmini');
+        const lotteryLPBalance = document.getElementById('lotteryLPBalance');
+        const totalClicksMini = document.getElementById('totalClicksMini');
+        const profileClicks = document.getElementById('profileClicks');
+        const profileUSDT = document.getElementById('profileUSDT');
+        const profileWins = document.getElementById('profileWins');
+        const earningPerClick = document.getElementById('earningPerClick');
+        const clickAmount = document.getElementById('clickAmount');
+        const totalTickets = document.getElementById('totalTickets');
+        const totalTicketsMini = document.getElementById('totalTicketsMini');
+        const starsBalance = document.getElementById('starsBalance');
+        const currentMaxEnergy = document.getElementById('currentMaxEnergy');
+        const energyUpgradeCount = document.getElementById('energyUpgradeCount');
+        const energyUpgradeCountProgress = document.getElementById('energyUpgradeCountProgress');
+        const energyUpgradesLeft = document.getElementById('energyUpgradesLeft');
+        const energyUpgradeProgressFill = document.getElementById('energyUpgradeProgressFill');
+        const regenInfo = document.getElementById('regenInfo');
+        const prizePool = document.getElementById('prizePool');
+        const ticketsCount = document.getElementById('ticketsCount');
+        const onlineCount = document.getElementById('onlineCount');
 
-                if (lotteryData.is_drawn !== undefined) {
-                    isDrawn = lotteryData.is_drawn;
-                    winningNumbers = lotteryData.winning_numbers || [];
-                    updateDrawUI();
-                }
+        // Обновляем локальные переменные
+        localWG = status.wg || 0;
+        localLP = status.lp || 0;
+        localEnergy = status.energy || 0;
+        localClicks = status.total_clicks || 0;
+        localEarning = status.earning_per_click || 0.01;
+        localUSDT = status.usdt || 0;
+        localWins = status.wins || 0;
+        localRole = status.role || 'player';
+        localStars = status.stars || 0;
+        localMaxEnergy = status.max_energy || 500;
+        localEnergyUpgrades = status.energy_upgrades || 0;
 
-                // 3. Обновляем мини-лидерборд
-                const leaderboardResponse = await fetch('/api/leaderboard/daily?limit=5');
-                const leaderboardData = await leaderboardResponse.json();
-                if (leaderboardData && leaderboardData.length > 0) {
-                    updateLeaderboardMini(leaderboardData);
-                } else {
-                    document.getElementById('leaderboardMini').innerHTML = '<div class="loading">Загрузка...</div>';
-                }
-
-                // 4. Обновляем последних участников
-                const recentResponse = await fetch('/api/recent_players');
-                const recentData = await recentResponse.json();
-                if (recentData && recentData.length > 0) {
-                    updateRecentPlayers(recentData);
-                }
-
-                // 5. Обновляем онлайн
-                const onlineResponse = await fetch('/api/online_count');
-                const onlineData = await onlineResponse.json();
-                const onlineCount = document.getElementById('onlineCount');
-                if (onlineCount && onlineData.online !== undefined) {
-                    onlineCount.innerHTML = `🟢 Онлайн: ${onlineData.online}`;
-                }
-
-            } catch(e) {
-                console.error('Sync error:', e);
-                setTimeout(() => syncData(true), 5000);
+        if (status.upgrade_counts) {
+            upgradeCounts = status.upgrade_counts;
+            for (let i = 1; i <= 3; i++) {
+                upgradeCosts[i] = getUpgradeCost(i, upgradeCounts[i] || 0);
             }
         }
 
-        // Функция для обновления мини-лидерборда
-        function updateLeaderboardMini(leaderboardData) {
-            const container = document.getElementById('leaderboardMini');
-            if (!container) return;
-            if (!leaderboardData || leaderboardData.length === 0) {
-                container.innerHTML = '<div class="loading">Загрузка...</div>';
-                return;
+        // Обновляем числа (без лишних перерисовок)
+        if (wgBalance) wgBalance.innerText = localWG.toFixed(2);
+        if (lpBalance) lpBalance.innerText = localLP;
+        if (energyValue) energyValue.innerText = localEnergy;
+        if (maxEnergyValue) maxEnergyValue.innerText = localMaxEnergy;
+        if (energyBar) energyBar.style.width = (localEnergy / localMaxEnergy * 100) + '%';
+        if (totalWG) totalWG.innerText = localWG.toFixed(2);
+        if (totalLP) totalLP.innerText = localLP;
+        if (totalWGmini) totalWGmini.innerText = localWG.toFixed(2);
+        if (lotteryLPBalance) lotteryLPBalance.innerText = localLP;
+        if (totalClicksMini) totalClicksMini.innerText = localClicks;
+        if (profileClicks) profileClicks.innerText = localClicks;
+        if (profileUSDT) profileUSDT.innerText = localUSDT.toFixed(2);
+        if (profileWins) profileWins.innerText = localWins;
+        if (earningPerClick) earningPerClick.innerText = localEarning.toFixed(2);
+        if (clickAmount) clickAmount.innerText = localEarning.toFixed(2);
+        if (starsBalance) starsBalance.innerText = localStars;
+        if (currentMaxEnergy) currentMaxEnergy.innerText = localMaxEnergy;
+        if (energyUpgradeCount) energyUpgradeCount.innerText = localEnergyUpgrades;
+        if (energyUpgradeCountProgress) energyUpgradeCountProgress.innerText = localEnergyUpgrades;
+
+        const upgradesLeft = Math.max(0, 15 - localEnergyUpgrades);
+        if (energyUpgradesLeft) energyUpgradesLeft.innerText = upgradesLeft;
+
+        const progressPercent = (localEnergyUpgrades / 15) * 100;
+        if (energyUpgradeProgressFill) energyUpgradeProgressFill.style.width = progressPercent + '%';
+
+        if (regenInfo && status.regen_text) regenInfo.innerHTML = status.regen_text;
+
+        // Обновляем лотерею
+        if (data.lottery) {
+            if (prizePool) prizePool.innerText = (data.lottery.prize_pool || 0).toFixed(2);
+            const userTickets = data.lottery.user_tickets || 0;
+            if (ticketsCount) ticketsCount.innerText = userTickets;
+            if (totalTickets) totalTickets.innerText = userTickets;
+            if (totalTicketsMini) totalTicketsMini.innerText = userTickets;
+
+            if (data.lottery.is_drawn !== undefined) {
+                isDrawn = data.lottery.is_drawn;
+                winningNumbers = data.lottery.winning_numbers || [];
+                updateDrawUI();
             }
-            let html = '';
-            for (let user of leaderboardData) {
-                let avatar = user.avatar && user.avatar !== '👤' && user.avatar !== ''
-                    ? `<img src="${user.avatar}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;" onerror="this.src='/static/default-avatar.png'">`
-                    : '👤';
-                let userName = user.username || 'Игрок';
-                let dailyClicks = user.daily_clicks || user.clicks || 0;
-                html += `<div class="leaderboard-mini-item">
-                    <span class="rank">${user.rank}</span>
-                    <span class="avatar-mini">${avatar}</span>
-                    <span class="name">${escapeHtml(userName)}</span>
-                    <span class="clicks"> ${dailyClicks.toLocaleString()} кликов</span>
-                </div>`;
-            }
-            container.innerHTML = html;
         }
+
+        // Обновляем мини-лидерборд
+        if (data.leaderboard && data.leaderboard.length > 0) {
+            updateLeaderboardMiniFast(data.leaderboard);
+        }
+
+        // Обновляем онлайн
+        if (onlineCount && data.online_count !== undefined) {
+            onlineCount.innerHTML = `🟢 Онлайн: ${data.online_count}`;
+        }
+
+        // Обновляем последних участников
+        if (data.recent_players && data.recent_players.length > 0) {
+            updateRecentPlayersFast(data.recent_players);
+        }
+
+    } catch(e) {
+        console.error('Sync error:', e);
+        setTimeout(() => syncData(true), 5000);
+    } finally {
+        isSyncing = false;
+    }
+}
+
+// Быстрое обновление мини-лидерборда
+function updateLeaderboardMiniFast(leaderboardData) {
+    const container = document.getElementById('leaderboardMini');
+    if (!container || !leaderboardData || leaderboardData.length === 0) {
+        if (container) container.innerHTML = '<div class="loading">Загрузка...</div>';
+        return;
+    }
+
+    let html = '';
+    for (let i = 0; i < leaderboardData.length; i++) {
+        const user = leaderboardData[i];
+        const avatar = (user.avatar && user.avatar !== '👤' && user.avatar !== '')
+            ? `<img src="${user.avatar}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;">`
+            : '👤';
+        const userName = user.username || 'Игрок';
+        const dailyClicks = user.daily_clicks || user.clicks || 0;
+        html += `<div class="leaderboard-mini-item">
+            <span class="rank">${user.rank}</span>
+            <span class="avatar-mini">${avatar}</span>
+            <span class="name">${escapeHtml(userName)}</span>
+            <span class="clicks">${dailyClicks.toLocaleString()} кликов</span>
+        </div>`;
+    }
+    container.innerHTML = html;
+}
+
+// Быстрое обновление последних участников
+function updateRecentPlayersFast(players) {
+    const container = document.getElementById('recentPlayersList');
+    if (!container) return;
+
+    if (!players || players.length === 0) {
+        container.innerHTML = '<div class="empty-state">😢 Пока нет участников</div>';
+        return;
+    }
+
+    let html = '';
+    for (let i = 0; i < players.length; i++) {
+        const p = players[i];
+        const avatarHtml = (p.avatar_url && p.avatar_url !== '')
+            ? `<img src="${p.avatar_url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`
+            : '👤';
+
+        let playerName = p.username || 'Игрок';
+        if (playerName.startsWith('@')) playerName = playerName.substring(1);
+
+        let roleBadge = '';
+        if (p.role === 'founder') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#ef4444;">👑</span>';
+        else if (p.role === 'pioneer') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#00b4d8;">⭐</span>';
+        else if (p.role === 'legend') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#FFD700;">👑</span>';
+
+        html += `<div class="recent-player-item" onclick="openPlayerProfile(${p.user_id}, 0)">
+            <div class="recent-player-avatar">${avatarHtml}</div>
+            <div class="recent-player-info">
+                <div class="recent-player-name">${escapeHtml(playerName)}${roleBadge}</div>
+                <div class="recent-player-time">🕐 ${p.time_ago || 'только что'}</div>
+            </div>
+            <div class="recent-player-ticket">🎫 #${p.ticket_number}</div>
+        </div>`;
+    }
+    container.innerHTML = html;
+}
 
         // Функция для обновления последних участников
         function updateRecentPlayers(players) {
@@ -9000,16 +9085,19 @@ let redPlayers = [];
 let selectedTeamForBet = null;
 let isFortuneActive = false;
 let isSubmittingBet = false;
-let lastFortuneUpdateTime = 0;
-const FORTUNE_UPDATE_INTERVAL = 4000; // 4 секунды между запросами
+let fortuneUpdateInterval = null;
+let isFortuneModalOpen = false;
+
 const FORTUNE_COMMISSION = 0.07;
 const FORTUNE_ROUND_DURATION = 300;
+const FORTUNE_UPDATE_DELAY = 3000; // 3 секунды между обновлениями
 
-// Кешированные DOM-элементы
+// Кешированные DOM-элементы (заполняются при открытии)
 let fortuneElements = {};
 let lastYellowHash = '';
 let lastRedHash = '';
 
+// ========== ИНИЦИАЛИЗАЦИЯ ПРИ ОТКРЫТИИ ==========
 function cacheFortuneElements() {
     fortuneElements = {
         yellowPool: document.getElementById('yellowPool'),
@@ -9023,21 +9111,29 @@ function cacheFortuneElements() {
         fortuneUserBalance: document.getElementById('fortuneUserBalance'),
         historyList: document.getElementById('fortuneHistoryList'),
         yellowCard: document.getElementById('teamYellowCard'),
-        redCard: document.getElementById('teamRedCard')
+        redCard: document.getElementById('teamRedCard'),
+        betBtnYellow: document.getElementById('betBtnYellow'),
+        betBtnRed: document.getElementById('betBtnRed')
     };
 }
 
-// Быстрое обновление чисел (без анимаций)
+// ========== ОБНОВЛЕНИЕ ЧИСЕЛ (ТОЛЬКО ПРИ ИЗМЕНЕНИИ) ==========
 function updateFortuneNumbers() {
     if (!fortuneElements.yellowPool) return;
 
     const yellowText = yellowPoolAmount.toFixed(2) + ' WG';
     const redText = redPoolAmount.toFixed(2) + ' WG';
-    if (fortuneElements.yellowPool.innerText !== yellowText) fortuneElements.yellowPool.innerText = yellowText;
-    if (fortuneElements.redPool.innerText !== redText) fortuneElements.redPool.innerText = redText;
+
+    if (fortuneElements.yellowPool.innerText !== yellowText) {
+        fortuneElements.yellowPool.innerText = yellowText;
+    }
+    if (fortuneElements.redPool.innerText !== redText) {
+        fortuneElements.redPool.innerText = redText;
+    }
 
     const total = yellowPoolAmount + redPoolAmount;
     let yellowPercent = 50, redPercent = 50;
+
     if (total > 0) {
         yellowPercent = Math.round((yellowPoolAmount / total) * 100);
         redPercent = Math.round((redPoolAmount / total) * 100);
@@ -9058,27 +9154,32 @@ function updateFortuneNumbers() {
     }
 }
 
-// Хеш для быстрого сравнения массивов игроков
+// ========== БЫСТРЫЙ ХЕШ ДЛЯ СРАВНЕНИЯ ==========
 function getPlayersHash(players) {
     if (!players || players.length === 0) return '';
     let hash = '';
-    for (let i = 0; i < Math.min(players.length, 10); i++) {
+    const len = Math.min(players.length, 10);
+    for (let i = 0; i < len; i++) {
         hash += players[i].userId + '|' + (players[i].netAmount || 0) + ',';
     }
     return hash;
 }
 
-// Обновление списка игроков (только при реальных изменениях)
+// ========== ОБНОВЛЕНИЕ СПИСКА ИГРОКОВ (ТОЛЬКО ПРИ ИЗМЕНЕНИИ) ==========
 function updatePlayersList() {
     const yellowHash = getPlayersHash(yellowPlayers);
     const redHash = getPlayersHash(redPlayers);
 
     if (yellowHash !== lastYellowHash && fortuneElements.yellowPlayers) {
         lastYellowHash = yellowHash;
+
         if (!yellowPlayers || yellowPlayers.length === 0) {
             fortuneElements.yellowPlayers.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
         } else {
-            const sorted = [...yellowPlayers].sort((a, b) => (b.netAmount || 0) - (a.netAmount || 0)).slice(0, 8);
+            const sorted = [...yellowPlayers]
+                .sort((a, b) => (b.netAmount || 0) - (a.netAmount || 0))
+                .slice(0, 8);
+
             let html = '';
             for (let i = 0; i < sorted.length; i++) {
                 const p = sorted[i];
@@ -9094,10 +9195,14 @@ function updatePlayersList() {
 
     if (redHash !== lastRedHash && fortuneElements.redPlayers) {
         lastRedHash = redHash;
+
         if (!redPlayers || redPlayers.length === 0) {
             fortuneElements.redPlayers.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
         } else {
-            const sorted = [...redPlayers].sort((a, b) => (b.netAmount || 0) - (a.netAmount || 0)).slice(0, 8);
+            const sorted = [...redPlayers]
+                .sort((a, b) => (b.netAmount || 0) - (a.netAmount || 0))
+                .slice(0, 8);
+
             let html = '';
             for (let i = 0; i < sorted.length; i++) {
                 const p = sorted[i];
@@ -9112,8 +9217,10 @@ function updatePlayersList() {
     }
 }
 
+// ========== ОБНОВЛЕНИЕ ПОДСВЕТКИ КОМАНД ==========
 function updateTeamHighlight() {
     if (!fortuneElements.yellowCard || !fortuneElements.redCard) return;
+
     const hasYellow = currentBetTeam === 'yellow';
     const hasRed = currentBetTeam === 'red';
 
@@ -9129,6 +9236,9 @@ function updateTeamHighlight() {
         fortuneElements.redCard.classList.remove('selected');
     }
 }
+
+// ========== ТАЙМЕР (С ИСПОЛЬЗОВАНИЕМ requestAnimationFrame) ==========
+let timerAnimationId = null;
 
 function updateFortuneTimerDisplay() {
     if (!fortuneElements.fortuneTimer) return;
@@ -9147,54 +9257,63 @@ function updateFortuneTimerDisplay() {
     }
 }
 
-function startFortuneCountdown() {
-    if (fortuneTimerInterval) clearInterval(fortuneTimerInterval);
+function animateTimer() {
+    if (!isFortuneActive) return;
 
-    fortuneTimerInterval = setInterval(() => {
-        if (!isFortuneActive) return;
+    if (fortuneTimeLeft > 0) {
+        fortuneTimeLeft--;
+        updateFortuneTimerDisplay();
+        timerAnimationId = setTimeout(animateTimer, 1000);
+    } else {
+        clearTimer();
 
-        if (fortuneTimeLeft > 0) {
-            fortuneTimeLeft--;
-            updateFortuneTimerDisplay();
+        if ((yellowPoolAmount > 0 && redPoolAmount === 0) || (redPoolAmount > 0 && yellowPoolAmount === 0)) {
+            fortuneTimeLeft = FORTUNE_ROUND_DURATION;
+            animateTimer();
+            showToast('⏰ Ставки только на одной команде! Таймер перезапущен.', 'info');
+        } else if (yellowPoolAmount > 0 && redPoolAmount > 0) {
+            endFortuneRound();
         } else {
-            clearInterval(fortuneTimerInterval);
-            fortuneTimerInterval = null;
-
-            if ((yellowPoolAmount > 0 && redPoolAmount === 0) || (redPoolAmount > 0 && yellowPoolAmount === 0)) {
-                fortuneTimeLeft = FORTUNE_ROUND_DURATION;
-                startFortuneCountdown();
-                showToast('⏰ Ставки только на одной команде! Таймер перезапущен.', 'info');
-            } else if (yellowPoolAmount > 0 && redPoolAmount > 0) {
-                endFortuneRound();
-            } else {
-                isFortuneActive = false;
-                fortuneTimeLeft = 0;
-                updateFortuneTimerDisplay();
-            }
+            isFortuneActive = false;
+            fortuneTimeLeft = 0;
+            updateFortuneTimerDisplay();
         }
-    }, 1000);
-}
-
-function stopFortuneCountdown() {
-    if (fortuneTimerInterval) {
-        clearInterval(fortuneTimerInterval);
-        fortuneTimerInterval = null;
     }
 }
 
+function startFortuneCountdown() {
+    clearTimer();
+    isFortuneActive = true;
+    animateTimer();
+}
+
+function clearTimer() {
+    if (timerAnimationId) {
+        clearTimeout(timerAnimationId);
+        timerAnimationId = null;
+    }
+}
+
+function stopFortuneCountdown() {
+    clearTimer();
+    isFortuneActive = false;
+}
+
+// ========== ЗАГРУЗКА СТАТУСА ФОРТУНЫ (С КЕШИРОВАНИЕМ) ==========
 async function loadFortuneStatus() {
-    const now = Date.now();
-    if (now - lastFortuneUpdateTime < FORTUNE_UPDATE_INTERVAL) return;
-    lastFortuneUpdateTime = now;
+    if (!isFortuneModalOpen) return;
 
     try {
         const response = await fetch('/api/fortune/status');
         if (!response.ok) return;
+
         const data = await response.json();
         if (!data.success) return;
 
+        // Обновляем данные
         yellowPoolAmount = data.yellow_pool;
         redPoolAmount = data.red_pool;
+
         yellowPlayers = (data.yellow_bets || []).map(bet => ({
             userId: bet.userId || bet.user_id,
             amount: bet.amount || 0,
@@ -9202,6 +9321,7 @@ async function loadFortuneStatus() {
             avatarUrl: bet.avatarUrl || '',
             username: bet.username || 'Игрок'
         }));
+
         redPlayers = (data.red_bets || []).map(bet => ({
             userId: bet.userId || bet.user_id,
             amount: bet.amount || 0,
@@ -9212,22 +9332,21 @@ async function loadFortuneStatus() {
 
         const serverTimeLeft = data.time_left;
 
+        // Управление таймером
         if (serverTimeLeft > 0 && serverTimeLeft <= FORTUNE_ROUND_DURATION) {
             if (!isFortuneActive || fortuneTimeLeft !== serverTimeLeft) {
                 fortuneTimeLeft = serverTimeLeft;
-                isFortuneActive = true;
                 stopFortuneCountdown();
                 startFortuneCountdown();
             }
         } else if ((yellowPoolAmount > 0 || redPoolAmount > 0) && fortuneTimeLeft === 0 && !isFortuneActive) {
             fortuneTimeLeft = FORTUNE_ROUND_DURATION;
-            isFortuneActive = true;
             stopFortuneCountdown();
             startFortuneCountdown();
         } else if (yellowPoolAmount === 0 && redPoolAmount === 0) {
             isFortuneActive = false;
             fortuneTimeLeft = 0;
-            stopFortuneCountdown();
+            clearTimer();
             updateFortuneTimerDisplay();
         }
 
@@ -9235,11 +9354,13 @@ async function loadFortuneStatus() {
         updatePlayersList();
         await loadUserCurrentBet();
         updateTeamHighlight();
+
     } catch(e) {
         console.warn('Fortune status error:', e);
     }
 }
 
+// ========== ЗАГРУЗКА ТЕКУЩЕЙ СТАВКИ ==========
 async function loadUserCurrentBet() {
     try {
         const response = await fetch('/api/fortune/user_total_bet', {
@@ -9254,12 +9375,15 @@ async function loadUserCurrentBet() {
     }
 }
 
+// ========== ЗАВЕРШЕНИЕ РАУНДА ==========
 async function endFortuneRound() {
     try {
         const response = await fetch('/api/fortune/end_round', { method: 'POST' });
         const data = await response.json();
+
         if (data.success) {
             showToast(data.message || '🎲 Раунд завершён!', 'success');
+
             yellowPoolAmount = 0;
             redPoolAmount = 0;
             yellowPlayers = [];
@@ -9267,29 +9391,40 @@ async function endFortuneRound() {
             currentBetTeam = null;
             fortuneTimeLeft = 0;
             isFortuneActive = false;
+
             stopFortuneCountdown();
             lastYellowHash = '';
             lastRedHash = '';
+
             updateFortuneNumbers();
             updatePlayersList();
             updateTeamHighlight();
             updateFortuneTimerDisplay();
+
             setTimeout(() => loadFortuneStatus(), 500);
+
+            // Обновляем глобальные данные
+            if (typeof syncData === 'function') syncData(true);
         }
     } catch(e) {
         console.error('End round error:', e);
     }
 }
 
+// ========== ИСТОРИЯ ==========
 async function loadFortuneHistory() {
+    if (!fortuneElements.historyList) return;
+
     try {
         const response = await fetch('/api/fortune/history', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_id: userId, limit: 20 })
         });
+
         const data = await response.json();
-        if (data.success && fortuneElements.historyList) {
+
+        if (data.success) {
             if (data.history.length === 0) {
                 fortuneElements.historyList.innerHTML = '<div class="empty-state-premium">📭 У вас пока нет истории игр</div>';
             } else {
@@ -9300,6 +9435,7 @@ async function loadFortuneHistory() {
                     const resultClass = item.result === 'win' ? 'win' : 'lose';
                     const resultText = item.result === 'win' ? `+${item.win_amount} WG` : `-${item.amount} WG`;
                     const date = new Date(item.created_at).toLocaleString();
+
                     html += `<div class="history-item-premium">
                         <div class="history-team-premium">
                             <span class="history-team-icon-premium">${item.team === 'yellow' ? '🟡' : '🔴'}</span>
@@ -9320,6 +9456,7 @@ async function loadFortuneHistory() {
     }
 }
 
+// ========== МОДАЛЬНОЕ ОКНО СТАВКИ ==========
 function openBetModal(team) {
     if (currentBetTeam) {
         showToast(`❌ Вы уже сделали ставку на команду ${currentBetTeam === 'yellow' ? 'Жёлтых 🟡' : 'Красных 🔴'}!`, 'error');
@@ -9331,10 +9468,14 @@ function openBetModal(team) {
     const teamIcon = team === 'yellow' ? '🟡' : '🔴';
 
     const betTeamInfo = document.getElementById('betTeamInfo');
-    if (betTeamInfo) betTeamInfo.innerHTML = `<span class="bet-team-icon">${teamIcon}</span><span class="bet-team-name">${teamName}</span>`;
+    if (betTeamInfo) {
+        betTeamInfo.innerHTML = `<span class="bet-team-icon">${teamIcon}</span><span class="bet-team-name">${teamName}</span>`;
+    }
 
     const betUserBalance = document.getElementById('betUserBalance');
-    if (betUserBalance) betUserBalance.innerText = (localWG || 0).toFixed(2);
+    if (betUserBalance) {
+        betUserBalance.innerText = (localWG || 0).toFixed(2);
+    }
 
     const betAmount = document.getElementById('betAmount');
     if (betAmount) betAmount.value = '';
@@ -9349,9 +9490,14 @@ function closeBetModal() {
     selectedTeamForBet = null;
 }
 
-function calculateBet() {
-    // Функция оставлена для совместимости, но UI скрыт
-}
+// ========== ПОДТВЕРЖДЕНИЕ СТАВКИ (С ЗАЩИТОЙ ОТ ДУБЛЕЙ) ==========
+const submitBetDebounce = (function() {
+    let timeout;
+    return function() {
+        if (timeout) clearTimeout(timeout);
+        timeout = setTimeout(submitBet, 300);
+    };
+})();
 
 async function submitBet() {
     if (isSubmittingBet) {
@@ -9389,6 +9535,7 @@ async function submitBet() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_id: userId, team: selectedTeamForBet, amount: amount })
         });
+
         const data = await response.json();
 
         if (data.success) {
@@ -9398,7 +9545,6 @@ async function submitBet() {
 
             if (!isFortuneActive && (yellowPoolAmount > 0 || redPoolAmount > 0)) {
                 fortuneTimeLeft = FORTUNE_ROUND_DURATION;
-                isFortuneActive = true;
                 stopFortuneCountdown();
                 startFortuneCountdown();
             }
@@ -9417,6 +9563,23 @@ async function submitBet() {
     }
 }
 
+// ========== ПРЕДУСТАНОВКИ СУММЫ СТАВКИ ==========
+function initBetPresets() {
+    const presets = document.querySelectorAll('.bet-preset-premium');
+    const betAmountInput = document.getElementById('betAmount');
+
+    presets.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const multiplier = parseFloat(btn.getAttribute('data-multiplier'));
+            if (!isNaN(multiplier) && betAmountInput) {
+                const presetAmount = Math.floor((localWG || 0) * multiplier);
+                betAmountInput.value = Math.max(10, presetAmount);
+            }
+        });
+    });
+}
+
+// ========== ТАБЫ ==========
 function initFortuneTabs() {
     const tabs = document.querySelectorAll('.fortune-tab');
     tabs.forEach(tab => {
@@ -9428,9 +9591,11 @@ function initFortuneTabs() {
 function fortuneTabHandler(e) {
     const tab = e.currentTarget;
     const target = tab.dataset.fortuneTab;
+
     document.querySelectorAll('.fortune-tab').forEach(t => t.classList.remove('active'));
     tab.classList.add('active');
     document.querySelectorAll('.fortune-tab-content').forEach(c => c.classList.remove('active'));
+
     if (target === 'play') {
         document.getElementById('fortunePlayTab').classList.add('active');
         loadFortuneStatus();
@@ -9440,20 +9605,50 @@ function fortuneTabHandler(e) {
     }
 }
 
+// ========== ОТКРЫТИЕ ПРОФИЛЯ ИГРОКА ==========
 function openPlayerProfileInFortune(targetId) {
-    if (typeof openPlayerProfile === 'function') openPlayerProfile(targetId, 0);
+    if (typeof openPlayerProfile === 'function') {
+        openPlayerProfile(targetId, 0);
+    }
 }
 
+// ========== ЗАПУСК ЦИКЛИЧЕСКОГО ОБНОВЛЕНИЯ ==========
+function startFortuneUpdates() {
+    if (fortuneUpdateInterval) clearInterval(fortuneUpdateInterval);
+
+    // Первый запрос сразу
+    loadFortuneStatus();
+
+    // Затем каждые 3 секунды
+    fortuneUpdateInterval = setInterval(() => {
+        if (isFortuneModalOpen) {
+            loadFortuneStatus();
+        }
+    }, FORTUNE_UPDATE_DELAY);
+}
+
+function stopFortuneUpdates() {
+    if (fortuneUpdateInterval) {
+        clearInterval(fortuneUpdateInterval);
+        fortuneUpdateInterval = null;
+    }
+}
+
+// ========== ОТКРЫТИЕ/ЗАКРЫТИЕ ФОРТУНЫ ==========
 window.openGame = function(gameName) {
     if (gameName === 'fortune') {
         const fortuneModal = document.getElementById('fortuneModal');
         if (fortuneModal) {
             fortuneModal.classList.add('active');
             document.body.style.overflow = 'hidden';
+            isFortuneModalOpen = true;
+
             if (typeof closeGamepad === 'function') closeGamepad();
+
             cacheFortuneElements();
-            loadFortuneStatus();
+            startFortuneUpdates();
             initFortuneTabs();
+            initBetPresets();
         }
     }
 };
@@ -9462,6 +9657,9 @@ window.closeFortuneGame = function() {
     const fortuneModal = document.getElementById('fortuneModal');
     if (fortuneModal) fortuneModal.classList.remove('active');
     document.body.style.overflow = '';
+    isFortuneModalOpen = false;
+
+    stopFortuneUpdates();
     stopFortuneCountdown();
     isFortuneActive = false;
     fortuneTimeLeft = 0;
@@ -9469,14 +9667,16 @@ window.closeFortuneGame = function() {
     lastRedHash = '';
 };
 
-// Инициализация обработчиков
+// ========== ИНИЦИАЛИЗАЦИЯ ОБРАБОТЧИКОВ ==========
 function initFortuneEventHandlers() {
+    // Кнопка подтверждения ставки
     const submitBtn = document.getElementById('submitBetBtn');
     if (submitBtn) {
-        submitBtn.removeEventListener('click', submitBet);
-        submitBtn.addEventListener('click', submitBet);
+        submitBtn.removeEventListener('click', submitBetDebounce);
+        submitBtn.addEventListener('click', submitBetDebounce);
     }
 
+    // Кнопки ставок
     const betBtnYellow = document.getElementById('betBtnYellow');
     if (betBtnYellow) {
         betBtnYellow.removeEventListener('click', () => openBetModal('yellow'));
@@ -9489,19 +9689,15 @@ function initFortuneEventHandlers() {
         betBtnRed.addEventListener('click', () => openBetModal('red'));
     }
 
+    // Закрытие модалки ставки
     const closeBetModalBtn = document.querySelector('#betModal .bet-modal-close');
     if (closeBetModalBtn) {
         closeBetModalBtn.removeEventListener('click', closeBetModal);
         closeBetModalBtn.addEventListener('click', closeBetModal);
     }
-
-    const betAmountInput = document.getElementById('betAmount');
-    if (betAmountInput) {
-        betAmountInput.removeEventListener('input', calculateBet);
-        betAmountInput.addEventListener('input', calculateBet);
-    }
 }
 
+// Запуск инициализации
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initFortuneEventHandlers);
 } else {
@@ -9540,7 +9736,6 @@ if (document.readyState === 'loading') {
         setTimeout(checkAndStartTutorial, 2000);
         setInterval(() => syncData(), 5000);
         setInterval(() => loadReferrals(), 30000);
-        setInterval(() => syncData(true), 30000);
         startDailyLeaderboardTimer();
         updateLPBoostCount();
 
