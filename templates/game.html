@@ -9183,12 +9183,13 @@ async function loadFortuneData() {
         const data = await response.json();
         if (!data.success) return;
 
-        // Обновляем данные
+        // Обновляем основные данные
         fortuneData.yellowPool = data.yellow_pool || 0;
         fortuneData.redPool = data.red_pool || 0;
         fortuneData.timeLeft = data.time_left || 0;
         fortuneData.isActive = fortuneData.timeLeft > 0;
 
+        // Обновляем списки игроков
         fortuneData.yellowPlayers = (data.yellow_bets || []).map(bet => ({
             userId: bet.userId || bet.user_id,
             amount: bet.amount || 0,
@@ -9205,13 +9206,33 @@ async function loadFortuneData() {
             username: bet.username || 'Игрок'
         }));
 
-        // Обновляем UI
-        updateFortuneUI();
-
         // Загружаем текущую ставку пользователя
         await loadUserCurrentBet();
 
-        // Обновляем подсветку
+        // ========== ДОПОЛНИТЕЛЬНАЯ СИНХРОНИЗАЦИЯ ==========
+        // Если у пользователя есть ставка, но её нет в списках — добавляем
+        if (fortuneData.userBetTeam && fortuneData.userBetAmount > 0) {
+            const targetList = fortuneData.userBetTeam === 'yellow' ? fortuneData.yellowPlayers : fortuneData.redPlayers;
+            const existingBet = targetList.find(p => p.userId == userId);
+
+            if (!existingBet) {
+                // Добавляем пользователя в список, если его там нет
+                targetList.push({
+                    userId: userId,
+                    amount: fortuneData.userBetAmount,
+                    netAmount: fortuneData.userBetAmount,
+                    avatarUrl: photoUrl || '',
+                    username: firstName || username || 'Игрок'
+                });
+            } else if (existingBet.amount !== fortuneData.userBetAmount) {
+                // Обновляем сумму, если она изменилась
+                existingBet.amount = fortuneData.userBetAmount;
+                existingBet.netAmount = fortuneData.userBetAmount;
+            }
+        }
+
+        // Обновляем UI
+        updateFortuneUI();
         updateTeamHighlightUI();
 
     } catch(e) {
@@ -9230,6 +9251,26 @@ async function loadUserCurrentBet() {
         if (data.success) {
             fortuneData.userBetTeam = data.team;
             fortuneData.userBetAmount = data.amount || 0;
+
+            // ========== ВАЖНО: ДОПОЛНИТЕЛЬНО ПРОВЕРЯЕМ СПИСКИ ==========
+            // Если нашли ставку, но её нет в списках — добавляем принудительно
+            if (data.team && data.amount > 0) {
+                const targetList = data.team === 'yellow' ? fortuneData.yellowPlayers : fortuneData.redPlayers;
+                const existingBet = targetList.find(p => p.userId == userId);
+
+                if (!existingBet) {
+                    targetList.push({
+                        userId: userId,
+                        amount: data.amount,
+                        netAmount: data.amount,
+                        avatarUrl: photoUrl || '',
+                        username: firstName || username || 'Игрок'
+                    });
+                } else if (existingBet.amount !== data.amount) {
+                    existingBet.amount = data.amount;
+                    existingBet.netAmount = data.amount;
+                }
+            }
         }
     } catch(e) {
         console.error('Load user bet error:', e);
@@ -9474,25 +9515,6 @@ async function submitBet() {
         return;
     }
 
-    // ПРОВЕРЯЕМ ЕЩЁ РАЗ ПЕРЕД ОТПРАВКОЙ
-    try {
-        const checkResponse = await fetch('/api/fortune/user_total_bet', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId })
-        });
-        const checkData = await checkResponse.json();
-
-        if (checkData.success && checkData.team && checkData.amount > 0) {
-            const teamName = checkData.team === 'yellow' ? 'Жёлтых 🟡' : 'Красных 🔴';
-            showFortuneMessage(`❌ Вы уже сделали ставку на команду ${teamName}! Можно ставить только на одну команду за раунд.`, 'error');
-            closeBetModal();
-            return;
-        }
-    } catch(e) {
-        console.error('Check before bet error:', e);
-    }
-
     const amount = parseFloat(document.getElementById('betAmount')?.value || '0');
     if (isNaN(amount) || amount < 10) {
         showFortuneMessage('Минимальная ставка — 10 WG', 'error');
@@ -9520,15 +9542,55 @@ async function submitBet() {
         const data = await response.json();
 
         if (data.success) {
+            // ✅ ОБНОВЛЯЕМ ЛОКАЛЬНЫЕ ДАННЫЕ
             localWG = (localWG || 0) - amount;
-            if (typeof updateUI === 'function') updateUI();
+
+            // ✅ ОБНОВЛЯЕМ ДАННЫЕ ФОРТУНЫ
+            fortuneData.yellowPool = data.yellow_pool;
+            fortuneData.redPool = data.red_pool;
+
+            // ✅ ОБНОВЛЯЕМ СТАВКУ ПОЛЬЗОВАТЕЛЯ
+            fortuneData.userBetTeam = betModalState.team;
+            fortuneData.userBetAmount = data.user_total_bet || amount;
+
+            // ✅ ОБНОВЛЯЕМ СПИСКИ ИГРОКОВ (добавляем/обновляем текущего пользователя)
+            const playerData = {
+                userId: userId,
+                amount: fortuneData.userBetAmount,
+                netAmount: data.net_amount || amount,
+                avatarUrl: photoUrl || '',
+                username: firstName || username || 'Игрок'
+            };
+
+            // Обновляем соответствующий список
+            if (betModalState.team === 'yellow') {
+                const existingIndex = fortuneData.yellowPlayers.findIndex(p => p.userId == userId);
+                if (existingIndex >= 0) {
+                    fortuneData.yellowPlayers[existingIndex] = playerData;
+                } else {
+                    fortuneData.yellowPlayers.push(playerData);
+                }
+            } else {
+                const existingIndex = fortuneData.redPlayers.findIndex(p => p.userId == userId);
+                if (existingIndex >= 0) {
+                    fortuneData.redPlayers[existingIndex] = playerData;
+                } else {
+                    fortuneData.redPlayers.push(playerData);
+                }
+            }
+
+            // ✅ ПРИНУДИТЕЛЬНО ОБНОВЛЯЕМ UI
+            updateUI();
+            updateFortuneUI();
+            updateTeamHighlightUI();
+
+            // ✅ ПОКАЗЫВАЕМ СООБЩЕНИЕ С ОБЩЕЙ СУММОЙ
+            showFortuneMessage(`✅ Ставка ${amount} WG принята! Всего на команду: ${fortuneData.userBetAmount} WG`, 'success');
+
+            // ✅ СИНХРОНИЗИРУЕМ С СЕРВЕРОМ (фоном)
             if (typeof syncData === 'function') syncData(true);
 
-            await loadFortuneData();
             closeBetModal();
-
-            const totalBet = data.user_total_bet || amount;
-            showFortuneMessage(`✅ Ставка ${amount} WG принята! Всего на команду: ${totalBet} WG`, 'success');
         } else {
             showFortuneMessage(data.error || 'Ошибка при ставке', 'error');
         }
