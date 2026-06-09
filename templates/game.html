@@ -7408,15 +7408,24 @@ function updateRecentPlayersFast(players) {
         updateTopPlayers();
     });
 
-    // ========== СЮДА ДОБАВЬ НОВЫЙ ОБРАБОТЧИК ==========
+    // ========== ФОРТУНА: ОБРАБОТЧИК ПЕРЕЗАПУСКА ТАЙМЕРА ==========
     socket.on('fortune_timer_reset', (data) => {
-        if (data.time_left) {
+        if (data.time_left !== undefined) {
+            // Обновляем время в глобальной переменной Фортуны
+            if (typeof fortuneData !== 'undefined') {
+                fortuneData.timeLeft = data.time_left;
+                updateTimerDisplay();
+            }
+            // Показываем сообщение
+            showToast(data.message || '⏰ Таймер перезапущен!', 'info');
+        }
+    });
+
+    // Также поддерживаем старый тип события для совместимости
+    socket.on('fortune_timer_update', (data) => {
+        if (data.time_left !== undefined && typeof fortuneData !== 'undefined') {
             fortuneData.timeLeft = data.time_left;
             updateTimerDisplay();
-            if (!fortuneUI.timerInterval) {
-                startFortuneTimer();
-            }
-            showToast(data.message || '⏰ Таймер перезапущен!', 'info');
         }
     });
 }
@@ -9156,21 +9165,25 @@ function showFortuneMessage(message, type = 'info') {
     }, 3000);
 }
 
+// Функция для обновления таймера в интерфейсе Фортуны
 function updateTimerDisplay() {
-    const e = fortuneUI.elements;
-    if (!e.fortuneTimer) return;
+    const timerElement = document.getElementById('fortuneTimer');
+    if (!timerElement) return;
+
+    if (!fortuneData || fortuneData.timeLeft === undefined) return;
 
     const minutes = Math.floor(fortuneData.timeLeft / 60);
     const seconds = fortuneData.timeLeft % 60;
     const timeString = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 
-    if (e.fortuneTimer.innerText !== timeString) {
-        e.fortuneTimer.innerText = timeString;
+    if (timerElement.innerText !== timeString) {
+        timerElement.innerText = timeString;
     }
 
-    if (e.timerBarFill) {
+    const timerBarFill = document.getElementById('timerBarFill');
+    if (timerBarFill) {
         const percent = (fortuneData.timeLeft / 300) * 100;
-        e.timerBarFill.style.width = percent + '%';
+        timerBarFill.style.width = percent + '%';
     }
 }
 
