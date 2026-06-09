@@ -158,6 +158,8 @@ current_fortune_round = {
 fortune_lock = threading.Lock()
 FORTUNE_COMMISSION = 0.07  # 7% комиссия
 FORTUNE_ROUND_DURATION = 300  # 5 минут
+fortune_timer_thread_started = False
+
 
 def process_click_worker():
     while True:
@@ -220,6 +222,7 @@ def async_click_tasks(user_id, user, earning, old_wg, new_wg, today):
 
 
 threading.Thread(target=flush_click_buffer, daemon=True).start()
+
 
 # ========== АВТОМАТИЧЕСКИЙ БЭКАП ==========
 def backup_database():
@@ -2106,6 +2109,7 @@ def schedule_next_draw():
             perform_draw()
             time.sleep(14400)
             reset_lottery()
+
     threading.Thread(target=wait_and_draw, daemon=True).start()
 
 
@@ -2751,12 +2755,13 @@ def api_get_lp_boost_count():
     return jsonify({"success": True, "count": count})
 
 
-# ========== ФОРТУНА API (НОВАЯ ЛОГИКА) ==========
+# ========== ФОРТУНА API (ИСПРАВЛЕННАЯ ВЕРСИЯ) ==========
+
 def create_new_fortune_round():
     global current_fortune_round
 
     with fortune_lock:
-        # ✅ СНАЧАЛА ПРОВЕРЯЕМ, ЕСТЬ ЛИ УЖЕ АКТИВНЫЙ РАУНД В БД
+        # Проверяем существующий активный раунд в БД
         with db.get_cursor() as cursor:
             cursor.execute('''
                 SELECT round_id FROM fortune_rounds 
@@ -2790,15 +2795,6 @@ def create_new_fortune_round():
                   datetime.datetime.fromtimestamp(current_fortune_round['end_time']).isoformat()))
 
         print(f"✨ Создан новый раунд Фортуны: {round_id}")
-
-def update_existing_bet_in_db(round_id, user_id, team, additional_amount, additional_net):
-    """Обновляет существующую ставку в БД (увеличивает сумму)"""
-    with db.get_cursor() as cursor:
-        cursor.execute('''
-            UPDATE fortune_active_bets 
-            SET amount = amount + ?, net_amount = net_amount + ?
-            WHERE round_id = ? AND user_id = ? AND team = ?
-        ''', (additional_amount, additional_net, round_id, user_id, team))
 
 
 def restore_fortune_from_db():
@@ -2899,25 +2895,20 @@ def check_and_end_fortune_round():
             restore_fortune_from_db()
             return
 
-        # Получаем время окончания из памяти
         end_time = current_fortune_round.get('end_time', 0)
 
-        # Если таймер ещё не истёк — выходим
         if end_time > time.time():
             return
 
-        # Таймер истёк — проверяем, не завершён ли раунд уже в БД
         with db.get_cursor() as cursor:
             cursor.execute("SELECT winner_team FROM fortune_rounds WHERE round_id = ?",
                            (current_fortune_round['round_id'],))
             row = cursor.fetchone()
             if row and row['winner_team'] is not None:
-                # Раунд уже завершён, просто создаём новый в памяти
                 print(f"Раунд {current_fortune_round['round_id']} уже завершён в БД, создаём новый")
                 create_new_fortune_round()
                 return
 
-        # Запускаем завершение
         with ending_round_lock:
             if ending_round:
                 return
@@ -2926,7 +2917,6 @@ def check_and_end_fortune_round():
         end_fortune_round_internal()
 
 
-# Глобальная переменная для блокировки завершения раунда
 ending_round = False
 ending_round_lock = threading.Lock()
 
@@ -2934,7 +2924,6 @@ ending_round_lock = threading.Lock()
 def end_fortune_round_internal():
     global current_fortune_round, ending_round
 
-    # Жёсткая блокировка от повторных вызовов
     with ending_round_lock:
         if ending_round:
             print("⚠️ Раунд уже завершается, пропускаем")
@@ -2944,7 +2933,6 @@ def end_fortune_round_internal():
     try:
         round_id = current_fortune_round['round_id']
 
-        # КРИТИЧЕСКАЯ ПРОВЕРКА: завершён ли раунд в БД?
         with db.get_cursor() as cursor:
             cursor.execute("SELECT winner_team, end_time FROM fortune_rounds WHERE round_id = ?", (round_id,))
             row = cursor.fetchone()
@@ -2952,7 +2940,6 @@ def end_fortune_round_internal():
                 print(f"⚠️ Раунд {round_id} уже завершён в БД (winner={row['winner_team']}), пропускаем")
                 with ending_round_lock:
                     ending_round = False
-                # Создаём новый раунд, если нужно
                 if not current_fortune_round.get('end_time') or current_fortune_round.get('end_time', 0) <= time.time():
                     create_new_fortune_round()
                 return
@@ -2961,12 +2948,10 @@ def end_fortune_round_internal():
         red_pool = current_fortune_round['red_pool']
         total_pool = yellow_pool + red_pool
 
-        # Получаем актуальные ставки из БД
         with db.get_cursor() as cursor:
             cursor.execute('SELECT * FROM fortune_active_bets WHERE round_id = ?', (round_id,))
             bets_from_db = cursor.fetchall()
 
-        # НЕТ СТАВОК → просто создаём новый раунд
         if not bets_from_db:
             print("Нет ставок, создаём новый раунд")
             create_new_fortune_round()
@@ -2974,11 +2959,9 @@ def end_fortune_round_internal():
                 ending_round = False
             return
 
-        # Проверяем, есть ли ставки только на одной команде
         has_yellow = any(b['team'] == 'yellow' for b in bets_from_db)
         has_red = any(b['team'] == 'red' for b in bets_from_db)
 
-        # ТОЛЬКО ОДНА КОМАНДА → перезапускаем таймер (не завершаем раунд!)
         if (has_yellow and not has_red) or (has_red and not has_yellow):
             print("Ставки только на одной команде, перезапускаем таймер")
             new_end_time = time.time() + FORTUNE_ROUND_DURATION
@@ -3000,25 +2983,21 @@ def end_fortune_round_internal():
                 ending_round = False
             return
 
-        # ОПРЕДЕЛЯЕМ ПОБЕДИТЕЛЯ
         if total_pool == 0:
             create_new_fortune_round()
             with ending_round_lock:
                 ending_round = False
             return
 
-        # Вычисляем шансы
         yellow_chance = yellow_pool / total_pool if total_pool > 0 else 0.5
         winner_team = 'yellow' if random.random() < yellow_chance else 'red'
         winner_pool = yellow_pool + red_pool
 
-        # Суммируем нетто-ставки победителей
         winner_bets_sum = 0
         for bet in bets_from_db:
             if bet['team'] == winner_team:
                 winner_bets_sum += bet['net_amount']
 
-        # Распределяем выигрыши
         if winner_bets_sum > 0:
             for bet in bets_from_db:
                 if bet['team'] == winner_team:
@@ -3042,24 +3021,20 @@ def end_fortune_round_internal():
                             VALUES (?, ?, ?, ?, 'lose', 0)
                         ''', (bet['user_id'], round_id, bet['team'], bet['amount'], 0))
 
-        # ОБНОВЛЯЕМ ЗАПИСЬ РАУНДА (УСТАНАВЛИВАЕМ ПОБЕДИТЕЛЯ)
         with db.get_cursor() as cursor:
             cursor.execute('''
                 UPDATE fortune_rounds SET winner_team = ?, end_time = ?, yellow_pool = ?, red_pool = ?
                 WHERE round_id = ? AND winner_team IS NULL
             ''', (winner_team, datetime.datetime.now().isoformat(), yellow_pool, red_pool, round_id))
 
-            # Проверяем, обновилась ли запись
             if cursor.rowcount == 0:
                 print(f"⚠️ Раунд {round_id} уже был завершён в БД (конкурентный вызов)")
                 with ending_round_lock:
                     ending_round = False
                 return
 
-            # Удаляем активные ставки
             cursor.execute("DELETE FROM fortune_active_bets WHERE round_id = ?", (round_id,))
 
-        # СОЗДАЁМ НОВЫЙ РАУНД
         create_new_fortune_round()
 
     except Exception as e:
@@ -3071,34 +3046,31 @@ def end_fortune_round_internal():
             ending_round = False
 
 
-def reset_fortune_round():
-    global current_fortune_round
-    create_new_fortune_round()
-
-
 def start_fortune_timer_thread():
+    global fortune_timer_thread_started
+    if fortune_timer_thread_started:
+        return
+    fortune_timer_thread_started = True
+
     def timer_loop():
         while True:
-            time.sleep(1)  # Проверяем каждую секунду
+            time.sleep(1)
             try:
                 check_and_end_fortune_round()
             except Exception as e:
                 logger.error(f"Ошибка в таймере Фортуны: {e}")
+
     threading.Thread(target=timer_loop, daemon=True).start()
 
 
-# Запускаем первый раунд
-create_new_fortune_round()
-start_fortune_timer_thread()
-
+# ========== ФОРТУНА API ENDPOINTS ==========
 
 @app.route('/api/fortune/status', methods=['GET'])
 def api_fortune_status():
-    """Получить текущий статус Фортуны"""
     global current_fortune_round
     with fortune_lock:
         if not current_fortune_round.get('round_id'):
-            create_new_fortune_round()
+            restore_fortune_from_db()
 
         time_left = max(0, int(current_fortune_round.get('end_time', 0) - time.time()))
         yellow_bets_sorted = sorted(current_fortune_round['yellow_bets'], key=lambda x: x['net_amount'], reverse=True)[
@@ -3160,7 +3132,6 @@ def api_fortune_bet():
 
         round_id = current_fortune_round['round_id']
 
-        # ========== ПРОВЕРКА ТОЛЬКО НА ПРОТИВОПОЛОЖНУЮ КОМАНДУ ==========
         other_team = 'red' if team == 'yellow' else 'yellow'
         other_bets = current_fortune_round['red_bets'] if team == 'yellow' else current_fortune_round['yellow_bets']
 
@@ -3169,7 +3140,6 @@ def api_fortune_bet():
                 return jsonify({"success": False,
                                 "error": f"❌ Вы уже сделали ставку на команду {'Красных 🔴' if other_team == 'red' else 'Жёлтых 🟡'}! Можно ставить только на одну команду за раунд."}), 400
 
-        # ========== НЕ ПРОВЕРЯЕМ НА ЭТУ ЖЕ КОМАНДУ — РАЗРЕШАЕМ ДОБАВЛЯТЬ ==========
         bet_list = current_fortune_round['yellow_bets'] if team == 'yellow' else current_fortune_round['red_bets']
         existing_bet = None
         for bet in bet_list:
@@ -3180,18 +3150,15 @@ def api_fortune_bet():
         commission = amount * FORTUNE_COMMISSION
         net_amount = amount - commission
 
-        # Снимаем WG
         safe_update_user(user_id, wg=user['wg'] - amount)
 
         if existing_bet:
-            # ✅ ЕСТЬ СТАВКА — СУММИРУЕМ (НЕ БЛОКИРУЕМ!)
             new_total = existing_bet['amount'] + amount
             new_net_total = existing_bet['net_amount'] + net_amount
 
             existing_bet['amount'] = new_total
             existing_bet['net_amount'] = new_net_total
 
-            # Обновляем в БД
             with db.get_cursor() as cursor:
                 cursor.execute('''
                     UPDATE fortune_active_bets 
@@ -3205,7 +3172,6 @@ def api_fortune_bet():
 
             result_amount = new_total
         else:
-            # ❌ НЕТ СТАВКИ — СОЗДАЁМ НОВУЮ
             bet_data = {
                 "user_id": user_id,
                 "amount": amount,
@@ -3227,13 +3193,11 @@ def api_fortune_bet():
 
             result_amount = amount
 
-        # Обновляем пулы
         if team == 'yellow':
             current_fortune_round['yellow_pool'] += net_amount
         else:
             current_fortune_round['red_pool'] += net_amount
 
-        # Обновляем пулы в БД
         with db.get_cursor() as cursor:
             cursor.execute('''
                 UPDATE fortune_rounds 
@@ -3251,10 +3215,8 @@ def api_fortune_bet():
         })
 
 
-
 @app.route('/api/fortune/history', methods=['POST'])
 def api_fortune_history():
-    """Получить историю ставок пользователя"""
     data = request.json
     if not data:
         return jsonify({"success": False, "error": "No data"}), 400
@@ -3289,15 +3251,11 @@ def api_fortune_history():
         return jsonify({"success": True, "history": history})
 
 
-# ========== ДОБАВИТЬ ПОСЛЕ ВСЕХ ЭНДПОИНТОВ ФОРТУНЫ (перед @app.route('/api/fortune/bet')) ==========
-
 @app.route('/api/fortune/end_round', methods=['POST'])
 def api_fortune_end_round():
-    """Принудительно завершить текущий раунд Фортуны (для синхронизации)"""
     global current_fortune_round
     try:
         with fortune_lock:
-            # Если раунд ещё не закончен
             if current_fortune_round.get('round_id') and time.time() >= current_fortune_round.get('end_time', 0):
                 end_fortune_round_internal()
                 return jsonify({
@@ -3318,7 +3276,6 @@ def api_fortune_end_round():
 
 @app.route('/api/fortune/user_bet', methods=['POST'])
 def api_fortune_user_bet():
-    """Получить текущую ставку пользователя в активном раунде"""
     data = request.json
     if not data:
         return jsonify({"success": False, "error": "No data"}), 400
@@ -3333,7 +3290,6 @@ def api_fortune_user_bet():
         if not round_id:
             return jsonify({"success": False, "bet": None, "team": None, "amount": 0})
 
-        # Ищем ставку в жёлтых
         for bet in current_fortune_round.get('yellow_bets', []):
             if bet.get('user_id') == user_id:
                 return jsonify({
@@ -3344,7 +3300,6 @@ def api_fortune_user_bet():
                     "net_amount": bet.get('net_amount', 0)
                 })
 
-        # Ищем в красных
         for bet in current_fortune_round.get('red_bets', []):
             if bet.get('user_id') == user_id:
                 return jsonify({
@@ -3358,11 +3313,8 @@ def api_fortune_user_bet():
         return jsonify({"success": True, "bet": None, "team": None, "amount": 0})
 
 
-# ========== ДОПОЛНИТЕЛЬНЫЕ ЭНДПОИНТЫ ДЛЯ ФОРТУНЫ ==========
-
 @app.route('/api/fortune/user_total_bet', methods=['POST'])
 def api_fortune_user_total_bet():
-    """Получить общую сумму ставки пользователя в текущем раунде"""
     data = request.json
     if not data:
         return jsonify({"success": False, "error": "No data"}), 400
@@ -3396,7 +3348,6 @@ def api_fortune_user_total_bet():
 
 @app.route('/api/fortune/winning_history', methods=['GET'])
 def api_fortune_winning_history():
-    """Получить историю побед (всех игроков)"""
     limit = request.args.get('limit', 20, type=int)
     with db.get_cursor() as cursor:
         cursor.execute('''
@@ -3425,9 +3376,9 @@ def api_fortune_winning_history():
 
         return jsonify({"success": True, "history": history})
 
+
 @app.route('/api/fortune/history_all', methods=['GET'])
 def api_fortune_history_all():
-    """Получить общую историю всех раундов (для админ-панели)"""
     limit = request.args.get('limit', 50, type=int)
     with db.get_cursor() as cursor:
         cursor.execute('''
@@ -3451,7 +3402,6 @@ def api_fortune_history_all():
             })
 
         return jsonify({"success": True, "history": history})
-
 
 
 # ========== ОСНОВНЫЕ API ==========
