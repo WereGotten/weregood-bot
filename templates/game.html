@@ -5835,32 +5835,116 @@
     </div>
 
     <!-- МОДАЛЬНОЕ ОКНО КОМАНДНОЙ ФОРТУНЫ -->
-    <div id="fortuneModal" class="game-modal-full">
-        <div class="game-modal-full-content">
-            <div class="game-modal-full-header"><h2>🎲 Командная Фортуна</h2><button class="game-modal-full-close" onclick="closeFortuneGame()">✕</button></div>
-            <div class="fortune-tabs"><button class="fortune-tab active" data-fortune-tab="play">🎮 Играть</button><button class="fortune-tab" data-fortune-tab="history">📜 Моя история</button></div>
-            <div id="fortunePlayTab" class="fortune-tab-content active">
-                <div class="fortune-timer-card"><div class="timer-label">⏱️ ДО КОНЦА РАУНДА</div><div class="timer-value-premium" id="fortuneTimer">05:00</div><div class="timer-bar-premium"><div class="timer-bar-fill-premium" id="timerBarFill"></div></div></div>
-                <div class="fortune-balance-card"><span class="balance-label-premium">💰 Ваш баланс WG:</span><span class="balance-value-premium" id="fortuneUserBalance">0</span></div>
-                <div class="team-card-premium" id="teamYellowCard"><div class="team-header-premium"><div class="team-icon-premium">🟡</div><div class="team-name-premium">Команда Жёлтых</div><div class="team-chance-premium" id="yellowChance">0%</div></div><div class="team-pool-premium"><span class="pool-label-premium">Общий счёт:</span><span class="pool-value-premium" id="yellowPool">0</span><span class="pool-currency">WG</span></div><div class="players-grid" id="yellowPlayers"><div class="empty-players-premium">🤝 Пока никто не поставил</div></div><button class="bet-btn-premium" data-team="yellow">💰 Сделать ставку</button></div>
-                <div class="team-card-premium" id="teamRedCard"><div class="team-header-premium"><div class="team-icon-premium">🔴</div><div class="team-name-premium">Команда Красных</div><div class="team-chance-premium" id="redChance">0%</div></div><div class="team-pool-premium"><span class="pool-label-premium">Общий счёт:</span><span class="pool-value-premium" id="redPool">0</span><span class="pool-currency">WG</span></div><div class="players-grid" id="redPlayers"><div class="empty-players-premium">🤝 Пока никто не поставил</div></div><button class="bet-btn-premium" data-team="red">💰 Сделать ставку</button></div>
-                <div class="winning-history-section"><div class="winning-history-header"><span>🏆</span><span>Последние победители</span></div><div class="winning-history-list" id="winningHistoryList"><div class="empty-state-premium">🏆 Скоро здесь появятся победители</div></div></div>
-            </div>
-            <div id="fortuneHistoryTab" class="fortune-tab-content"><div class="history-list-premium" id="fortuneHistoryList"><div class="empty-state-premium">📭 У вас пока нет истории игр</div></div></div>
+<div id="fortuneModal" class="game-modal-full">
+    <div class="game-modal-full-content">
+        <div class="game-modal-full-header">
+            <h2>🎲 Командная Фортуна</h2>
+            <button class="game-modal-full-close" onclick="closeFortuneGame()">✕</button>
         </div>
-    </div>
 
-    <!-- Модальное окно для ставки -->
-    <div id="betModal" class="bet-modal">
-        <div class="bet-modal-content-premium">
-            <div class="bet-modal-header"><h3>💰 Сделать ставку</h3><button class="bet-modal-close" onclick="closeBetModal()">✕</button></div>
-            <div class="bet-team-info" id="betTeamInfo"><span class="bet-team-icon">🟡</span><span class="bet-team-name">Команда Жёлтых</span></div>
-            <div class="bet-balance"><span>💰 Ваш баланс:</span><strong id="betUserBalance">0</strong><span>WG</span></div>
-            <div class="bet-input-group"><label>Сумма ставки (мин. 10 WG)</label><input type="number" id="betAmount" class="bet-input" placeholder="100" min="10" step="10"><div class="bet-amount-presets"><div class="bet-preset-premium" data-multiplier="0.1">10%</div><div class="bet-preset-premium" data-multiplier="0.25">25%</div><div class="bet-preset-premium" data-multiplier="0.5">50%</div><div class="bet-preset-premium" data-multiplier="1">100%</div></div></div>
-            <div class="bet-info"><div class="bet-info-item"><span>📊 Комиссия 7%:</span><strong id="betCommission">0</strong><span>WG</span></div><div class="bet-info-item"><span>✅ Зачислится в пул:</span><strong id="betNetAmount">0</strong><span>WG</span></div></div>
-            <button class="bet-submit-btn" id="submitBetBtn">🎲 Подтвердить ставку</button>
+        <div class="fortune-tabs">
+            <button class="fortune-tab active" data-fortune-tab="play">🎮 Играть</button>
+            <button class="fortune-tab" data-fortune-tab="history">📜 Моя история</button>
+        </div>
+
+        <div id="fortunePlayTab" class="fortune-tab-content active">
+            <div class="fortune-timer-card">
+                <div class="timer-label">⏱️ ДО КОНЦА РАУНДА</div>
+                <div class="timer-value-premium" id="fortuneTimer">05:00</div>
+                <div class="timer-bar-premium">
+                    <div class="timer-bar-fill-premium" id="timerBarFill"></div>
+                </div>
+            </div>
+
+            <div class="fortune-balance-card">
+                <span class="balance-label-premium">💰 Ваш баланс WG:</span>
+                <span class="balance-value-premium" id="fortuneUserBalance">0</span>
+            </div>
+
+            <div class="team-card-premium" id="teamYellowCard">
+                <div class="team-header-premium">
+                    <div class="team-icon-premium">🟡</div>
+                    <div class="team-name-premium">Команда Жёлтых</div>
+                    <div class="team-chance-premium" id="yellowChance">0%</div>
+                </div>
+                <div class="team-pool-premium">
+                    <span class="pool-label-premium">Общий счёт:</span>
+                    <span class="pool-value-premium" id="yellowPool">0</span>
+                    <span class="pool-currency">WG</span>
+                </div>
+                <div class="players-grid-premium" id="yellowPlayers">
+                    <div class="empty-players-premium">🤝 Пока никто не поставил</div>
+                </div>
+                <button class="bet-btn-premium" data-team="yellow">💰 Сделать ставку</button>
+            </div>
+
+            <div class="team-card-premium" id="teamRedCard">
+                <div class="team-header-premium">
+                    <div class="team-icon-premium">🔴</div>
+                    <div class="team-name-premium">Команда Красных</div>
+                    <div class="team-chance-premium" id="redChance">0%</div>
+                </div>
+                <div class="team-pool-premium">
+                    <span class="pool-label-premium">Общий счёт:</span>
+                    <span class="pool-value-premium" id="redPool">0</span>
+                    <span class="pool-currency">WG</span>
+                </div>
+                <div class="players-grid-premium" id="redPlayers">
+                    <div class="empty-players-premium">🤝 Пока никто не поставил</div>
+                </div>
+                <button class="bet-btn-premium" data-team="red">💰 Сделать ставку</button>
+            </div>
+        </div>
+
+        <div id="fortuneHistoryTab" class="fortune-tab-content">
+            <div class="history-list-premium" id="fortuneHistoryList">
+                <div class="empty-state-premium">📭 У вас пока нет истории игр</div>
+            </div>
         </div>
     </div>
+</div>
+
+<!-- Модальное окно для ставки -->
+<div id="betModal" class="bet-modal">
+    <div class="bet-modal-content-premium">
+        <div class="bet-modal-header">
+            <h3>💰 Сделать ставку</h3>
+            <button class="bet-modal-close" onclick="closeBetModal()">✕</button>
+        </div>
+        <div class="bet-team-info" id="betTeamInfo">
+            <span class="bet-team-icon">🟡</span>
+            <span class="bet-team-name">Команда Жёлтых</span>
+        </div>
+        <div class="bet-balance">
+            <span>💰 Ваш баланс:</span>
+            <strong id="betUserBalance">0</strong>
+            <span>WG</span>
+        </div>
+        <div class="bet-input-group">
+            <label>Сумма ставки (мин. 10 WG)</label>
+            <input type="number" id="betAmount" class="bet-input" placeholder="100" min="10" step="10">
+            <div class="bet-amount-presets">
+                <div class="bet-preset-premium" data-multiplier="0.1">10%</div>
+                <div class="bet-preset-premium" data-multiplier="0.25">25%</div>
+                <div class="bet-preset-premium" data-multiplier="0.5">50%</div>
+                <div class="bet-preset-premium" data-multiplier="1">100%</div>
+            </div>
+        </div>
+        <div class="bet-info">
+            <div class="bet-info-item">
+                <span>📊 Комиссия 7%:</span>
+                <strong id="betCommission">0</strong>
+                <span>WG</span>
+            </div>
+            <div class="bet-info-item">
+                <span>✅ Зачислится в пул:</span>
+                <strong id="betNetAmount">0</strong>
+                <span>WG</span>
+            </div>
+        </div>
+        <button class="bet-submit-btn" id="submitBetBtn">🎲 Подтвердить ставку</button>
+    </div>
+</div>
 
     <script>
         // ==================== ИНИЦИАЛИЗАЦИЯ ====================
@@ -8946,458 +9030,544 @@
             if (fortuneTimerInterval) clearInterval(fortuneTimerInterval);
         }
 
-        // ==================== КОМАНДНАЯ ФОРТУНА 2.0 (ПОЛНОСТЬЮ ИСПРАВЛЕННАЯ) ==================
-        let fortuneTimerInterval = null;
-        let fortuneTimeLeft = 300;
-        let currentBetTeam = null;
-        let currentBetAmount = 0;
-        let currentBetNetAmount = 0;
-        let yellowPoolAmount = 0;
-        let redPoolAmount = 0;
-        let yellowPlayers = [];
-        let redPlayers = [];
-        let selectedTeamForBet = null;
-        let currentRoundId = null;
-        let userHistory = [];
-        let winningHistory = [];
+        // ==================== КОМАНДНАЯ ФОРТУНА 3.0 (ОПТИМИЗИРОВАННАЯ) ==================
+let fortuneTimerInterval = null;
+let fortuneTimeLeft = 300;
+let currentBetTeam = null;
+let currentBetAmount = 0;
+let currentBetNetAmount = 0;
+let yellowPoolAmount = 0;
+let redPoolAmount = 0;
+let yellowPlayers = [];
+let redPlayers = [];
+let selectedTeamForBet = null;
+let currentRoundId = null;
+let userHistory = [];
+let winningHistory = [];
 
-        const FORTUNE_COMMISSION = 0.07;
-        let fortuneElements = {};
+const FORTUNE_COMMISSION = 0.07;
+let fortuneElements = {};
+let isUpdatingFortune = false;
+let lastFortuneUpdate = 0;
+const FORTUNE_UPDATE_DELAY = 2000;
 
-        function cacheFortuneElements() {
-            fortuneElements = {
-                yellowPool: document.getElementById('yellowPool'),
-                redPool: document.getElementById('redPool'),
-                yellowChance: document.getElementById('yellowChance'),
-                redChance: document.getElementById('redChance'),
-                yellowPlayers: document.getElementById('yellowPlayers'),
-                redPlayers: document.getElementById('redPlayers'),
-                fortuneTimer: document.getElementById('fortuneTimer'),
-                timerBarFill: document.getElementById('timerBarFill'),
-                fortuneUserBalance: document.getElementById('fortuneUserBalance'),
-                historyList: document.getElementById('fortuneHistoryList'),
-                winningHistoryList: document.getElementById('winningHistoryList'),
-                yellowCard: document.getElementById('teamYellowCard'),
-                redCard: document.getElementById('teamRedCard')
-            };
+// Плавная анимация обновления чисел
+function animateNumber(element, newValue, suffix = '', isDecimal = false) {
+    if (!element) return;
+    const oldValue = parseFloat(element.innerText) || 0;
+    const diff = newValue - oldValue;
+    if (diff === 0) return;
+
+    const duration = 300;
+    const startTime = performance.now();
+
+    function update(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(1, elapsed / duration);
+        const easeOut = 1 - Math.pow(1 - progress, 3);
+        const current = oldValue + diff * easeOut;
+
+        if (isDecimal) {
+            element.innerText = current.toFixed(2) + suffix;
+        } else {
+            element.innerText = Math.floor(current) + suffix;
         }
 
-        async function loadFortuneStatus() {
-            try {
-                const response = await fetch('/api/fortune/status');
-                const data = await response.json();
-                if (data.success) {
-                    currentRoundId = data.round_id;
-                    yellowPoolAmount = data.yellow_pool;
-                    redPoolAmount = data.red_pool;
-                    fortuneTimeLeft = data.time_left;
-                    yellowPlayers = data.yellow_bets.map(bet => ({
-                        userId: bet.userId,
-                        amount: bet.amount,
-                        netAmount: bet.fullAmount,
-                        avatarUrl: bet.avatarUrl,
-                        username: bet.username
-                    }));
-                    redPlayers = data.red_bets.map(bet => ({
-                        userId: bet.userId,
-                        amount: bet.amount,
-                        netAmount: bet.fullAmount,
-                        avatarUrl: bet.avatarUrl,
-                        username: bet.username
-                    }));
-                    updateFortuneUI();
-                    startFortuneTimer();
-                    await loadUserCurrentBet();
-                }
-            } catch(e) {
-                console.error('Load fortune status error:', e);
+        if (progress < 1) {
+            requestAnimationFrame(update);
+        } else {
+            if (isDecimal) {
+                element.innerText = newValue.toFixed(2) + suffix;
+            } else {
+                element.innerText = newValue + suffix;
             }
         }
+    }
 
-        async function loadUserCurrentBet() {
-            try {
-                const response = await fetch('/api/fortune/user_total_bet', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: userId })
-                });
-                const data = await response.json();
-                if (data.success && data.team && data.amount > 0) {
-                    currentBetTeam = data.team;
-                    currentBetAmount = data.amount;
-                    currentBetNetAmount = data.amount;
-                } else {
-                    currentBetTeam = null;
-                    currentBetAmount = 0;
-                    currentBetNetAmount = 0;
-                }
-                updateFortuneUI();
-            } catch(e) {
-                console.error('Load user bet error:', e);
+    requestAnimationFrame(update);
+}
+
+function cacheFortuneElements() {
+    fortuneElements = {
+        yellowPool: document.getElementById('yellowPool'),
+        redPool: document.getElementById('redPool'),
+        yellowChance: document.getElementById('yellowChance'),
+        redChance: document.getElementById('redChance'),
+        yellowPlayers: document.getElementById('yellowPlayers'),
+        redPlayers: document.getElementById('redPlayers'),
+        fortuneTimer: document.getElementById('fortuneTimer'),
+        timerBarFill: document.getElementById('timerBarFill'),
+        fortuneUserBalance: document.getElementById('fortuneUserBalance'),
+        historyList: document.getElementById('fortuneHistoryList'),
+        yellowCard: document.getElementById('teamYellowCard'),
+        redCard: document.getElementById('teamRedCard')
+    };
+}
+
+async function loadFortuneStatus() {
+    const now = Date.now();
+    if (isUpdatingFortune || now - lastFortuneUpdate < FORTUNE_UPDATE_DELAY) {
+        return;
+    }
+    isUpdatingFortune = true;
+
+    try {
+        const response = await fetch('/api/fortune/status');
+        const data = await response.json();
+        if (data.success) {
+            currentRoundId = data.round_id;
+
+            // Плавное обновление чисел
+            if (yellowPoolAmount !== data.yellow_pool) {
+                animateNumber(fortuneElements.yellowPool, data.yellow_pool, ' WG', true);
+                yellowPoolAmount = data.yellow_pool;
             }
-        }
-
-        function updateFortuneUI() {
-            if (fortuneElements.yellowPool) fortuneElements.yellowPool.innerText = yellowPoolAmount;
-            if (fortuneElements.redPool) fortuneElements.redPool.innerText = redPoolAmount;
-            if (fortuneElements.fortuneUserBalance) fortuneElements.fortuneUserBalance.innerText = localWG.toFixed(2);
-
-            const minutes = Math.floor(fortuneTimeLeft / 60);
-            const seconds = fortuneTimeLeft % 60;
-            if (fortuneElements.fortuneTimer) {
-                fortuneElements.fortuneTimer.innerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-                if (fortuneTimeLeft <= 10) fortuneElements.fortuneTimer.style.color = '#ff4444';
-                else fortuneElements.fortuneTimer.style.color = '#FFD700';
+            if (redPoolAmount !== data.red_pool) {
+                animateNumber(fortuneElements.redPool, data.red_pool, ' WG', true);
+                redPoolAmount = data.red_pool;
             }
 
-            const percent = (fortuneTimeLeft / 300) * 100;
-            if (fortuneElements.timerBarFill) fortuneElements.timerBarFill.style.width = percent + '%';
+            fortuneTimeLeft = data.time_left;
+            yellowPlayers = data.yellow_bets.map(bet => ({
+                userId: bet.userId,
+                amount: bet.amount,
+                netAmount: bet.fullAmount,
+                avatarUrl: bet.avatarUrl,
+                username: bet.username
+            }));
+            redPlayers = data.red_bets.map(bet => ({
+                userId: bet.userId,
+                amount: bet.amount,
+                netAmount: bet.fullAmount,
+                avatarUrl: bet.avatarUrl,
+                username: bet.username
+            }));
 
             updateChances();
             renderPlayers();
-            highlightUserTeam();
+            await loadUserCurrentBet();
         }
+        lastFortuneUpdate = now;
+    } catch(e) {
+        console.error('Load fortune status error:', e);
+    } finally {
+        isUpdatingFortune = false;
+    }
+}
 
-        function highlightUserTeam() {
-            if (fortuneElements.yellowCard && fortuneElements.redCard) {
-                if (currentBetTeam === 'yellow') {
-                    fortuneElements.yellowCard.classList.add('selected');
-                    fortuneElements.redCard.classList.remove('selected');
-                } else if (currentBetTeam === 'red') {
-                    fortuneElements.redCard.classList.add('selected');
-                    fortuneElements.yellowCard.classList.remove('selected');
-                } else {
-                    fortuneElements.yellowCard.classList.remove('selected');
-                    fortuneElements.redCard.classList.remove('selected');
-                }
-            }
-        }
-
-        function updateChances() {
-            const total = yellowPoolAmount + redPoolAmount;
-            let yellowPercent = 0, redPercent = 0;
-            if (total > 0) {
-                yellowPercent = Math.round((yellowPoolAmount / total) * 100);
-                redPercent = Math.round((redPoolAmount / total) * 100);
-            } else {
-                yellowPercent = 50;
-                redPercent = 50;
-            }
-            if (fortuneElements.yellowChance) fortuneElements.yellowChance.innerText = `${yellowPercent}%`;
-            if (fortuneElements.redChance) fortuneElements.redChance.innerText = `${redPercent}%`;
-        }
-
-        function sortPlayersByBet(players) {
-            return [...players].sort((a, b) => b.netAmount - a.netAmount);
-        }
-
-        function renderPlayers() {
-            if (fortuneElements.yellowPlayers) {
-                const sorted = sortPlayersByBet(yellowPlayers);
-                if (sorted.length === 0) {
-                    fortuneElements.yellowPlayers.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
-                } else {
-                    fortuneElements.yellowPlayers.innerHTML = sorted.slice(0, 8).map(player => `
-                        <div class="player-card" onclick="openPlayerProfileFromFortune(${player.userId})">
-                            <div class="player-avatar-premium">
-                                ${player.avatarUrl ? `<img src="${player.avatarUrl}" onerror="this.parentElement.innerHTML='<div class=\\'player-avatar-placeholder-premium\\'>🟡</div>'">` : '<div class="player-avatar-placeholder-premium">🟡</div>'}
-                            </div>
-                            <div class="player-bet-premium">${player.netAmount} WG</div>
-                        </div>
-                    `).join('');
-                }
-            }
-            if (fortuneElements.redPlayers) {
-                const sorted = sortPlayersByBet(redPlayers);
-                if (sorted.length === 0) {
-                    fortuneElements.redPlayers.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
-                } else {
-                    fortuneElements.redPlayers.innerHTML = sorted.slice(0, 8).map(player => `
-                        <div class="player-card" onclick="openPlayerProfileFromFortune(${player.userId})">
-                            <div class="player-avatar-premium">
-                                ${player.avatarUrl ? `<img src="${player.avatarUrl}" onerror="this.parentElement.innerHTML='<div class=\\'player-avatar-placeholder-premium\\'>🔴</div>'">` : '<div class="player-avatar-placeholder-premium">🔴</div>'}
-                            </div>
-                            <div class="player-bet-premium">${player.netAmount} WG</div>
-                        </div>
-                    `).join('');
-                }
-            }
-        }
-
-        window.openPlayerProfileFromFortune = function(targetId) {
-            closeFortuneGame();
-            setTimeout(() => {
-                openPlayerProfile(targetId, 0);
-            }, 300);
-        };
-
-        function startFortuneTimer() {
-            if (fortuneTimerInterval) clearInterval(fortuneTimerInterval);
-            fortuneTimerInterval = setInterval(() => {
-                if (fortuneTimeLeft > 0) {
-                    fortuneTimeLeft--;
-                    updateFortuneUI();
-                } else {
-                    clearInterval(fortuneTimerInterval);
-                    fortuneTimerInterval = null;
-                    loadFortuneStatus();
-                }
-            }, 1000);
-        }
-
-        async function loadFortuneHistory() {
-            try {
-                const response = await fetch('/api/fortune/history', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: userId, limit: 30 })
-                });
-                const data = await response.json();
-                if (data.success) {
-                    userHistory = data.history;
-                    renderUserHistory();
-                }
-            } catch(e) {
-                console.error('Load fortune history error:', e);
-            }
-        }
-
-        async function loadWinningHistory() {
-            try {
-                const response = await fetch('/api/fortune/winning_history?limit=20');
-                const data = await response.json();
-                if (data.success) {
-                    winningHistory = data.history;
-                    renderWinningHistory();
-                }
-            } catch(e) {
-                console.error('Load winning history error:', e);
-            }
-        }
-
-        function renderWinningHistory() {
-            const container = fortuneElements.winningHistoryList;
-            if (!container) return;
-            if (winningHistory.length === 0) {
-                container.innerHTML = '<div class="empty-state-premium">🏆 Скоро здесь появятся победители</div>';
-                return;
-            }
-            let html = '';
-            for (const item of winningHistory) {
-                const teamName = item.team === 'yellow' ? '🟡 Жёлтые' : '🔴 Красные';
-                let avatarHtml = item.avatar_url
-                    ? `<img src="${item.avatar_url}" onerror="this.parentElement.innerHTML='🏆'">`
-                    : '🏆';
-                html += `
-                    <div class="winning-item" onclick="openPlayerProfileFromFortune(${item.user_id})">
-                        <div class="winner-avatar">${avatarHtml}</div>
-                        <div class="winner-info">
-                            <div class="winner-name">${escapeHtml(item.username)}</div>
-                            <div class="winner-detail">Ставка: ${item.amount} WG</div>
-                        </div>
-                        <div class="winner-amount">
-                            <div class="winner-win">+${item.win_amount} WG</div>
-                            <div class="winner-team">${teamName}</div>
-                        </div>
-                    </div>
-                `;
-            }
-            container.innerHTML = html;
-        }
-
-        function renderUserHistory() {
-            const container = fortuneElements.historyList;
-            if (!container) return;
-            if (userHistory.length === 0) {
-                container.innerHTML = '<div class="empty-state-premium">📭 У вас пока нет истории игр</div>';
-                return;
-            }
-            let html = '';
-            for (const item of userHistory) {
-                const teamName = item.team === 'yellow' ? '🟡 Жёлтые' : '🔴 Красные';
-                let resultHtml = '';
-                if (item.result === 'win') {
-                    resultHtml = `<span class="history-result-premium win">+${item.win_amount} WG</span>`;
-                } else if (item.result === 'lose') {
-                    resultHtml = `<span class="history-result-premium lose">-${item.amount} WG</span>`;
-                } else {
-                    resultHtml = `<span class="history-result-premium" style="background: rgba(255,165,0,0.15); color: #FFA500;">↺ Возврат</span>`;
-                }
-                const date = new Date(item.created_at).toLocaleString();
-                html += `
-                    <div class="history-item-premium">
-                        <div class="history-team-premium">
-                            <span class="history-team-icon-premium">${item.team === 'yellow' ? '🟡' : '🔴'}</span>
-                            <span class="history-team-name-premium">${teamName}</span>
-                        </div>
-                        <div class="history-amount-premium">${item.amount} WG</div>
-                        ${resultHtml}
-                    </div>
-                    <div class="history-date-premium" style="text-align: right; margin-top: -8px; margin-bottom: 8px;">${date}</div>
-                `;
-            }
-            container.innerHTML = html;
-        }
-
-        function openBetModal(team) {
-            if (currentBetTeam) {
-                showToast(`❌ Вы уже сделали ставку на команду ${currentBetTeam === 'yellow' ? 'Жёлтых 🟡' : 'Красных 🔴'}!`, 'error');
-                return;
-            }
-
-            selectedTeamForBet = team;
-            const teamName = team === 'yellow' ? 'Команда Жёлтых' : 'Команда Красных';
-            const teamIcon = team === 'yellow' ? '🟡' : '🔴';
-            document.getElementById('betTeamInfo').innerHTML = `
-                <span class="bet-team-icon">${teamIcon}</span>
-                <span class="bet-team-name">${teamName}</span>
-            `;
-            document.getElementById('betUserBalance').innerText = localWG.toFixed(2);
-            document.getElementById('betAmount').value = '';
-            document.getElementById('betCommission').innerText = '0';
-            document.getElementById('betNetAmount').innerText = '0';
-            document.getElementById('betModal').classList.add('active');
-            document.body.style.overflow = 'hidden';
-        }
-
-        function closeBetModal() {
-            document.getElementById('betModal').classList.remove('active');
-            document.body.style.overflow = '';
-            selectedTeamForBet = null;
-        }
-
-        function calculateBet() {
-            const amount = parseFloat(document.getElementById('betAmount').value);
-            if (isNaN(amount) || amount <= 0) {
-                document.getElementById('betCommission').innerText = '0';
-                document.getElementById('betNetAmount').innerText = '0';
-                return;
-            }
-            const commission = amount * FORTUNE_COMMISSION;
-            const netAmount = amount - commission;
-            document.getElementById('betCommission').innerText = commission.toFixed(2);
-            document.getElementById('betNetAmount').innerText = netAmount.toFixed(2);
-        }
-
-        async function submitBet() {
-            if (!selectedTeamForBet) return;
-
-            if (currentBetTeam) {
-                showToast(`❌ Вы уже сделали ставку на команду ${currentBetTeam === 'yellow' ? 'Жёлтых 🟡' : 'Красных 🔴'}!`, 'error');
-                closeBetModal();
-                return;
-            }
-
-            const amount = parseFloat(document.getElementById('betAmount').value);
-            if (isNaN(amount) || amount < 10) {
-                showToast('Минимальная ставка — 10 WG', 'error');
-                return;
-            }
-
-            if (amount > localWG) {
-                showToast(`Не хватает WG! У вас ${localWG.toFixed(2)} WG`, 'error');
-                return;
-            }
-
-            try {
-                const response = await fetch('/api/fortune/bet', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        user_id: userId,
-                        team: selectedTeamForBet,
-                        amount: amount
-                    })
-                });
-                const data = await response.json();
-
-                if (data.success) {
-                    localWG -= amount;
-                    updateUI();
-                    await syncData(true);
-                    await loadFortuneStatus();
-
-                    const commission = amount * 0.07;
-                    const netAmount = amount - commission;
-                    showToast(`✅ Ставка ${amount} WG на команду ${selectedTeamForBet === 'yellow' ? 'Жёлтых 🟡' : 'Красных 🔴'} принята!`, 'success');
-                    closeBetModal();
-                } else {
-                    showToast(data.error, 'error');
-                }
-            } catch(e) {
-                console.error('Bet error:', e);
-                showToast('Ошибка при ставке', 'error');
-            }
-        }
-
-        function initFortuneTabs() {
-            const tabs = document.querySelectorAll('.fortune-tab');
-            if (!tabs.length) return;
-            tabs.forEach(tab => {
-                tab.removeEventListener('click', fortuneTabHandler);
-                tab.addEventListener('click', fortuneTabHandler);
-            });
-        }
-
-        function fortuneTabHandler(e) {
-            const tab = e.currentTarget;
-            const target = tab.dataset.fortuneTab;
-            document.querySelectorAll('.fortune-tab').forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            document.querySelectorAll('.fortune-tab-content').forEach(c => c.classList.remove('active'));
-            if (target === 'play') {
-                document.getElementById('fortunePlayTab').classList.add('active');
-            } else {
-                document.getElementById('fortuneHistoryTab').classList.add('active');
-                loadFortuneHistory();
-                loadWinningHistory();
-            }
-        }
-
-        window.openGame = function(gameName) {
-            if (gameName === 'fortune') {
-                const fortuneModal = document.getElementById('fortuneModal');
-                if (fortuneModal) {
-                    fortuneModal.classList.add('active');
-                    document.body.style.overflow = 'hidden';
-                    if (typeof closeGamepad === 'function') closeGamepad();
-                    cacheFortuneElements();
-                    loadFortuneStatus();
-                    loadWinningHistory();
-                    initFortuneTabs();
-                }
-            }
-        };
-
-        window.closeFortuneGame = function() {
-            const fortuneModal = document.getElementById('fortuneModal');
-            if (fortuneModal) fortuneModal.classList.remove('active');
-            document.body.style.overflow = '';
-            if (fortuneTimerInterval) clearInterval(fortuneTimerInterval);
-        };
-
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('betAmount')?.addEventListener('input', calculateBet);
-            document.querySelectorAll('.bet-preset').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const multiplier = parseFloat(btn.dataset.multiplier);
-                    const presetAmount = Math.floor(localWG * multiplier);
-                    const input = document.getElementById('betAmount');
-                    if (input) input.value = presetAmount;
-                    calculateBet();
-                });
-            });
-            document.getElementById('submitBetBtn')?.addEventListener('click', submitBet);
-
-            document.querySelectorAll('.team-bet-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const team = btn.dataset.team;
-                    if (!team) return;
-                    openBetModal(team);
-                });
-            });
+async function loadUserCurrentBet() {
+    try {
+        const response = await fetch('/api/fortune/user_total_bet', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId })
         });
+        const data = await response.json();
+        if (data.success && data.team && data.amount > 0) {
+            currentBetTeam = data.team;
+            currentBetAmount = data.amount;
+            currentBetNetAmount = data.amount;
+        } else {
+            currentBetTeam = null;
+            currentBetAmount = 0;
+            currentBetNetAmount = 0;
+        }
+        highlightUserTeam();
+    } catch(e) {
+        console.error('Load user bet error:', e);
+    }
+}
+
+function updateFortuneTimer() {
+    if (!fortuneElements.fortuneTimer) return;
+
+    const minutes = Math.floor(fortuneTimeLeft / 60);
+    const seconds = fortuneTimeLeft % 60;
+    const timeString = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+    if (fortuneElements.fortuneTimer.innerText !== timeString) {
+        fortuneElements.fortuneTimer.innerText = timeString;
+    }
+
+    if (fortuneTimeLeft <= 10) {
+        fortuneElements.fortuneTimer.style.color = '#ff4444';
+        if (fortuneElements.fortuneTimer.style.animation !== 'pulseGold 0.5s infinite') {
+            fortuneElements.fortuneTimer.style.animation = 'pulseGold 0.5s infinite';
+        }
+    } else {
+        fortuneElements.fortuneTimer.style.color = '#FFD700';
+        fortuneElements.fortuneTimer.style.animation = '';
+    }
+
+    const percent = (fortuneTimeLeft / 300) * 100;
+    if (fortuneElements.timerBarFill) {
+        fortuneElements.timerBarFill.style.width = percent + '%';
+    }
+}
+
+function highlightUserTeam() {
+    if (fortuneElements.yellowCard && fortuneElements.redCard) {
+        if (currentBetTeam === 'yellow') {
+            fortuneElements.yellowCard.classList.add('selected');
+            fortuneElements.redCard.classList.remove('selected');
+        } else if (currentBetTeam === 'red') {
+            fortuneElements.redCard.classList.add('selected');
+            fortuneElements.yellowCard.classList.remove('selected');
+        } else {
+            fortuneElements.yellowCard.classList.remove('selected');
+            fortuneElements.redCard.classList.remove('selected');
+        }
+    }
+}
+
+function updateChances() {
+    const total = yellowPoolAmount + redPoolAmount;
+    let yellowPercent = 0, redPercent = 0;
+    if (total > 0) {
+        yellowPercent = Math.round((yellowPoolAmount / total) * 100);
+        redPercent = Math.round((redPoolAmount / total) * 100);
+    } else {
+        yellowPercent = 50;
+        redPercent = 50;
+    }
+    if (fortuneElements.yellowChance && fortuneElements.yellowChance.innerText !== `${yellowPercent}%`) {
+        fortuneElements.yellowChance.innerText = `${yellowPercent}%`;
+    }
+    if (fortuneElements.redChance && fortuneElements.redChance.innerText !== `${redPercent}%`) {
+        fortuneElements.redChance.innerText = `${redPercent}%`;
+    }
+}
+
+function sortPlayersByBet(players) {
+    return [...players].sort((a, b) => b.netAmount - a.netAmount);
+}
+
+function renderPlayers() {
+    if (fortuneElements.yellowPlayers) {
+        const sorted = sortPlayersByBet(yellowPlayers);
+        if (sorted.length === 0) {
+            fortuneElements.yellowPlayers.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
+        } else {
+            fortuneElements.yellowPlayers.innerHTML = sorted.slice(0, 8).map(player => `
+                <div class="player-card" data-user-id="${player.userId}">
+                    <div class="player-avatar-premium" onclick="openPlayerProfileInFortune(${player.userId})">
+                        ${player.avatarUrl ? `<img src="${player.avatarUrl}" onerror="this.parentElement.innerHTML='<div class=\\'player-avatar-placeholder-premium\\'>🟡</div>'">` : '<div class="player-avatar-placeholder-premium">🟡</div>'}
+                    </div>
+                    <div class="player-bet-premium">${player.netAmount} WG</div>
+                </div>
+            `).join('');
+        }
+    }
+    if (fortuneElements.redPlayers) {
+        const sorted = sortPlayersByBet(redPlayers);
+        if (sorted.length === 0) {
+            fortuneElements.redPlayers.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
+        } else {
+            fortuneElements.redPlayers.innerHTML = sorted.slice(0, 8).map(player => `
+                <div class="player-card" data-user-id="${player.userId}">
+                    <div class="player-avatar-premium" onclick="openPlayerProfileInFortune(${player.userId})">
+                        ${player.avatarUrl ? `<img src="${player.avatarUrl}" onerror="this.parentElement.innerHTML='<div class=\\'player-avatar-placeholder-premium\\'>🔴</div>'">` : '<div class="player-avatar-placeholder-premium">🔴</div>'}
+                    </div>
+                    <div class="player-bet-premium">${player.netAmount} WG</div>
+                </div>
+            `).join('');
+        }
+    }
+}
+
+// Открытие профиля внутри Фортуны (без закрытия игры)
+function openPlayerProfileInFortune(targetId) {
+    selectedPlayerId = targetId;
+    const modalUsername = document.getElementById('playerModalUsername');
+    const modalClicks = document.getElementById('playerModalClicks');
+    const modalWG = document.getElementById('playerModalWG');
+    const modalLP = document.getElementById('playerModalLP');
+    const modalUSDT = document.getElementById('playerModalUSDT');
+    const modalWins = document.getElementById('playerModalWins');
+    const modalLikes = document.getElementById('playerModalLikes');
+    const modalDislikes = document.getElementById('playerModalDislikes');
+    const modalAvatar = document.getElementById('playerModalAvatar');
+    const modalBadges = document.getElementById('playerModalBadges');
+    const voteMessage = document.getElementById('voteMessage');
+
+    fetch('/api/get_user_stats', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({user_id: targetId})
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.error) {
+            showToast('Пользователь не найден', 'error');
+            return;
+        }
+        let userName = data.username || 'Игрок';
+        let avatar = (data.avatar_url && data.avatar_url !== '👤')
+            ? `<img src="${data.avatar_url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`
+            : '👤';
+        if (data.hide_from_top) {
+            avatar = '👤';
+            userName = 'Аноним';
+        }
+        modalUsername.innerText = userName;
+        modalClicks.innerText = data.total_clicks || 0;
+        modalWG.innerText = (data.wg || 0).toFixed(2);
+        modalLP.innerText = data.lp || 0;
+        modalUSDT.innerHTML = `💰 ${(data.usdt || 0).toFixed(2)}`;
+        modalWins.innerText = data.wins || 0;
+        modalLikes.innerText = data.likes || 0;
+        modalDislikes.innerText = data.dislikes || 0;
+        if (modalAvatar) modalAvatar.innerHTML = avatar;
+        if (modalBadges) {
+            let role = data.role || 'player';
+            let badgesHtml = '';
+            if (role === 'founder') badgesHtml = '<span class="role-badge founder">👑 ОСНОВАТЕЛЬ</span>';
+            else if (role === 'legend') badgesHtml = '<span class="role-badge legend">ЛЕГЕНДА</span>';
+            else if (role === 'pioneer') badgesHtml = '<span class="role-badge pioneer">⭐ ПЕРВООТКРЫВАТЕЛЬ</span>';
+            else badgesHtml = '<span class="role-badge player">🎮 Игрок</span>';
+            modalBadges.innerHTML = badgesHtml;
+        }
+        if (voteMessage) voteMessage.innerHTML = '';
+        document.getElementById('playerModal').classList.add('active');
+    })
+    .catch(e => {
+        console.error('Error opening player profile:', e);
+        showToast('Ошибка загрузки профиля', 'error');
+    });
+}
+
+function startFortuneTimer() {
+    if (fortuneTimerInterval) clearInterval(fortuneTimerInterval);
+
+    function tick() {
+        if (fortuneTimeLeft > 0) {
+            fortuneTimeLeft--;
+            updateFortuneTimer();
+        } else {
+            clearInterval(fortuneTimerInterval);
+            fortuneTimerInterval = null;
+            loadFortuneStatus();
+        }
+    }
+
+    updateFortuneTimer();
+    fortuneTimerInterval = setInterval(tick, 1000);
+}
+
+async function loadFortuneHistory() {
+    try {
+        const response = await fetch('/api/fortune/history', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId, limit: 30 })
+        });
+        const data = await response.json();
+        if (data.success) {
+            userHistory = data.history;
+            renderUserHistory();
+        }
+    } catch(e) {
+        console.error('Load fortune history error:', e);
+    }
+}
+
+function renderUserHistory() {
+    const container = fortuneElements.historyList;
+    if (!container) return;
+    if (userHistory.length === 0) {
+        container.innerHTML = '<div class="empty-state-premium">📭 У вас пока нет истории игр</div>';
+        return;
+    }
+    let html = '';
+    for (const item of userHistory) {
+        const teamName = item.team === 'yellow' ? '🟡 Жёлтые' : '🔴 Красные';
+        let resultHtml = '';
+        if (item.result === 'win') {
+            resultHtml = `<span class="history-result-premium win">+${item.win_amount} WG</span>`;
+        } else if (item.result === 'lose') {
+            resultHtml = `<span class="history-result-premium lose">-${item.amount} WG</span>`;
+        } else {
+            resultHtml = `<span class="history-result-premium" style="background: rgba(255,165,0,0.15); color: #FFA500;">↺ Возврат</span>`;
+        }
+        const date = new Date(item.created_at).toLocaleString();
+        html += `
+            <div class="history-item-premium">
+                <div class="history-team-premium">
+                    <span class="history-team-icon-premium">${item.team === 'yellow' ? '🟡' : '🔴'}</span>
+                    <span class="history-team-name-premium">${teamName}</span>
+                </div>
+                <div class="history-amount-premium">${item.amount} WG</div>
+                ${resultHtml}
+            </div>
+            <div class="history-date-premium">${date}</div>
+        `;
+    }
+    container.innerHTML = html;
+}
+
+function openBetModal(team) {
+    if (currentBetTeam) {
+        showToast(`❌ Вы уже сделали ставку на команду ${currentBetTeam === 'yellow' ? 'Жёлтых 🟡' : 'Красных 🔴'}!`, 'error');
+        return;
+    }
+
+    selectedTeamForBet = team;
+    const teamName = team === 'yellow' ? 'Команда Жёлтых' : 'Команда Красных';
+    const teamIcon = team === 'yellow' ? '🟡' : '🔴';
+    document.getElementById('betTeamInfo').innerHTML = `
+        <span class="bet-team-icon">${teamIcon}</span>
+        <span class="bet-team-name">${teamName}</span>
+    `;
+    document.getElementById('betUserBalance').innerText = localWG.toFixed(2);
+    document.getElementById('betAmount').value = '';
+    document.getElementById('betCommission').innerText = '0';
+    document.getElementById('betNetAmount').innerText = '0';
+    document.getElementById('betModal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeBetModal() {
+    document.getElementById('betModal').classList.remove('active');
+    document.body.style.overflow = '';
+    selectedTeamForBet = null;
+}
+
+function calculateBet() {
+    const amount = parseFloat(document.getElementById('betAmount').value);
+    if (isNaN(amount) || amount <= 0) {
+        document.getElementById('betCommission').innerText = '0';
+        document.getElementById('betNetAmount').innerText = '0';
+        return;
+    }
+    const commission = amount * FORTUNE_COMMISSION;
+    const netAmount = amount - commission;
+    document.getElementById('betCommission').innerText = commission.toFixed(2);
+    document.getElementById('betNetAmount').innerText = netAmount.toFixed(2);
+}
+
+async function submitBet() {
+    if (!selectedTeamForBet) return;
+
+    if (currentBetTeam) {
+        showToast(`❌ Вы уже сделали ставку на команду ${currentBetTeam === 'yellow' ? 'Жёлтых 🟡' : 'Красных 🔴'}!`, 'error');
+        closeBetModal();
+        return;
+    }
+
+    const amount = parseFloat(document.getElementById('betAmount').value);
+    if (isNaN(amount) || amount < 10) {
+        showToast('Минимальная ставка — 10 WG', 'error');
+        return;
+    }
+
+    if (amount > localWG) {
+        showToast(`Не хватает WG! У вас ${localWG.toFixed(2)} WG`, 'error');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/fortune/bet', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id: userId,
+                team: selectedTeamForBet,
+                amount: amount
+            })
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            localWG -= amount;
+            updateUI();
+            await syncData(true);
+            await loadFortuneStatus();
+            closeBetModal();
+        } else {
+            showToast(data.error, 'error');
+        }
+    } catch(e) {
+        console.error('Bet error:', e);
+        showToast('Ошибка при ставке', 'error');
+    }
+}
+
+function initFortuneTabs() {
+    const tabs = document.querySelectorAll('.fortune-tab');
+    if (!tabs.length) return;
+    tabs.forEach(tab => {
+        tab.removeEventListener('click', fortuneTabHandler);
+        tab.addEventListener('click', fortuneTabHandler);
+    });
+}
+
+function fortuneTabHandler(e) {
+    const tab = e.currentTarget;
+    const target = tab.dataset.fortuneTab;
+    document.querySelectorAll('.fortune-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelectorAll('.fortune-tab-content').forEach(c => c.classList.remove('active'));
+    if (target === 'play') {
+        document.getElementById('fortunePlayTab').classList.add('active');
+    } else {
+        document.getElementById('fortuneHistoryTab').classList.add('active');
+        loadFortuneHistory();
+    }
+}
+
+// Переопределяем openGame для Фортуны
+window.openGame = function(gameName) {
+    if (gameName === 'fortune') {
+        const fortuneModal = document.getElementById('fortuneModal');
+        if (fortuneModal) {
+            fortuneModal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+            if (typeof closeGamepad === 'function') closeGamepad();
+            cacheFortuneElements();
+            loadFortuneStatus();
+            initFortuneTabs();
+        }
+    }
+};
+
+window.closeFortuneGame = function() {
+    const fortuneModal = document.getElementById('fortuneModal');
+    if (fortuneModal) fortuneModal.classList.remove('active');
+    document.body.style.overflow = '';
+    if (fortuneTimerInterval) clearInterval(fortuneTimerInterval);
+};
+
+// Вешаем обработчики событий
+document.addEventListener('DOMContentLoaded', () => {
+    const betAmountInput = document.getElementById('betAmount');
+    if (betAmountInput) {
+        betAmountInput.addEventListener('input', calculateBet);
+    }
+
+    document.querySelectorAll('.bet-preset').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const multiplier = parseFloat(btn.dataset.multiplier);
+            const presetAmount = Math.floor(localWG * multiplier);
+            const input = document.getElementById('betAmount');
+            if (input) input.value = presetAmount;
+            calculateBet();
+        });
+    });
+
+    const submitBtn = document.getElementById('submitBetBtn');
+    if (submitBtn) {
+        submitBtn.addEventListener('click', submitBet);
+    }
+
+    document.querySelectorAll('.team-bet-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const team = btn.dataset.team;
+            if (!team) return;
+            openBetModal(team);
+        });
+    });
+});
 
         // ==================== СЧЁТЧИК ПОКУПОК LP БУСТЕРА ====================
         async function updateLPBoostCount() {
