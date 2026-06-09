@@ -2516,7 +2516,8 @@ def api_get_lp_boost_count():
         count = row['count'] if row else 0
     return jsonify({"success": True, "count": count})
 
-# ========== ФОРТУНА API (ИСПРАВЛЕННАЯ ВЕРСИЯ) ==========
+
+# ========== ФОРТУНА API (РУЧНОЕ УПРАВЛЕНИЕ - БЕЗ АВТОЗАВЕРШЕНИЯ) ==========
 
 def create_new_fortune_round():
     global current_fortune_round
@@ -2549,6 +2550,7 @@ def create_new_fortune_round():
             ''', (round_id, datetime.datetime.now().isoformat(), 0, 0,
                   datetime.datetime.fromtimestamp(current_fortune_round['end_time']).isoformat()))
         print(f"✨ Создан новый раунд Фортуны: {round_id}")
+
 
 def restore_fortune_from_db():
     global current_fortune_round
@@ -2614,137 +2616,143 @@ def restore_fortune_from_db():
                 round_id
             ))
             print(f"✅ Восстановлено {len(yellow_bets) + len(red_bets)} ставок")
-            print(f"   🟡 Жёлтые: {len(yellow_bets)} ставок, пул: {yellow_pool} WG")
-            print(f"   🔴 Красные: {len(red_bets)} ставок, пул: {red_pool} WG")
 
-def check_and_end_fortune_round():
+
+# ========== ТАЙМЕР ТОЛЬКО ДЛЯ ОТОБРАЖЕНИЯ, НЕ ЗАВЕРШАЕТ РАУНД ==========
+def update_fortune_timer():
+    """Только обновляет таймер на клиенте, НЕ завершает раунд"""
+    global current_fortune_round
+    while True:
+        time.sleep(1)
+        try:
+            with fortune_lock:
+                if current_fortune_round and current_fortune_round.get('round_id'):
+                    time_left = max(0, int(current_fortune_round.get('end_time', 0) - time.time()))
+                    # Только обновляем таймер через сокет, НИЧЕГО не завершаем
+                    socketio.emit('fortune_timer_update', {'time_left': time_left})
+        except Exception as e:
+            logger.error(f"Таймер Фортуны ошибка: {e}")
+
+
+# ========== РУЧНОЕ ЗАВЕРШЕНИЕ РАУНДА (ТОЛЬКО ЧЕРЕЗ АДМИНКУ ИЛИ API) ==========
+def end_fortune_round_manual():
+    """Ручное завершение раунда - вызывается только через API или админку"""
     global current_fortune_round, fortune_ending
+
+    if fortune_ending:
+        print("⚠️ Уже завершается")
+        return {"success": False, "message": "Уже завершается"}
+
     with fortune_lock:
         if not current_fortune_round.get('round_id'):
-            restore_fortune_from_db()
-            return
-        end_time = current_fortune_round.get('end_time', 0)
-        if end_time > time.time():
-            return
+            return {"success": False, "message": "Нет активного раунда"}
+
+        round_id = current_fortune_round['round_id']
+
+        # Проверяем, не завершён ли уже
         with db.get_cursor() as cursor:
-            cursor.execute("SELECT winner_team FROM fortune_rounds WHERE round_id = ?",
-                           (current_fortune_round['round_id'],))
+            cursor.execute("SELECT winner_team FROM fortune_rounds WHERE round_id = ?", (round_id,))
             row = cursor.fetchone()
             if row and row['winner_team'] is not None:
-                print(f"✅ Раунд {current_fortune_round['round_id']} уже завершён")
-                create_new_fortune_round()
-                return
-        if fortune_ending:
-            print("⚠️ Завершение уже запущено, пропускаю")
-            return
-        fortune_ending = True
-        print(f"⏰ Таймер истёк, завершаю раунд {current_fortune_round['round_id']}")
-        try:
-            _end_fortune_round_internal()
-        except Exception as e:
-            logger.error(f"Ошибка завершения раунда: {e}")
-            import traceback
-            traceback.print_exc()
-        finally:
-            fortune_ending = False
+                return {"success": False, "message": f"Раунд уже завершён, победитель: {row['winner_team']}"}
 
-def _end_fortune_round_internal():
-    global current_fortune_round
-    round_id = current_fortune_round['round_id']
-    with db.get_cursor() as cursor:
-        cursor.execute("SELECT winner_team FROM fortune_rounds WHERE round_id = ?", (round_id,))
-        row = cursor.fetchone()
-        if row and row['winner_team'] is not None:
-            print(f"⚠️ Раунд {round_id} уже завершён в БД")
+    fortune_ending = True
+
+    try:
+        with db.get_cursor() as cursor:
+            cursor.execute('SELECT * FROM fortune_active_bets WHERE round_id = ?', (round_id,))
+            bets_from_db = cursor.fetchall()
+
+        if not bets_from_db:
+            print("📭 Нет ставок, просто создаю новый раунд")
             create_new_fortune_round()
-            return
-    with db.get_cursor() as cursor:
-        cursor.execute('SELECT * FROM fortune_active_bets WHERE round_id = ?', (round_id,))
-        bets_from_db = cursor.fetchall()
-    if not bets_from_db:
-        print("📭 Нет ставок, создаю новый раунд")
-        create_new_fortune_round()
-        return
-    has_yellow = any(b['team'] == 'yellow' for b in bets_from_db)
-    has_red = any(b['team'] == 'red' for b in bets_from_db)
-    if (has_yellow and not has_red) or (has_red and not has_yellow):
-        print("⚠️ Ставки только на одной команде, перезапускаю таймер")
-        new_end_time = time.time() + FORTUNE_ROUND_DURATION
-        current_fortune_round['end_time'] = new_end_time
+            fortune_ending = False
+            return {"success": True, "message": "Ставок не было, создан новый раунд"}
+
+        yellow_pool = current_fortune_round['yellow_pool']
+        red_pool = current_fortune_round['red_pool']
+        total_pool = yellow_pool + red_pool
+
+        if total_pool == 0:
+            create_new_fortune_round()
+            fortune_ending = False
+            return {"success": True, "message": "Пустой пул, создан новый раунд"}
+
+        # Только если есть ставки на ОБЕИХ командах
+        has_yellow = any(b['team'] == 'yellow' for b in bets_from_db)
+        has_red = any(b['team'] == 'red' for b in bets_from_db)
+
+        if not (has_yellow and has_red):
+            fortune_ending = False
+            return {"success": False, "message": "Ставки только на одной команде! Нужно дождаться ставок на обеих."}
+
+        # Определяем победителя
+        yellow_chance = yellow_pool / total_pool
+        winner_team = 'yellow' if random.random() < yellow_chance else 'red'
+        winner_pool = yellow_pool + red_pool
+
+        print(f"🎲 РЕЗУЛЬТАТ: {'🟡 Жёлтые' if winner_team == 'yellow' else '🔴 Красные'} победили!")
+
+        # Распределяем выигрыши
+        winner_bets_sum = sum(b['net_amount'] for b in bets_from_db if b['team'] == winner_team)
+
+        if winner_bets_sum > 0:
+            for bet in bets_from_db:
+                if bet['team'] == winner_team:
+                    share = bet['net_amount'] / winner_bets_sum
+                    win_amount = round(winner_pool * share, 2)
+                    user = get_user(bet['user_id'])
+                    safe_update_user(bet['user_id'], wg=user['wg'] + win_amount)
+                    with db.get_cursor() as cursor:
+                        cursor.execute('''
+                            INSERT INTO fortune_history (user_id, round_id, team, amount, result, win_amount)
+                            VALUES (?, ?, ?, ?, 'win', ?)
+                        ''', (bet['user_id'], round_id, winner_team, bet['amount'], win_amount))
+                    send_telegram_message(bet['user_id'],
+                                          f"🎉 **Командная Фортуна!**\n\nВы выиграли {win_amount} WG!\nКоманда: {'🟡 Жёлтые' if winner_team == 'yellow' else '🔴 Красные'}")
+                else:
+                    with db.get_cursor() as cursor:
+                        cursor.execute('''
+                            INSERT INTO fortune_history (user_id, round_id, team, amount, result, win_amount)
+                            VALUES (?, ?, ?, ?, 'lose', 0)
+                        ''', (bet['user_id'], round_id, bet['team'], bet['amount'], 0))
+
+        # Обновляем запись раунда
         with db.get_cursor() as cursor:
             cursor.execute('''
                 UPDATE fortune_rounds 
-                SET end_time = ? 
+                SET winner_team = ?, end_time = ?, yellow_pool = ?, red_pool = ?
                 WHERE round_id = ? AND winner_team IS NULL
-            ''', (datetime.datetime.fromtimestamp(new_end_time).isoformat(), round_id))
-        try:
-            socketio.emit('fortune_timer_reset', {
-                'message': '⏰ Ставки только на одной команде! Таймер перезапущен.',
-                'time_left': FORTUNE_ROUND_DURATION
-            })
-        except:
-            pass
-        return
-    yellow_pool = current_fortune_round['yellow_pool']
-    red_pool = current_fortune_round['red_pool']
-    total_pool = yellow_pool + red_pool
-    if total_pool == 0:
-        print("📭 Общий пул = 0, создаю новый раунд")
+            ''', (winner_team, datetime.datetime.now().isoformat(), yellow_pool, red_pool, round_id))
+
+            if cursor.rowcount == 0:
+                print(f"⚠️ Раунд {round_id} уже был завершён")
+                fortune_ending = False
+                return {"success": False, "message": "Раунд уже завершён"}
+
+            cursor.execute("DELETE FROM fortune_active_bets WHERE round_id = ?", (round_id,))
+
+        print(f"✅ Раунд {round_id} завершён! Победитель: {winner_team}")
+
+        # Создаём новый раунд
         create_new_fortune_round()
-        return
-    yellow_chance = yellow_pool / total_pool
-    winner_team = 'yellow' if random.random() < yellow_chance else 'red'
-    winner_pool = yellow_pool + red_pool
-    print(f"🎲 РЕЗУЛЬТАТ: {'🟡 Жёлтые' if winner_team == 'yellow' else '🔴 Красные'} победили!")
-    print(f"   Шансы: Жёлтые {yellow_chance * 100:.1f}% / Красные {(1 - yellow_chance) * 100:.1f}%")
-    print(f"   Призовой фонд: {winner_pool} WG")
-    winner_bets_sum = sum(b['net_amount'] for b in bets_from_db if b['team'] == winner_team)
-    if winner_bets_sum > 0:
-        for bet in bets_from_db:
-            if bet['team'] == winner_team:
-                share = bet['net_amount'] / winner_bets_sum
-                win_amount = round(winner_pool * share, 2)
-                user = get_user(bet['user_id'])
-                safe_update_user(bet['user_id'], wg=user['wg'] + win_amount)
-                with db.get_cursor() as cursor:
-                    cursor.execute('''
-                        INSERT INTO fortune_history (user_id, round_id, team, amount, result, win_amount)
-                        VALUES (?, ?, ?, ?, 'win', ?)
-                    ''', (bet['user_id'], round_id, winner_team, bet['amount'], win_amount))
-                send_telegram_message(bet['user_id'],
-                                      f"🎉 **Командная Фортуна!**\n\nВы выиграли {win_amount} WG!\nКоманда: {'🟡 Жёлтые' if winner_team == 'yellow' else '🔴 Красные'}")
-            else:
-                with db.get_cursor() as cursor:
-                    cursor.execute('''
-                        INSERT INTO fortune_history (user_id, round_id, team, amount, result, win_amount)
-                        VALUES (?, ?, ?, ?, 'lose', 0)
-                    ''', (bet['user_id'], round_id, bet['team'], bet['amount'], 0))
-    with db.get_cursor() as cursor:
-        cursor.execute('''
-            UPDATE fortune_rounds 
-            SET winner_team = ?, end_time = ?, yellow_pool = ?, red_pool = ?
-            WHERE round_id = ? AND winner_team IS NULL
-        ''', (winner_team, datetime.datetime.now().isoformat(), yellow_pool, red_pool, round_id))
-        if cursor.rowcount == 0:
-            print(f"⚠️ Раунд {round_id} уже был завершён (конкурентный вызов)")
-            return
-        cursor.execute("DELETE FROM fortune_active_bets WHERE round_id = ?", (round_id,))
-    print(f"✅ Раунд {round_id} завершён! Победитель: {winner_team}")
-    create_new_fortune_round()
+
+        return {"success": True, "message": f"Раунд завершён! Победили {winner_team}", "winner": winner_team}
+
+    except Exception as e:
+        logger.error(f"Ошибка завершения раунда: {e}")
+        return {"success": False, "error": str(e)}
+    finally:
+        fortune_ending = False
+
 
 def start_fortune_timer_thread():
     global fortune_timer_thread_started
     if fortune_timer_thread_started:
         return
     fortune_timer_thread_started = True
-    def timer_loop():
-        while True:
-            time.sleep(1)
-            try:
-                check_and_end_fortune_round()
-            except Exception as e:
-                logger.error(f"Ошибка в таймере Фортуны: {e}")
-    threading.Thread(target=timer_loop, daemon=True).start()
+    threading.Thread(target=update_fortune_timer, daemon=True).start()
+
 
 # ========== ФОРТУНА API ENDPOINTS ==========
 
@@ -2755,7 +2763,8 @@ def api_fortune_status():
         if not current_fortune_round.get('round_id'):
             restore_fortune_from_db()
         time_left = max(0, int(current_fortune_round.get('end_time', 0) - time.time()))
-        yellow_bets_sorted = sorted(current_fortune_round['yellow_bets'], key=lambda x: x['net_amount'], reverse=True)[:5]
+        yellow_bets_sorted = sorted(current_fortune_round['yellow_bets'], key=lambda x: x['net_amount'], reverse=True)[
+            :5]
         red_bets_sorted = sorted(current_fortune_round['red_bets'], key=lambda x: x['net_amount'], reverse=True)[:5]
         return jsonify({
             "success": True,
@@ -2779,6 +2788,7 @@ def api_fortune_status():
             } for bet in red_bets_sorted]
         })
 
+
 @app.route('/api/fortune/bet', methods=['POST'])
 def api_fortune_bet():
     data = request.json
@@ -2800,23 +2810,35 @@ def api_fortune_bet():
         return jsonify({"success": False, "error": f"Не хватает WG! У вас {user['wg']:.2f} WG"}), 400
     with fortune_lock:
         if current_fortune_round.get('end_time', 0) <= time.time():
-            return jsonify({"success": False, "error": "Раунд завершён, ставки больше не принимаются"}), 400
+            # Если таймер истёк, но раунд не завершён — продлеваем
+            new_end_time = time.time() + FORTUNE_ROUND_DURATION
+            current_fortune_round['end_time'] = new_end_time
+            with db.get_cursor() as cursor:
+                cursor.execute('''
+                    UPDATE fortune_rounds SET end_time = ? WHERE round_id = ?
+                ''', (datetime.datetime.fromtimestamp(new_end_time).isoformat(), current_fortune_round['round_id']))
+
         round_id = current_fortune_round['round_id']
+
+        # Проверка на противоположную команду
         other_team = 'red' if team == 'yellow' else 'yellow'
         other_bets = current_fortune_round['red_bets'] if team == 'yellow' else current_fortune_round['yellow_bets']
         for bet in other_bets:
             if bet.get('user_id') == user_id:
                 return jsonify({"success": False,
                                 "error": f"❌ Вы уже сделали ставку на команду {'Красных 🔴' if other_team == 'red' else 'Жёлтых 🟡'}! Можно ставить только на одну команду за раунд."}), 400
+
         bet_list = current_fortune_round['yellow_bets'] if team == 'yellow' else current_fortune_round['red_bets']
         existing_bet = None
         for bet in bet_list:
             if bet.get('user_id') == user_id:
                 existing_bet = bet
                 break
+
         commission = amount * FORTUNE_COMMISSION
         net_amount = amount - commission
         safe_update_user(user_id, wg=user['wg'] - amount)
+
         if existing_bet:
             new_total = existing_bet['amount'] + amount
             new_net_total = existing_bet['net_amount'] + net_amount
@@ -2850,16 +2872,19 @@ def api_fortune_bet():
                 f"🎲 ФОРТУНА: Новая ставка {amount} WG на команду {'Жёлтые' if team == 'yellow' else 'Красные'}",
                 user_id, user['username'], old_value=user['wg'], new_value=user['wg'] - amount, currency="wg")
             result_amount = amount
+
         if team == 'yellow':
             current_fortune_round['yellow_pool'] += net_amount
         else:
             current_fortune_round['red_pool'] += net_amount
+
         with db.get_cursor() as cursor:
             cursor.execute('''
                 UPDATE fortune_rounds 
                 SET yellow_pool = ?, red_pool = ?
                 WHERE round_id = ?
             ''', (current_fortune_round['yellow_pool'], current_fortune_round['red_pool'], round_id))
+
         return jsonify({
             "success": True,
             "message": f"Ставка {amount} WG принята! Всего на команду: {result_amount} WG",
@@ -2868,6 +2893,7 @@ def api_fortune_bet():
             "red_pool": current_fortune_round['red_pool'],
             "user_total_bet": result_amount
         })
+
 
 @app.route('/api/fortune/history', methods=['POST'])
 def api_fortune_history():
@@ -2900,33 +2926,13 @@ def api_fortune_history():
             })
         return jsonify({"success": True, "history": history})
 
+
 @app.route('/api/fortune/end_round', methods=['POST'])
 def api_fortune_end_round():
-    global fortune_ending
-    try:
-        with fortune_lock:
-            if not current_fortune_round.get('round_id'):
-                return jsonify({"success": False, "message": "Нет активного раунда"})
-            if time.time() >= current_fortune_round.get('end_time', 0):
-                if fortune_ending:
-                    return jsonify({"success": False, "message": "Уже завершается"})
-                fortune_ending = True
-                try:
-                    _end_fortune_round_internal()
-                    return jsonify({"success": True, "message": "🎲 Раунд завершён! Результаты распределены."})
-                except Exception as e:
-                    return jsonify({"success": False, "error": str(e)})
-                finally:
-                    fortune_ending = False
-            else:
-                return jsonify({
-                    "success": False,
-                    "message": "Раунд ещё не закончен",
-                    "time_left": max(0, int(current_fortune_round.get('end_time', 0) - time.time()))
-                })
-    except Exception as e:
-        logger.error(f"Ошибка завершения раунда: {e}")
-        return jsonify({"success": False, "error": str(e)}), 500
+    """Ручное завершение раунда (для админки или тестирования)"""
+    result = end_fortune_round_manual()
+    return jsonify(result)
+
 
 @app.route('/api/fortune/user_bet', methods=['POST'])
 def api_fortune_user_bet():
@@ -2938,28 +2944,14 @@ def api_fortune_user_bet():
     if not is_valid:
         return jsonify({"success": False, "error": "Invalid user_id"}), 400
     with fortune_lock:
-        round_id = current_fortune_round.get('round_id')
-        if not round_id:
-            return jsonify({"success": False, "bet": None, "team": None, "amount": 0})
         for bet in current_fortune_round.get('yellow_bets', []):
             if bet.get('user_id') == user_id:
-                return jsonify({
-                    "success": True,
-                    "bet": bet,
-                    "team": "yellow",
-                    "amount": bet.get('amount', 0),
-                    "net_amount": bet.get('net_amount', 0)
-                })
+                return jsonify({"success": True, "bet": bet, "team": "yellow", "amount": bet.get('amount', 0)})
         for bet in current_fortune_round.get('red_bets', []):
             if bet.get('user_id') == user_id:
-                return jsonify({
-                    "success": True,
-                    "bet": bet,
-                    "team": "red",
-                    "amount": bet.get('amount', 0),
-                    "net_amount": bet.get('net_amount', 0)
-                })
+                return jsonify({"success": True, "bet": bet, "team": "red", "amount": bet.get('amount', 0)})
         return jsonify({"success": True, "bet": None, "team": None, "amount": 0})
+
 
 @app.route('/api/fortune/user_total_bet', methods=['POST'])
 def api_fortune_user_total_bet():
@@ -2971,22 +2963,14 @@ def api_fortune_user_total_bet():
     if not is_valid:
         return jsonify({"success": False, "error": "Invalid user_id"}), 400
     with fortune_lock:
-        total_yellow = 0
-        total_red = 0
         for bet in current_fortune_round.get('yellow_bets', []):
             if bet.get('user_id') == user_id:
-                total_yellow = bet.get('amount', 0)
-                break
+                return jsonify({"success": True, "team": "yellow", "amount": bet.get('amount', 0)})
         for bet in current_fortune_round.get('red_bets', []):
             if bet.get('user_id') == user_id:
-                total_red = bet.get('amount', 0)
-                break
-        if total_yellow > 0:
-            return jsonify({"success": True, "team": "yellow", "amount": total_yellow})
-        elif total_red > 0:
-            return jsonify({"success": True, "team": "red", "amount": total_red})
-        else:
-            return jsonify({"success": True, "team": None, "amount": 0})
+                return jsonify({"success": True, "team": "red", "amount": bet.get('amount', 0)})
+        return jsonify({"success": True, "team": None, "amount": 0})
+
 
 @app.route('/api/fortune/winning_history', methods=['GET'])
 def api_fortune_winning_history():
@@ -3015,6 +2999,7 @@ def api_fortune_winning_history():
                 "avatar_url": row['avatar_url'] or ''
             })
         return jsonify({"success": True, "history": history})
+
 
 @app.route('/api/fortune/history_all', methods=['GET'])
 def api_fortune_history_all():
