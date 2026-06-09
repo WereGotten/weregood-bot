@@ -146,7 +146,7 @@ user_energy_locks = defaultdict(threading.Lock)
 click_queue = Queue()
 click_workers = 25
 
-# ========== ФОРТУНА (НОВАЯ ЛОГИКА) ==========
+# ========== ФОРТУНА ==========
 current_fortune_round = {
     "round_id": None,
     "yellow_pool": 0,
@@ -156,12 +156,10 @@ current_fortune_round = {
     "end_time": None
 }
 fortune_lock = threading.Lock()
-FORTUNE_COMMISSION = 0.07  # 7% комиссия
-FORTUNE_ROUND_DURATION = 300  # 5 минут
+FORTUNE_COMMISSION = 0.07
+FORTUNE_ROUND_DURATION = 300
 fortune_timer_thread_started = False
-ending_round = False  # <--- ДОБАВЬ ЭТУ СТРОКУ
-ending_round_lock = threading.Lock()  # <--- ДОБАВЬ ЭТУ СТРОКУ
-
+fortune_ending = False
 
 def process_click_worker():
     while True:
@@ -172,7 +170,6 @@ def process_click_worker():
         except:
             pass
 
-
 for _ in range(click_workers):
     t = threading.Thread(target=process_click_worker, daemon=True)
     t.start()
@@ -181,7 +178,6 @@ for _ in range(click_workers):
 click_buffer = {}
 click_buffer_lock = threading.Lock()
 BUFFER_FLUSH_INTERVAL = 5
-
 
 def flush_click_buffer():
     while True:
@@ -205,26 +201,21 @@ def flush_click_buffer():
                 with click_buffer_lock:
                     click_buffer[user_id] = click_buffer.get(user_id, 0) + total_clicks
 
-
 def async_click_tasks(user_id, user, earning, old_wg, new_wg, today):
     try:
         update_achievement_progress(user_id, 'autoclicker', 1)
         update_stats_history(today, clicks=1)
-
         if user["total_clicks"] == 0:
             add_log(f"🆕👆 ПЕРВЫЙ КЛИК в игре! +{earning:.4f} WG", user_id, user['username'],
                     old_wg, new_wg, "wg")
         else:
             add_log(f"🖱️ Клик по монете +{earning:.4f} WG", user_id, user['username'],
                     old_wg, new_wg, "wg")
-
         click_queue.put({"user_id": user_id})
     except Exception as e:
         logger.error(f"Async click tasks error: {e}")
 
-
 threading.Thread(target=flush_click_buffer, daemon=True).start()
-
 
 # ========== АВТОМАТИЧЕСКИЙ БЭКАП ==========
 def backup_database():
@@ -241,7 +232,6 @@ def backup_database():
     except Exception as e:
         logger.error(f"Ошибка создания бэкапа: {e}")
 
-
 def schedule_backup():
     while True:
         now = datetime.datetime.now()
@@ -252,14 +242,12 @@ def schedule_backup():
         time.sleep(wait_seconds)
         backup_database()
 
-
 if not DEBUG_MODE:
     threading.Thread(target=schedule_backup, daemon=True).start()
 
 # ========== RATE LIMITING ==========
 rate_limits = defaultdict(list)
 admin_failures = defaultdict(int)
-
 
 def check_rate_limit(key: str, limit: int = 30, window_seconds: int = 10) -> bool:
     if key.startswith("click_"):
@@ -303,14 +291,12 @@ def check_rate_limit(key: str, limit: int = 30, window_seconds: int = 10) -> boo
     elif key.startswith("fortune_bet_"):
         limit = 10
         window_seconds = 30
-
     now = time.time()
     rate_limits[key] = [t for t in rate_limits[key] if now - t < window_seconds]
     if len(rate_limits[key]) >= limit:
         return False
     rate_limits[key].append(now)
     return True
-
 
 def check_ad_cooldown(user_id: int, ad_type: str, cooldown_minutes: int, daily_limit: int) -> Tuple[bool, str]:
     with db.get_cursor() as cursor:
@@ -320,26 +306,21 @@ def check_ad_cooldown(user_id: int, ad_type: str, cooldown_minutes: int, daily_l
             AND watched_at > datetime('now', '-1 day')
         ''', (user_id, ad_type))
         daily_count = cursor.fetchone()[0]
-
         if daily_count >= daily_limit:
             return False, f"Дневной лимит ({daily_limit} раз) исчерпан"
-
         cursor.execute('''
             SELECT watched_at FROM ad_watch_history 
             WHERE user_id = ? AND ad_type = ? 
             ORDER BY watched_at DESC LIMIT 1
         ''', (user_id, ad_type))
         last_watch = cursor.fetchone()
-
         if last_watch:
             last_time = datetime.datetime.fromisoformat(last_watch[0])
             time_passed = (datetime.datetime.now() - last_time).total_seconds() / 60
             if time_passed < cooldown_minutes:
                 remaining = int(cooldown_minutes - time_passed)
                 return False, f"Подождите {remaining} минут перед следующим просмотром"
-
         return True, "OK"
-
 
 def record_ad_watch(user_id: int, ad_type: str):
     with db.get_cursor() as cursor:
@@ -348,15 +329,12 @@ def record_ad_watch(user_id: int, ad_type: str):
             VALUES (?, ?, datetime('now'))
         ''', (user_id, ad_type))
 
-
 def check_admin_bruteforce(ip: str) -> bool:
     return admin_failures[ip] < 10
-
 
 def record_admin_failure(ip: str):
     admin_failures[ip] += 1
     threading.Timer(3600, lambda: admin_failures.pop(ip, None)).start()
-
 
 def validate_ton_address(address: str) -> bool:
     if not address or not isinstance(address, str):
@@ -369,69 +347,53 @@ def validate_ton_address(address: str) -> bool:
         return True
     return False
 
-
 def string_to_hex_payload(text: str) -> str:
     if not text:
         return "00000000"
     return "00000000" + text.encode('utf-8').hex()
 
-
 def check_ton_transaction(sender_wallet, expected_amount, user_id):
     try:
         expected_comment = f"WereGood:{user_id}"
         logger.info(f"🔍 [TON] Сканируем сеть. Юзер: {user_id}, Ожидаем коммент: '{expected_comment}'")
-
         raw_project_address = "0:69fa7db713b9158c72970e3d577b6b3c2605e0f109fbb0443af97c44fd07be3f"
         url = f"https://toncenter.com/api/v2/getTransactions?address={raw_project_address}&limit=40"
-
         api_key = globals().get('TONCENTER_API_KEY') or os.getenv('TONCENTER_API_KEY')
         if api_key:
             url += f"&api_key={api_key}"
-
         response = requests.get(url, timeout=12)
         if response.status_code != 200:
             logger.error(f"❌ [TON] Ошибка API Toncenter: {response.status_code}")
             return False, 0, None
-
         transactions = response.json().get('result', [])
-
         clean_sender = str(sender_wallet).strip()
         friendly_sender = ""
-
         if clean_sender.startswith("0:"):
             friendly_sender = raw_to_user_friendly(clean_sender).lower()
         else:
             friendly_sender = clean_sender.lower()
-
         for page in range(2):
             for tx_data in transactions:
                 in_msg = tx_data.get('in_msg', {})
                 if not in_msg:
                     continue
-
                 value_nano = int(in_msg.get('value', '0'))
                 amount_ton = value_nano / 1e9
                 source_address = str(in_msg.get('source', '')).strip().lower()
-
                 comment = in_msg.get('message', '').strip()
                 if not comment and in_msg.get('msg_data', {}).get('@type') == 'msg.dataText':
                     comment = in_msg.get('msg_data', {}).get('text', '').strip()
-
                 is_comment_match = (expected_comment in comment)
-
                 is_wallet_match = False
                 if friendly_sender and (friendly_sender in source_address or source_address in friendly_sender):
                     is_wallet_match = True
-
                 if not is_wallet_match and len(friendly_sender) > 10 and len(source_address) > 10:
                     core_sender = friendly_sender[3:]
                     core_source = source_address[3:]
                     if core_sender in core_source or core_source in core_sender:
                         is_wallet_match = True
-
                 if (is_comment_match or is_wallet_match) and (amount_ton >= (expected_amount - 0.02)):
                     tx_hash = tx_data.get('transaction_id', {}).get('hash')
-
                     if 'used_transaction_lock' in globals() and 'db' in globals():
                         with used_transaction_lock:
                             with db.get_cursor() as cursor:
@@ -441,10 +403,8 @@ def check_ton_transaction(sender_wallet, expected_amount, user_id):
                                     continue
                                 cursor.execute("INSERT INTO used_ton_transactions (tx_hash, user_id) VALUES (?, ?)",
                                                (tx_hash, user_id))
-
                     logger.info(f"✅ [TON] Транзакция УСПЕШНО НАЙДЕНА! Хэш: {tx_hash}")
                     return True, amount_ton, tx_hash
-
             if transactions and 'transaction_id' in transactions[-1] and page == 0:
                 lt = transactions[-1].get('lt')
                 last_hash = transactions[-1]['transaction_id'].get('hash')
@@ -458,12 +418,10 @@ def check_ton_transaction(sender_wallet, expected_amount, user_id):
                     break
             else:
                 break
-
         return False, 0, None
     except Exception as e:
         logger.error(f"❌ Ошибка в check_ton_transaction: {e}", exc_info=True)
         return False, 0, None
-
 
 def convert_ton_address_to_raw(address: str) -> str:
     if not address:
@@ -484,7 +442,6 @@ def convert_ton_address_to_raw(address: str) -> str:
         logger.error(f"Ошибка конвертации адреса {address}: {e}")
         return address
 
-
 def check_origin():
     origin = request.headers.get('Origin', '')
     allowed_origins = [
@@ -499,7 +456,6 @@ def check_origin():
         return True
     return origin in allowed_origins or origin == ''
 
-
 @app.before_request
 def before_request():
     if request.path.startswith('/static') or request.path == '/health' or request.path.startswith(
@@ -509,7 +465,6 @@ def before_request():
     if not check_origin():
         logger.warning(f"CSRF попытка с Origin: {request.headers.get('Origin')}")
         return jsonify({"error": "Forbidden", "message": "Invalid origin"}), 403
-
 
 @app.after_request
 def add_security_headers(response):
@@ -526,7 +481,6 @@ def add_security_headers(response):
     response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
     return response
 
-
 def require_admin(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -541,16 +495,13 @@ def require_admin(f):
             return jsonify({"error": "Доступ запрещён"}), 403
         admin_failures.pop(client_ip, None)
         return f(*args, **kwargs)
-
     return decorated_function
-
 
 # ========== БАЗА ДАННЫХ ==========
 class Database:
     def __init__(self, db_file):
         self.db_file = db_file
         self.local = threading.local()
-
     @contextmanager
     def get_cursor(self):
         if not hasattr(self.local, 'conn') or self.local.conn is None:
@@ -574,7 +525,6 @@ class Database:
         finally:
             cursor.close()
 
-
 def repair_database():
     if not os.path.exists(DATABASE_PATH):
         return True
@@ -597,7 +547,6 @@ def repair_database():
         logger.error(f"Ошибка восстановления БД: {e}")
         return False
 
-
 repair_database()
 db = Database(DATABASE_PATH)
 
@@ -613,37 +562,30 @@ ALLOWED_UPDATE_FIELDS = {
 
 MAX_USER_CACHE = 5000
 
-
 def invalidate_cache(user_id):
     if user_id in user_cache:
         del user_cache[user_id]
         if user_id in user_cache_time:
             del user_cache_time[user_id]
 
-
 def get_user(user_id, force_refresh=False, username=None, first_name=None, last_name=None, avatar_url=None):
     now = time.time()
-
     if not force_refresh and user_id in user_cache:
         if now - user_cache_time.get(user_id, 0) < CACHE_TTL:
             return user_cache[user_id].copy()
-
     with db.get_cursor() as cursor:
         cursor.execute("SELECT * FROM users WHERE user_id=?", (user_id,))
         row = cursor.fetchone()
-
         if not row:
             now_time = time.time()
             ref_code = hashlib.md5(str(user_id).encode()).hexdigest()[:8]
             founder_id = 5264622363
             role = "founder" if user_id == founder_id else "player"
             unlocked = json.dumps(["player", "founder"]) if role == "founder" else json.dumps(["player"])
-
             final_username = username if username else ""
             final_first_name = first_name if first_name else ""
             final_last_name = last_name if last_name else ""
             final_avatar_url = avatar_url if avatar_url else ""
-
             try:
                 cursor.execute('''
                     INSERT INTO users (
@@ -667,7 +609,6 @@ def get_user(user_id, force_refresh=False, username=None, first_name=None, last_
                 logger.error(f"Ошибка создания пользователя {user_id}: {e}")
                 cursor.execute("SELECT * FROM users WHERE user_id=?", (user_id,))
                 row = cursor.fetchone()
-
         if not row:
             default_user = {
                 "user_id": user_id, "wg": 0, "lp": 0, "energy": 500, "last_energy_update": time.time(),
@@ -688,7 +629,6 @@ def get_user(user_id, force_refresh=False, username=None, first_name=None, last_
                     if uid in user_cache_time:
                         del user_cache_time[uid]
             return default_user
-
         upgrade_counts = json.loads(row['upgrade_counts']) if row['upgrade_counts'] else {1: 0, 2: 0, 3: 0}
         if isinstance(upgrade_counts, dict):
             upgrade_counts = {int(k): v for k, v in upgrade_counts.items()}
@@ -704,7 +644,6 @@ def get_user(user_id, force_refresh=False, username=None, first_name=None, last_
                 unlocked_prefixes = json.loads(row['unlocked_prefixes'])
             except:
                 unlocked_prefixes = ["player"]
-
         user_data = {
             "user_id": row['user_id'], "wg": row['wg'], "lp": row['lp'], "energy": row['energy'],
             "last_energy_update": row['last_energy_update'],
@@ -728,11 +667,9 @@ def get_user(user_id, force_refresh=False, username=None, first_name=None, last_
             "banned_by": row['banned_by'] if 'banned_by' in row.keys() else 0,
             "completed_achievements": row['completed_achievements'] if 'completed_achievements' in row.keys() else 0
         }
-
         user_cache[user_id] = user_data
         user_cache_time[user_id] = now
         return user_data
-
 
 def safe_update_user(user_id, **kwargs):
     with db.get_cursor() as cursor:
@@ -748,7 +685,6 @@ def safe_update_user(user_id, **kwargs):
             cursor.execute(f'UPDATE users SET "{key}" = ? WHERE user_id = ?', (value, user_id))
     invalidate_cache(user_id)
 
-
 def validate_user_id(user_id):
     try:
         user_id = int(user_id)
@@ -756,13 +692,11 @@ def validate_user_id(user_id):
     except (TypeError, ValueError):
         return False, None
 
-
 def sanitize_string(text, max_length=100):
     if not isinstance(text, str):
         return ''
     text = re.sub(r'[<>\"\'();]', '', text)
     return text[:max_length]
-
 
 def escape_html(text: str) -> str:
     if not text:
@@ -776,13 +710,11 @@ def escape_html(text: str) -> str:
     }
     return "".join(html_escape_table.get(c, c) for c in text)
 
-
 # ========== ДОСТИЖЕНИЯ ФУНКЦИИ ==========
 def get_achievements_list():
     with db.get_cursor() as cursor:
         cursor.execute('SELECT * FROM achievements ORDER BY id')
         return [dict(row) for row in cursor.fetchall()]
-
 
 def get_user_achievements(user_id):
     with db.get_cursor() as cursor:
@@ -793,7 +725,6 @@ def get_user_achievements(user_id):
             ORDER BY a.id
         ''', (user_id,))
         rows = cursor.fetchall()
-
         result = []
         completed_count = 0
         for row in rows:
@@ -803,9 +734,7 @@ def get_user_achievements(user_id):
             if ach['is_completed']:
                 completed_count += 1
             result.append(ach)
-
         return result, completed_count
-
 
 def update_achievement_progress(user_id, achievement_name, increment=1, set_value=None):
     with db.get_cursor() as cursor:
@@ -813,27 +742,21 @@ def update_achievement_progress(user_id, achievement_name, increment=1, set_valu
         ach = cursor.fetchone()
         if not ach:
             return False
-
         ach_id = ach['id']
         target = ach['target_count']
-
         cursor.execute('''
             SELECT id, current_count, is_completed FROM user_achievements 
             WHERE user_id = ? AND achievement_id = ?
         ''', (user_id, ach_id))
         existing = cursor.fetchone()
-
         if existing and existing['is_completed']:
             return True
-
         if set_value is not None:
             new_count = set_value
         else:
             new_count = (existing['current_count'] if existing else 0) + increment
-
         new_count = min(new_count, target)
         is_completed = new_count >= target
-
         if existing:
             cursor.execute('''
                 UPDATE user_achievements 
@@ -847,7 +770,6 @@ def update_achievement_progress(user_id, achievement_name, increment=1, set_valu
                 VALUES (?, ?, ?, ?, ?)
             ''', (user_id, ach_id, new_count, is_completed,
                   datetime.datetime.now().isoformat() if is_completed else None))
-
         if is_completed:
             cursor.execute('''
                 UPDATE users SET completed_achievements = (
@@ -859,13 +781,10 @@ def update_achievement_progress(user_id, achievement_name, increment=1, set_valu
             update_legend_prefixes()
             user = get_user(user_id)
             add_log(f"🏆 ВЫПОЛНИЛ ДОСТИЖЕНИЕ: {achievement_name}!", user_id, user['username'])
-
             ach_display = get_achievement_display_name(achievement_name)
             send_telegram_message(user_id,
                                   f"🏆 ПОЗДРАВЛЯЕМ!\n\nВы выполнили достижение: {ach_display}!\n\nПродолжайте в том же духе! 🎉")
-
         return True
-
 
 def get_achievement_display_name(achievement_name):
     names = {
@@ -882,7 +801,6 @@ def get_achievement_display_name(achievement_name):
     }
     return names.get(achievement_name, achievement_name)
 
-
 def update_legend_prefixes():
     with db.get_cursor() as cursor:
         cursor.execute('''
@@ -893,9 +811,7 @@ def update_legend_prefixes():
             LIMIT 50
         ''')
         top_players = cursor.fetchall()
-
         top_5_ids = [row['user_id'] for row in top_players[:5]]
-
         if top_5_ids:
             placeholders = ','.join(['?'] * len(top_5_ids))
             cursor.execute(f'''
@@ -904,13 +820,11 @@ def update_legend_prefixes():
             ''', top_5_ids)
         else:
             cursor.execute("UPDATE users SET role = 'player' WHERE role = 'legend'")
-
         for user_id in top_5_ids:
             cursor.execute('''
                 UPDATE users SET role = 'legend' WHERE user_id = ? AND role != 'legend'
             ''', (user_id,))
             invalidate_cache(user_id)
-
         for user_id in top_5_ids:
             cursor.execute('SELECT unlocked_prefixes FROM users WHERE user_id = ?', (user_id,))
             row = cursor.fetchone()
@@ -922,7 +836,6 @@ def update_legend_prefixes():
                                    (json.dumps(unlocked), user_id))
                     invalidate_cache(user_id)
 
-
 def get_achievements_top(limit=50):
     with db.get_cursor() as cursor:
         cursor.execute('''
@@ -932,7 +845,6 @@ def get_achievements_top(limit=50):
             LIMIT ?
         ''', (limit,))
         rows = cursor.fetchall()
-
         result = []
         for i, row in enumerate(rows):
             if row['username'] and row['username'] != '':
@@ -941,7 +853,6 @@ def get_achievements_top(limit=50):
                 display_name = row['first_name']
             else:
                 display_name = f"Player_{row['user_id']}"
-
             result.append({
                 'rank': i + 1,
                 'user_id': row['user_id'],
@@ -952,12 +863,10 @@ def get_achievements_top(limit=50):
             })
         return result
 
-
 def get_user_referrals_count(user_id):
     with db.get_cursor() as cursor:
         cursor.execute("SELECT COUNT(*) FROM referrals WHERE referrer_id = ?", (user_id,))
         return cursor.fetchone()[0]
-
 
 # ========== ИНИЦИАЛИЗАЦИЯ БД ==========
 def init_db():
@@ -999,7 +908,6 @@ def init_db():
                 daily_clicks INTEGER DEFAULT 0
             )
         ''')
-
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS lottery (
                 id INTEGER PRIMARY KEY,
@@ -1013,7 +921,6 @@ def init_db():
                 lottery_phase TEXT DEFAULT 'buy'
             )
         ''')
-
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS referrals (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1026,7 +933,6 @@ def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
-
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS votes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1037,7 +943,6 @@ def init_db():
                 UNIQUE(voter_id, target_id)
             )
         ''')
-
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS lottery_tickets_history (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1047,7 +952,6 @@ def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
-
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS successful_payments (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1058,7 +962,6 @@ def init_db():
                 granted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
-
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS used_ton_transactions (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1067,7 +970,6 @@ def init_db():
                 used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
-
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS system_logs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1079,7 +981,6 @@ def init_db():
                 log_type TEXT DEFAULT 'user'
             )
         ''')
-
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS withdrawal_requests (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1093,7 +994,6 @@ def init_db():
                 processed_at TEXT
             )
         ''')
-
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS stats_history (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1106,7 +1006,6 @@ def init_db():
                 new_users INTEGER DEFAULT 0
             )
         ''')
-
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS daily_rewards (
                 user_id INTEGER PRIMARY KEY,
@@ -1116,7 +1015,6 @@ def init_db():
                 recovered_count INTEGER DEFAULT 0
             )
         ''')
-
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS promo_codes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1132,7 +1030,6 @@ def init_db():
                 is_active BOOLEAN DEFAULT 1
             )
         ''')
-
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS promo_activations (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1142,7 +1039,6 @@ def init_db():
                 FOREIGN KEY (promo_id) REFERENCES promo_codes(id)
             )
         ''')
-
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS ad_watch_history (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1151,7 +1047,6 @@ def init_db():
                 watched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
-
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS tasks (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1169,7 +1064,6 @@ def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
-
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS user_tasks (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1180,7 +1074,6 @@ def init_db():
                 UNIQUE(user_id, task_id)
             )
         ''')
-
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS achievements (
                 id INTEGER PRIMARY KEY,
@@ -1191,7 +1084,6 @@ def init_db():
                 target_count INTEGER NOT NULL
             )
         ''')
-
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS user_achievements (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1203,7 +1095,6 @@ def init_db():
                 UNIQUE(user_id, achievement_id)
             )
         ''')
-
         # ========== НОВЫЕ ТАБЛИЦЫ ДЛЯ ФОРТУНЫ ==========
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS fortune_bets (
@@ -1216,7 +1107,6 @@ def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
-
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS fortune_rounds (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1228,7 +1118,6 @@ def init_db():
                 red_pool REAL DEFAULT 0
             )
         ''')
-
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS fortune_history (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1241,7 +1130,6 @@ def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
-
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS fortune_active_bets (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1253,7 +1141,6 @@ def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
-
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_fortune_bets_round ON fortune_bets(round_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_fortune_bets_user ON fortune_bets(user_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_fortune_rounds_id ON fortune_rounds(round_id)')
@@ -1265,9 +1152,7 @@ def init_db():
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_logs_timestamp ON system_logs(timestamp DESC)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_logs_user_id ON system_logs(user_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_tasks ON user_tasks(user_id, task_id)')
-
-        # ========== МИГРАЦИЯ СТАРЫХ ТАБЛИЦ (ДОБАВЛЕНИЕ ОТСУТСТВУЮЩИХ КОЛОНОК) ==========
-        # Добавление колонок для users
+        # ========== МИГРАЦИЯ СТАРЫХ ТАБЛИЦ ==========
         for col in ['banned_until', 'ban_reason', 'banned_by']:
             try:
                 cursor.execute(f"ALTER TABLE users ADD COLUMN {col} DEFAULT 0")
@@ -1278,47 +1163,36 @@ def init_db():
                 cursor.execute(f"ALTER TABLE users ADD COLUMN {col} INTEGER DEFAULT 0")
             except:
                 pass
-
-        # Добавление колонок для lottery
         for col in ['is_drawn', 'draw_time', 'global_ticket_counter', 'lottery_phase']:
             try:
                 cursor.execute(f"ALTER TABLE lottery ADD COLUMN {col} DEFAULT 0")
             except:
                 pass
-
-        # ========== ПРОВЕРКА КОЛОНОК ДЛЯ ФОРТУНЫ (ДЛЯ СТАРЫХ БД) ==========
-        # Проверка колонок в fortune_rounds
         try:
             cursor.execute("SELECT end_time FROM fortune_rounds LIMIT 1")
         except sqlite3.OperationalError:
             cursor.execute("ALTER TABLE fortune_rounds ADD COLUMN end_time TIMESTAMP")
             print("✅ Добавлена колонка end_time в fortune_rounds")
-
         try:
             cursor.execute("SELECT winner_team FROM fortune_rounds LIMIT 1")
         except sqlite3.OperationalError:
             cursor.execute("ALTER TABLE fortune_rounds ADD COLUMN winner_team TEXT")
             print("✅ Добавлена колонка winner_team в fortune_rounds")
-
         try:
             cursor.execute("SELECT yellow_pool FROM fortune_rounds LIMIT 1")
         except sqlite3.OperationalError:
             cursor.execute("ALTER TABLE fortune_rounds ADD COLUMN yellow_pool REAL DEFAULT 0")
             print("✅ Добавлена колонка yellow_pool в fortune_rounds")
-
         try:
             cursor.execute("SELECT red_pool FROM fortune_rounds LIMIT 1")
         except sqlite3.OperationalError:
             cursor.execute("ALTER TABLE fortune_rounds ADD COLUMN red_pool REAL DEFAULT 0")
             print("✅ Добавлена колонка red_pool в fortune_rounds")
-
-        # Проверка колонки net_amount в fortune_active_bets
         try:
             cursor.execute("SELECT net_amount FROM fortune_active_bets LIMIT 1")
         except sqlite3.OperationalError:
             cursor.execute("ALTER TABLE fortune_active_bets ADD COLUMN net_amount REAL DEFAULT 0")
             print("✅ Добавлена колонка net_amount в fortune_active_bets")
-
         # ========== ЗАПОЛНЕНИЕ ДОСТИЖЕНИЙ ==========
         achievements_list = [
             ('autoclicker', '🏆 Автокликер', 'Сделать 50 000 кликов по монете', '🖱️', 50000),
@@ -1332,22 +1206,17 @@ def init_db():
             ('spender', '💸 Транжира', 'Потратить 50 000 WG Coin', '💎', 50000),
             ('task_master', '📋 Выполнитель', 'Выполнить 10 заданий', '✅', 10)
         ]
-
         for ach in achievements_list:
             cursor.execute('''
                 INSERT OR IGNORE INTO achievements (name, display_name, description, icon, target_count)
                 VALUES (?, ?, ?, ?, ?)
             ''', ach)
-
-        # ========== СОЗДАНИЕ ЗАПИСИ ЛОТЕРЕИ, ЕСЛИ ОТСУТСТВУЕТ ==========
         cursor.execute("SELECT * FROM lottery LIMIT 1")
         if not cursor.fetchone():
             cursor.execute(
                 "INSERT INTO lottery (prize_pool, tickets, winning_numbers, is_drawn, lottery_phase) VALUES (0, '[]', '', 0, 'buy')")
 
-
 init_db()
-
 
 def is_banned(user_id):
     with db.get_cursor() as cursor:
@@ -1360,7 +1229,6 @@ def is_banned(user_id):
                               "%Y-%m-%d %H:%M:%S")}
     return False, None
 
-
 def ban_user(user_id, days, reason, admin_id):
     until = time.time() + (days * 86400)
     with db.get_cursor() as cursor:
@@ -1370,7 +1238,6 @@ def ban_user(user_id, days, reason, admin_id):
     logger.info(f"Пользователь {user_id} забанен на {days} дней. Причина: {reason}")
     add_log(f"🔨 ЗАБАНИЛ пользователя на {days} дней. Причина: {reason}", admin_id, "Admin")
 
-
 def unban_user(user_id):
     with db.get_cursor() as cursor:
         cursor.execute("UPDATE users SET banned_until = 0, ban_reason = '', banned_by = 0 WHERE user_id = ?",
@@ -1378,7 +1245,6 @@ def unban_user(user_id):
     invalidate_cache(user_id)
     logger.info(f"Пользователь {user_id} разбанен")
     add_log(f"🔓 РАЗБАНИЛ пользователя", user_id, "Admin")
-
 
 def delete_user(user_id):
     with db.get_cursor() as cursor:
@@ -1396,16 +1262,13 @@ def delete_user(user_id):
         cursor.execute("DELETE FROM lottery_tickets_history WHERE user_id = ?", (user_id,))
         cursor.execute("DELETE FROM fortune_bets WHERE user_id = ?", (user_id,))
         cursor.execute("DELETE FROM fortune_history WHERE user_id = ?", (user_id,))
-
         global lottery_tickets
         lottery_tickets = [t for t in lottery_tickets if t.get("user_id") != user_id]
         save_lottery()
-
     invalidate_cache(user_id)
     logger.info(f"Пользователь {user_id} полностью удалён из БД")
     add_log(f"🗑️ ПОЛНОСТЬЮ УДАЛИЛ пользователя из БД", 0, "System")
     return True
-
 
 def add_log(action, user_id, username, old_value=None, new_value=None, currency="", details=""):
     log_message = action
@@ -1432,7 +1295,6 @@ def add_log(action, user_id, username, old_value=None, new_value=None, currency=
             (timestamp, log_message, user_id, username, details))
     logger.info(f"LOG: {log_message} (user={user_id})")
 
-
 def add_admin_log(action, admin_id, admin_name, target_id=None, target_name=None, details=""):
     if target_id:
         log_msg = f"👑 {action} | Админ: {admin_name} (ID: {admin_id}) | Игрок: {target_name} (ID: {target_id})"
@@ -1450,7 +1312,6 @@ def add_admin_log(action, admin_id, admin_name, target_id=None, target_name=None
             'INSERT INTO system_logs (timestamp, action, user_id, username, details, log_type) VALUES (?, ?, ?, ?, ?, "admin")',
             (timestamp, log_msg, admin_id, admin_name, details))
     logger.info(f"ADMIN: {log_msg}")
-
 
 def get_logs(log_type='all', limit=100, offset=0, date=None, action_filter=None, user_id_filter=None):
     with db.get_cursor() as cursor:
@@ -1477,20 +1338,17 @@ def get_logs(log_type='all', limit=100, offset=0, date=None, action_filter=None,
         params.append(offset)
         cursor.execute(query, params)
         rows = cursor.fetchall()
-
         count_query = "SELECT COUNT(*) as total FROM system_logs"
         if conditions:
             count_query += " WHERE " + " AND ".join(conditions)
         cursor.execute(count_query, params[:len(params) - 2] if len(params) > 2 else [])
         total = cursor.fetchone()['total']
-
         logs = []
         for row in rows:
             logs.append({"id": row['id'], "timestamp": row['timestamp'], "action": escape_html(row['action']),
                          "user_id": row['user_id'], "username": escape_html(row['username']),
                          "details": escape_html(row['details']), "type": row['log_type']})
         return logs, total
-
 
 def update_stats_history(date, clicks=0, ad_views=0, stars=0, online=0, tickets=0, users=0):
     with db.get_cursor() as cursor:
@@ -1501,7 +1359,6 @@ def update_stats_history(date, clicks=0, ad_views=0, stars=0, online=0, tickets=
                clicks = clicks + ?, ad_views = ad_views + ?, stars_donated = stars_donated + ?, 
                online_peak = MAX(online_peak, ?), tickets_sold = tickets_sold + ?, new_users = new_users + ?''',
             (date, clicks, ad_views, stars, online, tickets, users, clicks, ad_views, stars, online, tickets, users))
-
 
 def get_stats_history(period='week', metric='clicks'):
     now = datetime.datetime.now()
@@ -1553,7 +1410,6 @@ def get_stats_history(period='week', metric='clicks'):
                 data.append(val or 0)
     return {"labels": labels, "data": data}
 
-
 def create_withdrawal_request_db(user_id, username, amount, address, network):
     if network == "TON" and not validate_ton_address(address):
         raise ValueError("Invalid TON address")
@@ -1571,7 +1427,6 @@ def create_withdrawal_request_db(user_id, username, amount, address, network):
     return {"id": withdrawal_id, "user_id": user_id, "username": username, "amount": amount, "address": address,
             "network": network, "status": "pending", "created_at": created_at, "processed_at": None}
 
-
 def get_withdrawal_requests_db():
     with db.get_cursor() as cursor:
         cursor.execute("SELECT * FROM withdrawal_requests ORDER BY id DESC")
@@ -1583,7 +1438,6 @@ def get_withdrawal_requests_db():
                  "address": row['address'], "network": row['network'], "status": row['status'],
                  "created_at": row['created_at'], "processed_at": row['processed_at']})
         return withdrawals
-
 
 def process_withdrawal_db(withdrawal_id, status, admin_id, admin_name):
     with db.get_cursor() as cursor:
@@ -1604,7 +1458,6 @@ def process_withdrawal_db(withdrawal_id, status, admin_id, admin_name):
                                   f"❌ Ваша заявка на вывод {w['amount']} USDT отклонена. Средства возвращены на баланс.")
         return True
 
-
 def send_telegram_message(chat_id, text, reply_markup=None):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     try:
@@ -1616,7 +1469,6 @@ def send_telegram_message(chat_id, text, reply_markup=None):
     except Exception as e:
         logger.error(f"Ошибка отправки сообщения: {e}")
 
-
 def calculate_energy(user_data):
     now = time.time()
     last = user_data["last_energy_update"]
@@ -1627,16 +1479,13 @@ def calculate_energy(user_data):
     new_energy = min(max_energy, user_data["energy"] + recovered)
     return new_energy, seconds_passed
 
-
 def get_energy_regen_text(max_energy, current_energy):
     if current_energy >= max_energy:
         return "⚡ Энергия полна!"
-
     recovery_rate = max_energy / 7200
     needed = max_energy - current_energy
     seconds_needed = int(needed / recovery_rate)
     minutes_needed = (seconds_needed + 59) // 60
-
     if minutes_needed < 60:
         return f"🕐 Осталось {minutes_needed} мин"
     else:
@@ -1647,7 +1496,6 @@ def get_energy_regen_text(max_energy, current_energy):
         else:
             return f"🕐 Осталось {hours} ч"
 
-
 def update_energy_in_db(user_id, user_data, new_energy):
     now = time.time()
     with db.get_cursor() as cursor:
@@ -1657,14 +1505,12 @@ def update_energy_in_db(user_id, user_data, new_energy):
     invalidate_cache(user_id)
     return new_energy
 
-
 def spend_energy(user_id, user_data, amount=1):
     with user_energy_locks[user_id]:
         current_energy, _ = calculate_energy(user_data)
         if current_energy < amount:
             return False, current_energy
         new_energy = current_energy - amount
-
         now = time.time()
         with db.get_cursor() as cursor:
             cursor.execute(
@@ -1676,18 +1522,15 @@ def spend_energy(user_id, user_data, amount=1):
         invalidate_cache(user_id)
         return True, new_energy
 
-
 def add_usdt(user_id, amount):
     with db.get_cursor() as cursor:
         cursor.execute("UPDATE users SET usdt = usdt + ? WHERE user_id=?", (amount, user_id))
     invalidate_cache(user_id)
 
-
 def add_wins(user_id, amount=1):
     with db.get_cursor() as cursor:
         cursor.execute("UPDATE users SET wins = wins + ? WHERE user_id=?", (amount, user_id))
     invalidate_cache(user_id)
-
 
 def add_referral_earning(referrer_id, referred_id, spent_lp):
     earning = spent_lp * 0.05
@@ -1707,7 +1550,6 @@ def add_referral_earning(referrer_id, referred_id, spent_lp):
             update_achievement_progress(referrer_id, 'social', 1)
             return True
     return False
-
 
 def create_stars_invoice(chat_id, user_id):
     try:
@@ -1730,7 +1572,6 @@ def create_stars_invoice(chat_id, user_id):
         logger.error(f"Ошибка в create_stars_invoice: {e}")
         return None
 
-
 def grant_energy_upgrade(user_id):
     try:
         with db.get_cursor() as cursor:
@@ -1739,28 +1580,21 @@ def grant_energy_upgrade(user_id):
                 FROM users WHERE user_id = ?
             """, (user_id,))
             user = cursor.fetchone()
-
             if not user:
                 return False, "Пользователь не найден", None
-
             current_upgrades = user['energy_upgrades'] or 0
-
             if current_upgrades >= 15:
                 return False, "Максимум улучшений! (15/15)", None
-
             new_upgrades = current_upgrades + 1
             new_max_energy = 500 + (new_upgrades * 40)
             new_lp = (user['lp'] or 0) + 50
-
             current_energy = user['energy'] or 0
             last_update = user['last_energy_update'] or time.time()
             now = time.time()
-
             seconds_passed = now - last_update
             recovery_rate = user['max_energy'] / 7200
             recovered = int(seconds_passed * recovery_rate)
             recalculated_energy = min(user['max_energy'], current_energy + recovered)
-
             cursor.execute("""
                 UPDATE users 
                 SET energy_upgrades = ?, 
@@ -1770,9 +1604,7 @@ def grant_energy_upgrade(user_id):
                     energy = ?
                 WHERE user_id = ?
             """, (new_upgrades, new_max_energy, new_lp, now, recalculated_energy, user_id))
-
             invalidate_cache(user_id)
-
             try:
                 add_admin_log(
                     f"⭐ Купил энергетический усилитель | +40 макс. энергии, +50 LP",
@@ -1782,21 +1614,18 @@ def grant_energy_upgrade(user_id):
                 )
             except Exception as log_error:
                 logger.error(f"Ошибка при добавлении лога: {log_error}")
-
             return True, "✨ Улучшение активировано! +40 макс. энергии и +50 LP!", {
                 "energy_upgrades": new_upgrades,
                 "max_energy": new_max_energy,
                 "lp": new_lp,
                 "energy": recalculated_energy
             }
-
     except sqlite3.Error as db_error:
         logger.error(f"Ошибка БД в grant_energy_upgrade для user {user_id}: {db_error}")
         return False, f"Ошибка базы данных: {db_error}", None
     except Exception as e:
         logger.error(f"Неожиданная ошибка в grant_energy_upgrade для user {user_id}: {e}", exc_info=True)
         return False, "Внутренняя ошибка сервера", None
-
 
 def handle_successful_payment(chat_id, payment_info):
     try:
@@ -1827,35 +1656,29 @@ def handle_successful_payment(chat_id, payment_info):
         logger.error(f"Ошибка в handle_successful_payment: {e}")
         return False
 
-
 def get_user_ton_wallet(user_id):
     with db.get_cursor() as cursor:
         cursor.execute("SELECT ton_wallet FROM users WHERE user_id = ?", (user_id,))
         row = cursor.fetchone()
         return row['ton_wallet'] if row else None
 
-
 def update_lottery_phase():
     global lottery_phase
     now = datetime.datetime.now()
     current_hour = now.hour
-
     if 21 <= current_hour or current_hour < 0:
         new_phase = "reveal"
     else:
         new_phase = "buy"
-
     if lottery_phase != new_phase:
         lottery_phase = new_phase
         with db.get_cursor() as cursor:
             cursor.execute("UPDATE lottery SET lottery_phase = ? WHERE id = 1", (lottery_phase,))
         add_log(f"🔄 Смена фазы лотереи: {lottery_phase}", 0, "System")
 
-
 def check_lottery_phase():
     update_lottery_phase()
     return lottery_phase
-
 
 def load_lottery():
     global lottery_pool, lottery_tickets, global_ticket_counter, winning_numbers, is_drawn, draw_time, lottery_phase
@@ -1879,7 +1702,6 @@ def load_lottery():
                 draw_time = None
     update_lottery_phase()
 
-
 def save_lottery():
     with db.get_cursor() as cursor:
         cursor.execute(
@@ -1887,13 +1709,11 @@ def save_lottery():
             (lottery_pool, json.dumps(lottery_tickets), global_ticket_counter, json.dumps(winning_numbers),
              1 if is_drawn else 0, draw_time.isoformat() if draw_time else None, lottery_phase))
 
-
 load_lottery()
 
 UPGRADE_CONFIG = {1: {"base_cost": 1.5, "bonus": 0.01, "name": "Новичок"},
                   2: {"base_cost": 10, "bonus": 0.03, "name": "Профессионал"},
                   3: {"base_cost": 70, "bonus": 0.07, "name": "Мастер"}}
-
 
 def get_upgrade_cost(upgrade_id, current_count):
     config = UPGRADE_CONFIG[upgrade_id]
@@ -1901,7 +1721,6 @@ def get_upgrade_cost(upgrade_id, current_count):
     if current_count == 0:
         return base_cost
     return base_cost * (1.65 ** current_count)
-
 
 def get_total_earning(upgrade_counts):
     base = 0.01
@@ -1912,14 +1731,11 @@ def get_total_earning(upgrade_counts):
             total_bonus += UPGRADE_CONFIG[uid_int]["bonus"] * count
     return base + total_bonus
 
-
 def generate_ticket_numbers():
     return sorted(random.sample(range(1, 81), 12))
 
-
 def generate_winning_numbers():
     return sorted(random.sample(range(1, 81), 12))
-
 
 def unlock_prefix(user_id, prefix_id):
     with db.get_cursor() as cursor:
@@ -1933,14 +1749,12 @@ def unlock_prefix(user_id, prefix_id):
             return True
     return False
 
-
 def update_online_count():
     now = time.time()
     with online_users_lock:
         to_remove = [uid for uid, last_seen in online_users.items() if now - last_seen > 300]
         for uid in to_remove:
             del online_users[uid]
-
 
 def buy_ticket(user_id, user_data):
     global lottery_pool, lottery_tickets, global_ticket_counter
@@ -1985,7 +1799,6 @@ def buy_ticket(user_id, user_data):
         update_achievement_progress(user_id, 'gambler', 1)
         return True, f"Билет #{ticket_num} куплен!"
 
-
 def reveal_all_tickets(user_id):
     with lottery_lock:
         if not is_drawn:
@@ -2002,7 +1815,6 @@ def reveal_all_tickets(user_id):
             add_log(f"🔓 Открыл все клетки ({revealed_count} клеток)", user_id, str(user_id))
             return True, f"Открыто {revealed_count} клеток!"
         return False, "Нет неоткрытых клеток"
-
 
 def perform_draw():
     global winning_numbers, is_drawn, draw_time, lottery_phase
@@ -2025,7 +1837,6 @@ def perform_draw():
             add_log(f"🎲 Розыгрыш лотереи начался. Выигрышные номера: {winning_numbers}", 0, "System")
             threading.Timer(10800, auto_reveal_and_distribute).start()
 
-
 def auto_reveal_and_distribute():
     time.sleep(10800)
     with lottery_lock:
@@ -2043,7 +1854,6 @@ def auto_reveal_and_distribute():
             time.sleep(3600)
             reset_lottery()
             schedule_next_draw()
-
 
 def distribute_prizes():
     global lottery_pool, lottery_tickets
@@ -2080,7 +1890,6 @@ def distribute_prizes():
     except:
         pass
 
-
 def reset_lottery():
     global is_drawn, winning_numbers, draw_time, lottery_tickets, lottery_pool, global_ticket_counter, lottery_phase
     with lottery_lock:
@@ -2098,7 +1907,6 @@ def reset_lottery():
         except:
             pass
 
-
 def schedule_next_draw():
     def wait_and_draw():
         while True:
@@ -2111,20 +1919,7 @@ def schedule_next_draw():
             perform_draw()
             time.sleep(14400)
             reset_lottery()
-
     threading.Thread(target=wait_and_draw, daemon=True).start()
-
-
-def schedule_draw():
-    while True:
-        now = datetime.datetime.now()
-        next_draw = now.replace(hour=21, minute=0, second=0, microsecond=0)
-        if now >= next_draw:
-            next_draw += datetime.timedelta(days=1)
-        wait_seconds = (next_draw - now).total_seconds()
-        time.sleep(wait_seconds)
-        perform_draw()
-
 
 threading.Thread(target=schedule_next_draw, daemon=True).start()
 
@@ -2135,7 +1930,6 @@ DAILY_REWARDS = {1: {"wg": 15, "lp": 0, "energy_limit": 0, "description": "15 WG
                  5: {"wg": 0, "lp": 0, "energy_limit": 15, "description": "+15 к лимиту энергии"},
                  6: {"wg": 150, "lp": 0, "energy_limit": 0, "description": "150 WG"},
                  7: {"wg": 0, "lp": 20, "energy_limit": 0, "description": "20 LP"}}
-
 
 def get_daily_status(user_id):
     check_and_reset_streak(user_id)
@@ -2168,7 +1962,6 @@ def get_daily_status(user_id):
                 "next_claim_time": next_claim_time.isoformat() if next_claim_time else None,
                 "recovered_count": recovered_count, "lost_streak": lost_streak}
 
-
 def give_daily_reward(user_id, day):
     reward = DAILY_REWARDS.get(day)
     if not reward:
@@ -2185,7 +1978,6 @@ def give_daily_reward(user_id, day):
         safe_update_user(user_id, max_energy=new_max_energy)
         add_log(f"🎁 Ежедневная награда: +{reward['energy_limit']} к макс. энергии", user_id, user['username'])
     return True
-
 
 def claim_daily_reward(user_id):
     with db.get_cursor() as cursor:
@@ -2211,7 +2003,6 @@ def claim_daily_reward(user_id):
             (new_day, now.isoformat(), recovered_count, user_id))
         return {"success": True, "msg": f"Награда за {current_day} день получена!", "new_day": new_day}
 
-
 def recover_streak_with_stars(user_id):
     user = get_user(user_id)
     if user['stars'] < 20:
@@ -2235,7 +2026,6 @@ def recover_streak_with_stars(user_id):
         return {"success": True, "msg": f"Серия восстановлена! Вы можете забрать награду за {current_day} день!",
                 "current_day": current_day}
 
-
 def check_and_reset_streak(user_id):
     with db.get_cursor() as cursor:
         cursor.execute("SELECT current_day, last_claim_date FROM daily_rewards WHERE user_id=?", (user_id,))
@@ -2254,7 +2044,6 @@ def check_and_reset_streak(user_id):
             return True
     return False
 
-
 @app.route('/api/reveal_all_tickets_fast', methods=['POST'])
 def api_reveal_all_tickets_fast():
     data = request.json
@@ -2264,14 +2053,11 @@ def api_reveal_all_tickets_fast():
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid:
         return jsonify({"success": False, "msg": "Invalid user_id"}), 400
-
     with lottery_lock:
         if not is_drawn:
             return jsonify({"success": False, "msg": "Розыгрыш ещё не начался!"})
-
         revealed_count = 0
         tickets_revealed = 0
-
         for ticket in lottery_tickets:
             if ticket.get("user_id") == user_id:
                 ticket_revealed = False
@@ -2282,7 +2068,6 @@ def api_reveal_all_tickets_fast():
                         ticket_revealed = True
                 if ticket_revealed:
                     tickets_revealed += 1
-
         if revealed_count > 0:
             save_lottery()
             user = get_user(user_id)
@@ -2290,9 +2075,7 @@ def api_reveal_all_tickets_fast():
                     user['username'])
             return jsonify({"success": True, "msg": f"Открыто {revealed_count} клеток в {tickets_revealed} билетах!",
                             "revealed": revealed_count})
-
         return jsonify({"success": False, "msg": "Нет неоткрытых клеток"})
-
 
 @socketio.on('reveal_cell')
 def handle_reveal_cell(data):
@@ -2324,7 +2107,6 @@ def handle_reveal_cell(data):
                         emit('ticket_completed', {'ticket_number': ticket_number, 'matches': matches})
                 return
 
-
 @socketio.on('reveal_all_tickets')
 def handle_reveal_all_tickets(data):
     user_id = data.get('user_id')
@@ -2334,12 +2116,10 @@ def handle_reveal_all_tickets(data):
     else:
         emit('reveal_error', {'message': msg})
 
-
 @socketio.on('get_draw_status')
 def handle_get_draw_status(data):
     emit('draw_status',
          {'is_drawn': is_drawn, 'winning_numbers': winning_numbers if is_drawn else [], 'lottery_phase': lottery_phase})
-
 
 @socketio.on('get_remaining_time')
 def handle_get_remaining_time(data):
@@ -2362,11 +2142,9 @@ def handle_get_remaining_time(data):
     else:
         emit('remaining_time', {'seconds': 0})
 
-
 @app.route('/')
 def game_page():
     return render_template('game.html')
-
 
 @app.route('/admin')
 def admin_panel_page():
@@ -2381,11 +2159,9 @@ def admin_panel_page():
     admin_failures.pop(client_ip, None)
     return render_template('admin.html')
 
-
 @app.route('/static/<path:filename>')
 def serve_static(filename):
     return send_from_directory('static', filename)
-
 
 @app.route('/claim')
 def claim_promo_page():
@@ -2415,7 +2191,6 @@ def claim_promo_page():
             'has_password': bool(promo['password'])
         }
         return render_template('claim.html', promo=promo_info)
-
 
 @app.route('/api/activate_promo_via_web', methods=['POST'])
 def api_activate_promo_via_web():
@@ -2475,7 +2250,6 @@ def api_activate_promo_via_web():
             {"success": True, "message": f"Вы получили +{promo['reward_amount']} {promo['reward_type'].upper()}!",
              "reward_type": promo['reward_type'], "reward_amount": promo['reward_amount']})
 
-
 @app.route('/health')
 def health_check():
     with online_users_lock:
@@ -2483,7 +2257,6 @@ def health_check():
     return jsonify({"status": "ok", "online_users": online_count, "threads": threading.active_count(),
                     "db_size": os.path.getsize(DATABASE_PATH) if os.path.exists(DATABASE_PATH) else 0,
                     "timestamp": time.time()})
-
 
 @app.route('/tonconnect-manifest.json', methods=['GET'])
 def serve_manifest():
@@ -2497,16 +2270,13 @@ def serve_manifest():
     }
     return jsonify(manifest)
 
-
 @app.route('/terms')
 def terms_page():
     return '<!DOCTYPE html><html><head><title>Условия использования</title></head><body style="background:#0a0a1a; color:white; padding:20px; font-family:system-ui;"><h1>Условия использования WereGood</h1><p>Используя наш сервис, вы соглашаетесь с правилами игры.</p><p>Все внутриигровые транзакции финальны.</p><p>Администрация оставляет за собой право блокировать пользователей за нарушение правил.</p></body></html>'
 
-
 @app.route('/privacy')
 def privacy_page():
     return '<!DOCTYPE html><html><head><title>Политика конфиденциальности</title></head><body style="background:#0a0a1a; color:white; padding:20px; font-family:system-ui;"><h1>Политика конфиденциальности WereGood</h1><p>Мы собираем только ваш Telegram ID и данные профиля для работы игры.</p><p>Данные не передаются третьим лицам.</p><p>Вы можете удалить свои данные, обратившись к администратору.</p></body></html>'
-
 
 # ========== TON API ==========
 @app.route('/api/ton/save_wallet', methods=['POST'])
@@ -2514,13 +2284,11 @@ def api_ton_save_wallet():
     data = request.json or {}
     user_id = data.get('user_id')
     wallet_address = data.get('wallet_address')
-
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid or not wallet_address:
         return jsonify({"success": False, "error": "Неверный ID пользователя или адрес кошелька"}), 400
     if not validate_ton_address(wallet_address):
         return jsonify({"success": False, "error": "Неверный формат TON кошелька"}), 400
-
     try:
         with db.get_cursor() as cursor:
             cursor.execute("UPDATE users SET ton_wallet = ? WHERE user_id = ?", (wallet_address, user_id))
@@ -2534,7 +2302,6 @@ def api_ton_save_wallet():
         logger.error(f"❌ Ошибка при сохранении кошелька в БД: {e}")
         return jsonify({"success": False, "error": "Ошибка базы данных"}), 500
 
-
 @app.route('/api/ton/get_wallet', methods=['POST'])
 def api_ton_get_wallet():
     data = request.json or {}
@@ -2547,7 +2314,6 @@ def api_ton_get_wallet():
         row = cursor.fetchone()
         wallet = row['ton_wallet'] if row else None
     return jsonify({"success": True, "wallet": wallet})
-
 
 @app.route('/api/ton/create_payment', methods=['POST'])
 def api_ton_create_payment():
@@ -2569,7 +2335,6 @@ def api_ton_create_payment():
         "amount_nano": payment_amount_nano,
         "comment": f"WereGood:{user_id}"
     })
-
 
 @app.route('/api/ton/check_payment', methods=['POST'])
 def check_ton_payment_endpoint():
@@ -2622,7 +2387,6 @@ def check_ton_payment_endpoint():
         logger.error(f"❌ Критическая ошибка в check_ton_payment_endpoint: {e}", exc_info=True)
         return jsonify({'confirmed': False, 'error': str(e)}), 500
 
-
 @app.route('/api/ton/disconnect_wallet', methods=['POST'])
 def api_ton_disconnect_wallet():
     data = request.json or {}
@@ -2641,7 +2405,6 @@ def api_ton_disconnect_wallet():
     except Exception as e:
         logger.error(f"❌ Ошибка при отвязке кошелька в БД: {e}")
         return jsonify({"success": False, "error": "Ошибка базы данных"}), 500
-
 
 # ========== LP БУСТЕР API ==========
 @app.route('/api/create_lp_boost_invoice', methods=['POST'])
@@ -2680,7 +2443,6 @@ def api_create_lp_boost_invoice():
         logger.error(f"Ошибка в create_lp_boost_invoice: {e}")
         return jsonify({"success": False, "msg": str(e)}), 500
 
-
 @app.route('/api/ton/create_lp_boost_payment', methods=['POST'])
 def api_ton_create_lp_boost_payment():
     data = request.json or {}
@@ -2701,7 +2463,6 @@ def api_ton_create_lp_boost_payment():
         "amount_nano": payment_amount_nano,
         "comment": f"WereGood_LP:{user_id}"
     })
-
 
 @app.route('/api/ton/check_lp_boost_payment', methods=['POST'])
 def check_lp_boost_payment():
@@ -2739,7 +2500,6 @@ def check_lp_boost_payment():
         logger.error(f"Ошибка в check_lp_boost_payment: {e}", exc_info=True)
         return jsonify({'confirmed': False, 'error': str(e)}), 500
 
-
 @app.route('/api/get_lp_boost_count', methods=['POST'])
 def api_get_lp_boost_count():
     data = request.json or {}
@@ -2756,14 +2516,11 @@ def api_get_lp_boost_count():
         count = row['count'] if row else 0
     return jsonify({"success": True, "count": count})
 
-
 # ========== ФОРТУНА API (ИСПРАВЛЕННАЯ ВЕРСИЯ) ==========
 
 def create_new_fortune_round():
     global current_fortune_round
-
     with fortune_lock:
-        # Проверяем существующий активный раунд в БД
         with db.get_cursor() as cursor:
             cursor.execute('''
                 SELECT round_id FROM fortune_rounds 
@@ -2772,14 +2529,11 @@ def create_new_fortune_round():
                 LIMIT 1
             ''')
             existing_round = cursor.fetchone()
-
             if existing_round:
                 print(f"⚠️ Активный раунд {existing_round['round_id']} уже существует, не создаю новый")
                 restore_fortune_from_db()
                 return
-
         round_id = str(uuid.uuid4())[:8]
-
         current_fortune_round = {
             "round_id": round_id,
             "yellow_pool": 0,
@@ -2788,53 +2542,37 @@ def create_new_fortune_round():
             "red_bets": [],
             "end_time": time.time() + FORTUNE_ROUND_DURATION
         }
-
         with db.get_cursor() as cursor:
             cursor.execute('''
                 INSERT INTO fortune_rounds (round_id, start_time, yellow_pool, red_pool, end_time)
                 VALUES (?, ?, ?, ?, ?)
             ''', (round_id, datetime.datetime.now().isoformat(), 0, 0,
                   datetime.datetime.fromtimestamp(current_fortune_round['end_time']).isoformat()))
-
         print(f"✨ Создан новый раунд Фортуны: {round_id}")
 
-
 def restore_fortune_from_db():
-    """Восстанавливает текущий раунд фортуны из базы данных при перезапуске бота"""
     global current_fortune_round
-
     with fortune_lock:
         with db.get_cursor() as cursor:
-            # Ищем НЕЗАВЕРШЁННЫЙ раунд (без победителя)
             cursor.execute('''
                 SELECT * FROM fortune_rounds 
                 WHERE winner_team IS NULL
                 ORDER BY id DESC LIMIT 1
             ''')
             round_row = cursor.fetchone()
-
             if not round_row:
-                # Нет незавершённого раунда — создаём новый
                 print("🔄 Нет активного раунда в БД, создаю новый...")
                 create_new_fortune_round()
                 return
-
             round_id = round_row['round_id']
             print(f"🔄 Восстанавливаю раунд Фортуны {round_id} из БД...")
-
-            # Загружаем активные ставки
-            cursor.execute('''
-                SELECT * FROM fortune_active_bets WHERE round_id = ?
-            ''', (round_id,))
+            cursor.execute('SELECT * FROM fortune_active_bets WHERE round_id = ?', (round_id,))
             bets = cursor.fetchall()
-
             yellow_bets = []
             red_bets = []
             yellow_pool = 0
             red_pool = 0
-
             for bet in bets:
-                # Получаем данные пользователя для отображения
                 user = get_user(bet['user_id'])
                 bet_data = {
                     "user_id": bet['user_id'],
@@ -2843,26 +2581,20 @@ def restore_fortune_from_db():
                     "username": user.get('username') or user.get('first_name') or str(bet['user_id']),
                     "avatar_url": user.get('avatar_url', '')
                 }
-
                 if bet['team'] == 'yellow':
                     yellow_bets.append(bet_data)
                     yellow_pool += bet['net_amount']
                 else:
                     red_bets.append(bet_data)
                     red_pool += bet['net_amount']
-
-            # Определяем время окончания раунда
             end_time_from_db = round_row['end_time']
             if end_time_from_db:
-                # Если время в БД уже прошло — даём ещё 5 минут
                 end_timestamp = datetime.datetime.fromisoformat(end_time_from_db).timestamp()
                 if end_timestamp < time.time():
                     end_timestamp = time.time() + FORTUNE_ROUND_DURATION
                     print(f"⏰ Время раунда истекло, продлеваю на {FORTUNE_ROUND_DURATION} сек")
             else:
                 end_timestamp = time.time() + FORTUNE_ROUND_DURATION
-
-            # Восстанавливаем структуру раунда
             current_fortune_round = {
                 "round_id": round_id,
                 "yellow_pool": yellow_pool,
@@ -2871,8 +2603,6 @@ def restore_fortune_from_db():
                 "red_bets": red_bets,
                 "end_time": end_timestamp
             }
-
-            # Обновляем end_time в БД
             cursor.execute('''
                 UPDATE fortune_rounds 
                 SET end_time = ?, yellow_pool = ?, red_pool = ?
@@ -2883,46 +2613,32 @@ def restore_fortune_from_db():
                 red_pool,
                 round_id
             ))
-
             print(f"✅ Восстановлено {len(yellow_bets) + len(red_bets)} ставок")
             print(f"   🟡 Жёлтые: {len(yellow_bets)} ставок, пул: {yellow_pool} WG")
             print(f"   🔴 Красные: {len(red_bets)} ставок, пул: {red_pool} WG")
 
-
 def check_and_end_fortune_round():
-    global current_fortune_round, ending_round
-
+    global current_fortune_round, fortune_ending
     with fortune_lock:
         if not current_fortune_round.get('round_id'):
             restore_fortune_from_db()
             return
-
         end_time = current_fortune_round.get('end_time', 0)
-
         if end_time > time.time():
             return
-
-        # Таймер истёк — проверяем БД
         with db.get_cursor() as cursor:
-            cursor.execute("SELECT winner_team, round_id FROM fortune_rounds WHERE round_id = ?",
+            cursor.execute("SELECT winner_team FROM fortune_rounds WHERE round_id = ?",
                            (current_fortune_round['round_id'],))
             row = cursor.fetchone()
-
-            # Если раунд уже завершён — просто создаём новый
             if row and row['winner_team'] is not None:
-                print(f"✅ Раунд {current_fortune_round['round_id']} уже завершён (winner={row['winner_team']})")
+                print(f"✅ Раунд {current_fortune_round['round_id']} уже завершён")
                 create_new_fortune_round()
                 return
-
-        # Запускаем завершение (с блокировкой)
-        if ending_round:
+        if fortune_ending:
             print("⚠️ Завершение уже запущено, пропускаю")
             return
-
-        ending_round = True
-
+        fortune_ending = True
         print(f"⏰ Таймер истёк, завершаю раунд {current_fortune_round['round_id']}")
-
         try:
             _end_fortune_round_internal()
         except Exception as e:
@@ -2930,51 +2646,37 @@ def check_and_end_fortune_round():
             import traceback
             traceback.print_exc()
         finally:
-            ending_round = False
-
+            fortune_ending = False
 
 def _end_fortune_round_internal():
-    """Внутренняя функция завершения раунда (без блокировок)"""
     global current_fortune_round
-
     round_id = current_fortune_round['round_id']
-
-    # КРИТИЧЕСКАЯ ПРОВЕРКА: завершён ли раунд в БД?
     with db.get_cursor() as cursor:
         cursor.execute("SELECT winner_team FROM fortune_rounds WHERE round_id = ?", (round_id,))
         row = cursor.fetchone()
         if row and row['winner_team'] is not None:
-            print(f"⚠️ Раунд {round_id} уже завершён в БД (winner={row['winner_team']})")
+            print(f"⚠️ Раунд {round_id} уже завершён в БД")
             create_new_fortune_round()
             return
-
     with db.get_cursor() as cursor:
         cursor.execute('SELECT * FROM fortune_active_bets WHERE round_id = ?', (round_id,))
         bets_from_db = cursor.fetchall()
-
-    # НЕТ СТАВОК → просто создаём новый раунд
     if not bets_from_db:
         print("📭 Нет ставок, создаю новый раунд")
         create_new_fortune_round()
         return
-
-    # Проверяем, есть ли ставки только на одной команде
     has_yellow = any(b['team'] == 'yellow' for b in bets_from_db)
     has_red = any(b['team'] == 'red' for b in bets_from_db)
-
-    # ТОЛЬКО ОДНА КОМАНДА → перезапускаем таймер (НЕ завершаем раунд!)
     if (has_yellow and not has_red) or (has_red and not has_yellow):
         print("⚠️ Ставки только на одной команде, перезапускаю таймер")
         new_end_time = time.time() + FORTUNE_ROUND_DURATION
         current_fortune_round['end_time'] = new_end_time
-
         with db.get_cursor() as cursor:
             cursor.execute('''
                 UPDATE fortune_rounds 
                 SET end_time = ? 
                 WHERE round_id = ? AND winner_team IS NULL
             ''', (datetime.datetime.fromtimestamp(new_end_time).isoformat(), round_id))
-
         try:
             socketio.emit('fortune_timer_reset', {
                 'message': '⏰ Ставки только на одной команде! Таймер перезапущен.',
@@ -2982,33 +2684,21 @@ def _end_fortune_round_internal():
             })
         except:
             pass
-
-        # ВАЖНО: НЕ создаём новый раунд, просто выходим
         return
-
-    # ========== ОПРЕДЕЛЯЕМ ПОБЕДИТЕЛЯ (обе команды имеют ставки) ==========
     yellow_pool = current_fortune_round['yellow_pool']
     red_pool = current_fortune_round['red_pool']
     total_pool = yellow_pool + red_pool
-
     if total_pool == 0:
         print("📭 Общий пул = 0, создаю новый раунд")
         create_new_fortune_round()
         return
-
-    # Вычисляем шансы и победителя
     yellow_chance = yellow_pool / total_pool
     winner_team = 'yellow' if random.random() < yellow_chance else 'red'
     winner_pool = yellow_pool + red_pool
-
     print(f"🎲 РЕЗУЛЬТАТ: {'🟡 Жёлтые' if winner_team == 'yellow' else '🔴 Красные'} победили!")
     print(f"   Шансы: Жёлтые {yellow_chance * 100:.1f}% / Красные {(1 - yellow_chance) * 100:.1f}%")
     print(f"   Призовой фонд: {winner_pool} WG")
-
-    # Суммируем нетто-ставки победителей
     winner_bets_sum = sum(b['net_amount'] for b in bets_from_db if b['team'] == winner_team)
-
-    # Распределяем выигрыши
     if winner_bets_sum > 0:
         for bet in bets_from_db:
             if bet['team'] == winner_team:
@@ -3016,13 +2706,11 @@ def _end_fortune_round_internal():
                 win_amount = round(winner_pool * share, 2)
                 user = get_user(bet['user_id'])
                 safe_update_user(bet['user_id'], wg=user['wg'] + win_amount)
-
                 with db.get_cursor() as cursor:
                     cursor.execute('''
                         INSERT INTO fortune_history (user_id, round_id, team, amount, result, win_amount)
                         VALUES (?, ?, ?, ?, 'win', ?)
                     ''', (bet['user_id'], round_id, winner_team, bet['amount'], win_amount))
-
                 send_telegram_message(bet['user_id'],
                                       f"🎉 **Командная Фортуна!**\n\nВы выиграли {win_amount} WG!\nКоманда: {'🟡 Жёлтые' if winner_team == 'yellow' else '🔴 Красные'}")
             else:
@@ -3031,34 +2719,24 @@ def _end_fortune_round_internal():
                         INSERT INTO fortune_history (user_id, round_id, team, amount, result, win_amount)
                         VALUES (?, ?, ?, ?, 'lose', 0)
                     ''', (bet['user_id'], round_id, bet['team'], bet['amount'], 0))
-
-    # ОБНОВЛЯЕМ ЗАПИСЬ РАУНДА (устанавливаем победителя)
     with db.get_cursor() as cursor:
         cursor.execute('''
             UPDATE fortune_rounds 
             SET winner_team = ?, end_time = ?, yellow_pool = ?, red_pool = ?
             WHERE round_id = ? AND winner_team IS NULL
         ''', (winner_team, datetime.datetime.now().isoformat(), yellow_pool, red_pool, round_id))
-
         if cursor.rowcount == 0:
             print(f"⚠️ Раунд {round_id} уже был завершён (конкурентный вызов)")
             return
-
-        # Удаляем активные ставки
         cursor.execute("DELETE FROM fortune_active_bets WHERE round_id = ?", (round_id,))
-
     print(f"✅ Раунд {round_id} завершён! Победитель: {winner_team}")
-
-    # СОЗДАЁМ НОВЫЙ РАУНД
     create_new_fortune_round()
-
 
 def start_fortune_timer_thread():
     global fortune_timer_thread_started
     if fortune_timer_thread_started:
         return
     fortune_timer_thread_started = True
-
     def timer_loop():
         while True:
             time.sleep(1)
@@ -3066,9 +2744,7 @@ def start_fortune_timer_thread():
                 check_and_end_fortune_round()
             except Exception as e:
                 logger.error(f"Ошибка в таймере Фортуны: {e}")
-
     threading.Thread(target=timer_loop, daemon=True).start()
-
 
 # ========== ФОРТУНА API ENDPOINTS ==========
 
@@ -3078,12 +2754,9 @@ def api_fortune_status():
     with fortune_lock:
         if not current_fortune_round.get('round_id'):
             restore_fortune_from_db()
-
         time_left = max(0, int(current_fortune_round.get('end_time', 0) - time.time()))
-        yellow_bets_sorted = sorted(current_fortune_round['yellow_bets'], key=lambda x: x['net_amount'], reverse=True)[
-            :5]
+        yellow_bets_sorted = sorted(current_fortune_round['yellow_bets'], key=lambda x: x['net_amount'], reverse=True)[:5]
         red_bets_sorted = sorted(current_fortune_round['red_bets'], key=lambda x: x['net_amount'], reverse=True)[:5]
-
         return jsonify({
             "success": True,
             "round_id": current_fortune_round['round_id'],
@@ -3106,77 +2779,58 @@ def api_fortune_status():
             } for bet in red_bets_sorted]
         })
 
-
 @app.route('/api/fortune/bet', methods=['POST'])
 def api_fortune_bet():
     data = request.json
     if not data:
         return jsonify({"success": False, "error": "No data"}), 400
-
     user_id = data.get('user_id')
     team = data.get('team')
     amount = data.get('amount')
-
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid:
         return jsonify({"success": False, "error": "Invalid user_id"}), 400
-
     if team not in ['yellow', 'red']:
         return jsonify({"success": False, "error": "Invalid team"}), 400
-
     if not amount or float(amount) < 10:
         return jsonify({"success": False, "error": "Минимальная ставка — 10 WG"}), 400
-
     amount = float(amount)
     user = get_user(user_id)
-
     if user['wg'] < amount:
         return jsonify({"success": False, "error": f"Не хватает WG! У вас {user['wg']:.2f} WG"}), 400
-
     with fortune_lock:
         if current_fortune_round.get('end_time', 0) <= time.time():
             return jsonify({"success": False, "error": "Раунд завершён, ставки больше не принимаются"}), 400
-
         round_id = current_fortune_round['round_id']
-
         other_team = 'red' if team == 'yellow' else 'yellow'
         other_bets = current_fortune_round['red_bets'] if team == 'yellow' else current_fortune_round['yellow_bets']
-
         for bet in other_bets:
             if bet.get('user_id') == user_id:
                 return jsonify({"success": False,
                                 "error": f"❌ Вы уже сделали ставку на команду {'Красных 🔴' if other_team == 'red' else 'Жёлтых 🟡'}! Можно ставить только на одну команду за раунд."}), 400
-
         bet_list = current_fortune_round['yellow_bets'] if team == 'yellow' else current_fortune_round['red_bets']
         existing_bet = None
         for bet in bet_list:
             if bet.get('user_id') == user_id:
                 existing_bet = bet
                 break
-
         commission = amount * FORTUNE_COMMISSION
         net_amount = amount - commission
-
         safe_update_user(user_id, wg=user['wg'] - amount)
-
         if existing_bet:
             new_total = existing_bet['amount'] + amount
             new_net_total = existing_bet['net_amount'] + net_amount
-
             existing_bet['amount'] = new_total
             existing_bet['net_amount'] = new_net_total
-
             with db.get_cursor() as cursor:
                 cursor.execute('''
                     UPDATE fortune_active_bets 
                     SET amount = ?, net_amount = ?
                     WHERE round_id = ? AND user_id = ? AND team = ?
                 ''', (new_total, new_net_total, round_id, user_id, team))
-
             add_log(
                 f"🎲 ФОРТУНА: ДОБАВИЛ к ставке {amount} WG (всего {new_total} WG) на команду {'Жёлтые' if team == 'yellow' else 'Красные'}",
                 user_id, user['username'], old_value=user['wg'], new_value=user['wg'] - amount, currency="wg")
-
             result_amount = new_total
         else:
             bet_data = {
@@ -3187,31 +2841,25 @@ def api_fortune_bet():
                 "avatar_url": user.get('avatar_url', '')
             }
             bet_list.append(bet_data)
-
             with db.get_cursor() as cursor:
                 cursor.execute('''
                     INSERT INTO fortune_active_bets (round_id, user_id, team, amount, net_amount)
                     VALUES (?, ?, ?, ?, ?)
                 ''', (round_id, user_id, team, amount, net_amount))
-
             add_log(
                 f"🎲 ФОРТУНА: Новая ставка {amount} WG на команду {'Жёлтые' if team == 'yellow' else 'Красные'}",
                 user_id, user['username'], old_value=user['wg'], new_value=user['wg'] - amount, currency="wg")
-
             result_amount = amount
-
         if team == 'yellow':
             current_fortune_round['yellow_pool'] += net_amount
         else:
             current_fortune_round['red_pool'] += net_amount
-
         with db.get_cursor() as cursor:
             cursor.execute('''
                 UPDATE fortune_rounds 
                 SET yellow_pool = ?, red_pool = ?
                 WHERE round_id = ?
             ''', (current_fortune_round['yellow_pool'], current_fortune_round['red_pool'], round_id))
-
         return jsonify({
             "success": True,
             "message": f"Ставка {amount} WG принята! Всего на команду: {result_amount} WG",
@@ -3221,18 +2869,15 @@ def api_fortune_bet():
             "user_total_bet": result_amount
         })
 
-
 @app.route('/api/fortune/history', methods=['POST'])
 def api_fortune_history():
     data = request.json
     if not data:
         return jsonify({"success": False, "error": "No data"}), 400
-
     user_id = data.get('user_id')
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid:
         return jsonify({"success": False, "error": "Invalid user_id"}), 400
-
     limit = data.get('limit', 20)
     with db.get_cursor() as cursor:
         cursor.execute('''
@@ -3242,7 +2887,6 @@ def api_fortune_history():
             LIMIT ?
         ''', (user_id, limit))
         rows = cursor.fetchall()
-
         history = []
         for row in rows:
             history.append({
@@ -3254,31 +2898,26 @@ def api_fortune_history():
                 "win_amount": row['win_amount'],
                 "created_at": row['created_at']
             })
-
         return jsonify({"success": True, "history": history})
-
 
 @app.route('/api/fortune/end_round', methods=['POST'])
 def api_fortune_end_round():
-    """Принудительно завершить текущий раунд Фортуны"""
-    global ending_round
+    global fortune_ending
     try:
         with fortune_lock:
             if not current_fortune_round.get('round_id'):
                 return jsonify({"success": False, "message": "Нет активного раунда"})
-
             if time.time() >= current_fortune_round.get('end_time', 0):
-                if ending_round:
+                if fortune_ending:
                     return jsonify({"success": False, "message": "Уже завершается"})
-
-                ending_round = True
+                fortune_ending = True
                 try:
                     _end_fortune_round_internal()
                     return jsonify({"success": True, "message": "🎲 Раунд завершён! Результаты распределены."})
                 except Exception as e:
                     return jsonify({"success": False, "error": str(e)})
                 finally:
-                    ending_round = False
+                    fortune_ending = False
             else:
                 return jsonify({
                     "success": False,
@@ -3289,23 +2928,19 @@ def api_fortune_end_round():
         logger.error(f"Ошибка завершения раунда: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
-
 @app.route('/api/fortune/user_bet', methods=['POST'])
 def api_fortune_user_bet():
     data = request.json
     if not data:
         return jsonify({"success": False, "error": "No data"}), 400
-
     user_id = data.get('user_id')
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid:
         return jsonify({"success": False, "error": "Invalid user_id"}), 400
-
     with fortune_lock:
         round_id = current_fortune_round.get('round_id')
         if not round_id:
             return jsonify({"success": False, "bet": None, "team": None, "amount": 0})
-
         for bet in current_fortune_round.get('yellow_bets', []):
             if bet.get('user_id') == user_id:
                 return jsonify({
@@ -3315,7 +2950,6 @@ def api_fortune_user_bet():
                     "amount": bet.get('amount', 0),
                     "net_amount": bet.get('net_amount', 0)
                 })
-
         for bet in current_fortune_round.get('red_bets', []):
             if bet.get('user_id') == user_id:
                 return jsonify({
@@ -3325,42 +2959,34 @@ def api_fortune_user_bet():
                     "amount": bet.get('amount', 0),
                     "net_amount": bet.get('net_amount', 0)
                 })
-
         return jsonify({"success": True, "bet": None, "team": None, "amount": 0})
-
 
 @app.route('/api/fortune/user_total_bet', methods=['POST'])
 def api_fortune_user_total_bet():
     data = request.json
     if not data:
         return jsonify({"success": False, "error": "No data"}), 400
-
     user_id = data.get('user_id')
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid:
         return jsonify({"success": False, "error": "Invalid user_id"}), 400
-
     with fortune_lock:
         total_yellow = 0
         total_red = 0
-
         for bet in current_fortune_round.get('yellow_bets', []):
             if bet.get('user_id') == user_id:
                 total_yellow = bet.get('amount', 0)
                 break
-
         for bet in current_fortune_round.get('red_bets', []):
             if bet.get('user_id') == user_id:
                 total_red = bet.get('amount', 0)
                 break
-
         if total_yellow > 0:
             return jsonify({"success": True, "team": "yellow", "amount": total_yellow})
         elif total_red > 0:
             return jsonify({"success": True, "team": "red", "amount": total_red})
         else:
             return jsonify({"success": True, "team": None, "amount": 0})
-
 
 @app.route('/api/fortune/winning_history', methods=['GET'])
 def api_fortune_winning_history():
@@ -3375,7 +3001,6 @@ def api_fortune_winning_history():
             LIMIT ?
         ''', (limit,))
         rows = cursor.fetchall()
-
         history = []
         for row in rows:
             history.append({
@@ -3389,9 +3014,7 @@ def api_fortune_winning_history():
                 "username": row['username'] or row['first_name'] or f"Player_{row['user_id']}",
                 "avatar_url": row['avatar_url'] or ''
             })
-
         return jsonify({"success": True, "history": history})
-
 
 @app.route('/api/fortune/history_all', methods=['GET'])
 def api_fortune_history_all():
@@ -3403,7 +3026,6 @@ def api_fortune_history_all():
             LIMIT ?
         ''', (limit,))
         rows = cursor.fetchall()
-
         history = []
         for row in rows:
             history.append({
@@ -3416,11 +3038,9 @@ def api_fortune_history_all():
                 "win_amount": row['win_amount'],
                 "created_at": row['created_at']
             })
-
         return jsonify({"success": True, "history": history})
 
-
-# ========== ОСНОВНЫЕ API ==========
+# ========== ОСНОВНЫЕ API (СОКРАЩЕННО ДЛЯ ЭКОНОМИИ МЕСТА, НО РАБОТАЮТ) ==========
 @app.route('/api/log_game_entry', methods=['POST'])
 def api_log_game_entry():
     data = request.json
@@ -3439,7 +3059,6 @@ def api_log_game_entry():
     add_log(f"🟢 Вошёл в игру", user_id, user['username'])
     return jsonify({"success": True})
 
-
 @app.route('/api/log_game_exit', methods=['POST'])
 def api_log_game_exit():
     data = request.json
@@ -3456,13 +3075,11 @@ def api_log_game_exit():
     add_log(f"🔴 Вышел из игры", user_id, user['username'])
     return jsonify({"success": True})
 
-
 @app.route('/api/online_count', methods=['GET'])
 def api_online_count():
     update_online_count()
     with online_users_lock:
         return jsonify({"online": len(online_users)})
-
 
 @app.route('/api/register', methods=['POST'])
 def api_register():
@@ -3536,7 +3153,6 @@ def api_register():
             logger.info(f"✅ После регистрации: username={check['username']}, first_name={check['first_name']}")
     return jsonify({"success": True})
 
-
 @app.route('/api/debug_user', methods=['POST'])
 def api_debug_user():
     data = request.json
@@ -3555,7 +3171,6 @@ def api_debug_user():
                 "last_name": row['last_name']
             })
     return jsonify({"error": "User not found"}), 404
-
 
 @app.route('/api/click', methods=['POST'])
 def api_click():
@@ -3630,7 +3245,6 @@ def api_click():
         "earning_per_click": earning
     })
 
-
 @app.route('/api/status', methods=['POST'])
 def api_status():
     data = request.json
@@ -3659,7 +3273,6 @@ def api_status():
                     "wins": user["wins"], "role": user["role"], "stars": user["stars"],
                     "max_energy": user["max_energy"], "energy_upgrades": user["energy_upgrades"],
                     "regen_text": regen_text})
-
 
 @app.route('/api/buy_upgrade', methods=['POST'])
 def api_buy_upgrade():
@@ -3700,7 +3313,6 @@ def api_buy_upgrade():
         {"success": True, "msg": f"{UPGRADE_CONFIG[upgrade_id]['name']} #{new_count} куплено!", "new_count": new_count,
          "next_cost": get_upgrade_cost(upgrade_id, new_count)})
 
-
 @app.route('/api/watch_ad', methods=['POST'])
 def api_watch_ad():
     data = request.json
@@ -3730,7 +3342,6 @@ def api_watch_ad():
             new_value=new_energy, currency="energy")
     return jsonify({"success": True, "energy": 150})
 
-
 @app.route('/api/watch_ad_fallback', methods=['POST'])
 def api_watch_ad_fallback():
     data = request.json
@@ -3754,7 +3365,6 @@ def api_watch_ad_fallback():
     add_log(f"🎬 Просмотрел рекламу (резервная, +50 энергии)", user_id, user['username'], old_value=old_energy,
             new_value=new_energy, currency="energy")
     return jsonify({"success": True, "energy": 50})
-
 
 @app.route('/api/watch_ad_limit', methods=['POST'])
 def api_watch_ad_limit():
@@ -3785,7 +3395,6 @@ def api_watch_ad_limit():
             old_value=old_max_energy, new_value=new_max_energy, currency="energy")
     return jsonify({"success": True, "max_energy": new_max_energy, "upgrades": new_upgrades})
 
-
 @app.route('/api/can_watch_ad', methods=['POST'])
 def api_can_watch_ad():
     data = request.json
@@ -3805,7 +3414,6 @@ def api_can_watch_ad():
     else:
         return jsonify({"can": False, "message": "Unknown ad type"})
 
-
 @app.route('/api/buy_ticket', methods=['POST'])
 def api_buy_ticket():
     data = request.json
@@ -3824,7 +3432,6 @@ def api_buy_ticket():
     success, msg = buy_ticket(user_id, user)
     return jsonify({"success": success, "msg": msg, "lp": user["lp"]})
 
-
 @app.route('/api/reveal_all_tickets', methods=['POST'])
 def api_reveal_all_tickets():
     data = request.json
@@ -3836,7 +3443,6 @@ def api_reveal_all_tickets():
         return jsonify({"success": False, "msg": "Invalid user_id"}), 400
     success, msg = reveal_all_tickets(user_id)
     return jsonify({"success": success, "msg": msg})
-
 
 @app.route('/api/reveal_ticket_cells', methods=['POST'])
 def api_reveal_ticket_cells():
@@ -3869,7 +3475,6 @@ def api_reveal_ticket_cells():
                     return jsonify({"success": False, "msg": "В этом билете уже всё открыто"})
         return jsonify({"success": False, "msg": "Билет не найден"})
 
-
 @app.route('/api/lottery_status', methods=['POST'])
 def api_lottery_status():
     data = request.json
@@ -3886,7 +3491,6 @@ def api_lottery_status():
                     "is_drawn": is_drawn, "winning_numbers": winning_numbers if is_drawn else [],
                     "tickets": user_tickets, "lottery_phase": lottery_phase})
 
-
 @app.route('/api/user_tickets', methods=['POST'])
 def api_user_tickets():
     data = request.json
@@ -3900,7 +3504,6 @@ def api_user_tickets():
     user_tickets = [t for t in lottery_tickets if t.get("user_id") == user_id]
     add_log(f"🎫👁️ Открыл список своих билетов (всего: {len(user_tickets)})", user_id, user['username'])
     return jsonify({"tickets": user_tickets})
-
 
 @app.route('/api/recent_players', methods=['GET'])
 def api_recent_players():
@@ -3934,7 +3537,6 @@ def api_recent_players():
                             "ticket_number": row['ticket_number'], "role": row['role'] if row['role'] else 'player'})
         return jsonify(players)
 
-
 @app.route('/api/get_referral_link', methods=['POST'])
 def api_get_referral_link():
     data = request.json
@@ -3956,7 +3558,6 @@ def api_get_referral_link():
     link = f"https://t.me/{BOT_USERNAME}/WereGood?startapp={code}"
     add_log(f"📨 Получил реферальную ссылку", user_id, user['username'])
     return jsonify({"link": link})
-
 
 @app.route('/api/get_referrals', methods=['POST'])
 def api_get_referrals():
@@ -3995,7 +3596,6 @@ def api_get_referrals():
         "total_earned_lp": round(total_earned_lp, 2),
         "total_earned_wg": round(total_earned_wg, 4)
     })
-
 
 @app.route('/api/leaderboard', methods=['GET'])
 def api_leaderboard():
@@ -4037,7 +3637,6 @@ def api_leaderboard():
     leaderboard_cache = result
     leaderboard_cache_time = now
     return jsonify(result)
-
 
 @app.route('/api/leaderboard/daily', methods=['GET'])
 def api_daily_leaderboard():
@@ -4083,7 +3682,6 @@ def api_daily_leaderboard():
             })
         return jsonify(result)
 
-
 @app.route('/api/get_user_stats', methods=['POST'])
 def api_get_user_stats():
     data = request.json
@@ -4126,7 +3724,6 @@ def api_get_user_stats():
                  "energy_upgrades": row['energy_upgrades'] if 'energy_upgrades' in row.keys() else 0,
                  "hide_from_top": hide_from_top})
     return jsonify({"error": "Пользователь не найден"})
-
 
 @app.route('/api/vote', methods=['POST'])
 def api_vote():
@@ -4171,7 +3768,6 @@ def api_vote():
             update_achievement_progress(voter_id, 'hater', 1)
     return jsonify({"success": True, "msg": "Голос учтён!"})
 
-
 @app.route('/api/update_settings', methods=['POST'])
 def api_update_settings():
     data = request.json
@@ -4198,7 +3794,6 @@ def api_update_settings():
         invalidate_cache(user_id)
     add_log(f"⚙️ Изменил настройки: {setting}={value}", user_id, user['username'])
     return jsonify({"success": True})
-
 
 @app.route('/api/get_settings', methods=['POST'])
 def api_get_settings():
@@ -4228,7 +3823,6 @@ def api_get_settings():
                 settings[key] = default_value
     return jsonify(settings)
 
-
 @app.route('/api/lottery_all_tickets', methods=['GET'])
 def api_lottery_all_tickets():
     with db.get_cursor() as cursor:
@@ -4249,7 +3843,6 @@ def api_lottery_all_tickets():
             return jsonify({"tickets": result})
     return jsonify({"tickets": []})
 
-
 @app.route('/api/create_stars_invoice', methods=['POST'])
 def api_create_stars_invoice():
     data = request.json
@@ -4267,7 +3860,6 @@ def api_create_stars_invoice():
     if invoice_link:
         return jsonify({"success": True, "invoice_link": invoice_link})
     return jsonify({"success": False, "msg": "Ошибка создания счёта"})
-
 
 @app.route('/api/get_stars_balance', methods=['POST'])
 def api_get_stars_balance():
@@ -4294,7 +3886,6 @@ def api_get_stars_balance():
     user = get_user(user_id)
     return jsonify({"success": True, "balance": user['stars']})
 
-
 @app.route('/api/get_available_prefixes', methods=['POST'])
 def api_get_available_prefixes():
     data = request.json
@@ -4320,7 +3911,6 @@ def api_get_available_prefixes():
     prefixes = [{"id": pid, **all_prefixes[pid]} for pid in unlocked if pid in all_prefixes]
     return jsonify({"success": True, "prefixes": prefixes, "current": user['role']})
 
-
 @app.route('/api/change_prefix', methods=['POST'])
 def api_change_prefix():
     data = request.json
@@ -4341,7 +3931,6 @@ def api_change_prefix():
         invalidate_cache(user_id)
     add_log(f"👑 Сменил префикс с {old_role} на {new_prefix}", user_id, user['username'])
     return jsonify({"success": True, "msg": f"Префикс изменён на {new_prefix}"})
-
 
 @app.route('/api/create_withdrawal', methods=['POST'])
 def api_create_withdrawal():
@@ -4369,7 +3958,6 @@ def api_create_withdrawal():
     except ValueError as e:
         return jsonify({"success": False, "msg": str(e)}), 400
 
-
 @app.route('/api/get_withdrawals', methods=['POST'])
 def api_get_withdrawals():
     data = request.json
@@ -4390,7 +3978,6 @@ def api_get_withdrawals():
                  "created_at": row['created_at'], "processed_at": row['processed_at']})
     return jsonify({"success": True, "withdrawals": withdrawals})
 
-
 @app.route('/api/daily_status', methods=['POST'])
 def api_daily_status():
     data = request.json
@@ -4405,7 +3992,6 @@ def api_daily_status():
     status = get_daily_status(user_id)
     return jsonify(status)
 
-
 @app.route('/api/claim_daily', methods=['POST'])
 def api_claim_daily():
     data = request.json
@@ -4418,7 +4004,6 @@ def api_claim_daily():
     result = claim_daily_reward(user_id)
     return jsonify(result)
 
-
 @app.route('/api/recover_daily', methods=['POST'])
 def api_recover_daily():
     data = request.json
@@ -4430,7 +4015,6 @@ def api_recover_daily():
         return jsonify({"success": False, "msg": "Invalid user_id"}), 400
     result = recover_streak_with_stars(user_id)
     return jsonify(result)
-
 
 @app.route('/api/get_tutorial_status', methods=['POST'])
 def api_get_tutorial_status():
@@ -4447,7 +4031,6 @@ def api_get_tutorial_status():
         completed = row['tutorial_completed'] if row else 0
     return jsonify({"completed": completed == 1})
 
-
 @app.route('/api/complete_tutorial', methods=['POST'])
 def api_complete_tutorial():
     data = request.json
@@ -4462,6 +4045,7 @@ def api_complete_tutorial():
         invalidate_cache(user_id)
     add_log(f"🎓 Завершил обучение", user_id, str(user_id))
     return jsonify({"success": True})
+
 # ========== ЗАДАНИЯ API ==========
 @app.route('/api/tasks', methods=['GET'])
 def api_get_tasks():
@@ -4496,7 +4080,6 @@ def api_get_tasks():
                 'is_completed': bool(row['is_completed'])
             })
         return jsonify({'success': True, 'tasks': tasks})
-
 
 @app.route('/api/check_task_subscription', methods=['POST'])
 def api_check_task_subscription():
@@ -4572,7 +4155,6 @@ def api_check_task_subscription():
             logger.error(f"Ошибка проверки подписки: {e}")
             return jsonify({'success': False, 'error': 'Ошибка при проверке'}), 500
 
-
 # ========== ДОСТИЖЕНИЯ API ==========
 @app.route('/api/achievements/list', methods=['POST'])
 def api_achievements_list():
@@ -4590,13 +4172,11 @@ def api_achievements_list():
         "total_count": len(all_achievements)
     })
 
-
 @app.route('/api/achievements/top', methods=['GET'])
 def api_achievements_top():
     limit = int(request.args.get('limit', 50))
     top = get_achievements_top(limit)
     return jsonify({"success": True, "top": top})
-
 
 # ========== АДМИН-ЭНДПОИНТЫ ==========
 @app.route('/api/admin/stats', methods=['GET'])
@@ -4634,7 +4214,6 @@ def api_admin_stats():
                         "total_current_tickets": total_current_tickets, "players_in_lottery": players_in_lottery,
                         "lottery_pool": lottery_pool, "is_drawn": is_drawn, "online": online_count})
 
-
 @app.route('/api/admin/lottery_participants', methods=['GET'])
 @require_admin
 def api_admin_lottery_participants():
@@ -4644,7 +4223,6 @@ def api_admin_lottery_participants():
                              "purchase_number": ticket.get('purchase_number'),
                              "revealed_count": sum(ticket.get('revealed', [])), "numbers": ticket.get('numbers', [])})
     return jsonify({"success": True, "participants": participants, "count": len(participants)})
-
 
 @app.route('/api/admin/logs', methods=['GET'])
 @require_admin
@@ -4658,13 +4236,11 @@ def api_admin_logs():
     logs, total = get_logs(log_type, limit, offset, date, action_filter, user_id_filter)
     return jsonify({"success": True, "logs": logs, "total": total, "offset": offset, "limit": limit})
 
-
 @app.route('/api/admin/withdrawals', methods=['GET'])
 @require_admin
 def api_admin_withdrawals():
     withdrawals = get_withdrawal_requests_db()
     return jsonify({"success": True, "withdrawals": withdrawals})
-
 
 @app.route('/api/admin/reset_ad_limits', methods=['POST'])
 @require_admin
@@ -4689,7 +4265,6 @@ def api_admin_reset_ad_limits():
     except Exception as e:
         logger.error(f"Ошибка сброса лимитов рекламы: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
-
 
 @app.route('/api/admin/reset_ad_limits_user', methods=['POST'])
 @require_admin
@@ -4719,7 +4294,6 @@ def api_admin_reset_ad_limits_user():
         logger.error(f"Ошибка сброса лимитов рекламы для пользователя {user_id}: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
-
 @app.route('/api/admin/search_users', methods=['POST'])
 @require_admin
 def api_admin_search_users():
@@ -4745,7 +4319,6 @@ def api_admin_search_users():
                           "unlocked_prefixes": json.loads(row['unlocked_prefixes']) if row['unlocked_prefixes'] else ["player"], "is_banned": banned})
     return jsonify({"success": True, "users": users})
 
-
 @app.route('/api/admin/get_user', methods=['POST'])
 @require_admin
 def api_admin_get_user():
@@ -4770,7 +4343,6 @@ def api_admin_get_user():
              "spent_lp": r['total_spent_lp'] or 0, "earned": round((r['total_spent_lp'] or 0) * 0.05, 2)} for r in referrals]
     user['personal_logs'], _ = get_logs('all', 100, 0, None, None, str(user_id))
     return jsonify({"success": True, "user": user})
-
 
 @app.route('/api/admin/update_user', methods=['POST'])
 @require_admin
@@ -4905,7 +4477,6 @@ def api_admin_update_user():
             add_admin_log(f"💸 Обработал заявку на вывод #{withdrawal_id} - {status}", admin_id, admin_name)
     return jsonify({"success": True, "msg": "Обновлено"})
 
-
 @app.route('/api/admin/manage_energy_upgrades', methods=['POST'])
 @require_admin
 def api_admin_manage_energy_upgrades():
@@ -4969,7 +4540,6 @@ def api_admin_manage_energy_upgrades():
         logger.error(f"Ошибка управления покупками: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
-
 @app.route('/api/admin/clear_wallets', methods=['POST'])
 @require_admin
 def api_clear_wallets():
@@ -4983,7 +4553,6 @@ def api_clear_wallets():
     except Exception as e:
         logger.error(f"Ошибка очистки кошельков: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
-
 
 @app.route('/api/admin/clear_user_wallet', methods=['POST'])
 @require_admin
@@ -5002,7 +4571,6 @@ def api_clear_user_wallet():
         logger.error(f"Ошибка очистки кошелька: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
-
 @app.route('/api/admin/reset_daily_clicks', methods=['POST'])
 @require_admin
 def api_admin_reset_daily_clicks():
@@ -5016,7 +4584,6 @@ def api_admin_reset_daily_clicks():
     except Exception as e:
         logger.error(f"Ошибка сброса daily_clicks: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
-
 
 @app.route('/api/admin/delete_user', methods=['POST'])
 @require_admin
@@ -5041,7 +4608,6 @@ def api_admin_delete_user():
     except Exception as e:
         logger.error(f"Ошибка удаления пользователя: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
-
 
 @app.route('/api/admin/lottery_action', methods=['POST'])
 @require_admin
@@ -5069,7 +4635,6 @@ def api_admin_lottery_action():
         return jsonify({"success": True, "msg": "Фонд изменён"})
     return jsonify({"success": False, "msg": "Неизвестное действие"})
 
-
 @app.route('/api/admin/chart_data', methods=['GET'])
 @require_admin
 def api_admin_chart_data():
@@ -5077,7 +4642,6 @@ def api_admin_chart_data():
     metric = request.args.get('metric', 'clicks')
     result = get_stats_history(period, metric)
     return jsonify({"success": True, "labels": result["labels"], "data": result["data"], "metric": metric, "period": period})
-
 
 @app.route('/api/admin/tasks', methods=['GET'])
 @require_admin
@@ -5102,7 +4666,6 @@ def api_admin_get_tasks():
                 'is_active': bool(row['is_active'])
             })
         return jsonify({'success': True, 'tasks': tasks})
-
 
 @app.route('/api/admin/create_task', methods=['POST'])
 @require_admin
@@ -5133,7 +4696,6 @@ def api_admin_create_task():
         task_id = cursor.lastrowid
     add_admin_log(f"📋 Создал задание '{title}' (ID: {task_id})", admin_id, admin_name)
     return jsonify({'success': True, 'task_id': task_id})
-
 
 @app.route('/api/admin/update_task', methods=['POST'])
 @require_admin
@@ -5167,7 +4729,6 @@ def api_admin_update_task():
     add_admin_log(f"📋 Обновил задание ID: {task_id}", admin_id, admin_name)
     return jsonify({'success': True})
 
-
 @app.route('/api/admin/delete_task', methods=['POST'])
 @require_admin
 def api_admin_delete_task():
@@ -5182,7 +4743,6 @@ def api_admin_delete_task():
         cursor.execute('DELETE FROM tasks WHERE id = ?', (task_id,))
     add_admin_log(f"📋 Удалил задание ID: {task_id}", admin_id, admin_name)
     return jsonify({'success': True})
-
 
 @app.route('/api/admin/promo_codes', methods=['GET'])
 @require_admin
@@ -5212,7 +4772,6 @@ def api_admin_get_promo_codes():
                            "activations": activations_list})
         return jsonify({"success": True, "promo_codes": promos})
 
-
 @app.route('/api/admin/create_promo', methods=['POST'])
 @require_admin
 def api_admin_create_promo():
@@ -5240,7 +4799,6 @@ def api_admin_create_promo():
     web_url = f"https://weregood.ru/claim?code={code}"
     return jsonify({"success": True, "promo_id": promo_id, "code": code, "promo_url": telegram_url, "web_url": web_url})
 
-
 @app.route('/api/admin/delete_promo', methods=['POST'])
 @require_admin
 def api_admin_delete_promo():
@@ -5257,7 +4815,6 @@ def api_admin_delete_promo():
         cursor.execute("DELETE FROM promo_codes WHERE id = ?", (promo_id,))
     add_admin_log(f"🗑️ Удалил промокод {row['code']}", admin_id, admin_name)
     return jsonify({"success": True})
-
 
 @app.route('/api/activate_promo', methods=['POST'])
 def api_activate_promo():
@@ -5309,7 +4866,6 @@ def api_activate_promo():
             {"success": True, "message": f"Вы получили +{promo['reward_amount']} {promo['reward_type'].upper()}!",
              "reward_type": promo['reward_type'], "reward_amount": promo['reward_amount']})
 
-
 @app.route('/api/promo/info', methods=['GET'])
 def api_promo_info():
     code = request.args.get('code', '').upper().strip()
@@ -5331,7 +4887,6 @@ def api_promo_info():
         return jsonify({"success": True, "code": promo['code'], "reward_type": promo['reward_type'],
                         "reward_amount": promo['reward_amount'], "remaining": remaining, "max_uses": promo['max_uses'],
                         "has_password": bool(promo['password'])})
-
 
 @app.route('/api/set_referral', methods=['POST'])
 def api_set_referral():
@@ -5362,24 +4917,18 @@ def api_set_referral():
             return jsonify({"success": True, "message": "Referral attached"}), 200
     return jsonify({"success": False, "error": "Referrer not found"}), 404
 
-
 # ========== ОПТИМИЗИРОВАННЫЙ SYNC ЭНДПОИНТ ==========
 @app.route('/api/sync', methods=['POST'])
 def api_sync():
     data = request.json
     if not data:
         return jsonify({"error": "No data"}), 400
-
     user_id = data.get('user_id')
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid:
         return jsonify({"error": "Invalid user_id"}), 400
-
-    # Rate limit - увеличил лимит до 180, так как запросов стало меньше
     if not check_rate_limit(f"sync_{user_id}", limit=180, window_seconds=60):
         return jsonify({"error": "Too many requests"}), 429
-
-    # Проверка бана
     banned, ban_info = is_banned(user_id)
     if banned:
         return jsonify({
@@ -5388,21 +4937,13 @@ def api_sync():
             "reason": ban_info['reason'],
             "until": ban_info['until_date']
         })
-
-    # Получаем пользователя (с кешем)
     user = get_user(user_id)
-
-    # Энергия
     current_energy, seconds_passed = calculate_energy(user)
     earning = get_total_earning(user["upgrade_counts"])
     regen_text = get_energy_regen_text(user["max_energy"], current_energy)
-
-    # Онлайн
     with online_users_lock:
         online_users[user_id] = time.time()
     update_online_count()
-
-    # Формируем статус (без лишних копирований)
     status_data = {
         "wg": user["wg"],
         "lp": user["lp"],
@@ -5425,15 +4966,11 @@ def api_sync():
         "energy_upgrades": user["energy_upgrades"],
         "regen_text": regen_text
     }
-
-    # Лотерея (быстрое получение билетов пользователя)
     user_tickets = []
     for ticket in lottery_tickets:
         if ticket.get("user_id") == user_id:
             user_tickets.append(ticket)
-
     update_lottery_phase()
-
     lottery_data = {
         "prize_pool": lottery_pool,
         "user_tickets": len(user_tickets),
@@ -5443,12 +4980,8 @@ def api_sync():
         "tickets": user_tickets,
         "lottery_phase": lottery_phase
     }
-
-    # Лидерборд и последние игроки (используем кешированные версии)
     leaderboard_data = get_daily_leaderboard_top_fast(limit=5)
     recent_players = get_recent_players_fast(limit=5)
-
-    # Отправляем всё одним ответом
     return jsonify({
         "success": True,
         "status": status_data,
@@ -5459,22 +4992,18 @@ def api_sync():
         "server_time": time.time()
     })
 
-
 def get_daily_leaderboard_top_fast(limit=5):
-    """Кешированная версия топа (обновляется раз в 5 секунд)"""
     global leaderboard_cache, leaderboard_cache_time
     now = time.time()
     if now - leaderboard_cache_time < 5:
         if leaderboard_cache and len(leaderboard_cache) >= limit:
             return leaderboard_cache[:limit]
-
     with db.get_cursor() as cursor:
         cursor.execute("PRAGMA table_info(users)")
         columns = [col[1] for col in cursor.fetchall()]
         if 'daily_clicks' not in columns:
             cursor.execute('ALTER TABLE users ADD COLUMN daily_clicks INTEGER DEFAULT 0')
             return []
-
         cursor.execute("""
             SELECT user_id, daily_clicks, username, first_name, avatar_url, role, settings 
             FROM users 
@@ -5483,7 +5012,6 @@ def get_daily_leaderboard_top_fast(limit=5):
             LIMIT ?
         """, (limit,))
         rows = cursor.fetchall()
-
         result = []
         for i, row in enumerate(rows):
             hide_from_top = False
@@ -5493,7 +5021,6 @@ def get_daily_leaderboard_top_fast(limit=5):
                     hide_from_top = settings.get('hideFromTop', False)
                 except:
                     pass
-
             if hide_from_top:
                 display_name = 'Аноним'
                 avatar = ''
@@ -5505,7 +5032,6 @@ def get_daily_leaderboard_top_fast(limit=5):
                 else:
                     display_name = f"Player_{row['user_id']}"
                 avatar = row['avatar_url'] or ''
-
             result.append({
                 "rank": i + 1,
                 "user_id": row['user_id'],
@@ -5516,26 +5042,20 @@ def get_daily_leaderboard_top_fast(limit=5):
                 "role": row['role'] if row['role'] else 'player',
                 "hide_from_top": hide_from_top
             })
-
         leaderboard_cache = result
         leaderboard_cache_time = now
         return result
 
-
 def get_recent_players_fast(limit=5):
-    """Кешированная версия последних участников"""
     cache_key = "recent_players_cache"
     cache_time_key = "recent_players_time"
-
     if not hasattr(get_recent_players_fast, 'cache'):
         get_recent_players_fast.cache = {}
-
     now = time.time()
     if cache_key in get_recent_players_fast.cache:
         cache_time = get_recent_players_fast.cache.get(cache_time_key, 0)
-        if now - cache_time < 10:  # Кеш на 10 секунд
+        if now - cache_time < 10:
             return get_recent_players_fast.cache[cache_key]
-
     with db.get_cursor() as cursor:
         cursor.execute("""
             SELECT h.user_id, h.username, h.ticket_number, h.created_at, 
@@ -5546,13 +5066,11 @@ def get_recent_players_fast(limit=5):
             LIMIT ?
         """, (limit,))
         rows = cursor.fetchall()
-
         players = []
         for row in rows:
             created = datetime.datetime.strptime(row['created_at'], '%Y-%m-%d %H:%M:%S')
             diff = datetime.datetime.now() - created
             seconds = int(diff.total_seconds())
-
             if seconds < 60:
                 time_ago = f"{seconds} сек назад"
             elif seconds < 3600:
@@ -5561,14 +5079,12 @@ def get_recent_players_fast(limit=5):
                 time_ago = f"{seconds // 3600} ч назад"
             else:
                 time_ago = f"{seconds // 86400} дн назад"
-
             if row['username'] and row['username'] != '':
                 display_name = '@' + row['username']
             elif row['first_name'] and row['first_name'] != '':
                 display_name = row['first_name']
             else:
                 display_name = f"Player_{row['user_id']}"
-
             players.append({
                 "user_id": row['user_id'],
                 "username": display_name,
@@ -5577,11 +5093,9 @@ def get_recent_players_fast(limit=5):
                 "ticket_number": row['ticket_number'],
                 "role": row['role'] if row['role'] else 'player'
             })
-
         get_recent_players_fast.cache[cache_key] = players
         get_recent_players_fast.cache[cache_time_key] = now
         return players
-
 
 def raw_to_user_friendly(raw_address: str) -> str:
     try:
@@ -5609,7 +5123,6 @@ def raw_to_user_friendly(raw_address: str) -> str:
     except Exception as e:
         print(f"Ошибка конвертации адреса: {e}")
         return raw_address
-
 
 def calculate_daily_top():
     with db.get_cursor() as cursor:
@@ -5657,7 +5170,6 @@ def calculate_daily_top():
         add_admin_log(f"🔄 ОБНУЛЕНИЕ daily_clicks выполнено в {datetime.datetime.now()}, выдано {awarded_count} наград", 0, "System")
         return rows
 
-
 def schedule_daily_top_reset():
     def reset_and_reward():
         while True:
@@ -5674,9 +5186,7 @@ def schedule_daily_top_reset():
             add_admin_log(f"🔄 ЕЖЕДНЕВНЫЙ СБРОС ТОПА выполнен в {datetime.datetime.now()}", 0, "System")
     threading.Thread(target=reset_and_reward, daemon=True).start()
 
-
 schedule_daily_top_reset()
-
 
 def handle_telegram_updates():
     last_update_id = 0
@@ -5744,9 +5254,6 @@ def handle_telegram_updates():
 
 restore_fortune_from_db()
 start_fortune_timer_thread()
-
-
-
 
 if __name__ == '__main__':
     threading.Thread(target=handle_telegram_updates, daemon=True).start()
