@@ -9542,19 +9542,20 @@ async function submitBet() {
         const data = await response.json();
 
         if (data.success) {
-            // ✅ ОБНОВЛЯЕМ ЛОКАЛЬНЫЕ ДАННЫЕ
+            // ✅ ОБНОВЛЯЕМ ЛОКАЛЬНЫЙ БАЛАНС
             localWG = (localWG || 0) - amount;
 
             // ✅ ОБНОВЛЯЕМ ДАННЫЕ ФОРТУНЫ
             fortuneData.yellowPool = data.yellow_pool;
             fortuneData.redPool = data.red_pool;
-
-            // ✅ ОБНОВЛЯЕМ СТАВКУ ПОЛЬЗОВАТЕЛЯ
             fortuneData.userBetTeam = betModalState.team;
             fortuneData.userBetAmount = data.user_total_bet || amount;
 
-            // ✅ ОБНОВЛЯЕМ СПИСКИ ИГРОКОВ (добавляем/обновляем текущего пользователя)
-            const playerData = {
+            // ✅ ОБНОВЛЯЕМ СПИСКИ ИГРОКОВ
+            const targetList = betModalState.team === 'yellow' ? fortuneData.yellowPlayers : fortuneData.redPlayers;
+            const existingIndex = targetList.findIndex(p => p.userId == userId);
+
+            const updatedPlayer = {
                 userId: userId,
                 amount: fortuneData.userBetAmount,
                 netAmount: data.net_amount || amount,
@@ -9562,33 +9563,19 @@ async function submitBet() {
                 username: firstName || username || 'Игрок'
             };
 
-            // Обновляем соответствующий список
-            if (betModalState.team === 'yellow') {
-                const existingIndex = fortuneData.yellowPlayers.findIndex(p => p.userId == userId);
-                if (existingIndex >= 0) {
-                    fortuneData.yellowPlayers[existingIndex] = playerData;
-                } else {
-                    fortuneData.yellowPlayers.push(playerData);
-                }
+            if (existingIndex >= 0) {
+                targetList[existingIndex] = updatedPlayer;
             } else {
-                const existingIndex = fortuneData.redPlayers.findIndex(p => p.userId == userId);
-                if (existingIndex >= 0) {
-                    fortuneData.redPlayers[existingIndex] = playerData;
-                } else {
-                    fortuneData.redPlayers.push(playerData);
-                }
+                targetList.push(updatedPlayer);
             }
 
-            // ✅ ПРИНУДИТЕЛЬНО ОБНОВЛЯЕМ UI
-            updateUI();
+            // ✅ ОБНОВЛЯЕМ UI
+            if (typeof updateUI === 'function') updateUI();
             updateFortuneUI();
             updateTeamHighlightUI();
 
             // ✅ ПОКАЗЫВАЕМ СООБЩЕНИЕ С ОБЩЕЙ СУММОЙ
             showFortuneMessage(`✅ Ставка ${amount} WG принята! Всего на команду: ${fortuneData.userBetAmount} WG`, 'success');
-
-            // ✅ СИНХРОНИЗИРУЕМ С СЕРВЕРОМ (фоном)
-            if (typeof syncData === 'function') syncData(true);
 
             closeBetModal();
         } else {
