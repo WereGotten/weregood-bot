@@ -2754,43 +2754,31 @@ def api_get_lp_boost_count():
 # ========== ФОРТУНА API (НОВАЯ ЛОГИКА) ==========
 def create_new_fortune_round():
     global current_fortune_round
+
     with fortune_lock:
-        round_id = str(uuid.uuid4())[:8]
-
-        yellow_bets = []
-        red_bets = []
-        yellow_pool = 0
-        red_pool = 0
-
+        # ✅ СНАЧАЛА ПРОВЕРЯЕМ, ЕСТЬ ЛИ УЖЕ АКТИВНЫЙ РАУНД В БД
         with db.get_cursor() as cursor:
             cursor.execute('''
-                SELECT user_id, team, amount, net_amount
-                FROM fortune_active_bets 
-                WHERE round_id = ?
-            ''', (round_id,))
-            rows = cursor.fetchall()
+                SELECT round_id FROM fortune_rounds 
+                WHERE winner_team IS NULL 
+                AND (end_time > datetime('now') OR end_time IS NULL)
+                LIMIT 1
+            ''')
+            existing_round = cursor.fetchone()
 
-            for row in rows:
-                bet_data = {
-                    "user_id": row['user_id'],
-                    "amount": row['amount'],
-                    "net_amount": row['net_amount'],
-                    "username": "",
-                    "avatar_url": ""
-                }
-                if row['team'] == 'yellow':
-                    yellow_bets.append(bet_data)
-                    yellow_pool += row['net_amount']
-                else:
-                    red_bets.append(bet_data)
-                    red_pool += row['net_amount']
+            if existing_round:
+                print(f"⚠️ Активный раунд {existing_round['round_id']} уже существует, не создаю новый")
+                restore_fortune_from_db()
+                return
+
+        round_id = str(uuid.uuid4())[:8]
 
         current_fortune_round = {
             "round_id": round_id,
-            "yellow_pool": yellow_pool,
-            "red_pool": red_pool,
-            "yellow_bets": yellow_bets,
-            "red_bets": red_bets,
+            "yellow_pool": 0,
+            "red_pool": 0,
+            "yellow_bets": [],
+            "red_bets": [],
             "end_time": time.time() + FORTUNE_ROUND_DURATION
         }
 
@@ -2798,10 +2786,10 @@ def create_new_fortune_round():
             cursor.execute('''
                 INSERT INTO fortune_rounds (round_id, start_time, yellow_pool, red_pool, end_time)
                 VALUES (?, ?, ?, ?, ?)
-            ''', (round_id, datetime.datetime.now().isoformat(), yellow_pool, red_pool,
+            ''', (round_id, datetime.datetime.now().isoformat(), 0, 0,
                   datetime.datetime.fromtimestamp(current_fortune_round['end_time']).isoformat()))
 
-    return current_fortune_round
+        print(f"✨ Создан новый раунд Фортуны: {round_id}")
 
 def update_existing_bet_in_db(round_id, user_id, team, additional_amount, additional_net):
     """Обновляет существующую ставку в БД (увеличивает сумму)"""
@@ -2812,61 +2800,95 @@ def update_existing_bet_in_db(round_id, user_id, team, additional_amount, additi
             WHERE round_id = ? AND user_id = ? AND team = ?
         ''', (additional_amount, additional_net, round_id, user_id, team))
 
+
 def restore_fortune_from_db():
+    """Восстанавливает текущий раунд фортуны из базы данных при перезапуске бота"""
     global current_fortune_round
+
     with fortune_lock:
         with db.get_cursor() as cursor:
+            # Ищем НЕЗАВЕРШЁННЫЙ раунд (без победителя)
             cursor.execute('''
                 SELECT * FROM fortune_rounds 
-                WHERE end_time > datetime('now') OR end_time IS NULL
+                WHERE winner_team IS NULL
                 ORDER BY id DESC LIMIT 1
             ''')
             round_row = cursor.fetchone()
 
-            if round_row:
-                round_id = round_row['round_id']
-
-                cursor.execute('''
-                    SELECT * FROM fortune_active_bets WHERE round_id = ?
-                ''', (round_id,))
-                bets = cursor.fetchall()
-
-                yellow_bets = []
-                red_bets = []
-                yellow_pool = 0
-                red_pool = 0
-
-                for bet in bets:
-                    bet_data = {
-                        "user_id": bet['user_id'],
-                        "amount": bet['amount'],
-                        "net_amount": bet['net_amount'],
-                        "username": "",
-                        "avatar_url": ""
-                    }
-                    user = get_user(bet['user_id'])
-                    bet_data['username'] = user.get('username') or user.get('first_name') or str(bet['user_id'])
-                    bet_data['avatar_url'] = user.get('avatar_url', '')
-
-                    if bet['team'] == 'yellow':
-                        yellow_bets.append(bet_data)
-                        yellow_pool += bet['net_amount']
-                    else:
-                        red_bets.append(bet_data)
-                        red_pool += bet['net_amount']
-
-                current_fortune_round = {
-                    "round_id": round_id,
-                    "yellow_pool": yellow_pool,
-                    "red_pool": red_pool,
-                    "yellow_bets": yellow_bets,
-                    "red_bets": red_bets,
-                    "end_time": time.time() + FORTUNE_ROUND_DURATION
-                }
-                print(f"✅ Восстановлена фортуна: раунд {round_id}")
-            else:
+            if not round_row:
+                # Нет незавершённого раунда — создаём новый
+                print("🔄 Нет активного раунда в БД, создаю новый...")
                 create_new_fortune_round()
-                print("✅ Создан новый раунд фортуны")
+                return
+
+            round_id = round_row['round_id']
+            print(f"🔄 Восстанавливаю раунд Фортуны {round_id} из БД...")
+
+            # Загружаем активные ставки
+            cursor.execute('''
+                SELECT * FROM fortune_active_bets WHERE round_id = ?
+            ''', (round_id,))
+            bets = cursor.fetchall()
+
+            yellow_bets = []
+            red_bets = []
+            yellow_pool = 0
+            red_pool = 0
+
+            for bet in bets:
+                # Получаем данные пользователя для отображения
+                user = get_user(bet['user_id'])
+                bet_data = {
+                    "user_id": bet['user_id'],
+                    "amount": bet['amount'],
+                    "net_amount": bet['net_amount'],
+                    "username": user.get('username') or user.get('first_name') or str(bet['user_id']),
+                    "avatar_url": user.get('avatar_url', '')
+                }
+
+                if bet['team'] == 'yellow':
+                    yellow_bets.append(bet_data)
+                    yellow_pool += bet['net_amount']
+                else:
+                    red_bets.append(bet_data)
+                    red_pool += bet['net_amount']
+
+            # Определяем время окончания раунда
+            end_time_from_db = round_row['end_time']
+            if end_time_from_db:
+                # Если время в БД уже прошло — даём ещё 5 минут
+                end_timestamp = datetime.datetime.fromisoformat(end_time_from_db).timestamp()
+                if end_timestamp < time.time():
+                    end_timestamp = time.time() + FORTUNE_ROUND_DURATION
+                    print(f"⏰ Время раунда истекло, продлеваю на {FORTUNE_ROUND_DURATION} сек")
+            else:
+                end_timestamp = time.time() + FORTUNE_ROUND_DURATION
+
+            # Восстанавливаем структуру раунда
+            current_fortune_round = {
+                "round_id": round_id,
+                "yellow_pool": yellow_pool,
+                "red_pool": red_pool,
+                "yellow_bets": yellow_bets,
+                "red_bets": red_bets,
+                "end_time": end_timestamp
+            }
+
+            # Обновляем end_time в БД
+            cursor.execute('''
+                UPDATE fortune_rounds 
+                SET end_time = ?, yellow_pool = ?, red_pool = ?
+                WHERE round_id = ?
+            ''', (
+                datetime.datetime.fromtimestamp(end_timestamp).isoformat(),
+                yellow_pool,
+                red_pool,
+                round_id
+            ))
+
+            print(f"✅ Восстановлено {len(yellow_bets) + len(red_bets)} ставок")
+            print(f"   🟡 Жёлтые: {len(yellow_bets)} ставок, пул: {yellow_pool} WG")
+            print(f"   🔴 Красные: {len(red_bets)} ставок, пул: {red_pool} WG")
 
 
 def check_and_end_fortune_round():
