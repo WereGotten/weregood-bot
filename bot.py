@@ -3033,7 +3033,7 @@ def api_fortune_bet():
 
         round_id = current_fortune_round['round_id']
 
-        # ========== ПРОВЕРКА: ЕСТЬ ЛИ СТАВКА НА ПРОТИВОПОЛОЖНУЮ КОМАНДУ ==========
+        # ========== ПРОВЕРКА ТОЛЬКО НА ПРОТИВОПОЛОЖНУЮ КОМАНДУ ==========
         other_team = 'red' if team == 'yellow' else 'yellow'
         other_bets = current_fortune_round['red_bets'] if team == 'yellow' else current_fortune_round['yellow_bets']
 
@@ -3042,7 +3042,7 @@ def api_fortune_bet():
                 return jsonify({"success": False,
                                 "error": f"❌ Вы уже сделали ставку на команду {'Красных 🔴' if other_team == 'red' else 'Жёлтых 🟡'}! Можно ставить только на одну команду за раунд."}), 400
 
-        # ========== ИЩЕМ СУЩЕСТВУЮЩУЮ СТАВКУ НА ЭТУ ЖЕ КОМАНДУ ==========
+        # ========== НЕ ПРОВЕРЯЕМ НА ЭТУ ЖЕ КОМАНДУ — РАЗРЕШАЕМ ДОБАВЛЯТЬ ==========
         bet_list = current_fortune_round['yellow_bets'] if team == 'yellow' else current_fortune_round['red_bets']
         existing_bet = None
         for bet in bet_list:
@@ -3057,16 +3057,20 @@ def api_fortune_bet():
         safe_update_user(user_id, wg=user['wg'] - amount)
 
         if existing_bet:
-            # ✅ ЕСТЬ СТАВКА — СУММИРУЕМ
+            # ✅ ЕСТЬ СТАВКА — СУММИРУЕМ (НЕ БЛОКИРУЕМ!)
             new_total = existing_bet['amount'] + amount
             new_net_total = existing_bet['net_amount'] + net_amount
 
-            # Обновляем в памяти
             existing_bet['amount'] = new_total
             existing_bet['net_amount'] = new_net_total
 
-            # Обновляем в БД (добавляем к существующей сумме)
-            update_existing_bet_in_db(round_id, user_id, team, amount, net_amount)
+            # Обновляем в БД
+            with db.get_cursor() as cursor:
+                cursor.execute('''
+                    UPDATE fortune_active_bets 
+                    SET amount = ?, net_amount = ?
+                    WHERE round_id = ? AND user_id = ? AND team = ?
+                ''', (new_total, new_net_total, round_id, user_id, team))
 
             add_log(
                 f"🎲 ФОРТУНА: ДОБАВИЛ к ставке {amount} WG (всего {new_total} WG) на команду {'Жёлтые' if team == 'yellow' else 'Красные'}",
@@ -3084,7 +3088,6 @@ def api_fortune_bet():
             }
             bet_list.append(bet_data)
 
-            # Сохраняем новую ставку в БД
             with db.get_cursor() as cursor:
                 cursor.execute('''
                     INSERT INTO fortune_active_bets (round_id, user_id, team, amount, net_amount)
