@@ -9030,7 +9030,7 @@
             if (fortuneTimerInterval) clearInterval(fortuneTimerInterval);
         }
 
-        // ==================== КОМАНДНАЯ ФОРТУНА 3.0 (ОПТИМИЗИРОВАННАЯ) ==================
+        // ==================== КОМАНДНАЯ ФОРТУНА 3.1 (ПОЛНОСТЬЮ ИСПРАВЛЕННАЯ) ==================
 let fortuneTimerInterval = null;
 let fortuneTimeLeft = 300;
 let currentBetTeam = null;
@@ -9043,13 +9043,13 @@ let redPlayers = [];
 let selectedTeamForBet = null;
 let currentRoundId = null;
 let userHistory = [];
-let winningHistory = [];
 
 const FORTUNE_COMMISSION = 0.07;
 let fortuneElements = {};
 let isUpdatingFortune = false;
 let lastFortuneUpdate = 0;
 const FORTUNE_UPDATE_DELAY = 2000;
+let fortuneInitialized = false;
 
 // Плавная анимация обновления чисел
 function animateNumber(element, newValue, suffix = '', isDecimal = false) {
@@ -9117,7 +9117,6 @@ async function loadFortuneStatus() {
         if (data.success) {
             currentRoundId = data.round_id;
 
-            // Плавное обновление чисел
             if (yellowPoolAmount !== data.yellow_pool) {
                 animateNumber(fortuneElements.yellowPool, data.yellow_pool, ' WG', true);
                 yellowPoolAmount = data.yellow_pool;
@@ -9146,6 +9145,7 @@ async function loadFortuneStatus() {
             updateChances();
             renderPlayers();
             await loadUserCurrentBet();
+            updateFortuneTimer();
         }
         lastFortuneUpdate = now;
     } catch(e) {
@@ -9191,12 +9191,8 @@ function updateFortuneTimer() {
 
     if (fortuneTimeLeft <= 10) {
         fortuneElements.fortuneTimer.style.color = '#ff4444';
-        if (fortuneElements.fortuneTimer.style.animation !== 'pulseGold 0.5s infinite') {
-            fortuneElements.fortuneTimer.style.animation = 'pulseGold 0.5s infinite';
-        }
     } else {
         fortuneElements.fortuneTimer.style.color = '#FFD700';
-        fortuneElements.fortuneTimer.style.animation = '';
     }
 
     const percent = (fortuneTimeLeft / 300) * 100;
@@ -9275,7 +9271,7 @@ function renderPlayers() {
     }
 }
 
-// Открытие профиля внутри Фортуны (без закрытия игры)
+// Открытие профиля внутри Фортуны
 function openPlayerProfileInFortune(targetId) {
     selectedPlayerId = targetId;
     const modalUsername = document.getElementById('playerModalUsername');
@@ -9414,20 +9410,37 @@ function openBetModal(team) {
     selectedTeamForBet = team;
     const teamName = team === 'yellow' ? 'Команда Жёлтых' : 'Команда Красных';
     const teamIcon = team === 'yellow' ? '🟡' : '🔴';
-    document.getElementById('betTeamInfo').innerHTML = `
-        <span class="bet-team-icon">${teamIcon}</span>
-        <span class="bet-team-name">${teamName}</span>
-    `;
-    document.getElementById('betUserBalance').innerText = localWG.toFixed(2);
-    document.getElementById('betAmount').value = '';
-    document.getElementById('betCommission').innerText = '0';
-    document.getElementById('betNetAmount').innerText = '0';
-    document.getElementById('betModal').classList.add('active');
-    document.body.style.overflow = 'hidden';
+
+    const betTeamInfo = document.getElementById('betTeamInfo');
+    if (betTeamInfo) {
+        betTeamInfo.innerHTML = `
+            <span class="bet-team-icon">${teamIcon}</span>
+            <span class="bet-team-name">${teamName}</span>
+        `;
+    }
+
+    const betUserBalance = document.getElementById('betUserBalance');
+    if (betUserBalance) betUserBalance.innerText = localWG.toFixed(2);
+
+    const betAmount = document.getElementById('betAmount');
+    if (betAmount) betAmount.value = '';
+
+    const betCommission = document.getElementById('betCommission');
+    if (betCommission) betCommission.innerText = '0';
+
+    const betNetAmount = document.getElementById('betNetAmount');
+    if (betNetAmount) betNetAmount.innerText = '0';
+
+    const betModal = document.getElementById('betModal');
+    if (betModal) {
+        betModal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
 }
 
 function closeBetModal() {
-    document.getElementById('betModal').classList.remove('active');
+    const betModal = document.getElementById('betModal');
+    if (betModal) betModal.classList.remove('active');
     document.body.style.overflow = '';
     selectedTeamForBet = null;
 }
@@ -9483,6 +9496,7 @@ async function submitBet() {
             await syncData(true);
             await loadFortuneStatus();
             closeBetModal();
+            showToast(`✅ Ставка ${amount} WG принята!`, 'success');
         } else {
             showToast(data.error, 'error');
         }
@@ -9515,7 +9529,49 @@ function fortuneTabHandler(e) {
     }
 }
 
+// Инициализация обработчиков Фортуны
+function initFortuneEventHandlers() {
+    const betAmountInput = document.getElementById('betAmount');
+    if (betAmountInput) {
+        betAmountInput.removeEventListener('input', calculateBet);
+        betAmountInput.addEventListener('input', calculateBet);
+    }
+
+    document.querySelectorAll('.bet-preset').forEach(btn => {
+        btn.removeEventListener('click', betPresetHandler);
+        btn.addEventListener('click', betPresetHandler);
+    });
+
+    const submitBtn = document.getElementById('submitBetBtn');
+    if (submitBtn) {
+        submitBtn.removeEventListener('click', submitBet);
+        submitBtn.addEventListener('click', submitBet);
+    }
+
+    document.querySelectorAll('.team-bet-btn').forEach(btn => {
+        btn.removeEventListener('click', teamBetHandler);
+        btn.addEventListener('click', teamBetHandler);
+    });
+}
+
+function betPresetHandler(e) {
+    e.stopPropagation();
+    const multiplier = parseFloat(e.currentTarget.dataset.multiplier);
+    const presetAmount = Math.floor(localWG * multiplier);
+    const input = document.getElementById('betAmount');
+    if (input) input.value = presetAmount;
+    calculateBet();
+}
+
+function teamBetHandler(e) {
+    e.stopPropagation();
+    const team = e.currentTarget.dataset.team;
+    if (!team) return;
+    openBetModal(team);
+}
+
 // Переопределяем openGame для Фортуны
+const originalOpenGame = window.openGame;
 window.openGame = function(gameName) {
     if (gameName === 'fortune') {
         const fortuneModal = document.getElementById('fortuneModal');
@@ -9524,9 +9580,13 @@ window.openGame = function(gameName) {
             document.body.style.overflow = 'hidden';
             if (typeof closeGamepad === 'function') closeGamepad();
             cacheFortuneElements();
+            initFortuneEventHandlers();
             loadFortuneStatus();
             initFortuneTabs();
+            fortuneInitialized = true;
         }
+    } else if (originalOpenGame) {
+        originalOpenGame(gameName);
     }
 };
 
@@ -9536,38 +9596,6 @@ window.closeFortuneGame = function() {
     document.body.style.overflow = '';
     if (fortuneTimerInterval) clearInterval(fortuneTimerInterval);
 };
-
-// Вешаем обработчики событий
-document.addEventListener('DOMContentLoaded', () => {
-    const betAmountInput = document.getElementById('betAmount');
-    if (betAmountInput) {
-        betAmountInput.addEventListener('input', calculateBet);
-    }
-
-    document.querySelectorAll('.bet-preset').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const multiplier = parseFloat(btn.dataset.multiplier);
-            const presetAmount = Math.floor(localWG * multiplier);
-            const input = document.getElementById('betAmount');
-            if (input) input.value = presetAmount;
-            calculateBet();
-        });
-    });
-
-    const submitBtn = document.getElementById('submitBetBtn');
-    if (submitBtn) {
-        submitBtn.addEventListener('click', submitBet);
-    }
-
-    document.querySelectorAll('.team-bet-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const team = btn.dataset.team;
-            if (!team) return;
-            openBetModal(team);
-        });
-    });
-});
 
         // ==================== СЧЁТЧИК ПОКУПОК LP БУСТЕРА ====================
         async function updateLPBoostCount() {
