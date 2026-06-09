@@ -2964,6 +2964,102 @@ def api_fortune_history():
         return jsonify({"success": True, "history": history})
 
 
+# ========== ДОБАВИТЬ ПОСЛЕ ВСЕХ ЭНДПОИНТОВ ФОРТУНЫ (перед @app.route('/api/fortune/bet')) ==========
+
+@app.route('/api/fortune/end_round', methods=['POST'])
+def api_fortune_end_round():
+    """Принудительно завершить текущий раунд Фортуны (для синхронизации)"""
+    global current_fortune_round
+    try:
+        with fortune_lock:
+            # Если раунд ещё не закончен
+            if current_fortune_round.get('round_id') and time.time() >= current_fortune_round.get('end_time', 0):
+                end_fortune_round_internal()
+                return jsonify({
+                    "success": True,
+                    "message": "🎲 Раунд завершён! Результаты распределены.",
+                    "winner": "system"
+                })
+            else:
+                return jsonify({
+                    "success": False,
+                    "message": "Раунд ещё не закончен",
+                    "time_left": max(0, int(current_fortune_round.get('end_time', 0) - time.time()))
+                })
+    except Exception as e:
+        logger.error(f"Ошибка завершения раунда: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/fortune/user_bet', methods=['POST'])
+def api_fortune_user_bet():
+    """Получить текущую ставку пользователя в активном раунде"""
+    data = request.json
+    if not data:
+        return jsonify({"success": False, "error": "No data"}), 400
+
+    user_id = data.get('user_id')
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"success": False, "error": "Invalid user_id"}), 400
+
+    with fortune_lock:
+        round_id = current_fortune_round.get('round_id')
+        if not round_id:
+            return jsonify({"success": False, "bet": None, "team": None, "amount": 0})
+
+        # Ищем ставку в жёлтых
+        for bet in current_fortune_round.get('yellow_bets', []):
+            if bet.get('user_id') == user_id:
+                return jsonify({
+                    "success": True,
+                    "bet": bet,
+                    "team": "yellow",
+                    "amount": bet.get('amount', 0),
+                    "net_amount": bet.get('net_amount', 0)
+                })
+
+        # Ищем в красных
+        for bet in current_fortune_round.get('red_bets', []):
+            if bet.get('user_id') == user_id:
+                return jsonify({
+                    "success": True,
+                    "bet": bet,
+                    "team": "red",
+                    "amount": bet.get('amount', 0),
+                    "net_amount": bet.get('net_amount', 0)
+                })
+
+        return jsonify({"success": True, "bet": None, "team": None, "amount": 0})
+
+
+@app.route('/api/fortune/history_all', methods=['GET'])
+def api_fortune_history_all():
+    """Получить общую историю всех раундов (для админ-панели)"""
+    limit = request.args.get('limit', 50, type=int)
+    with db.get_cursor() as cursor:
+        cursor.execute('''
+            SELECT * FROM fortune_history 
+            ORDER BY id DESC 
+            LIMIT ?
+        ''', (limit,))
+        rows = cursor.fetchall()
+
+        history = []
+        for row in rows:
+            history.append({
+                "id": row['id'],
+                "user_id": row['user_id'],
+                "round_id": row['round_id'],
+                "team": row['team'],
+                "amount": row['amount'],
+                "result": row['result'],
+                "win_amount": row['win_amount'],
+                "created_at": row['created_at']
+            })
+
+        return jsonify({"success": True, "history": history})
+
 # ========== ОСНОВНЫЕ API ==========
 @app.route('/api/log_game_entry', methods=['POST'])
 def api_log_game_entry():
