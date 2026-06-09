@@ -5875,7 +5875,7 @@
     </div>
 
     <!-- МОДАЛЬНОЕ ОКНО КОМАНДНОЙ ФОРТУНЫ -->
-<div id="fortuneModal" class="game-modal-full">
+<div id="fortuneModal" class="game-modal">
     <div class="game-modal-full-content">
         <div class="game-modal-full-header">
             <h2>🎲 Командная Фортуна</h2>
@@ -9002,15 +9002,18 @@
         }
 
         function openGame(gameName) {
-            if (gameName === 'fortune') {
-                const fortuneModal = document.getElementById('fortuneModal');
-                if (fortuneModal) {
-                    fortuneModal.classList.add('active');
-                    document.body.style.overflow = 'hidden';
-                    closeGamepad();
-                }
-            }
+    if (gameName === 'fortune') {
+        const fortuneModal = document.getElementById('fortuneModal');
+        if (fortuneModal) {
+            fortuneModal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+            closeGamepad();
+            if (typeof cacheFortuneElements === 'function') cacheFortuneElements();
+            if (typeof loadFortuneStatus === 'function') loadFortuneStatus();
+            if (typeof initFortuneTabs === 'function') initFortuneTabs();
         }
+    }
+}
 
         function closeFortuneGame() {
             const fortuneModal = document.getElementById('fortuneModal');
