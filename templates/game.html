@@ -9065,15 +9065,28 @@ function startFortuneTimer() {
         if (fortuneData.timeLeft > 0) {
             fortuneData.timeLeft--;
             updateTimerDisplay();
-        } else if (fortuneData.isActive) {
-            // Раунд закончился
+        } else if (fortuneData.timeLeft <= 0) {
+            // Таймер достиг 0
             clearInterval(fortuneUI.timerInterval);
             fortuneUI.timerInterval = null;
-            if (fortuneData.yellowPool > 0 && fortuneData.redPool > 0) {
+
+            // ПРОВЕРЯЕМ: если ставки только на одной команде
+            if ((fortuneData.yellowPool > 0 && fortuneData.redPool === 0) ||
+                (fortuneData.redPool > 0 && fortuneData.yellowPool === 0)) {
+                // Перезапускаем таймер
+                fortuneData.timeLeft = 300;
+                startFortuneTimer();
+                showToast('⏰ Ставки только на одной команде! Таймер перезапущен.', 'info');
+            } else if (fortuneData.yellowPool > 0 && fortuneData.redPool > 0) {
+                // Обе команды имеют ставки - завершаем раунд
                 endFortuneRound();
+            } else {
+                // Нет ставок вообще
+                fortuneData.isActive = false;
+                updateTimerDisplay();
             }
         }
-    }, 1000);
+    }, 1000);await loadUserFortuneBet();  // ❌ такой функции нет
 }
 
 function updateTimerDisplay() {
