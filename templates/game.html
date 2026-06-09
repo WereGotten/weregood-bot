@@ -9417,6 +9417,9 @@ function initFortuneTabs() {
     });
 }
 
+// Сохраняем оригинальную функцию openGame (если она была)
+const originalOpenGame = window.openGame;
+
 // Переопределяем openGame для Фортуны
 window.openGame = function(gameName) {
     if (gameName === 'fortune') {
@@ -9431,15 +9434,26 @@ window.openGame = function(gameName) {
 
             // Привязываем обработчики к кнопкам
             setTimeout(() => {
-                document.querySelectorAll('.team-bet-btn').forEach(btn => {
-                    btn.onclick = (e) => {
+                const betButtons = document.querySelectorAll('.team-bet-btn');
+                console.log('🔍 Найдено кнопок ставок:', betButtons.length);
+                betButtons.forEach(btn => {
+                    // Убираем старые обработчики, чтобы не было дублей
+                    btn.removeEventListener('click', btn._fortuneHandler);
+                    // Создаём новый обработчик
+                    const handler = (e) => {
                         e.stopPropagation();
                         const team = btn.dataset.team;
                         if (team) window.openBetModal(team);
                     };
+                    // Сохраняем обработчик для возможности удаления
+                    btn._fortuneHandler = handler;
+                    btn.addEventListener('click', handler);
                 });
             }, 100);
         }
+    } else if (originalOpenGame) {
+        // Если игра не Фортуна, вызываем оригинальную функцию
+        originalOpenGame(gameName);
     }
 };
 
