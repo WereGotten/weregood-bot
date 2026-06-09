@@ -2929,8 +2929,10 @@ def api_fortune_bet():
 
         if existing_bet:
             # Обновляем существующую ставку (суммируем)
-            existing_bet['amount'] += amount
-            existing_bet['net_amount'] += net_amount
+            old_amount = existing_bet['amount']
+            old_net = existing_bet['net_amount']
+            existing_bet['amount'] = old_amount + amount
+            existing_bet['net_amount'] = old_net + net_amount
             new_total = existing_bet['amount']
             add_log(
                 f"🎲 ФОРТУНА: ДОБАВИЛ к ставке {amount} WG (всего {new_total} WG) на команду {'Жёлтые' if team == 'yellow' else 'Красные'}",
