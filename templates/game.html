@@ -8947,7 +8947,6 @@ function updateFortuneUI() {
 }
 
 // Асинхронное обновление списков игроков
-// Асинхронное обновление списков игроков (СУПЕР ОПТИМИЗИРОВАННОЕ)
 let pendingPlayersUpdate = false;
 let yellowCacheHtml = '';
 let redCacheHtml = '';
@@ -8959,63 +8958,65 @@ function updatePlayersListAsync() {
     requestAnimationFrame(() => {
         const e = fortuneUI.elements;
 
-        // Обновляем жёлтых (только если изменилось)
-        let newYellowHtml = '';
-        if (!fortuneData.yellowPlayers || fortuneData.yellowPlayers.length === 0) {
-            newYellowHtml = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
-        } else {
-            const sorted = [...fortuneData.yellowPlayers]
-                .sort((a, b) => (b.netAmount || 0) - (a.netAmount || 0))
-                .slice(0, 6);
+        // Обновляем жёлтых
+        if (e.yellowPlayers) {
+            if (!fortuneData.yellowPlayers || fortuneData.yellowPlayers.length === 0) {
+                e.yellowPlayers.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
+            } else {
+                const sorted = [...fortuneData.yellowPlayers]
+                    .sort((a, b) => (b.netAmount || 0) - (a.netAmount || 0))
+                    .slice(0, 6);
 
-            let html = '';
-            for (let i = 0; i < sorted.length; i++) {
-                const p = sorted[i];
-                const amount = (p.netAmount || p.amount || 0).toFixed(0);
-                const avatarHtml = p.avatarUrl
-                    ? `<img src="${p.avatarUrl}" loading="lazy" onerror="this.parentElement.innerHTML='🟡'" style="width:100%;height:100%;object-fit:cover;">`
-                    : '🟡';
-                html += `<div class="player-card-premium" data-userid="${p.userId}">
-                    <div class="player-avatar-premium">${avatarHtml}</div>
-                    <div class="player-bet-premium">${amount} WG</div>
-                </div>`;
+                let html = '';
+                for (let i = 0; i < sorted.length; i++) {
+                    const p = sorted[i];
+                    const amount = (p.netAmount || p.amount || 0).toFixed(0);
+                    const avatarHtml = p.avatarUrl
+                        ? `<img src="${p.avatarUrl}" loading="lazy" onerror="this.parentElement.innerHTML='🟡'">`
+                        : '🟡';
+
+                    // ========== ТУТ ДОБАВИТЬ ПРОВЕРКУ ==========
+                    // ЕСЛИ ЭТОТ ИГРОК - ТЕКУЩИЙ ПОЛЬЗОВАТЕЛЬ, ДОБАВЛЯЕМ ОСОБЫЙ КЛАСС
+                    const isCurrentUser = (p.userId == userId);
+                    const currentUserClass = isCurrentUser ? ' current-user' : '';
+
+                    html += `<div class="player-card-premium${currentUserClass}" data-userid="${p.userId}">
+                        <div class="player-avatar-premium">${avatarHtml}</div>
+                        <div class="player-bet-premium">${amount} WG</div>
+                    </div>`;
+                }
+                e.yellowPlayers.innerHTML = html;
             }
-            newYellowHtml = html;
         }
 
-        // Обновляем только если изменилось
-        if (yellowCacheHtml !== newYellowHtml && e.yellowPlayers) {
-            yellowCacheHtml = newYellowHtml;
-            e.yellowPlayers.innerHTML = newYellowHtml;
-        }
+        // Аналогично для красных
+        if (e.redPlayers) {
+            if (!fortuneData.redPlayers || fortuneData.redPlayers.length === 0) {
+                e.redPlayers.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
+            } else {
+                const sorted = [...fortuneData.redPlayers]
+                    .sort((a, b) => (b.netAmount || 0) - (a.netAmount || 0))
+                    .slice(0, 6);
 
-        // Обновляем красных (только если изменилось)
-        let newRedHtml = '';
-        if (!fortuneData.redPlayers || fortuneData.redPlayers.length === 0) {
-            newRedHtml = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
-        } else {
-            const sorted = [...fortuneData.redPlayers]
-                .sort((a, b) => (b.netAmount || 0) - (a.netAmount || 0))
-                .slice(0, 6);
+                let html = '';
+                for (let i = 0; i < sorted.length; i++) {
+                    const p = sorted[i];
+                    const amount = (p.netAmount || p.amount || 0).toFixed(0);
+                    const avatarHtml = p.avatarUrl
+                        ? `<img src="${p.avatarUrl}" loading="lazy" onerror="this.parentElement.innerHTML='🔴'">`
+                        : '🔴';
 
-            let html = '';
-            for (let i = 0; i < sorted.length; i++) {
-                const p = sorted[i];
-                const amount = (p.netAmount || p.amount || 0).toFixed(0);
-                const avatarHtml = p.avatarUrl
-                    ? `<img src="${p.avatarUrl}" loading="lazy" onerror="this.parentElement.innerHTML='🔴'" style="width:100%;height:100%;object-fit:cover;">`
-                    : '🔴';
-                html += `<div class="player-card-premium" data-userid="${p.userId}">
-                    <div class="player-avatar-premium">${avatarHtml}</div>
-                    <div class="player-bet-premium">${amount} WG</div>
-                </div>`;
+                    // ========== ТУТ ТОЖЕ ДОБАВИТЬ ПРОВЕРКУ ==========
+                    const isCurrentUser = (p.userId == userId);
+                    const currentUserClass = isCurrentUser ? ' current-user' : '';
+
+                    html += `<div class="player-card-premium${currentUserClass}" data-userid="${p.userId}">
+                        <div class="player-avatar-premium">${avatarHtml}</div>
+                        <div class="player-bet-premium">${amount} WG</div>
+                    </div>`;
+                }
+                e.redPlayers.innerHTML = html;
             }
-            newRedHtml = html;
-        }
-
-        if (redCacheHtml !== newRedHtml && e.redPlayers) {
-            redCacheHtml = newRedHtml;
-            e.redPlayers.innerHTML = newRedHtml;
         }
 
         pendingPlayersUpdate = false;
@@ -9138,7 +9139,7 @@ async function loadFortuneData() {
     }
 }
 
-async function loadUserFortuneBet() {
+async function loadUserCurrentBet() {
     try {
         const response = await fetch('/api/fortune/user_total_bet', {
             method: 'POST',
@@ -9146,7 +9147,10 @@ async function loadUserFortuneBet() {
             body: JSON.stringify({ user_id: userId })
         });
         const data = await response.json();
-        fortuneData.userBetTeam = (data.success && data.team && data.amount > 0) ? data.team : null;
+        if (data.success) {
+            fortuneData.userBetTeam = data.team;
+            fortuneData.userBetAmount = data.amount || 0;
+        }
     } catch(e) {
         console.error('Load user bet error:', e);
     }

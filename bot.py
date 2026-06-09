@@ -2740,23 +2740,29 @@ def end_fortune_round_internal():
 
     if total_pool == 0:
         # Никто не ставил - просто сбрасываем
-        reset_fortune_round()
+        create_new_fortune_round()
         return
 
-    # Определяем победителя на основе шансов
+    # Определяем победителя на основе шансов (НЕ ИЗМЕНЯЕМ)
     yellow_chance = yellow_pool / total_pool if total_pool > 0 else 0.5
     winner_team = 'yellow' if random.random() < yellow_chance else 'red'
-    winner_pool = yellow_pool if winner_team == 'yellow' else red_pool
-    loser_pool = red_pool if winner_team == 'yellow' else yellow_pool
-    total_prize = winner_pool + loser_pool  # Весь пул разыгрывается
 
-    # Выплата победителям пропорционально ставкам
+    # ВЕСЬ фонд идёт победившей команде
+    winner_pool = yellow_pool + red_pool  # Весь фонд!
     winner_bets = current_fortune_round['yellow_bets'] if winner_team == 'yellow' else current_fortune_round['red_bets']
 
+    # Считаем общую сумму ставок победителей
+    total_winner_bets = sum(bet['net_amount'] for bet in winner_bets)
+
+    if total_winner_bets == 0:
+        create_new_fortune_round()
+        return
+
+    # Выплата победителям пропорционально их ставке
     for bet in winner_bets:
-        share = bet['net_amount'] / winner_pool if winner_pool > 0 else 0
-        win_amount = total_prize * share
-        win_amount = round(win_amount, 2)
+        # Доля игрока в пуле победителей
+        share = bet['net_amount'] / total_winner_bets
+        win_amount = round(winner_pool * share, 2)  # ВЕСЬ фонд * доля игрока
 
         # Начисляем выигрыш
         user = get_user(bet['user_id'])
@@ -2794,7 +2800,8 @@ def end_fortune_round_internal():
         ''', (winner_team, datetime.datetime.now().isoformat(), yellow_pool, red_pool,
               current_fortune_round['round_id']))
 
-    reset_fortune_round()
+    # СОЗДАЁМ НОВЫЙ РАУНД (сбрасываем таймер)
+    create_new_fortune_round()
 
 
 def reset_fortune_round():
@@ -2854,7 +2861,7 @@ def api_fortune_status():
 
 @app.route('/api/fortune/bet', methods=['POST'])
 def api_fortune_bet():
-    """Сделать ставку в Фортуне"""
+    """Сделать ставку в Фортуне (можно несколько раз на одну команду)"""
     data = request.json
     if not data:
         return jsonify({"success": False, "error": "No data"}), 400
@@ -2891,21 +2898,41 @@ def api_fortune_bet():
         # Списываем деньги
         safe_update_user(user_id, wg=user['wg'] - amount)
 
-        # Добавляем в пул и в список ставок
-        bet_data = {
-            "user_id": user_id,
-            "amount": amount,
-            "net_amount": net_amount,
-            "username": user.get('username') or user.get('first_name') or str(user_id),
-            "avatar_url": user.get('avatar_url', '')
-        }
+        # ПРОВЕРЯЕМ: есть ли уже ставка этого игрока на эту команду
+        existing_bet = None
+        bet_list = current_fortune_round['yellow_bets'] if team == 'yellow' else current_fortune_round['red_bets']
 
+        for bet in bet_list:
+            if bet.get('user_id') == user_id:
+                existing_bet = bet
+                break
+
+        if existing_bet:
+            # Обновляем существующую ставку
+            existing_bet['amount'] += amount
+            existing_bet['net_amount'] += net_amount
+            add_log(
+                f"🎲 ФОРТУНА: ДОБАВИЛ к ставке {amount} WG (всего {existing_bet['amount']} WG) на команду {'Жёлтые' if team == 'yellow' else 'Красные'}",
+                user_id, user['username'], old_value=user['wg'], new_value=user['wg'] - amount, currency="wg")
+        else:
+            # Создаём новую ставку
+            bet_data = {
+                "user_id": user_id,
+                "amount": amount,
+                "net_amount": net_amount,
+                "username": user.get('username') or user.get('first_name') or str(user_id),
+                "avatar_url": user.get('avatar_url', '')
+            }
+            bet_list.append(bet_data)
+            add_log(
+                f"🎲 ФОРТУНА: Сделал ставку {amount} WG (после комиссии {net_amount:.2f} WG) на команду {'Жёлтые' if team == 'yellow' else 'Красные'}",
+                user_id, user['username'], old_value=user['wg'], new_value=user['wg'] - amount, currency="wg")
+
+        # Обновляем пул
         if team == 'yellow':
             current_fortune_round['yellow_pool'] += net_amount
-            current_fortune_round['yellow_bets'].append(bet_data)
         else:
             current_fortune_round['red_pool'] += net_amount
-            current_fortune_round['red_bets'].append(bet_data)
 
         # Сохраняем в БД
         with db.get_cursor() as cursor:
@@ -2914,17 +2941,15 @@ def api_fortune_bet():
                 VALUES (?, ?, ?, ?, ?)
             ''', (current_fortune_round['round_id'], user_id, team, amount, net_amount))
 
-        add_log(
-            f"🎲 ФОРТУНА: Сделал ставку {amount} WG (после комиссии {net_amount:.2f} WG) на команду {'Жёлтые' if team == 'yellow' else 'Красные'}",
-            user_id, user['username'], old_value=user['wg'], new_value=user['wg'] - amount, currency="wg")
-
         return jsonify({
             "success": True,
             "message": f"Ставка {amount} WG принята! (Комиссия 7%, зачислено {net_amount:.2f} WG)",
             "net_amount": net_amount,
             "yellow_pool": current_fortune_round['yellow_pool'],
-            "red_pool": current_fortune_round['red_pool']
+            "red_pool": current_fortune_round['red_pool'],
+            "user_total_bet": existing_bet['amount'] if existing_bet else amount
         })
+
 
 
 @app.route('/api/fortune/history', methods=['POST'])
@@ -3048,10 +3073,18 @@ def api_fortune_user_total_bet():
         return jsonify({"success": False, "error": "Invalid user_id"}), 400
 
     with fortune_lock:
-        total_yellow = sum(bet.get('net_amount', 0) for bet in current_fortune_round.get('yellow_bets', []) if
-                           bet.get('user_id') == user_id)
-        total_red = sum(bet.get('net_amount', 0) for bet in current_fortune_round.get('red_bets', []) if
-                        bet.get('user_id') == user_id)
+        total_yellow = 0
+        total_red = 0
+
+        for bet in current_fortune_round.get('yellow_bets', []):
+            if bet.get('user_id') == user_id:
+                total_yellow = bet.get('amount', 0)
+                break
+
+        for bet in current_fortune_round.get('red_bets', []):
+            if bet.get('user_id') == user_id:
+                total_red = bet.get('amount', 0)
+                break
 
         if total_yellow > 0:
             return jsonify({"success": True, "team": "yellow", "amount": total_yellow})
