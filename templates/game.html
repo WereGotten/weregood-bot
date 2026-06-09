@@ -9412,10 +9412,11 @@ let betModalState = {
 };
 
 function openBetModal(team) {
-    if (fortuneData.userBetTeam) {
-        showToast(`❌ Вы уже сделали ставку на команду ${fortuneData.userBetTeam === 'yellow' ? 'Жёлтых 🟡' : 'Красных 🔴'}!`, 'error');
-        return;
-    }
+    // УБИРАЕМ ПРОВЕРКУ НА userBetTeam - теперь можно ставить несколько раз на одну команду!
+    // if (fortuneData.userBetTeam) {
+    //     showToast(`❌ Вы уже сделали ставку на команду ${fortuneData.userBetTeam === 'yellow' ? 'Жёлтых 🟡' : 'Красных 🔴'}!`, 'error');
+    //     return;
+    // }
 
     betModalState.team = team;
     betModalState.isOpen = true;
@@ -9460,6 +9461,13 @@ async function submitBet() {
         return;
     }
 
+    // УБИРАЕМ ПРОВЕРКУ НА userBetTeam
+    // if (fortuneData.userBetTeam) {
+    //     showFortuneMessage(`❌ Вы уже сделали ставку!`, 'error');
+    //     closeBetModal();
+    //     return;
+    // }
+
     const amount = parseFloat(document.getElementById('betAmount')?.value || '0');
     if (isNaN(amount) || amount < 10) {
         showFortuneMessage('Минимальная ставка — 10 WG', 'error');
@@ -9494,7 +9502,6 @@ async function submitBet() {
             await loadFortuneData();
             closeBetModal();
 
-            // Показываем сообщение внутри Фортуны
             const totalBet = data.user_total_bet || amount;
             showFortuneMessage(`✅ Ставка ${amount} WG принята! Всего на команду: ${totalBet} WG`, 'success');
         } else {
