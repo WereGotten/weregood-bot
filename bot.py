@@ -2928,11 +2928,12 @@ def api_fortune_bet():
                 break
 
         if existing_bet:
-            # Обновляем существующую ставку
+            # Обновляем существующую ставку (суммируем)
             existing_bet['amount'] += amount
             existing_bet['net_amount'] += net_amount
+            new_total = existing_bet['amount']
             add_log(
-                f"🎲 ФОРТУНА: ДОБАВИЛ к ставке {amount} WG (всего {existing_bet['amount']} WG) на команду {'Жёлтые' if team == 'yellow' else 'Красные'}",
+                f"🎲 ФОРТУНА: ДОБАВИЛ к ставке {amount} WG (всего {new_total} WG) на команду {'Жёлтые' if team == 'yellow' else 'Красные'}",
                 user_id, user['username'], old_value=user['wg'], new_value=user['wg'] - amount, currency="wg")
         else:
             # Создаём новую ставку
@@ -2944,6 +2945,7 @@ def api_fortune_bet():
                 "avatar_url": user.get('avatar_url', '')
             }
             bet_list.append(bet_data)
+            new_total = amount
             add_log(
                 f"🎲 ФОРТУНА: Сделал ставку {amount} WG (после комиссии {net_amount:.2f} WG) на команду {'Жёлтые' if team == 'yellow' else 'Красные'}",
                 user_id, user['username'], old_value=user['wg'], new_value=user['wg'] - amount, currency="wg")
@@ -2963,11 +2965,11 @@ def api_fortune_bet():
 
         return jsonify({
             "success": True,
-            "message": f"Ставка {amount} WG принята! (Комиссия 7%, зачислено {net_amount:.2f} WG)",
+            "message": f"Ставка {amount} WG принята! Всего на команду: {new_total} WG",
             "net_amount": net_amount,
             "yellow_pool": current_fortune_round['yellow_pool'],
             "red_pool": current_fortune_round['red_pool'],
-            "user_total_bet": existing_bet['amount'] if existing_bet else amount
+            "user_total_bet": new_total
         })
 
 

@@ -4895,6 +4895,16 @@
 .game-modal-full {
     -webkit-overflow-scrolling: touch;
 }
+        /* Сообщения внутри Фортуны */
+#fortuneMessage {
+    backdrop-filter: blur(10px);
+    animation: fortuneMessageFade 0.2s ease;
+}
+
+@keyframes fortuneMessageFade {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
     </style>
 </head>
 <body>
@@ -9088,17 +9098,62 @@ function startFortuneTimer() {
                 // Перезапускаем таймер, ставки НЕ ОЧИЩАЕМ
                 fortuneData.timeLeft = 300;
                 startFortuneTimer();
-                showToast('⏰ Ставки только на одной команде! Таймер перезапущен.', 'info');
+                // ПОКАЗЫВАЕМ ОПОВЕЩЕНИЕ ВНУТРИ ФОРТУНЫ (а не глобальный тост)
+                showFortuneMessage('⏰ Ставки только на одной команде! Таймер перезапущен.', 'info');
             } else if (fortuneData.yellowPool > 0 && fortuneData.redPool > 0) {
                 // Обе команды имеют ставки - завершаем раунд (ставки очистятся)
+                showFortuneMessage('🎲 Раунд завершается! Определяем победителя...', 'info');
                 endFortuneRound();
             } else {
                 // Нет ставок вообще
                 fortuneData.isActive = false;
                 updateTimerDisplay();
+                showFortuneMessage('🤝 Пока нет ставок! Сделайте первую ставку!', 'info');
             }
         }
     }, 1000);
+}
+
+// НОВАЯ ФУНКЦИЯ ДЛЯ ОПОВЕЩЕНИЙ ВНУТРИ ФОРТУНЫ
+function showFortuneMessage(message, type = 'info') {
+    const e = fortuneUI.elements;
+    if (!e.playTab) return;
+
+    // Создаём или находим элемент для сообщений
+    let messageDiv = document.getElementById('fortuneMessage');
+    if (!messageDiv) {
+        messageDiv = document.createElement('div');
+        messageDiv.id = 'fortuneMessage';
+        messageDiv.style.cssText = `
+            background: rgba(255,215,0,0.1);
+            border: 1px solid rgba(255,215,0,0.3);
+            border-radius: 20px;
+            padding: 10px 16px;
+            margin: 10px 20px;
+            text-align: center;
+            font-size: 0.75rem;
+            color: #FFD700;
+            transition: opacity 0.3s ease;
+        `;
+        const playTab = document.getElementById('fortunePlayTab');
+        if (playTab) {
+            playTab.insertBefore(messageDiv, playTab.firstChild);
+        }
+    }
+
+    messageDiv.innerHTML = message;
+    messageDiv.style.display = 'block';
+    messageDiv.style.opacity = '1';
+
+    // Автоматически скрываем через 3 секунды
+    setTimeout(() => {
+        if (messageDiv) {
+            messageDiv.style.opacity = '0';
+            setTimeout(() => {
+                if (messageDiv) messageDiv.style.display = 'none';
+            }, 300);
+        }
+    }, 3000);
 }
 
 function updateTimerDisplay() {
@@ -9285,7 +9340,7 @@ async function endFortuneRound() {
                 fortuneUI.elements.redPlayers.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
             }
 
-            updateFortuneNumbers();
+            updateFortuneUI();
             updateTeamHighlightUI();
             updateTimerDisplay();
 
@@ -9337,7 +9392,7 @@ function resetFortuneLocally() {
         fortuneUI.elements.redPlayers.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
     }
 
-    updateFortuneNumbers();
+    updateFortuneUI();
     updateTeamHighlightUI();
     updateTimerDisplay();
 
@@ -9396,35 +9451,28 @@ let isBetting = false;
 
 async function submitBet() {
     if (isBetting) {
-        showToast('⏳ Подождите, ставка обрабатывается...', 'info');
+        showFortuneMessage('⏳ Подождите, ставка обрабатывается...', 'info');
         return;
     }
 
     if (!betModalState.team) {
-        showToast('Выберите команду для ставки', 'error');
-        return;
-    }
-
-    if (fortuneData.userBetTeam) {
-        showToast(`❌ Вы уже сделали ставку!`, 'error');
-        closeBetModal();
+        showFortuneMessage('Выберите команду для ставки', 'error');
         return;
     }
 
     const amount = parseFloat(document.getElementById('betAmount')?.value || '0');
     if (isNaN(amount) || amount < 10) {
-        showToast('Минимальная ставка — 10 WG', 'error');
+        showFortuneMessage('Минимальная ставка — 10 WG', 'error');
         return;
     }
 
     if (amount > (localWG || 0)) {
-        showToast(`❌ Не хватает WG! У вас ${(localWG || 0).toFixed(2)} WG`, 'error');
+        showFortuneMessage(`❌ Не хватает WG! У вас ${(localWG || 0).toFixed(2)} WG`, 'error');
         return;
     }
 
     isBetting = true;
 
-    // Показываем индикатор загрузки
     const submitBtn = document.getElementById('submitBetBtn');
     const originalText = submitBtn?.innerHTML || 'Подтвердить';
     if (submitBtn) submitBtn.innerHTML = '⏳ Обработка...';
@@ -9445,13 +9493,16 @@ async function submitBet() {
 
             await loadFortuneData();
             closeBetModal();
-            showToast(`✅ Ставка ${amount} WG принята!`, 'success');
+
+            // Показываем сообщение внутри Фортуны
+            const totalBet = data.user_total_bet || amount;
+            showFortuneMessage(`✅ Ставка ${amount} WG принята! Всего на команду: ${totalBet} WG`, 'success');
         } else {
-            showToast(data.error || 'Ошибка при ставке', 'error');
+            showFortuneMessage(data.error || 'Ошибка при ставке', 'error');
         }
     } catch(e) {
         console.error('Bet error:', e);
-        showToast('Ошибка при ставке', 'error');
+        showFortuneMessage('Ошибка при ставке', 'error');
     } finally {
         isBetting = false;
         if (submitBtn) submitBtn.innerHTML = originalText;
