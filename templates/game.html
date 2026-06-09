@@ -9,23 +9,31 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
+
     <script>
         window.TON_CONNECT_UI = null;
         const tonScript = document.createElement('script');
         tonScript.src = 'https://unpkg.com/@tonconnect/ui@2.0.9/dist/tonconnect-ui.min.js';
         tonScript.onload = function() {
-            if (window.TON_CONNECT_UI) console.log('TON Connect ready');
-            else if (window.tonconnect) window.TON_CONNECT_UI = window.tonconnect;
+            if (window.TON_CONNECT_UI) {
+                console.log('TON Connect ready');
+            } else if (window.tonconnect) {
+                window.TON_CONNECT_UI = window.tonconnect;
+            }
             window.dispatchEvent(new Event('tonconnect-ready'));
         };
         tonScript.onerror = function() {
             const btn = document.getElementById('tonDonateBtn');
-            if (btn) { btn.style.opacity = '0.5'; btn.disabled = true; }
+            if (btn) {
+                btn.style.opacity = '0.5';
+                btn.disabled = true;
+            }
         };
         document.head.appendChild(tonScript);
     </script>
 
     <style>
+        /* ========== ОСНОВНЫЕ СТИЛИ ========== */
         * {
             margin: 0;
             padding: 0;
@@ -55,6 +63,7 @@
             flex-direction: column;
         }
 
+        /* ========== ХЕДЕР ========== */
         .header {
             display: flex;
             justify-content: space-between;
@@ -107,6 +116,7 @@
             display: flex;
             align-items: center;
             gap: 4px;
+            cursor: pointer;
         }
 
         .user-stats {
@@ -148,6 +158,7 @@
             transform: scale(0.95);
         }
 
+        /* ========== ОСНОВНОЙ КОНТЕНТ ========== */
         .main-content {
             flex: 1;
             padding: 16px;
@@ -165,10 +176,17 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(8px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
+        /* ========== БАЛАНС КАРТА ========== */
         .balance-card {
             background: linear-gradient(135deg, rgba(255,215,0,0.08), rgba(255,165,0,0.04));
             border-radius: 20px;
@@ -223,6 +241,7 @@
             color: transparent;
         }
 
+        /* ========== ПРИВЕТСТВИЕ ========== */
         .greeting {
             font-size: 0.85em;
             opacity: 0.5;
@@ -236,6 +255,7 @@
             color: #FFD700;
         }
 
+        /* ========== МОНЕТА ========== */
         .coin-wrapper {
             display: flex;
             justify-content: center;
@@ -287,10 +307,17 @@
         }
 
         @keyframes plusFloat {
-            0% { opacity: 1; transform: translate(-50%, -50%) scale(0.6); }
-            100% { opacity: 0; transform: translate(-50%, -100%) scale(1.2); }
+            0% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(0.6);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -100%) scale(1.2);
+            }
         }
 
+        /* ========== ИНФО О ЗАРАБОТКЕ ========== */
         .earnings-info {
             display: flex;
             justify-content: center;
@@ -313,6 +340,7 @@
             color: #FFD700;
         }
 
+        /* ========== ЭНЕРГИЯ ========== */
         .energy-card {
             background: rgba(255,255,255,0.05);
             border-radius: 16px;
@@ -363,6 +391,7 @@
             margin-top: 8px;
         }
 
+        /* ========== МИНИ-СТАТИСТИКА ========== */
         .stats-mini {
             display: flex;
             gap: 12px;
@@ -398,6 +427,7 @@
             opacity: 0.5;
         }
 
+        /* ========== МИНИ-ЛИДЕРБОРД ========== */
         .leaderboard-mini {
             background: rgba(255,215,0,0.08);
             border-radius: 16px;
@@ -467,6 +497,7 @@
             opacity: 0.6;
         }
 
+        /* ========== ВКЛАДКИ МАГАЗИНА ========== */
         .shop-tabs {
             display: flex;
             gap: 8px;
@@ -514,6 +545,7 @@
             display: block;
         }
 
+        /* ========== ЗАГОЛОВКИ ========== */
         .section-title {
             font-size: 1.3rem;
             font-weight: 700;
@@ -538,6 +570,7 @@
             flex-shrink: 0;
         }
 
+        /* ========== КАРТОЧКИ УЛУЧШЕНИЙ ========== */
         .upgrade-card {
             background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,165,0,0.05));
             border-radius: 16px;
@@ -597,6 +630,7 @@
             font-weight: 600;
         }
 
+        /* ========== ЗВЁЗДНЫЙ МАГАЗИН ========== */
         .stars-balance-card {
             background: linear-gradient(135deg, rgba(255,215,0,0.12), rgba(255,165,0,0.06));
             border-radius: 24px;
@@ -673,6 +707,7 @@
             margin-top: 4px;
         }
 
+        /* ========== КАРУСЕЛЬ ДЛЯ ДОНАТА ========== */
         .donate-carousel-container {
             overflow: hidden;
             border-radius: 24px;
@@ -684,7 +719,8 @@
             transition: transform 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1);
         }
 
-        .carousel-prev, .carousel-next {
+        .carousel-prev,
+        .carousel-next {
             position: absolute;
             top: 50%;
             transform: translateY(-50%);
@@ -705,17 +741,24 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         }
 
-        .carousel-prev { left: 8px; }
-        .carousel-next { right: 8px; }
+        .carousel-prev {
+            left: 8px;
+        }
 
-        .carousel-prev:hover, .carousel-next:hover {
+        .carousel-next {
+            right: 8px;
+        }
+
+        .carousel-prev:hover,
+        .carousel-next:hover {
             background: rgba(255,215,0,0.45);
             transform: translateY(-50%) scale(1.08);
             border-color: rgba(255,215,0,0.7);
             box-shadow: 0 4px 12px rgba(255,215,0,0.3);
         }
 
-        .carousel-prev:active, .carousel-next:active {
+        .carousel-prev:active,
+        .carousel-next:active {
             transform: translateY(-50%) scale(0.95);
         }
 
@@ -883,7 +926,9 @@
             transform: scale(0.97);
         }
 
-        .ad-card, .donation-card {
+        /* ========== РЕКЛАМНЫЕ КАРТОЧКИ ========== */
+        .ad-card,
+        .donation-card {
             background: rgba(255,255,255,0.05);
             border-radius: 14px;
             padding: 12px;
@@ -894,7 +939,8 @@
             margin-bottom: 8px;
         }
 
-        .ad-icon, .donation-icon {
+        .ad-icon,
+        .donation-icon {
             display: flex;
             align-items: center;
             justify-content: center;
@@ -927,6 +973,7 @@
             opacity: 0.6;
         }
 
+        /* ========== ЛОТЕРЕЯ ========== */
         .lottery-header {
             display: flex;
             justify-content: space-between;
@@ -1051,7 +1098,8 @@
             display: block;
         }
 
-        .buy-ticket-btn, .my-tickets-btn {
+        .buy-ticket-btn,
+        .my-tickets-btn {
             width: 100%;
             padding: 12px;
             border-radius: 40px;
@@ -1067,7 +1115,8 @@
             gap: 8px;
         }
 
-        .buy-ticket-btn img, .my-tickets-btn img {
+        .buy-ticket-btn img,
+        .my-tickets-btn img {
             width: 18px;
             height: 18px;
             display: block;
@@ -1135,9 +1184,15 @@
         }
 
         @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(34,197,94,0.4); }
-            70% { box-shadow: 0 0 0 8px rgba(34,197,94,0); }
-            100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+            0% {
+                box-shadow: 0 0 0 0 rgba(34,197,94,0.4);
+            }
+            70% {
+                box-shadow: 0 0 0 8px rgba(34,197,94,0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(34,197,94,0);
+            }
         }
 
         .draw-timer {
@@ -1186,6 +1241,7 @@
             opacity: 0.5;
         }
 
+        /* ========== ТОП ИГРОКОВ В ЛОТЕРЕЕ ========== */
         .top-players-section {
             background: rgba(255,215,0,0.08);
             border-radius: 16px;
@@ -1255,6 +1311,7 @@
             color: #FFD700;
         }
 
+        /* ========== ПОСЛЕДНИЕ УЧАСТНИКИ ========== */
         .recent-players-section {
             background: rgba(255,255,255,0.04);
             border-radius: 16px;
@@ -1347,6 +1404,7 @@
             font-weight: 500;
         }
 
+        /* ========== ИНФО КАРТОЧКИ ========== */
         .info-card {
             background: rgba(255,255,255,0.04);
             border-radius: 18px;
@@ -1384,6 +1442,7 @@
             opacity: 0.5;
         }
 
+        /* ========== ПРОФИЛЬ ========== */
         .profile-header {
             text-align: center;
             margin-bottom: 20px;
@@ -1466,9 +1525,15 @@
         }
 
         @keyframes legendShine {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
+            0% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+            100% {
+                background-position: 0% 50%;
+            }
         }
 
         .role-badge.legend::before {
@@ -1505,6 +1570,7 @@
             transform: scale(0.95);
         }
 
+        /* ========== СТАТИСТИКА В ПРОФИЛЕ ========== */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -1549,6 +1615,7 @@
             opacity: 0.5;
         }
 
+        /* ========== КНОПКА ВЫВОДА ========== */
         .withdrawal-btn {
             background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,165,0,0.08));
             border: 1px solid rgba(255,215,0,0.25);
@@ -1571,6 +1638,7 @@
             transform: scale(0.97);
         }
 
+        /* ========== РЕФЕРАЛЬНАЯ СИСТЕМА ========== */
         .referral-section {
             background: rgba(255,255,255,0.05);
             border-radius: 20px;
@@ -1786,6 +1854,7 @@
             font-size: 0.7rem;
         }
 
+        /* ========== НАСТРОЙКИ ========== */
         .settings-card {
             background: rgba(255,255,255,0.05);
             border-radius: 16px;
@@ -1861,14 +1930,15 @@
             transition: 0.2s;
         }
 
-        input:checked + .slider {
+        input:checked+.slider {
             background: linear-gradient(135deg, #00E5FF, #00BFA5);
         }
 
-        input:checked + .slider:before {
+        input:checked+.slider:before {
             transform: translateX(22px);
         }
 
+        /* ========== СТРАНИЦА БИЛЕТОВ ========== */
         .tickets-page {
             position: fixed;
             top: 0;
@@ -1977,6 +2047,7 @@
             background: linear-gradient(90deg, #FFD700, #FFA500);
         }
 
+        /* ========== БИЛЕТ ========== */
         .ticket-container {
             background: linear-gradient(145deg, #1a1a2e, #0f0f1f);
             border-radius: 28px;
@@ -2136,6 +2207,7 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         }
 
+        /* ========== МОДАЛЬНОЕ ОКНО ПРОФИЛЯ ИГРОКА ========== */
         .player-modal {
             display: none;
             position: fixed;
@@ -2290,6 +2362,7 @@
             display: none;
         }
 
+        /* ========== СТРАНИЦА ЛИДЕРБОРДА ========== */
         .leaderboard-page {
             position: fixed;
             top: 0;
@@ -2408,6 +2481,7 @@
             color: #FFD700;
         }
 
+        /* ========== НИЖНЯЯ НАВИГАЦИЯ ========== */
         .bottom-nav {
             position: fixed;
             bottom: 0;
@@ -2456,6 +2530,7 @@
             font-size: 0.55rem;
         }
 
+        /* ========== TOAST УВЕДОМЛЕНИЯ ========== */
         .toast {
             position: fixed;
             bottom: 80px;
@@ -2485,12 +2560,14 @@
             background: linear-gradient(135deg, #eb3349, #f45c43);
         }
 
-        .empty-state, .loading {
+        .empty-state,
+        .loading {
             text-align: center;
             padding: 30px;
             opacity: 0.5;
         }
 
+        /* ========== МОДАЛЬНОЕ ОКНО ВЫВОДА ========== */
         .withdrawal-modal {
             display: none;
             position: fixed;
@@ -2733,6 +2810,7 @@
             border-top: 1px solid rgba(255,255,255,0.05);
         }
 
+        /* ========== МОДАЛЬНОЕ ОКНО ЕЖЕДНЕВНЫХ НАГРАД ========== */
         .daily-modal {
             display: none;
             position: fixed;
@@ -2909,6 +2987,7 @@
             transform: scale(0.97);
         }
 
+        /* ========== ТУТОРИАЛ ========== */
         .tutorial-overlay {
             position: fixed;
             top: 0;
@@ -2992,10 +3071,17 @@
         }
 
         @keyframes tutorialFadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
+        /* ========== МОДАЛЬНОЕ ОКНО ПРЕФИКСОВ ========== */
         .prefix-modal {
             display: none;
             position: fixed;
@@ -3115,45 +3201,74 @@
             font-weight: 800;
         }
 
+        /* ========== АНИМАЦИИ ========== */
         @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-5px); }
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-5px);
+            }
         }
 
         @keyframes bounceClick {
-            0% { transform: translateY(0); }
-            30% { transform: translateY(-8px); }
-            70% { transform: translateY(2px); }
-            100% { transform: translateY(0); }
+            0% {
+                transform: translateY(0);
+            }
+
+            30% {
+                transform: translateY(-8px);
+            }
+
+            70% {
+                transform: translateY(2px);
+            }
+
+            100% {
+                transform: translateY(0);
+            }
         }
 
-        .daily-icon, .stat-badge {
+        .daily-icon,
+        .stat-badge {
             transition: all 0.2s ease;
         }
 
-        .daily-icon.bounce-animate, .stat-badge.bounce-animate {
+        .daily-icon.bounce-animate,
+        .stat-badge.bounce-animate {
             animation: bounce 0.5s ease;
             animation-play-state: running;
         }
 
-        .daily-icon.click-animate, .stat-badge.click-animate {
+        .daily-icon.click-animate,
+        .stat-badge.click-animate {
             animation: bounceClick 0.3s ease;
         }
 
-        .daily-icon:active, .stat-badge:active {
+        .daily-icon:active,
+        .stat-badge:active {
             transform: scale(0.95);
         }
 
-        .stat-badge img, .energy-header img, .ad-icon img, .star-upgrade-icon img, .desc-icon img {
+        .stat-badge img,
+        .energy-header img,
+        .ad-icon img,
+        .star-upgrade-icon img,
+        .desc-icon img {
             display: block;
             object-fit: contain;
         }
 
-        #energyValue, #maxEnergyValue {
+        #energyValue,
+        #maxEnergyValue {
             display: inline-block;
             line-height: 1;
         }
 
+        /* ========== ПРОМОКОДЫ ========== */
         .promo-modal {
             display: none;
             position: fixed;
@@ -3276,6 +3391,7 @@
             color: #4caf50;
         }
 
+        /* ========== ЗАДАНИЯ ========== */
         .reveal-ticket-btn {
             width: 100%;
             background: linear-gradient(135deg, #9C27B0, #7B1FA2);
@@ -3503,7 +3619,8 @@
             margin-bottom: 24px;
         }
 
-        .task-detail-reward, .task-detail-limit {
+        .task-detail-reward,
+        .task-detail-limit {
             display: flex;
             justify-content: space-between;
             padding: 8px 0;
@@ -3556,6 +3673,7 @@
             cursor: pointer;
         }
 
+        /* ========== ДОСТИЖЕНИЯ ========== */
         .achievements-modal {
             display: none;
             position: fixed;
@@ -3895,6 +4013,7 @@
             scroll-behavior: smooth;
         }
 
+        /* ========== ТАЙМЕР ТОПА ДНЯ ========== */
         .daily-timer-container {
             background: linear-gradient(135deg, rgba(255,215,0,0.12), rgba(255,165,0,0.06));
             border-radius: 30px;
@@ -3913,9 +4032,18 @@
         }
 
         @keyframes timerPulse {
-            0% { transform: scale(1); opacity: 0.7; }
-            50% { transform: scale(1.05); opacity: 1; }
-            100% { transform: scale(1); opacity: 0.7; }
+            0% {
+                transform: scale(1);
+                opacity: 0.7;
+            }
+            50% {
+                transform: scale(1.05);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 0.7;
+            }
         }
 
         .daily-timer-label {
@@ -3947,6 +4075,7 @@
             }
         }
 
+        /* ========== СКОРО ПОЯВИТСЯ ========== */
         .coming-soon {
             background: linear-gradient(135deg, rgba(255,215,0,0.08), rgba(255,165,0,0.04));
             border-radius: 28px;
@@ -3965,9 +4094,18 @@
         }
 
         @keyframes comingSoonPulse {
-            0% { transform: scale(1); opacity: 0.6; }
-            50% { transform: scale(1.1); opacity: 1; }
-            100% { transform: scale(1); opacity: 0.6; }
+            0% {
+                transform: scale(1);
+                opacity: 0.6;
+            }
+            50% {
+                transform: scale(1.1);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 0.6;
+            }
         }
 
         .coming-soon-title {
@@ -4003,25 +4141,33 @@
         }
 
         @keyframes progressShine {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
+            0% {
+                background-position: 200% 0;
+            }
+            100% {
+                background-position: -200% 0;
+            }
         }
 
         @media (max-width: 480px) {
             .coming-soon {
                 padding: 24px 16px;
             }
+
             .coming-soon-icon {
                 font-size: 2.5rem;
             }
+
             .coming-soon-title {
                 font-size: 1.1rem;
             }
+
             .coming-soon-text {
                 font-size: 0.7rem;
             }
         }
 
+        /* ========== ИГРОВОЙ КОНТЕЙНЕР ========== */
         .game-container {
             position: relative;
             display: flex;
@@ -4073,9 +4219,7 @@
             }
         }
 
-        /* ============================================
-        ГЕЙМПАД МЕНЮ - WEREGOOD СТИЛЬ
-        ============================================ */
+        /* ========== ГЕЙМПАД МЕНЮ ========== */
         .gamepad-modal {
             display: none;
             position: fixed;
@@ -4094,8 +4238,14 @@
         }
 
         @keyframes fadeInGamepad {
-            from { opacity: 0; transform: translateY(15px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(15px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .gamepad-modal-content {
@@ -4269,9 +4419,7 @@
             gap: 6px;
         }
 
-        /* ============================================
-        ФОРТУНА 2.0 - ПРЕМИУМ ДИЗАЙН
-        ============================================ */
+        /* ========== ФОРТУНА ========== */
         .game-modal-full {
             display: none;
             position: fixed;
@@ -4290,8 +4438,14 @@
         }
 
         @keyframes fadeInGame {
-            from { opacity: 0; transform: scale(0.98); }
-            to { opacity: 1; transform: scale(1); }
+            from {
+                opacity: 0;
+                transform: scale(0.98);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
         }
 
         .game-modal-full-content {
@@ -4322,9 +4476,15 @@
         }
 
         @keyframes titleShine {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
+            0% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+            100% {
+                background-position: 0% 50%;
+            }
         }
 
         .game-modal-full-close {
@@ -4387,8 +4547,14 @@
         }
 
         @keyframes fadeInTab {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .fortune-timer-card {
@@ -4415,8 +4581,12 @@
         }
 
         @keyframes rotateBg {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         .timer-label {
@@ -4463,8 +4633,12 @@
         }
 
         @keyframes shimmer {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
+            0% {
+                background-position: 200% 0;
+            }
+            100% {
+                background-position: -200% 0;
+            }
         }
 
         .fortune-balance-card {
@@ -4848,6 +5022,7 @@
             font-size: 0.75rem;
         }
 
+        /* ========== МОДАЛЬНОЕ ОКНО СТАВКИ ========== */
         .bet-modal {
             display: none;
             position: fixed;
@@ -4867,8 +5042,14 @@
         }
 
         @keyframes fadeInModal {
-            from { opacity: 0; backdrop-filter: blur(0); }
-            to { opacity: 1; backdrop-filter: blur(4px); }
+            from {
+                opacity: 0;
+                backdrop-filter: blur(0);
+            }
+            to {
+                opacity: 1;
+                backdrop-filter: blur(4px);
+            }
         }
 
         .bet-modal-content-premium {
@@ -5067,36 +5248,46 @@
                 font-size: 2rem;
                 letter-spacing: 3px;
             }
+
             .pool-value-premium {
                 font-size: 1.2rem;
             }
+
             .player-card-premium {
                 width: 58px;
             }
+
             .player-avatar-premium {
                 width: 46px;
                 height: 46px;
             }
+
             .winning-item {
                 padding: 10px 16px;
             }
+
             .winner-name {
                 font-size: 0.75rem;
             }
+
             .winner-win {
                 font-size: 0.8rem;
             }
+
             .team-header-premium {
                 padding: 14px 16px;
             }
+
             .team-icon-premium {
                 width: 40px;
                 height: 40px;
                 font-size: 1.4rem;
             }
+
             .team-name-premium {
                 font-size: 0.95rem;
             }
+
             .team-chance-premium {
                 font-size: 0.65rem;
                 padding: 4px 10px;
@@ -5104,9 +5295,15 @@
         }
 
         @keyframes pulseGold {
-            0% { box-shadow: 0 0 0 0 rgba(255,215,0,0.4); }
-            70% { box-shadow: 0 0 0 8px rgba(255,215,0,0); }
-            100% { box-shadow: 0 0 0 0 rgba(255,215,0,0); }
+            0% {
+                box-shadow: 0 0 0 0 rgba(255,215,0,0.4);
+            }
+            70% {
+                box-shadow: 0 0 0 8px rgba(255,215,0,0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(255,215,0,0);
+            }
         }
 
         .bet-btn-premium:active {
@@ -5116,6 +5313,7 @@
 </head>
 <body>
     <div class="app">
+        <!-- ХЕДЕР -->
         <header class="header">
             <div class="logo">
                 <div class="logo-icon">
@@ -5136,6 +5334,7 @@
             </div>
         </header>
 
+        <!-- ОСНОВНОЙ КОНТЕНТ -->
         <main class="main-content">
             <!-- ВКЛАДКА ГЛАВНАЯ -->
             <div id="tabHome" class="tab-pane active">
@@ -5185,9 +5384,21 @@
                 </div>
 
                 <div class="stats-mini">
-                    <div class="stat-mini-item"><div class="stat-mini-icon"><img src="/static/wallet.png" style="width:30px"></div><div class="stat-mini-value" id="totalWGmini">0</div><div class="stat-mini-label">Всего WG</div></div>
-                    <div class="stat-mini-item"><div class="stat-mini-icon"><img src="/static/ticket.png" style="width:30px"></div><div class="stat-mini-value" id="totalTicketsMini">0</div><div class="stat-mini-label">Билетов</div></div>
-                    <div class="stat-mini-item"><div class="stat-mini-icon"><img src="/static/click.png" style="width:30px"></div><div class="stat-mini-value" id="totalClicksMini">0</div><div class="stat-mini-label">Кликов</div></div>
+                    <div class="stat-mini-item">
+                        <div class="stat-mini-icon"><img src="/static/wallet.png" style="width:30px"></div>
+                        <div class="stat-mini-value" id="totalWGmini">0</div>
+                        <div class="stat-mini-label">Всего WG</div>
+                    </div>
+                    <div class="stat-mini-item">
+                        <div class="stat-mini-icon"><img src="/static/ticket.png" style="width:30px"></div>
+                        <div class="stat-mini-value" id="totalTicketsMini">0</div>
+                        <div class="stat-mini-label">Билетов</div>
+                    </div>
+                    <div class="stat-mini-item">
+                        <div class="stat-mini-icon"><img src="/static/click.png" style="width:30px"></div>
+                        <div class="stat-mini-value" id="totalClicksMini">0</div>
+                        <div class="stat-mini-label">Кликов</div>
+                    </div>
                 </div>
 
                 <div class="leaderboard-mini" onclick="openLeaderboard()">
@@ -5199,31 +5410,17 @@
             <!-- ВКЛАДКА МАГАЗИН -->
             <div id="tabShop" class="tab-pane">
                 <div class="shop-tabs">
-                    <div class="shop-tab active" data-shop-tab="normal">
-                        <img src="/static/shop_icon.png" alt="Магазин" style="width: 18px; height: 18px;">
-                        Магазин
-                    </div>
-                    <div class="shop-tab" data-shop-tab="stars">
-                        <img src="/static/star_small.png" alt="Звёздный магазин" style="width: 24px; height: 24px;">
-                        Звёздный магазин
-                    </div>
+                    <div class="shop-tab active" data-shop-tab="normal">🛒 Магазин</div>
+                    <div class="shop-tab" data-shop-tab="stars">⭐ Звёздный магазин</div>
                 </div>
 
                 <div id="shopNormal" class="shop-pane active">
-                    <h2 class="section-title">
-                        <img src="/static/shop_icon.png" alt="Магазин" style="width: 30px; height: 30px;">
-                        Магазин
-                    </h2>
+                    <h2 class="section-title">🛒 Магазин</h2>
 
-                    <h3 class="subsection-title">
-                        <img src="/static/chart.png" alt="Улучшения" style="width: 30px; height: 30px;">
-                        <span>Улучшения</span>
-                    </h3>
+                    <h3 class="subsection-title">📈 Улучшения</h3>
 
                     <div class="upgrade-card" onclick="buyUpgrade(1)">
-                        <div class="upgrade-icon">
-                            <img src="/static/star_icon.png" alt="Новичок" style="width: 41px; height: 41px;">
-                        </div>
+                        <div class="upgrade-icon">⭐</div>
                         <div class="upgrade-info">
                             <div class="upgrade-title">Новичок</div>
                             <div class="upgrade-desc">+0.01 WG к заработку</div>
@@ -5233,9 +5430,7 @@
                     </div>
 
                     <div class="upgrade-card" onclick="buyUpgrade(2)">
-                        <div class="upgrade-icon">
-                            <img src="/static/diamond_icon.png" alt="Профессионал" style="width: 41px; height: 41px;">
-                        </div>
+                        <div class="upgrade-icon">💎</div>
                         <div class="upgrade-info">
                             <div class="upgrade-title">Профессионал</div>
                             <div class="upgrade-desc">+0.03 WG к заработку</div>
@@ -5245,9 +5440,7 @@
                     </div>
 
                     <div class="upgrade-card" onclick="buyUpgrade(3)">
-                        <div class="upgrade-icon">
-                            <img src="/static/crown_icon.png" alt="Мастер" style="width: 41px; height: 41px;">
-                        </div>
+                        <div class="upgrade-icon">👑</div>
                         <div class="upgrade-info">
                             <div class="upgrade-title">Мастер</div>
                             <div class="upgrade-desc">+0.07 WG к заработку</div>
@@ -5256,15 +5449,10 @@
                         <div class="upgrade-price"><span id="upgradeCost3">70</span> WG</div>
                     </div>
 
-                    <h3 class="subsection-title">
-                        <img src="/static/tv.png" alt="За энергией" style="width: 41px; height: 41px;">
-                        <span>За энергией</span>
-                    </h3>
+                    <h3 class="subsection-title">⚡ За энергией</h3>
 
                     <div class="ad-card" onclick="watchAd()">
-                        <div class="ad-icon">
-                            <img src="/static/video.png" alt="Реклама" style="width: 41px; height: 41px;">
-                        </div>
+                        <div class="ad-icon">🎬</div>
                         <div class="ad-info">
                             <div class="ad-title">Посмотреть рекламу</div>
                             <div class="ad-desc">+150 энергии</div>
@@ -5273,20 +5461,16 @@
                     </div>
 
                     <div class="ad-card" onclick="watchAdLimit()">
-                        <div class="ad-icon">
-                            <img src="/static/lightning.png" alt="Энергия" style="width: 41px; height: 41px;">
-                        </div>
+                        <div class="ad-icon">⚡</div>
                         <div class="ad-info">
                             <div class="ad-title">Увеличить лимит энергии</div>
-                            <div class="ad-desc">+1.00 к макс. энергии<br>(макс. 300 раз)</div>
+                            <div class="ad-desc">+1 к макс. энергии (макс. 300 раз)</div>
                         </div>
                         <div class="ad-btn">Смотреть →</div>
                     </div>
 
                     <div class="donation-card" onclick="donate()">
-                        <div class="donation-icon">
-                            <img src="/static/support.png" alt="Поддержать" style="width: 41px; height: 41px;">
-                        </div>
+                        <div class="donation-icon">❤️</div>
                         <div class="donation-text">Поддержать проект →</div>
                     </div>
                 </div>
@@ -5294,10 +5478,7 @@
                 <div id="shopStars" class="shop-pane">
                     <div class="stars-balance-card">
                         <div class="stars-balance-row">
-                            <span class="stars-label">
-                                <img src="/static/star_small.png" alt="Stars" style="width: 22px; height: 22px;">
-                                Ваши Telegram Stars
-                            </span>
+                            <span class="stars-label">⭐ Ваши Telegram Stars</span>
                             <span class="stars-value" id="starsBalance">0</span>
                         </div>
                         <div class="stars-sub">Покупайте улучшения за звёзды!</div>
@@ -5325,30 +5506,19 @@
                             <div class="donate-carousel-track" id="donateCarouselTrack">
                                 <div class="star-upgrade-card" id="energyUpgradeCard">
                                     <div class="star-upgrade-header">
-                                        <div class="star-upgrade-icon">
-                                            <img src="/static/lightning.png" alt="Энергия" style="width: 32px; height: 32px;">
-                                        </div>
+                                        <div class="star-upgrade-icon">⚡</div>
                                         <div class="star-upgrade-title">
                                             <h3>✨ Энергетический усилитель</h3>
                                             <p>Увеличивает лимит энергии</p>
                                         </div>
                                     </div>
-                                    <div class="star-upgrade-price">
-                                        <img src="/static/star_small.png" alt="Stars" style="width: 16px; height: 16px;">
-                                        25 Stars
-                                    </div>
+                                    <div class="star-upgrade-price">⭐ 25 Stars</div>
                                     <div class="star-upgrade-desc">
                                         <div class="star-upgrade-desc-item">
-                                            <div class="desc-icon">
-                                                <img src="/static/lightning.png" alt="Энергия" style="width: 30px; height: 30px;">
-                                            </div>
                                             <div class="desc-text">+40 к макс. энергии</div>
                                             <div class="desc-value">навсегда</div>
                                         </div>
                                         <div class="star-upgrade-desc-item">
-                                            <div class="desc-icon">
-                                                <img src="/static/diamond.png" alt="LP" style="width: 30px; height: 30px">
-                                            </div>
                                             <div class="desc-text">+50 LP</div>
                                             <div class="desc-value">на баланс</div>
                                         </div>
@@ -5362,56 +5532,39 @@
                                             <div class="progress-bar-fill" id="energyUpgradeProgressFill" style="width: 0%"></div>
                                         </div>
                                     </div>
-                                    <button class="star-upgrade-btn btn-stars" id="energyUpgradeBtn" onclick="buyEnergyUpgrade()">
-                                        <img src="/static/star_small.png" alt="Stars" style="width: 16px; height: 16px;">
-                                        Купить за 25 звёзд
-                                    </button>
+                                    <button class="star-upgrade-btn btn-stars" id="energyUpgradeBtn" onclick="buyEnergyUpgrade()">⭐ Купить за 25 звёзд</button>
                                     <button class="star-upgrade-btn btn-ton" id="tonDonateBtn" onclick="buyWithTon()">💎 Купить за 0.18 TON</button>
                                 </div>
 
                                 <div class="star-upgrade-card" id="lpBoostCard">
                                     <div class="star-upgrade-header">
-                                        <div class="star-upgrade-icon">
-                                            <img src="/static/diamond.png" alt="LP" style="width: 44px; height: 44px;">
-                                        </div>
+                                        <div class="star-upgrade-icon">💎</div>
                                         <div class="star-upgrade-title">
                                             <h3>💎 LP Бустер</h3>
                                             <p>Пополняет баланс LP</p>
                                         </div>
                                     </div>
-                                    <div class="star-upgrade-price">
-                                        <img src="/static/star_small.png" alt="Stars" style="width: 16px; height: 16px;">
-                                        22 Stars
-                                    </div>
+                                    <div class="star-upgrade-price">⭐ 22 Stars</div>
                                     <div class="star-upgrade-desc">
                                         <div class="star-upgrade-desc-item">
-                                            <div class="desc-icon">
-                                                <img src="/static/diamond.png" alt="LP" style="width: 36px; height: 36px;">
-                                            </div>
                                             <div class="desc-text">+50 LP</div>
                                             <div class="desc-value">на баланс</div>
                                         </div>
                                         <div class="star-upgrade-desc-item">
-                                            <div class="desc-icon">
-                                                <img src="/static/withdraw.png" alt="Безлимит" style="width: 30px; height: 30px;">
-                                            </div>
                                             <div class="desc-text">Безлимитная покупка</div>
                                             <div class="desc-value">покупай сколько хочешь</div>
                                         </div>
                                     </div>
                                     <div class="star-upgrade-progress">
                                         <div class="progress-info">
-                                            <span> Куплено: <span id="lpBoostPurchaseCount">0</span> раз</span>
+                                            <span>Куплено: <span id="lpBoostPurchaseCount">0</span> раз</span>
                                             <span>⚡ Мгновенное зачисление</span>
                                         </div>
                                         <div class="progress-bar-bg">
-                                            <div class="progress-bar-fill" style="width: 100%; background: linear-gradient(90deg, #FFD700, #FFA500);"></div>
+                                            <div class="progress-bar-fill" style="width: 100%"></div>
                                         </div>
                                     </div>
-                                    <button class="star-upgrade-btn btn-stars" id="lpBoostStarsBtn" onclick="buyLPBoostStars()">
-                                        <img src="/static/star_small.png" alt="Stars" style="width: 16px; height: 16px;">
-                                        Купить за 22 звёзд
-                                    </button>
+                                    <button class="star-upgrade-btn btn-stars" id="lpBoostStarsBtn" onclick="buyLPBoostStars()">⭐ Купить за 22 звёзд</button>
                                     <button class="star-upgrade-btn btn-ton" id="lpBoostTonBtn" onclick="buyLPBoostTon()">💎 Купить за 0.13 TON</button>
                                 </div>
                             </div>
@@ -5436,13 +5589,10 @@
                 </div>
             </div>
 
-            <!-- ВКЛАДКА ВЫЗОВ (ЛОТЕРЕЯ) -->
+            <!-- ВКЛАДКА ЛОТЕРЕЯ -->
             <div id="tabLottery" class="tab-pane">
                 <div class="lottery-header">
-                    <h2 class="section-title">
-                        <img src="/static/fire.png" alt="Вызов">
-                        <span>Ежедневный вызов</span>
-                    </h2>
+                    <h2 class="section-title">🔥 Ежедневный вызов</h2>
                     <div class="lottery-badge">21:00</div>
                 </div>
 
@@ -5453,35 +5603,20 @@
                     </div>
                     <div class="prize-info">
                         <div class="prize-label">ВАШ БАЛАНС LP</div>
-                        <div class="prize-value lp">
-                            <img src="/static/diamond.png" alt="LP">
-                            <span id="lotteryLPBalance">0</span> LP
-                        </div>
+                        <div class="prize-value lp">💎 <span id="lotteryLPBalance">0</span> LP</div>
                     </div>
                 </div>
 
                 <div class="ticket-card">
                     <div class="ticket-stats">
-                        <span>
-                            <img src="/static/ticket.png" alt="билет">
-                            <span id="ticketsCount">0</span> билетов
-                        </span>
+                        <span>🎫 <span id="ticketsCount">0</span> билетов</span>
                         <span>Макс. 10</span>
                     </div>
-                    <button class="buy-ticket-btn" id="ticketBtn">
-                        <img src="/static/fire.png" alt="Принять участие">
-                        Принять участие за 100 LP
-                    </button>
-                    <button class="my-tickets-btn" id="myTicketsBtn">
-                        <img src="/static/ticket.png" alt="Мои билеты">
-                        Мои билеты
-                    </button>
+                    <button class="buy-ticket-btn" id="ticketBtn">🔥 Принять участие за 100 LP</button>
+                    <button class="my-tickets-btn" id="myTicketsBtn">🎫 Мои билеты</button>
                 </div>
 
-                <div id="drawStatus" class="draw-status">
-                    <img src="/static/hourglass.png" alt="Ожидание" style="width: 18px; height: 18px;">
-                    Ожидание розыгрыша в 21:00
-                </div>
+                <div id="drawStatus" class="draw-status">⏳ Ожидание розыгрыша в 21:00</div>
                 <div id="drawTimer" class="draw-timer" style="display: none;"></div>
 
                 <div id="topPlayersBlock" class="top-players-section" style="display: none;">
@@ -5494,8 +5629,7 @@
                         <span>📋 Последние участники</span>
                         <span class="recent-badge">5</span>
                     </div>
-                    <div class="recent-players-list" id="recentPlayersList">
-                    </div>
+                    <div class="recent-players-list" id="recentPlayersList"></div>
                 </div>
 
                 <div class="info-card">
@@ -5522,49 +5656,43 @@
 
                 <div class="stats-grid">
                     <div class="stat-card-glass">
-                        <div class="stat-card-icon"><img src="/static/wallet.png" alt="WG" style="width: 33px; height: 33px;"></div>
+                        <div class="stat-card-icon">💰</div>
                         <div class="stat-card-value" id="totalWG">0</div>
                         <div class="stat-card-label">WG Coin</div>
                     </div>
                     <div class="stat-card-glass">
-                        <div class="stat-card-icon"><img src="/static/diamond.png" alt="LP" style="width: 42px; height: 42px;"></div>
+                        <div class="stat-card-icon">💎</div>
                         <div class="stat-card-value" id="totalLP">0</div>
                         <div class="stat-card-label">LP</div>
                     </div>
                     <div class="stat-card-glass">
-                        <div class="stat-card-icon"><img src="/static/usdt_icon.png" alt="USDT" style="width: 24px; height: 24px;"></div>
+                        <div class="stat-card-icon">💵</div>
                         <div class="stat-card-value usdt" id="profileUSDT">0</div>
                         <div class="stat-card-label">USDT</div>
                     </div>
                     <div class="stat-card-glass">
-                        <div class="stat-card-icon"><img src="/static/trophy.png" alt="Побед" style="width: 28px; height: 28px;"></div>
+                        <div class="stat-card-icon">🏆</div>
                         <div class="stat-card-value" id="profileWins">0</div>
                         <div class="stat-card-label">Побед</div>
                     </div>
                     <div class="stat-card-glass">
-                        <div class="stat-card-icon"><img src="/static/ticket.png" alt="билет" style="width: 30px; height: 30px;"></div>
+                        <div class="stat-card-icon">🎫</div>
                         <div class="stat-card-value" id="totalTickets">0</div>
                         <div class="stat-card-label">Билетов</div>
                     </div>
                     <div class="stat-card-glass">
-                        <div class="stat-card-icon"><img src="/static/click.png" alt="Клики" style="width: 32px; height: 32px;"></div>
+                        <div class="stat-card-icon">👆</div>
                         <div class="stat-card-value" id="profileClicks">0</div>
                         <div class="stat-card-label">Кликов</div>
                     </div>
                 </div>
 
-                <button class="withdrawal-btn" onclick="openWithdrawalModal()">
-                    <img src="/static/withdraw.png" alt="Вывести" style="width: 24px; height: 24px;">
-                    Вывести USDT
-                </button>
-                <button class="withdrawal-btn" onclick="openAchievementsModal()">
-                    <img src="/static/trophy.png" alt="Достижения" style="width: 24px; height: 24px;">
-                    Достижения
-                </button>
+                <button class="withdrawal-btn" onclick="openWithdrawalModal()">💸 Вывести USDT</button>
+                <button class="withdrawal-btn" onclick="openAchievementsModal()">🏆 Достижения</button>
 
                 <div class="referral-section">
                     <div class="referral-header">
-                        <div class="referral-header-icon"><img src="/static/invite.png" alt="invite" style="width: 24px; height: 24px;"></div>
+                        <div class="referral-header-icon">👥</div>
                         <div class="referral-header-info">
                             <div class="referral-title">Пригласи друга</div>
                             <div class="referral-subtitle">5% от трат LP + 10% от WG дохода друга → тебе</div>
@@ -5573,29 +5701,21 @@
 
                     <div style="display: flex; gap: 12px; margin-bottom: 20px;">
                         <div style="flex: 1; background: rgba(255,215,0,0.08); border-radius: 16px; padding: 12px; text-align: center;">
-                            <div style="font-size: 0.6rem; color: rgba(255,255,255,0.5); margin-bottom: 4px;">💰 Заработано WG</div>
+                            <div style="font-size: 0.6rem; opacity: 0.5;">💰 Заработано WG</div>
                             <div style="font-size: 1.3rem; font-weight: 700; color: #FFD700;" id="totalEarnedWG">0</div>
-                            <div style="font-size: 0.55rem; color: rgba(255,255,255,0.4);">10% от кликов друга</div>
                         </div>
                         <div style="flex: 1; background: rgba(255,215,0,0.08); border-radius: 16px; padding: 12px; text-align: center;">
-                            <div style="font-size: 0.6rem; color: rgba(255,255,255,0.5); margin-bottom: 4px;">💎 Заработано LP</div>
+                            <div style="font-size: 0.6rem; opacity: 0.5;">💎 Заработано LP</div>
                             <div style="font-size: 1.3rem; font-weight: 700; color: #00E5FF;" id="totalEarnedLP">0</div>
-                            <div style="font-size: 0.55rem; color: rgba(255,255,255,0.4);">5% от трат LP друга</div>
                         </div>
                     </div>
 
                     <div class="referral-link-row">
                         <input type="text" id="referralLinkInput" readonly>
-                        <button class="referral-copy-btn" onclick="copyReferralLink()">
-                            <img src="/static/copy.png" alt="copy" style="width: 14px; height: 14px;">
-                            <span>Копировать</span>
-                        </button>
+                        <button class="referral-copy-btn" onclick="copyReferralLink()">📋 Копировать</button>
                     </div>
 
-                    <button class="referral-share-btn-full" onclick="shareReferral()">
-                        <img src="/static/share.png" alt="share" style="width: 14px; height: 14px;">
-                        <span>Поделиться ссылкой</span>
-                    </button>
+                    <button class="referral-share-btn-full" onclick="shareReferral()">📤 Поделиться ссылкой</button>
 
                     <div class="referrals-list-header">
                         <span>👥 Рефералы</span>
@@ -5608,57 +5728,55 @@
                 </div>
 
                 <div class="settings-card">
-                    <div class="settings-header">
-                        <img src="/static/settings.png" alt="Настройки" style="width: 28px; height: 28px;">
-                        Настройки
-                    </div>
+                    <div class="settings-header">⚙️ Настройки</div>
                     <div class="setting-item">
-                        <span><img src="/static/notification.png" alt="Уведомления" style="width: 22px; height: 22px;"> Уведомления</span>
+                        <span>🔔 Уведомления</span>
                         <label class="switch"><input type="checkbox" id="notificationsToggle"><span class="slider"></span></label>
                     </div>
                     <div class="setting-item">
-                        <span><img src="/static/theme.png" alt="Тёмная тема" style="width: 22px; height: 22px;"> Тёмная тема</span>
+                        <span>🌙 Тёмная тема</span>
                         <label class="switch"><input type="checkbox" id="themeToggle"><span class="slider"></span></label>
                     </div>
                     <div class="setting-item">
-                        <span><img src="/static/sound.png" alt="Звуки" style="width: 25px; height: 25px;"> Звуки</span>
+                        <span>🔊 Звуки</span>
                         <label class="switch"><input type="checkbox" id="soundsToggle"><span class="slider"></span></label>
                     </div>
                     <div class="setting-item">
-                        <span><img src="/static/vibration.png" alt="Вибрация" style="width: 25px; height: 25px;"> Вибрация</span>
+                        <span>📳 Вибрация</span>
                         <label class="switch"><input type="checkbox" id="vibrationToggle"><span class="slider"></span></label>
                     </div>
                     <div class="setting-item">
-                        <span><img src="/static/hide.png" alt="Скрыть из топа" style="width: 25px; height: 25px;"> Скрыть из топа</span>
+                        <span>🙈 Скрыть из топа</span>
                         <label class="switch"><input type="checkbox" id="hideFromTopToggle"><span class="slider"></span></label>
                     </div>
                     <div class="setting-item">
-                        <span><span style="font-size: 20px;">💎</span> TON Кошелёк</span>
-                        <span id="tonWalletStatus" style="font-size:0.7rem; color:#FFD700;">Не подключён</span>
+                        <span>💎 TON Кошелёк</span>
+                        <span id="tonWalletStatus" style="font-size: 0.7rem; color: #FFD700;">Не подключён</span>
                     </div>
                     <div class="setting-item">
-                        <span><span style="font-size: 20px;">🔗</span> Отвязать TON кошелёк</span>
+                        <span>🔗 Отвязать TON кошелёк</span>
                         <button class="btn-sm" onclick="disconnectTonWallet()" style="background: rgba(244,67,54,0.2); color: #f44336; border: 1px solid rgba(244,67,54,0.3); border-radius: 20px; padding: 5px 12px;">Отвязать</button>
                     </div>
                 </div>
             </div>
         </main>
 
+        <!-- НИЖНЯЯ НАВИГАЦИЯ -->
         <nav class="bottom-nav" id="bottomNav">
             <div class="nav-item active" data-tab="home">
-                <div class="nav-icon"><img src="/static/home_normal.png" alt="Главная" style="width: 24px; height: 24px;"></div>
+                <div class="nav-icon">🏠</div>
                 <div class="nav-label">Главная</div>
             </div>
             <div class="nav-item" data-tab="shop">
-                <div class="nav-icon"><img src="/static/shop_normal.png" alt="Магазин" style="width: 24px; height: 24px;"></div>
+                <div class="nav-icon">🛒</div>
                 <div class="nav-label">Магазин</div>
             </div>
             <div class="nav-item" data-tab="lottery">
-                <div class="nav-icon"><img src="/static/fire_normal.png" alt="Вызов" style="width: 24px; height: 24px;"></div>
+                <div class="nav-icon">🎲</div>
                 <div class="nav-label">Вызов</div>
             </div>
             <div class="nav-item" data-tab="profile">
-                <div class="nav-icon"><img src="/static/profile_normal.png" alt="Профиль" style="width: 24px; height: 24px;"></div>
+                <div class="nav-icon">👤</div>
                 <div class="nav-label">Профиль</div>
             </div>
         </nav>
@@ -5748,7 +5866,7 @@
                 </div>
                 <div class="form-group"><label>💰 Сумма вывода</label><input type="number" class="form-input" id="withdrawalAmount" step="0.01" placeholder="Минимум 2 USDT"></div>
                 <div class="form-group"><label>🏦 Адрес кошелька</label><input type="text" class="form-input" id="withdrawalAddress" placeholder="TRC20 / ERC20 / BEP20 адрес"></div>
-                <div class="form-group"><label>🌐 Сеть</label><select class="form-select" id="withdrawalNetwork"><option value="TRC20">TRC20 (TRON) - рекомендуем</option><option value="ERC20">ERC20 (Ethereum)</option><option value="BEP20">BEP20 (BSC)</option></select></div>
+                <div class="form-group"><label>🌐 Сеть</label><select class="form-select" id="withdrawalNetwork"><option value="TRC20">TRC20 (TRON)</option><option value="ERC20">ERC20 (Ethereum)</option><option value="BEP20">BEP20 (BSC)</option></select></div>
                 <button class="withdrawal-submit-btn" onclick="createWithdrawal()">📤 Отправить заявку</button>
             </div>
             <div id="withdrawalHistory" class="withdrawal-tab-content" style="display: none;"><div id="withdrawalHistoryList"></div></div>
@@ -5761,7 +5879,7 @@
             <div class="daily-timer">⏳ Следующая награда через: <span id="dailyTimerValue">--:--:--</span></div>
             <div class="daily-rewards-grid" id="dailyRewardsGrid"></div>
             <div class="daily-recover" id="dailyRecover" style="display: none;"><button class="daily-recover-btn" onclick="recoverDailyStreak()">⭐ Восстановить прогресс за 20 Stars</button></div>
-            <button class="daily-claim-btn" id="dailyClaimBtn" onclick="claimDailyReward()"><img src="/static/calendar.png" alt="Забрать награду"> Забрать награду</button>
+            <button class="daily-claim-btn" id="dailyClaimBtn" onclick="claimDailyReward()">🎁 Забрать награду</button>
         </div>
     </div>
 
@@ -5769,7 +5887,7 @@
         <div class="promo-modal-content">
             <div class="promo-modal-header"><h2>🎫 Активация промокода</h2><button class="promo-modal-close" onclick="closePromoModal()">✕</button></div>
             <div class="promo-info"><div class="promo-reward" id="promoReward"></div><div class="promo-remaining" id="promoRemaining"></div></div>
-            <input type="text" class="promo-input" id="promoCodeInput" placeholder="Введите промокод" maxlength="30">
+            <input type="text" class="promo-input" id="promoCodeInput" placeholder="Введите промокод">
             <button class="promo-activate-btn" id="activatePromoBtn">🎁 Активировать</button>
             <div id="promoMessage" class="promo-message"></div>
         </div>
@@ -5815,6 +5933,7 @@
 
     <div id="toast" class="toast"></div>
 
+    <!-- АУДИО -->
     <audio id="errorSound" preload="auto"><source src="/static/error.mp3" type="audio/mpeg"></audio>
     <audio id="clickSound" preload="auto"><source src="/static/click.mp3" type="audio/mpeg"></audio>
     <audio id="navSound" preload="auto"><source src="/static/nav.mp3" type="audio/mpeg"></audio>
@@ -5834,118 +5953,32 @@
         </div>
     </div>
 
-    <!-- МОДАЛЬНОЕ ОКНО КОМАНДНОЙ ФОРТУНЫ -->
-<div id="fortuneModal" class="game-modal-full">
-    <div class="game-modal-full-content">
-        <div class="game-modal-full-header">
-            <h2>🎲 Командная Фортуна</h2>
-            <button class="game-modal-full-close" onclick="closeFortuneGame()">✕</button>
-        </div>
-
-        <div class="fortune-tabs">
-            <button class="fortune-tab active" data-fortune-tab="play">🎮 Играть</button>
-            <button class="fortune-tab" data-fortune-tab="history">📜 Моя история</button>
-        </div>
-
-        <div id="fortunePlayTab" class="fortune-tab-content active">
-            <div class="fortune-timer-card">
-                <div class="timer-label">⏱️ ДО КОНЦА РАУНДА</div>
-                <div class="timer-value-premium" id="fortuneTimer">05:00</div>
-                <div class="timer-bar-premium">
-                    <div class="timer-bar-fill-premium" id="timerBarFill"></div>
-                </div>
+    <!-- МОДАЛЬНОЕ ОКНО ФОРТУНЫ -->
+    <div id="fortuneModal" class="game-modal-full">
+        <div class="game-modal-full-content">
+            <div class="game-modal-full-header"><h2>🎲 Командная Фортуна</h2><button class="game-modal-full-close" onclick="closeFortuneGame()">✕</button></div>
+            <div class="fortune-tabs"><button class="fortune-tab active" data-fortune-tab="play">🎮 Играть</button><button class="fortune-tab" data-fortune-tab="history">📜 Моя история</button></div>
+            <div id="fortunePlayTab" class="fortune-tab-content active">
+                <div class="fortune-timer-card"><div class="timer-label">⏱️ ДО КОНЦА РАУНДА</div><div class="timer-value-premium" id="fortuneTimer">05:00</div><div class="timer-bar-premium"><div class="timer-bar-fill-premium" id="timerBarFill"></div></div></div>
+                <div class="fortune-balance-card"><span class="balance-label-premium">💰 Ваш баланс WG:</span><span class="balance-value-premium" id="fortuneUserBalance">0</span></div>
+                <div class="team-card-premium" id="teamYellowCard"><div class="team-header-premium"><div class="team-icon-premium">🟡</div><div class="team-name-premium">Команда Жёлтых</div><div class="team-chance-premium" id="yellowChance">0%</div></div><div class="team-pool-premium"><span class="pool-label-premium">Общий счёт:</span><span class="pool-value-premium" id="yellowPool">0</span><span class="pool-currency">WG</span></div><div class="players-grid-premium" id="yellowPlayers"><div class="empty-players-premium">🤝 Пока никто не поставил</div></div><button class="bet-btn-premium" data-team="yellow">💰 Сделать ставку</button></div>
+                <div class="team-card-premium" id="teamRedCard"><div class="team-header-premium"><div class="team-icon-premium">🔴</div><div class="team-name-premium">Команда Красных</div><div class="team-chance-premium" id="redChance">0%</div></div><div class="team-pool-premium"><span class="pool-label-premium">Общий счёт:</span><span class="pool-value-premium" id="redPool">0</span><span class="pool-currency">WG</span></div><div class="players-grid-premium" id="redPlayers"><div class="empty-players-premium">🤝 Пока никто не поставил</div></div><button class="bet-btn-premium" data-team="red">💰 Сделать ставку</button></div>
             </div>
-
-            <div class="fortune-balance-card">
-                <span class="balance-label-premium">💰 Ваш баланс WG:</span>
-                <span class="balance-value-premium" id="fortuneUserBalance">0</span>
-            </div>
-
-            <div class="team-card-premium" id="teamYellowCard">
-                <div class="team-header-premium">
-                    <div class="team-icon-premium">🟡</div>
-                    <div class="team-name-premium">Команда Жёлтых</div>
-                    <div class="team-chance-premium" id="yellowChance">0%</div>
-                </div>
-                <div class="team-pool-premium">
-                    <span class="pool-label-premium">Общий счёт:</span>
-                    <span class="pool-value-premium" id="yellowPool">0</span>
-                    <span class="pool-currency">WG</span>
-                </div>
-                <div class="players-grid-premium" id="yellowPlayers">
-                    <div class="empty-players-premium">🤝 Пока никто не поставил</div>
-                </div>
-                <button class="bet-btn-premium" data-team="yellow">💰 Сделать ставку</button>
-            </div>
-
-            <div class="team-card-premium" id="teamRedCard">
-                <div class="team-header-premium">
-                    <div class="team-icon-premium">🔴</div>
-                    <div class="team-name-premium">Команда Красных</div>
-                    <div class="team-chance-premium" id="redChance">0%</div>
-                </div>
-                <div class="team-pool-premium">
-                    <span class="pool-label-premium">Общий счёт:</span>
-                    <span class="pool-value-premium" id="redPool">0</span>
-                    <span class="pool-currency">WG</span>
-                </div>
-                <div class="players-grid-premium" id="redPlayers">
-                    <div class="empty-players-premium">🤝 Пока никто не поставил</div>
-                </div>
-                <button class="bet-btn-premium" data-team="red">💰 Сделать ставку</button>
-            </div>
-        </div>
-
-        <div id="fortuneHistoryTab" class="fortune-tab-content">
-            <div class="history-list-premium" id="fortuneHistoryList">
-                <div class="empty-state-premium">📭 У вас пока нет истории игр</div>
-            </div>
+            <div id="fortuneHistoryTab" class="fortune-tab-content"><div class="history-list-premium" id="fortuneHistoryList"><div class="empty-state-premium">📭 У вас пока нет истории игр</div></div></div>
         </div>
     </div>
-</div>
 
-<!-- Модальное окно для ставки -->
-<div id="betModal" class="bet-modal">
-    <div class="bet-modal-content-premium">
-        <div class="bet-modal-header">
-            <h3>💰 Сделать ставку</h3>
-            <button class="bet-modal-close" onclick="closeBetModal()">✕</button>
+    <!-- МОДАЛЬНОЕ ОКНО СТАВКИ -->
+    <div id="betModal" class="bet-modal">
+        <div class="bet-modal-content-premium">
+            <div class="bet-modal-header"><h3>💰 Сделать ставку</h3><button class="bet-modal-close" onclick="closeBetModal()">✕</button></div>
+            <div class="bet-team-info" id="betTeamInfo"><span class="bet-team-icon">🟡</span><span class="bet-team-name">Команда Жёлтых</span></div>
+            <div class="bet-balance"><span>💰 Ваш баланс:</span><strong id="betUserBalance">0</strong><span>WG</span></div>
+            <div class="bet-input-group"><label>Сумма ставки (мин. 10 WG)</label><input type="number" id="betAmount" class="bet-input" placeholder="100" min="10" step="10"><div class="bet-amount-presets"><div class="bet-preset-premium" data-multiplier="0.1">10%</div><div class="bet-preset-premium" data-multiplier="0.25">25%</div><div class="bet-preset-premium" data-multiplier="0.5">50%</div><div class="bet-preset-premium" data-multiplier="1">100%</div></div></div>
+            <div class="bet-info"><div class="bet-info-item"><span>📊 Комиссия 7%:</span><strong id="betCommission">0</strong><span>WG</span></div><div class="bet-info-item"><span>✅ Зачислится в пул:</span><strong id="betNetAmount">0</strong><span>WG</span></div></div>
+            <button class="bet-submit-btn" id="submitBetBtn">🎲 Подтвердить ставку</button>
         </div>
-        <div class="bet-team-info" id="betTeamInfo">
-            <span class="bet-team-icon">🟡</span>
-            <span class="bet-team-name">Команда Жёлтых</span>
-        </div>
-        <div class="bet-balance">
-            <span>💰 Ваш баланс:</span>
-            <strong id="betUserBalance">0</strong>
-            <span>WG</span>
-        </div>
-        <div class="bet-input-group">
-            <label>Сумма ставки (мин. 10 WG)</label>
-            <input type="number" id="betAmount" class="bet-input" placeholder="100" min="10" step="10">
-            <div class="bet-amount-presets">
-                <div class="bet-preset-premium" data-multiplier="0.1">10%</div>
-                <div class="bet-preset-premium" data-multiplier="0.25">25%</div>
-                <div class="bet-preset-premium" data-multiplier="0.5">50%</div>
-                <div class="bet-preset-premium" data-multiplier="1">100%</div>
-            </div>
-        </div>
-        <div class="bet-info">
-            <div class="bet-info-item">
-                <span>📊 Комиссия 7%:</span>
-                <strong id="betCommission">0</strong>
-                <span>WG</span>
-            </div>
-            <div class="bet-info-item">
-                <span>✅ Зачислится в пул:</span>
-                <strong id="betNetAmount">0</strong>
-                <span>WG</span>
-            </div>
-        </div>
-        <button class="bet-submit-btn" id="submitBetBtn">🎲 Подтвердить ставку</button>
     </div>
-</div>
-
     <script>
         // ==================== ИНИЦИАЛИЗАЦИЯ ====================
         let tg = window.Telegram?.WebApp;
@@ -5961,12 +5994,9 @@
         } else if (savedUserId && savedUserId !== '12345678' && savedUserId !== 'null') {
             userId = parseInt(savedUserId);
             console.log('✅ ID восстановлен из localStorage:', userId);
-            if (user && user.id && user.id !== userId) {
-                console.log('⚠️ ID из Telegram отличается от сохранённого:', user.id, '→', userId);
-            }
         } else {
             userId = 12345678;
-            console.warn('⚠️ ВНИМАНИЕ! Используется дефолтный ID 12345678. Игрок может потерять прогресс!');
+            console.warn('⚠️ Используется дефолтный ID 12345678');
         }
 
         let username = user ? (user.username || '') : '';
@@ -5974,40 +6004,6 @@
         let lastName = user ? (user.last_name || '') : '';
         let photoUrl = user && user.photo_url ? user.photo_url : '';
         let chatId = userId;
-        let displayName = firstName || username || 'Игрок';
-
-        window.forceBindAccount = async function() {
-            if (!tg) {
-                showToast('❌ Telegram WebApp не доступен', 'error');
-                return;
-            }
-            tg.expand();
-            const freshUser = tg.initDataUnsafe?.user;
-            if (freshUser && freshUser.id && freshUser.id !== 12345678) {
-                const newUserId = freshUser.id;
-                if (confirm(`⚠️ Обнаружен ваш реальный аккаунт (ID: ${newUserId}).\n\nПривязать его к игре? Весь ваш прогресс сохранится.`)) {
-                    userId = newUserId;
-                    localStorage.setItem('weregood_user_id', userId);
-                    username = freshUser.username || '';
-                    firstName = freshUser.first_name || '';
-                    lastName = freshUser.last_name || '';
-                    photoUrl = freshUser.photo_url || '';
-                    displayName = firstName || username || 'Игрок';
-                    await autoRegister();
-                    await updateStatus();
-                    await updateLottery();
-                    await updateLeaderboard();
-                    showToast('✅ Аккаунт привязан! Страница будет обновлена...', 'success');
-                    setTimeout(() => location.reload(), 1500);
-                }
-            } else {
-                showToast('❌ Не удалось получить данные аккаунта. Попробуйте перезапустить Telegram.', 'error');
-            }
-        };
-
-        if (localStorage.getItem('weregood_display_name')) {
-            displayName = localStorage.getItem('weregood_display_name');
-        }
 
         let currentTickets = [];
         let socket = null;
@@ -6034,7 +6030,9 @@
         let availablePrefixes = [];
         let dailyData = null;
         let dailyTimerInterval = null;
+        let paymentCheckInterval = null;
 
+        // Флаг, чтобы не обновлять несколько раз подряд
         let isUpdatingStatus = false;
         let lastStatusUpdate = 0;
         let isUpdatingLottery = false;
@@ -6053,10 +6051,7 @@
             7: { reward: "20 LP" }
         };
 
-        function showComingSoon() {
-            openGamepad();
-        }
-
+        // ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
         function showToast(msg, type = 'info') {
             let toast = document.getElementById('toast');
             toast.textContent = msg;
@@ -6130,6 +6125,16 @@
             }
         }
 
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+
         function getUpgradeCost(upgradeId, currentCount) {
             const config = {
                 1: { baseCost: 1.5, bonus: 0.01, name: "Новичок" },
@@ -6185,7 +6190,7 @@
                     upgradeBtn.classList.add('disabled');
                     upgradeCard.classList.add('disabled');
                 } else {
-                    upgradeBtn.innerHTML = '<img src="/static/star_small.png" alt="Stars" style="width: 16px; height: 16px;"> Купить за 25 звёзд';
+                    upgradeBtn.innerHTML = '⭐ Купить за 25 звёзд';
                     upgradeBtn.disabled = false;
                     upgradeBtn.classList.remove('disabled');
                     upgradeCard.classList.remove('disabled');
@@ -6225,7 +6230,7 @@
             }, 80);
         }
 
-        // ========== НОВЫЙ ОБЪЕДИНЁННЫЙ ЗАПРОС ==========
+        // ==================== ГЛАВНАЯ СИНХРОНИЗАЦИЯ ====================
         let syncInterval = null;
         let lastSyncTime = 0;
         const SYNC_DELAY = 3000;
@@ -6238,7 +6243,6 @@
             lastSyncTime = now;
 
             try {
-                // 1. Получаем статус игрока
                 const statusResponse = await fetch('/api/status', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -6255,7 +6259,6 @@
                     return;
                 }
 
-                // Обновляем локальные данные из статуса
                 localWG = statusData.wg || 0;
                 localLP = statusData.lp || 0;
                 localEnergy = statusData.energy || 0;
@@ -6281,7 +6284,6 @@
                 const regenInfo = document.getElementById('regenInfo');
                 if (regenInfo && regenText) regenInfo.innerHTML = regenText;
 
-                // 2. Получаем статус лотереи
                 const lotteryResponse = await fetch('/api/lottery_status', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -6300,7 +6302,6 @@
                     updateDrawUI();
                 }
 
-                // 3. Обновляем мини-лидерборд
                 const leaderboardResponse = await fetch('/api/leaderboard/daily?limit=5');
                 const leaderboardData = await leaderboardResponse.json();
                 if (leaderboardData && leaderboardData.length > 0) {
@@ -6309,14 +6310,12 @@
                     document.getElementById('leaderboardMini').innerHTML = '<div class="loading">Загрузка...</div>';
                 }
 
-                // 4. Обновляем последних участников
                 const recentResponse = await fetch('/api/recent_players');
                 const recentData = await recentResponse.json();
                 if (recentData && recentData.length > 0) {
                     updateRecentPlayers(recentData);
                 }
 
-                // 5. Обновляем онлайн
                 const onlineResponse = await fetch('/api/online_count');
                 const onlineData = await onlineResponse.json();
                 const onlineCount = document.getElementById('onlineCount');
@@ -6330,7 +6329,6 @@
             }
         }
 
-        // Функция для обновления мини-лидерборда
         function updateLeaderboardMini(leaderboardData) {
             const container = document.getElementById('leaderboardMini');
             if (!container) return;
@@ -6355,57 +6353,18 @@
             container.innerHTML = html;
         }
 
-        // Функция для обновления последних участников
         function updateRecentPlayers(players) {
             const container = document.getElementById('recentPlayersList');
             if (!container) return;
-
             if (!players || players.length === 0) {
                 container.innerHTML = '<div class="empty-state">😢 Пока нет участников</div>';
                 return;
             }
-
             let html = '';
             for (let p of players) {
                 let avatarHtml = (p.avatar_url && p.avatar_url !== '')
                     ? `<img src="${p.avatar_url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" onerror="this.parentElement.innerHTML='👤'">`
                     : '👤';
-
-                let playerName = p.username || 'Игрок';
-                if (playerName.startsWith('@')) playerName = playerName.substring(1);
-
-                let roleBadge = '';
-                if (p.role === 'founder') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#ef4444;">👑</span>';
-                else if (p.role === 'pioneer') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#00b4d8;">⭐</span>';
-                else if (p.role === 'legend') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#FFD700;">👑</span>';
-
-                html += `<div class="recent-player-item" onclick="openPlayerProfile(${p.user_id}, 0)">
-                    <div class="recent-player-avatar">${avatarHtml}</div>
-                    <div class="recent-player-info">
-                        <div class="recent-player-name">${escapeHtml(playerName)}${roleBadge}</div>
-                        <div class="recent-player-time">🕐 ${p.time_ago || 'только что'}</div>
-                    </div>
-                    <div class="recent-player-ticket">🎫 #${p.ticket_number}</div>
-                </div>`;
-            }
-            container.innerHTML = html;
-        }
-
-        function updateRecentPlayers(players) {
-            const container = document.getElementById('recentPlayersList');
-            if (!container) return;
-            if (!players || players.length === 0) {
-                container.innerHTML = '<div class="empty-state">😢 Пока нет участников</div>';
-                return;
-            }
-            let html = '';
-            for (let p of players) {
-                let avatarHtml = '';
-                if (p.avatar_url && p.avatar_url !== '') {
-                    avatarHtml = `<img src="${p.avatar_url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
-                } else {
-                    avatarHtml = '👤';
-                }
                 let playerName = p.username || 'Игрок';
                 if (playerName.startsWith('@')) playerName = playerName.substring(1);
                 let roleBadge = '';
@@ -7502,7 +7461,7 @@
                 statusDiv.classList.remove('active');
                 ticketBtn.disabled = false;
                 ticketBtn.classList.remove('disabled');
-                ticketBtn.innerHTML = '<img src="/static/fire.png" alt="Принять участие" style="width: 20px; height: 20px;"> Принять участие за 100 LP';
+                ticketBtn.innerHTML = '🔥 Принять участие за 100 LP';
                 topPlayersBlock.style.display = 'none';
                 recentSection.style.display = 'block';
                 stopTimer();
@@ -8281,16 +8240,6 @@
             return '📢';
         }
 
-        function escapeHtml(text) {
-            if (!text) return '';
-            return text.replace(/[&<>]/g, function(m) {
-                if (m === '&') return '&amp;';
-                if (m === '<') return '&lt;';
-                if (m === '>') return '&gt;';
-                return m;
-            });
-        }
-
         function renderTasksList() {
             const container = document.getElementById('tasksList');
             if (!container) return;
@@ -8527,10 +8476,11 @@
             if (dailyLeaderboardTimerInterval) clearInterval(dailyLeaderboardTimerInterval);
             function updateTimer() {
                 const now = new Date();
-                const nextMidnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 21, 0, 0));
-                let targetDate = new Date(nextMidnight);
+                // 21:00 по местному времени (МСК)
+                let targetDate = new Date(now);
+                targetDate.setHours(21, 0, 0, 0);
                 if (now > targetDate) {
-                    targetDate = new Date(targetDate.getTime() + 24 * 60 * 60 * 1000);
+                    targetDate.setDate(targetDate.getDate() + 1);
                 }
                 const diff = targetDate - now;
                 if (diff <= 0) {
@@ -8544,7 +8494,7 @@
                 const seconds = Math.floor((diff % (1000 * 60)) / 1000);
                 const timerElement = document.getElementById('dailyLeaderboardTimer');
                 if (timerElement) {
-                    timerElement.innerHTML = `${hours.toString().padStart(2, '0')} : ${minutes.toString().padStart(2, '0')} : ${seconds.toString().padStart(2, '0')}`;
+                    timerElement.innerHTML = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
                 }
             }
             updateTimer();
@@ -8616,7 +8566,6 @@
 
         // ==================== TON CONNECT ====================
         let tonConnectUI = null;
-        let paymentCheckInterval = null;
 
         async function initTonConnect() {
             try {
@@ -9012,562 +8961,430 @@
             document.body.style.width = '';
         }
 
-        function openGame(gameName) {
+        // ==================== КОМАНДНАЯ ФОРТУНА ====================
+        let fortuneTimerInterval = null;
+        let fortuneTimeLeft = 300;
+        let currentBetTeam = null;
+        let currentBetAmount = 0;
+        let yellowPoolAmount = 0;
+        let redPoolAmount = 0;
+        let yellowPlayers = [];
+        let redPlayers = [];
+        let selectedTeamForBet = null;
+        let userHistory = [];
+
+        const FORTUNE_COMMISSION = 0.07;
+        let fortuneElements = {};
+
+        function cacheFortuneElements() {
+            fortuneElements = {
+                yellowPool: document.getElementById('yellowPool'),
+                redPool: document.getElementById('redPool'),
+                yellowChance: document.getElementById('yellowChance'),
+                redChance: document.getElementById('redChance'),
+                yellowPlayers: document.getElementById('yellowPlayers'),
+                redPlayers: document.getElementById('redPlayers'),
+                fortuneTimer: document.getElementById('fortuneTimer'),
+                timerBarFill: document.getElementById('timerBarFill'),
+                fortuneUserBalance: document.getElementById('fortuneUserBalance'),
+                historyList: document.getElementById('fortuneHistoryList'),
+                yellowCard: document.getElementById('teamYellowCard'),
+                redCard: document.getElementById('teamRedCard')
+            };
+        }
+
+        async function loadFortuneStatus() {
+            try {
+                const response = await fetch('/api/fortune/status');
+                const data = await response.json();
+                if (data.success) {
+                    yellowPoolAmount = data.yellow_pool;
+                    redPoolAmount = data.red_pool;
+                    fortuneTimeLeft = data.time_left;
+                    yellowPlayers = data.yellow_bets || [];
+                    redPlayers = data.red_bets || [];
+
+                    if (fortuneElements.yellowPool) fortuneElements.yellowPool.innerText = yellowPoolAmount;
+                    if (fortuneElements.redPool) fortuneElements.redPool.innerText = redPoolAmount;
+                    if (fortuneElements.fortuneUserBalance) fortuneElements.fortuneUserBalance.innerText = localWG.toFixed(2);
+
+                    updateChances();
+                    renderPlayers();
+                    await loadUserCurrentBet();
+                    startFortuneTimer();
+                }
+            } catch(e) {
+                console.error('Load fortune status error:', e);
+            }
+        }
+
+        async function loadUserCurrentBet() {
+            try {
+                const response = await fetch('/api/fortune/user_total_bet', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId })
+                });
+                const data = await response.json();
+                if (data.success && data.team && data.amount > 0) {
+                    currentBetTeam = data.team;
+                    currentBetAmount = data.amount;
+                } else {
+                    currentBetTeam = null;
+                    currentBetAmount = 0;
+                }
+                highlightUserTeam();
+            } catch(e) {
+                console.error('Load user bet error:', e);
+            }
+        }
+
+        function updateFortuneTimer() {
+            if (!fortuneElements.fortuneTimer) return;
+            const minutes = Math.floor(fortuneTimeLeft / 60);
+            const seconds = fortuneTimeLeft % 60;
+            fortuneElements.fortuneTimer.innerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            if (fortuneTimeLeft <= 10) fortuneElements.fortuneTimer.style.color = '#ff4444';
+            else fortuneElements.fortuneTimer.style.color = '#FFD700';
+
+            const percent = (fortuneTimeLeft / 300) * 100;
+            if (fortuneElements.timerBarFill) fortuneElements.timerBarFill.style.width = percent + '%';
+        }
+
+        function startFortuneTimer() {
+            if (fortuneTimerInterval) clearInterval(fortuneTimerInterval);
+            fortuneTimerInterval = setInterval(() => {
+                if (fortuneTimeLeft > 0) {
+                    fortuneTimeLeft--;
+                    updateFortuneTimer();
+                } else {
+                    clearInterval(fortuneTimerInterval);
+                    fortuneTimerInterval = null;
+                    loadFortuneStatus();
+                }
+            }, 1000);
+        }
+
+        function highlightUserTeam() {
+            if (fortuneElements.yellowCard && fortuneElements.redCard) {
+                if (currentBetTeam === 'yellow') {
+                    fortuneElements.yellowCard.classList.add('selected');
+                    fortuneElements.redCard.classList.remove('selected');
+                } else if (currentBetTeam === 'red') {
+                    fortuneElements.redCard.classList.add('selected');
+                    fortuneElements.yellowCard.classList.remove('selected');
+                } else {
+                    fortuneElements.yellowCard.classList.remove('selected');
+                    fortuneElements.redCard.classList.remove('selected');
+                }
+            }
+        }
+
+        function updateChances() {
+            const total = yellowPoolAmount + redPoolAmount;
+            let yellowPercent = 0, redPercent = 0;
+            if (total > 0) {
+                yellowPercent = Math.round((yellowPoolAmount / total) * 100);
+                redPercent = Math.round((redPoolAmount / total) * 100);
+            } else {
+                yellowPercent = 50;
+                redPercent = 50;
+            }
+            if (fortuneElements.yellowChance) fortuneElements.yellowChance.innerText = `${yellowPercent}%`;
+            if (fortuneElements.redChance) fortuneElements.redChance.innerText = `${redPercent}%`;
+        }
+
+        function renderPlayers() {
+            if (fortuneElements.yellowPlayers) {
+                if (yellowPlayers.length === 0) {
+                    fortuneElements.yellowPlayers.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
+                } else {
+                    fortuneElements.yellowPlayers.innerHTML = yellowPlayers.slice(0, 8).map(player => `
+                        <div class="player-card" onclick="openPlayerProfileInFortune(${player.userId})">
+                            <div class="player-avatar-premium">
+                                ${player.avatarUrl ? `<img src="${player.avatarUrl}" onerror="this.parentElement.innerHTML='🟡'">` : '<div class="player-avatar-placeholder-premium">🟡</div>'}
+                            </div>
+                            <div class="player-bet-premium">${player.amount} WG</div>
+                        </div>
+                    `).join('');
+                }
+            }
+            if (fortuneElements.redPlayers) {
+                if (redPlayers.length === 0) {
+                    fortuneElements.redPlayers.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
+                } else {
+                    fortuneElements.redPlayers.innerHTML = redPlayers.slice(0, 8).map(player => `
+                        <div class="player-card" onclick="openPlayerProfileInFortune(${player.userId})">
+                            <div class="player-avatar-premium">
+                                ${player.avatarUrl ? `<img src="${player.avatarUrl}" onerror="this.parentElement.innerHTML='🔴'">` : '<div class="player-avatar-placeholder-premium">🔴</div>'}
+                            </div>
+                            <div class="player-bet-premium">${player.amount} WG</div>
+                        </div>
+                    `).join('');
+                }
+            }
+        }
+
+        function openPlayerProfileInFortune(targetId) {
+            fetch('/api/get_user_stats', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({user_id: targetId})
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    showToast('Пользователь не найден', 'error');
+                    return;
+                }
+                let userName = data.username || 'Игрок';
+                let avatar = (data.avatar_url && data.avatar_url !== '👤')
+                    ? `<img src="${data.avatar_url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`
+                    : '👤';
+                if (data.hide_from_top) {
+                    avatar = '👤';
+                    userName = 'Аноним';
+                }
+                document.getElementById('playerModalUsername').innerText = userName;
+                document.getElementById('playerModalClicks').innerText = data.total_clicks || 0;
+                document.getElementById('playerModalWG').innerText = (data.wg || 0).toFixed(2);
+                document.getElementById('playerModalLP').innerText = data.lp || 0;
+                document.getElementById('playerModalUSDT').innerHTML = `💰 ${(data.usdt || 0).toFixed(2)}`;
+                document.getElementById('playerModalWins').innerText = data.wins || 0;
+                document.getElementById('playerModalLikes').innerText = data.likes || 0;
+                document.getElementById('playerModalDislikes').innerText = data.dislikes || 0;
+                document.getElementById('playerModalAvatar').innerHTML = avatar;
+
+                let role = data.role || 'player';
+                let badgesHtml = '';
+                if (role === 'founder') badgesHtml = '<span class="role-badge founder">👑 ОСНОВАТЕЛЬ</span>';
+                else if (role === 'legend') badgesHtml = '<span class="role-badge legend">👑 ЛЕГЕНДА</span>';
+                else if (role === 'pioneer') badgesHtml = '<span class="role-badge pioneer">⭐ ПЕРВООТКРЫВАТЕЛЬ</span>';
+                else badgesHtml = '<span class="role-badge player">🎮 Игрок</span>';
+                document.getElementById('playerModalBadges').innerHTML = badgesHtml;
+                document.getElementById('voteMessage').innerHTML = '';
+                document.getElementById('playerModal').classList.add('active');
+            })
+            .catch(e => {
+                console.error('Error opening player profile:', e);
+                showToast('Ошибка загрузки профиля', 'error');
+            });
+        }
+
+        async function loadFortuneHistory() {
+            try {
+                const response = await fetch('/api/fortune/history', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId, limit: 30 })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    userHistory = data.history;
+                    renderUserHistory();
+                }
+            } catch(e) {
+                console.error('Load fortune history error:', e);
+            }
+        }
+
+        function renderUserHistory() {
+            const container = fortuneElements.historyList;
+            if (!container) return;
+            if (userHistory.length === 0) {
+                container.innerHTML = '<div class="empty-state-premium">📭 У вас пока нет истории игр</div>';
+                return;
+            }
+            let html = '';
+            for (const item of userHistory) {
+                const teamName = item.team === 'yellow' ? '🟡 Жёлтые' : '🔴 Красные';
+                let resultHtml = '';
+                if (item.result === 'win') {
+                    resultHtml = `<span class="history-result-premium win">+${item.win_amount} WG</span>`;
+                } else if (item.result === 'lose') {
+                    resultHtml = `<span class="history-result-premium lose">-${item.amount} WG</span>`;
+                } else {
+                    resultHtml = `<span class="history-result-premium">↺ Возврат</span>`;
+                }
+                const date = new Date(item.created_at).toLocaleString();
+                html += `
+                    <div class="history-item-premium">
+                        <div class="history-team-premium">
+                            <span class="history-team-icon-premium">${item.team === 'yellow' ? '🟡' : '🔴'}</span>
+                            <span class="history-team-name-premium">${teamName}</span>
+                        </div>
+                        <div class="history-amount-premium">${item.amount} WG</div>
+                        ${resultHtml}
+                    </div>
+                    <div class="history-date-premium">${date}</div>
+                `;
+            }
+            container.innerHTML = html;
+        }
+
+        // ГЛОБАЛЬНЫЕ ФУНКЦИИ ДЛЯ СТАВОК
+        window.openBetModal = function(team) {
+            if (currentBetTeam) {
+                showToast(`❌ Вы уже сделали ставку на команду ${currentBetTeam === 'yellow' ? 'Жёлтых 🟡' : 'Красных 🔴'}!`, 'error');
+                return;
+            }
+
+            selectedTeamForBet = team;
+            const teamName = team === 'yellow' ? 'Команда Жёлтых' : 'Команда Красных';
+            const teamIcon = team === 'yellow' ? '🟡' : '🔴';
+
+            const betTeamInfo = document.getElementById('betTeamInfo');
+            if (betTeamInfo) {
+                betTeamInfo.innerHTML = `
+                    <span class="bet-team-icon">${teamIcon}</span>
+                    <span class="bet-team-name">${teamName}</span>
+                `;
+            }
+
+            const betUserBalance = document.getElementById('betUserBalance');
+            if (betUserBalance) betUserBalance.innerText = localWG.toFixed(2);
+
+            const betAmount = document.getElementById('betAmount');
+            if (betAmount) betAmount.value = '';
+
+            const betCommission = document.getElementById('betCommission');
+            if (betCommission) betCommission.innerText = '0';
+
+            const betNetAmount = document.getElementById('betNetAmount');
+            if (betNetAmount) betNetAmount.innerText = '0';
+
+            const betModal = document.getElementById('betModal');
+            if (betModal) {
+                betModal.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+        };
+
+        window.closeBetModal = function() {
+            const betModal = document.getElementById('betModal');
+            if (betModal) betModal.classList.remove('active');
+            document.body.style.overflow = '';
+            selectedTeamForBet = null;
+        };
+
+        window.calculateBet = function() {
+            const amount = parseFloat(document.getElementById('betAmount').value);
+            if (isNaN(amount) || amount <= 0) {
+                document.getElementById('betCommission').innerText = '0';
+                document.getElementById('betNetAmount').innerText = '0';
+                return;
+            }
+            const commission = amount * FORTUNE_COMMISSION;
+            const netAmount = amount - commission;
+            document.getElementById('betCommission').innerText = commission.toFixed(2);
+            document.getElementById('betNetAmount').innerText = netAmount.toFixed(2);
+        };
+
+        window.submitBet = async function() {
+            if (!selectedTeamForBet) {
+                showToast('Сначала выберите команду', 'error');
+                return;
+            }
+
+            if (currentBetTeam) {
+                showToast(`❌ Вы уже сделали ставку на команду ${currentBetTeam === 'yellow' ? 'Жёлтых 🟡' : 'Красных 🔴'}!`, 'error');
+                window.closeBetModal();
+                return;
+            }
+
+            const amount = parseFloat(document.getElementById('betAmount').value);
+            if (isNaN(amount) || amount < 10) {
+                showToast('Минимальная ставка — 10 WG', 'error');
+                return;
+            }
+
+            if (amount > localWG) {
+                showToast(`Не хватает WG! У вас ${localWG.toFixed(2)} WG`, 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/fortune/bet', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        team: selectedTeamForBet,
+                        amount: amount
+                    })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    localWG -= amount;
+                    updateUI();
+                    await syncData(true);
+                    await loadFortuneStatus();
+                    window.closeBetModal();
+                    showToast(`✅ Ставка ${amount} WG принята!`, 'success');
+                } else {
+                    showToast(data.error, 'error');
+                }
+            } catch(e) {
+                console.error('Bet error:', e);
+                showToast('Ошибка при ставке', 'error');
+            }
+        };
+
+        function initFortuneTabs() {
+            const tabs = document.querySelectorAll('.fortune-tab');
+            tabs.forEach(tab => {
+                tab.onclick = (e) => {
+                    const target = tab.dataset.fortuneTab;
+                    document.querySelectorAll('.fortune-tab').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    document.querySelectorAll('.fortune-tab-content').forEach(c => c.classList.remove('active'));
+                    if (target === 'play') {
+                        document.getElementById('fortunePlayTab').classList.add('active');
+                    } else {
+                        document.getElementById('fortuneHistoryTab').classList.add('active');
+                        loadFortuneHistory();
+                    }
+                };
+            });
+        }
+
+        // Сохраняем оригинальную функцию openGame
+        const originalOpenGame = window.openGame || function() {};
+
+        // Переопределяем openGame для Фортуны
+        window.openGame = function(gameName) {
             if (gameName === 'fortune') {
                 const fortuneModal = document.getElementById('fortuneModal');
                 if (fortuneModal) {
                     fortuneModal.classList.add('active');
                     document.body.style.overflow = 'hidden';
-                    closeGamepad();
-                }
-            }
-        }
+                    if (typeof closeGamepad === 'function') closeGamepad();
+                    cacheFortuneElements();
+                    loadFortuneStatus();
+                    initFortuneTabs();
 
-        function closeFortuneGame() {
+                    setTimeout(() => {
+                        document.querySelectorAll('.team-bet-btn').forEach(btn => {
+                            btn.onclick = (e) => {
+                                e.stopPropagation();
+                                const team = btn.dataset.team;
+                                if (team) window.openBetModal(team);
+                            };
+                        });
+                    }, 100);
+                }
+            } else if (originalOpenGame) {
+                originalOpenGame(gameName);
+            }
+        };
+
+        window.closeFortuneGame = function() {
             const fortuneModal = document.getElementById('fortuneModal');
             if (fortuneModal) fortuneModal.classList.remove('active');
             document.body.style.overflow = '';
             if (fortuneTimerInterval) clearInterval(fortuneTimerInterval);
-        }
-
-        // ==================== КОМАНДНАЯ ФОРТУНА 3.0 (ОПТИМИЗИРОВАННАЯ) ==================
-let fortuneTimerInterval = null;
-let fortuneTimeLeft = 300;
-let currentBetTeam = null;
-let currentBetAmount = 0;
-let currentBetNetAmount = 0;
-let yellowPoolAmount = 0;
-let redPoolAmount = 0;
-let yellowPlayers = [];
-let redPlayers = [];
-let selectedTeamForBet = null;
-let currentRoundId = null;
-let userHistory = [];
-let winningHistory = [];
-
-const FORTUNE_COMMISSION = 0.07;
-let fortuneElements = {};
-let isUpdatingFortune = false;
-let lastFortuneUpdate = 0;
-const FORTUNE_UPDATE_DELAY = 2000;
-
-// Плавная анимация обновления чисел
-function animateNumber(element, newValue, suffix = '', isDecimal = false) {
-    if (!element) return;
-    const oldValue = parseFloat(element.innerText) || 0;
-    const diff = newValue - oldValue;
-    if (diff === 0) return;
-
-    const duration = 300;
-    const startTime = performance.now();
-
-    function update(currentTime) {
-        const elapsed = currentTime - startTime;
-        const progress = Math.min(1, elapsed / duration);
-        const easeOut = 1 - Math.pow(1 - progress, 3);
-        const current = oldValue + diff * easeOut;
-
-        if (isDecimal) {
-            element.innerText = current.toFixed(2) + suffix;
-        } else {
-            element.innerText = Math.floor(current) + suffix;
-        }
-
-        if (progress < 1) {
-            requestAnimationFrame(update);
-        } else {
-            if (isDecimal) {
-                element.innerText = newValue.toFixed(2) + suffix;
-            } else {
-                element.innerText = newValue + suffix;
-            }
-        }
-    }
-
-    requestAnimationFrame(update);
-}
-
-function cacheFortuneElements() {
-    fortuneElements = {
-        yellowPool: document.getElementById('yellowPool'),
-        redPool: document.getElementById('redPool'),
-        yellowChance: document.getElementById('yellowChance'),
-        redChance: document.getElementById('redChance'),
-        yellowPlayers: document.getElementById('yellowPlayers'),
-        redPlayers: document.getElementById('redPlayers'),
-        fortuneTimer: document.getElementById('fortuneTimer'),
-        timerBarFill: document.getElementById('timerBarFill'),
-        fortuneUserBalance: document.getElementById('fortuneUserBalance'),
-        historyList: document.getElementById('fortuneHistoryList'),
-        yellowCard: document.getElementById('teamYellowCard'),
-        redCard: document.getElementById('teamRedCard')
-    };
-}
-
-async function loadFortuneStatus() {
-    const now = Date.now();
-    if (isUpdatingFortune || now - lastFortuneUpdate < FORTUNE_UPDATE_DELAY) {
-        return;
-    }
-    isUpdatingFortune = true;
-
-    try {
-        const response = await fetch('/api/fortune/status');
-        const data = await response.json();
-        if (data.success) {
-            currentRoundId = data.round_id;
-
-            // Плавное обновление чисел
-            if (yellowPoolAmount !== data.yellow_pool) {
-                animateNumber(fortuneElements.yellowPool, data.yellow_pool, ' WG', true);
-                yellowPoolAmount = data.yellow_pool;
-            }
-            if (redPoolAmount !== data.red_pool) {
-                animateNumber(fortuneElements.redPool, data.red_pool, ' WG', true);
-                redPoolAmount = data.red_pool;
-            }
-
-            fortuneTimeLeft = data.time_left;
-            yellowPlayers = data.yellow_bets.map(bet => ({
-                userId: bet.userId,
-                amount: bet.amount,
-                netAmount: bet.fullAmount,
-                avatarUrl: bet.avatarUrl,
-                username: bet.username
-            }));
-            redPlayers = data.red_bets.map(bet => ({
-                userId: bet.userId,
-                amount: bet.amount,
-                netAmount: bet.fullAmount,
-                avatarUrl: bet.avatarUrl,
-                username: bet.username
-            }));
-
-            updateChances();
-            renderPlayers();
-            await loadUserCurrentBet();
-        }
-        lastFortuneUpdate = now;
-    } catch(e) {
-        console.error('Load fortune status error:', e);
-    } finally {
-        isUpdatingFortune = false;
-    }
-}
-
-async function loadUserCurrentBet() {
-    try {
-        const response = await fetch('/api/fortune/user_total_bet', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId })
-        });
-        const data = await response.json();
-        if (data.success && data.team && data.amount > 0) {
-            currentBetTeam = data.team;
-            currentBetAmount = data.amount;
-            currentBetNetAmount = data.amount;
-        } else {
-            currentBetTeam = null;
-            currentBetAmount = 0;
-            currentBetNetAmount = 0;
-        }
-        highlightUserTeam();
-    } catch(e) {
-        console.error('Load user bet error:', e);
-    }
-}
-
-function updateFortuneTimer() {
-    if (!fortuneElements.fortuneTimer) return;
-
-    const minutes = Math.floor(fortuneTimeLeft / 60);
-    const seconds = fortuneTimeLeft % 60;
-    const timeString = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-
-    if (fortuneElements.fortuneTimer.innerText !== timeString) {
-        fortuneElements.fortuneTimer.innerText = timeString;
-    }
-
-    if (fortuneTimeLeft <= 10) {
-        fortuneElements.fortuneTimer.style.color = '#ff4444';
-        if (fortuneElements.fortuneTimer.style.animation !== 'pulseGold 0.5s infinite') {
-            fortuneElements.fortuneTimer.style.animation = 'pulseGold 0.5s infinite';
-        }
-    } else {
-        fortuneElements.fortuneTimer.style.color = '#FFD700';
-        fortuneElements.fortuneTimer.style.animation = '';
-    }
-
-    const percent = (fortuneTimeLeft / 300) * 100;
-    if (fortuneElements.timerBarFill) {
-        fortuneElements.timerBarFill.style.width = percent + '%';
-    }
-}
-
-function highlightUserTeam() {
-    if (fortuneElements.yellowCard && fortuneElements.redCard) {
-        if (currentBetTeam === 'yellow') {
-            fortuneElements.yellowCard.classList.add('selected');
-            fortuneElements.redCard.classList.remove('selected');
-        } else if (currentBetTeam === 'red') {
-            fortuneElements.redCard.classList.add('selected');
-            fortuneElements.yellowCard.classList.remove('selected');
-        } else {
-            fortuneElements.yellowCard.classList.remove('selected');
-            fortuneElements.redCard.classList.remove('selected');
-        }
-    }
-}
-
-function updateChances() {
-    const total = yellowPoolAmount + redPoolAmount;
-    let yellowPercent = 0, redPercent = 0;
-    if (total > 0) {
-        yellowPercent = Math.round((yellowPoolAmount / total) * 100);
-        redPercent = Math.round((redPoolAmount / total) * 100);
-    } else {
-        yellowPercent = 50;
-        redPercent = 50;
-    }
-    if (fortuneElements.yellowChance && fortuneElements.yellowChance.innerText !== `${yellowPercent}%`) {
-        fortuneElements.yellowChance.innerText = `${yellowPercent}%`;
-    }
-    if (fortuneElements.redChance && fortuneElements.redChance.innerText !== `${redPercent}%`) {
-        fortuneElements.redChance.innerText = `${redPercent}%`;
-    }
-}
-
-function sortPlayersByBet(players) {
-    return [...players].sort((a, b) => b.netAmount - a.netAmount);
-}
-
-function renderPlayers() {
-    if (fortuneElements.yellowPlayers) {
-        const sorted = sortPlayersByBet(yellowPlayers);
-        if (sorted.length === 0) {
-            fortuneElements.yellowPlayers.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
-        } else {
-            fortuneElements.yellowPlayers.innerHTML = sorted.slice(0, 8).map(player => `
-                <div class="player-card" data-user-id="${player.userId}">
-                    <div class="player-avatar-premium" onclick="openPlayerProfileInFortune(${player.userId})">
-                        ${player.avatarUrl ? `<img src="${player.avatarUrl}" onerror="this.parentElement.innerHTML='<div class=\\'player-avatar-placeholder-premium\\'>🟡</div>'">` : '<div class="player-avatar-placeholder-premium">🟡</div>'}
-                    </div>
-                    <div class="player-bet-premium">${player.netAmount} WG</div>
-                </div>
-            `).join('');
-        }
-    }
-    if (fortuneElements.redPlayers) {
-        const sorted = sortPlayersByBet(redPlayers);
-        if (sorted.length === 0) {
-            fortuneElements.redPlayers.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
-        } else {
-            fortuneElements.redPlayers.innerHTML = sorted.slice(0, 8).map(player => `
-                <div class="player-card" data-user-id="${player.userId}">
-                    <div class="player-avatar-premium" onclick="openPlayerProfileInFortune(${player.userId})">
-                        ${player.avatarUrl ? `<img src="${player.avatarUrl}" onerror="this.parentElement.innerHTML='<div class=\\'player-avatar-placeholder-premium\\'>🔴</div>'">` : '<div class="player-avatar-placeholder-premium">🔴</div>'}
-                    </div>
-                    <div class="player-bet-premium">${player.netAmount} WG</div>
-                </div>
-            `).join('');
-        }
-    }
-}
-
-// Открытие профиля внутри Фортуны (без закрытия игры)
-function openPlayerProfileInFortune(targetId) {
-    selectedPlayerId = targetId;
-    const modalUsername = document.getElementById('playerModalUsername');
-    const modalClicks = document.getElementById('playerModalClicks');
-    const modalWG = document.getElementById('playerModalWG');
-    const modalLP = document.getElementById('playerModalLP');
-    const modalUSDT = document.getElementById('playerModalUSDT');
-    const modalWins = document.getElementById('playerModalWins');
-    const modalLikes = document.getElementById('playerModalLikes');
-    const modalDislikes = document.getElementById('playerModalDislikes');
-    const modalAvatar = document.getElementById('playerModalAvatar');
-    const modalBadges = document.getElementById('playerModalBadges');
-    const voteMessage = document.getElementById('voteMessage');
-
-    fetch('/api/get_user_stats', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({user_id: targetId})
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.error) {
-            showToast('Пользователь не найден', 'error');
-            return;
-        }
-        let userName = data.username || 'Игрок';
-        let avatar = (data.avatar_url && data.avatar_url !== '👤')
-            ? `<img src="${data.avatar_url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`
-            : '👤';
-        if (data.hide_from_top) {
-            avatar = '👤';
-            userName = 'Аноним';
-        }
-        modalUsername.innerText = userName;
-        modalClicks.innerText = data.total_clicks || 0;
-        modalWG.innerText = (data.wg || 0).toFixed(2);
-        modalLP.innerText = data.lp || 0;
-        modalUSDT.innerHTML = `💰 ${(data.usdt || 0).toFixed(2)}`;
-        modalWins.innerText = data.wins || 0;
-        modalLikes.innerText = data.likes || 0;
-        modalDislikes.innerText = data.dislikes || 0;
-        if (modalAvatar) modalAvatar.innerHTML = avatar;
-        if (modalBadges) {
-            let role = data.role || 'player';
-            let badgesHtml = '';
-            if (role === 'founder') badgesHtml = '<span class="role-badge founder">👑 ОСНОВАТЕЛЬ</span>';
-            else if (role === 'legend') badgesHtml = '<span class="role-badge legend">ЛЕГЕНДА</span>';
-            else if (role === 'pioneer') badgesHtml = '<span class="role-badge pioneer">⭐ ПЕРВООТКРЫВАТЕЛЬ</span>';
-            else badgesHtml = '<span class="role-badge player">🎮 Игрок</span>';
-            modalBadges.innerHTML = badgesHtml;
-        }
-        if (voteMessage) voteMessage.innerHTML = '';
-        document.getElementById('playerModal').classList.add('active');
-    })
-    .catch(e => {
-        console.error('Error opening player profile:', e);
-        showToast('Ошибка загрузки профиля', 'error');
-    });
-}
-
-function startFortuneTimer() {
-    if (fortuneTimerInterval) clearInterval(fortuneTimerInterval);
-
-    function tick() {
-        if (fortuneTimeLeft > 0) {
-            fortuneTimeLeft--;
-            updateFortuneTimer();
-        } else {
-            clearInterval(fortuneTimerInterval);
-            fortuneTimerInterval = null;
-            loadFortuneStatus();
-        }
-    }
-
-    updateFortuneTimer();
-    fortuneTimerInterval = setInterval(tick, 1000);
-}
-
-async function loadFortuneHistory() {
-    try {
-        const response = await fetch('/api/fortune/history', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId, limit: 30 })
-        });
-        const data = await response.json();
-        if (data.success) {
-            userHistory = data.history;
-            renderUserHistory();
-        }
-    } catch(e) {
-        console.error('Load fortune history error:', e);
-    }
-}
-
-function renderUserHistory() {
-    const container = fortuneElements.historyList;
-    if (!container) return;
-    if (userHistory.length === 0) {
-        container.innerHTML = '<div class="empty-state-premium">📭 У вас пока нет истории игр</div>';
-        return;
-    }
-    let html = '';
-    for (const item of userHistory) {
-        const teamName = item.team === 'yellow' ? '🟡 Жёлтые' : '🔴 Красные';
-        let resultHtml = '';
-        if (item.result === 'win') {
-            resultHtml = `<span class="history-result-premium win">+${item.win_amount} WG</span>`;
-        } else if (item.result === 'lose') {
-            resultHtml = `<span class="history-result-premium lose">-${item.amount} WG</span>`;
-        } else {
-            resultHtml = `<span class="history-result-premium" style="background: rgba(255,165,0,0.15); color: #FFA500;">↺ Возврат</span>`;
-        }
-        const date = new Date(item.created_at).toLocaleString();
-        html += `
-            <div class="history-item-premium">
-                <div class="history-team-premium">
-                    <span class="history-team-icon-premium">${item.team === 'yellow' ? '🟡' : '🔴'}</span>
-                    <span class="history-team-name-premium">${teamName}</span>
-                </div>
-                <div class="history-amount-premium">${item.amount} WG</div>
-                ${resultHtml}
-            </div>
-            <div class="history-date-premium">${date}</div>
-        `;
-    }
-    container.innerHTML = html;
-}
-
-function openBetModal(team) {
-    if (currentBetTeam) {
-        showToast(`❌ Вы уже сделали ставку на команду ${currentBetTeam === 'yellow' ? 'Жёлтых 🟡' : 'Красных 🔴'}!`, 'error');
-        return;
-    }
-
-    selectedTeamForBet = team;
-    const teamName = team === 'yellow' ? 'Команда Жёлтых' : 'Команда Красных';
-    const teamIcon = team === 'yellow' ? '🟡' : '🔴';
-    document.getElementById('betTeamInfo').innerHTML = `
-        <span class="bet-team-icon">${teamIcon}</span>
-        <span class="bet-team-name">${teamName}</span>
-    `;
-    document.getElementById('betUserBalance').innerText = localWG.toFixed(2);
-    document.getElementById('betAmount').value = '';
-    document.getElementById('betCommission').innerText = '0';
-    document.getElementById('betNetAmount').innerText = '0';
-    document.getElementById('betModal').classList.add('active');
-    document.body.style.overflow = 'hidden';
-}
-
-function closeBetModal() {
-    document.getElementById('betModal').classList.remove('active');
-    document.body.style.overflow = '';
-    selectedTeamForBet = null;
-}
-
-function calculateBet() {
-    const amount = parseFloat(document.getElementById('betAmount').value);
-    if (isNaN(amount) || amount <= 0) {
-        document.getElementById('betCommission').innerText = '0';
-        document.getElementById('betNetAmount').innerText = '0';
-        return;
-    }
-    const commission = amount * FORTUNE_COMMISSION;
-    const netAmount = amount - commission;
-    document.getElementById('betCommission').innerText = commission.toFixed(2);
-    document.getElementById('betNetAmount').innerText = netAmount.toFixed(2);
-}
-
-async function submitBet() {
-    if (!selectedTeamForBet) return;
-
-    if (currentBetTeam) {
-        showToast(`❌ Вы уже сделали ставку на команду ${currentBetTeam === 'yellow' ? 'Жёлтых 🟡' : 'Красных 🔴'}!`, 'error');
-        closeBetModal();
-        return;
-    }
-
-    const amount = parseFloat(document.getElementById('betAmount').value);
-    if (isNaN(amount) || amount < 10) {
-        showToast('Минимальная ставка — 10 WG', 'error');
-        return;
-    }
-
-    if (amount > localWG) {
-        showToast(`Не хватает WG! У вас ${localWG.toFixed(2)} WG`, 'error');
-        return;
-    }
-
-    try {
-        const response = await fetch('/api/fortune/bet', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                user_id: userId,
-                team: selectedTeamForBet,
-                amount: amount
-            })
-        });
-        const data = await response.json();
-
-        if (data.success) {
-            localWG -= amount;
-            updateUI();
-            await syncData(true);
-            await loadFortuneStatus();
-            closeBetModal();
-        } else {
-            showToast(data.error, 'error');
-        }
-    } catch(e) {
-        console.error('Bet error:', e);
-        showToast('Ошибка при ставке', 'error');
-    }
-}
-
-function initFortuneTabs() {
-    const tabs = document.querySelectorAll('.fortune-tab');
-    if (!tabs.length) return;
-    tabs.forEach(tab => {
-        tab.removeEventListener('click', fortuneTabHandler);
-        tab.addEventListener('click', fortuneTabHandler);
-    });
-}
-
-function fortuneTabHandler(e) {
-    const tab = e.currentTarget;
-    const target = tab.dataset.fortuneTab;
-    document.querySelectorAll('.fortune-tab').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    document.querySelectorAll('.fortune-tab-content').forEach(c => c.classList.remove('active'));
-    if (target === 'play') {
-        document.getElementById('fortunePlayTab').classList.add('active');
-    } else {
-        document.getElementById('fortuneHistoryTab').classList.add('active');
-        loadFortuneHistory();
-    }
-}
-
-// Переопределяем openGame для Фортуны
-window.openGame = function(gameName) {
-    if (gameName === 'fortune') {
-        const fortuneModal = document.getElementById('fortuneModal');
-        if (fortuneModal) {
-            fortuneModal.classList.add('active');
-            document.body.style.overflow = 'hidden';
-            if (typeof closeGamepad === 'function') closeGamepad();
-            cacheFortuneElements();
-            loadFortuneStatus();
-            initFortuneTabs();
-        }
-    }
-};
-
-window.closeFortuneGame = function() {
-    const fortuneModal = document.getElementById('fortuneModal');
-    if (fortuneModal) fortuneModal.classList.remove('active');
-    document.body.style.overflow = '';
-    if (fortuneTimerInterval) clearInterval(fortuneTimerInterval);
-};
-
-// Вешаем обработчики событий
-document.addEventListener('DOMContentLoaded', () => {
-    const betAmountInput = document.getElementById('betAmount');
-    if (betAmountInput) {
-        betAmountInput.addEventListener('input', calculateBet);
-    }
-
-    document.querySelectorAll('.bet-preset').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const multiplier = parseFloat(btn.dataset.multiplier);
-            const presetAmount = Math.floor(localWG * multiplier);
-            const input = document.getElementById('betAmount');
-            if (input) input.value = presetAmount;
-            calculateBet();
-        });
-    });
-
-    const submitBtn = document.getElementById('submitBetBtn');
-    if (submitBtn) {
-        submitBtn.addEventListener('click', submitBet);
-    }
-
-    document.querySelectorAll('.team-bet-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const team = btn.dataset.team;
-            if (!team) return;
-            openBetModal(team);
-        });
-    });
-});
+        };
 
         // ==================== СЧЁТЧИК ПОКУПОК LP БУСТЕРА ====================
         async function updateLPBoostCount() {
@@ -9604,6 +9421,7 @@ document.addEventListener('DOMContentLoaded', () => {
             setInterval(() => syncData(true), 30000);
             startDailyLeaderboardTimer();
             updateLPBoostCount();
+
             if (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
                 const startParam = tg.initDataUnsafe.start_param;
                 if (startParam && startParam.startsWith('claim_')) {
@@ -9631,6 +9449,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }, 1500);
                 }
             }
+
             if (tg) {
                 tg.ready();
                 tg.expand();
