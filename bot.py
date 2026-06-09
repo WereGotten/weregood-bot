@@ -2722,7 +2722,6 @@ def create_new_fortune_round():
     with fortune_lock:
         round_id = str(uuid.uuid4())[:8]
 
-        # Загружаем активные ставки из БД (если есть)
         yellow_bets = []
         red_bets = []
         yellow_pool = 0
@@ -2771,11 +2770,9 @@ def create_new_fortune_round():
 
 
 def restore_fortune_from_db():
-    """Восстанавливаем активный раунд фортуны из БД при запуске сервера"""
     global current_fortune_round
     with fortune_lock:
         with db.get_cursor() as cursor:
-            # Ищем последний незавершённый раунд
             cursor.execute('''
                 SELECT * FROM fortune_rounds 
                 WHERE end_time > datetime('now') OR end_time IS NULL
@@ -2786,7 +2783,6 @@ def restore_fortune_from_db():
             if round_row:
                 round_id = round_row['round_id']
 
-                # Загружаем ставки из fortune_active_bets
                 cursor.execute('''
                     SELECT * FROM fortune_active_bets WHERE round_id = ?
                 ''', (round_id,))
@@ -2805,7 +2801,6 @@ def restore_fortune_from_db():
                         "username": "",
                         "avatar_url": ""
                     }
-                    # Подгружаем username из users
                     user = get_user(bet['user_id'])
                     bet_data['username'] = user.get('username') or user.get('first_name') or str(bet['user_id'])
                     bet_data['avatar_url'] = user.get('avatar_url', '')
@@ -2825,7 +2820,7 @@ def restore_fortune_from_db():
                     "red_bets": red_bets,
                     "end_time": time.time() + FORTUNE_ROUND_DURATION
                 }
-                print(f"✅ Восстановлена фортуна: раунд {round_id}, жёлтые: {yellow_pool}, красные: {red_pool}")
+                print(f"✅ Восстановлена фортуна: раунд {round_id}")
             else:
                 create_new_fortune_round()
                 print("✅ Создан новый раунд фортуны")
@@ -3028,69 +3023,76 @@ def api_fortune_bet():
         if current_fortune_round.get('end_time', 0) <= time.time():
             return jsonify({"success": False, "error": "Раунд завершён, ставки больше не принимаются"}), 400
 
-        # ========== НОВАЯ ПРОВЕРКА: НЕТ ЛИ СТАВКИ НА ДРУГУЮ КОМАНДУ ==========
-        # Проверяем ставку на противоположную команду
+        round_id = current_fortune_round['round_id']
         other_team = 'red' if team == 'yellow' else 'yellow'
-        other_bets = current_fortune_round['red_bets'] if team == 'yellow' else current_fortune_round['yellow_bets']
 
+        # ========== ПРОВЕРКА: ЕСТЬ ЛИ СТАВКА НА ПРОТИВОПОЛОЖНУЮ КОМАНДУ ==========
+        other_bets = current_fortune_round['red_bets'] if team == 'yellow' else current_fortune_round['yellow_bets']
         for bet in other_bets:
             if bet.get('user_id') == user_id:
                 return jsonify({"success": False,
                                 "error": f"❌ Вы уже сделали ставку на команду {'Красных 🔴' if other_team == 'red' else 'Жёлтых 🟡'}! Можно ставить только на одну команду за раунд."}), 400
 
-        commission = amount * FORTUNE_COMMISSION
-        net_amount = amount - commission
-
-        safe_update_user(user_id, wg=user['wg'] - amount)
-
-        round_id = current_fortune_round['round_id']
-
-        # Проверяем есть ли уже ставка на ЭТУ же команду (для суммирования)
-        existing_bet = None
+        # ========== ИЩЕМ СУЩЕСТВУЮЩУЮ СТАВКУ НА ЭТУ ЖЕ КОМАНДУ ==========
         bet_list = current_fortune_round['yellow_bets'] if team == 'yellow' else current_fortune_round['red_bets']
-
+        existing_bet = None
         for bet in bet_list:
             if bet.get('user_id') == user_id:
                 existing_bet = bet
                 break
 
-        with db.get_cursor() as cursor:
-            if existing_bet:
-                # Обновляем существующую ставку в БД (суммируем)
+        commission = amount * FORTUNE_COMMISSION
+        net_amount = amount - commission
+
+        # Снимаем WG (только если это первая ставка ИЛИ добавляем разницу)
+        if existing_bet:
+            # Если уже есть ставка — снимаем ТОЛЬКО новую сумму
+            safe_update_user(user_id, wg=user['wg'] - amount)
+            new_total = existing_bet['amount'] + amount
+            new_net_total = existing_bet['net_amount'] + net_amount
+
+            with db.get_cursor() as cursor:
                 cursor.execute('''
                     UPDATE fortune_active_bets 
-                    SET amount = amount + ?, net_amount = net_amount + ?
+                    SET amount = ?, net_amount = ?
                     WHERE round_id = ? AND user_id = ? AND team = ?
-                ''', (amount, net_amount, round_id, user_id, team))
+                ''', (new_total, new_net_total, round_id, user_id, team))
 
-                existing_bet['amount'] += amount
-                existing_bet['net_amount'] += net_amount
-                new_total = existing_bet['amount']
-            else:
-                # Сохраняем новую ставку в БД
+            existing_bet['amount'] = new_total
+            existing_bet['net_amount'] = new_net_total
+
+            add_log(
+                f"🎲 ФОРТУНА: ДОБАВИЛ к ставке {amount} WG (всего {new_total} WG) на команду {'Жёлтые' if team == 'yellow' else 'Красные'}",
+                user_id, user['username'], old_value=user['wg'], new_value=user['wg'] - amount, currency="wg")
+        else:
+            # Новая ставка
+            safe_update_user(user_id, wg=user['wg'] - amount)
+
+            with db.get_cursor() as cursor:
                 cursor.execute('''
                     INSERT INTO fortune_active_bets (round_id, user_id, team, amount, net_amount)
                     VALUES (?, ?, ?, ?, ?)
                 ''', (round_id, user_id, team, amount, net_amount))
 
-                bet_data = {
-                    "user_id": user_id,
-                    "amount": amount,
-                    "net_amount": net_amount,
-                    "username": user.get('username') or user.get('first_name') or str(user_id),
-                    "avatar_url": user.get('avatar_url', '')
-                }
-                bet_list.append(bet_data)
-                new_total = amount
+            bet_data = {
+                "user_id": user_id,
+                "amount": amount,
+                "net_amount": net_amount,
+                "username": user.get('username') or user.get('first_name') or str(user_id),
+                "avatar_url": user.get('avatar_url', '')
+            }
+            bet_list.append(bet_data)
+            new_total = amount
 
+            add_log(
+                f"🎲 ФОРТУНА: Новая ставка {amount} WG на команду {'Жёлтые' if team == 'yellow' else 'Красные'}",
+                user_id, user['username'], old_value=user['wg'], new_value=user['wg'] - amount, currency="wg")
+
+        # Обновляем пулы
         if team == 'yellow':
             current_fortune_round['yellow_pool'] += net_amount
         else:
             current_fortune_round['red_pool'] += net_amount
-
-        add_log(
-            f"🎲 ФОРТУНА: Ставка {amount} WG (всего {new_total} WG) на команду {'Жёлтые' if team == 'yellow' else 'Красные'}",
-            user_id, user['username'], old_value=user['wg'], new_value=user['wg'] - amount, currency="wg")
 
         return jsonify({
             "success": True,
@@ -5628,6 +5630,8 @@ def handle_telegram_updates():
             time.sleep(5)
 
 restore_fortune_from_db()
+
+
 
 if __name__ == '__main__':
     threading.Thread(target=handle_telegram_updates, daemon=True).start()
