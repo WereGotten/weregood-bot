@@ -2718,9 +2718,10 @@ def create_new_fortune_round():
         }
         with db.get_cursor() as cursor:
             cursor.execute('''
-                INSERT INTO fortune_rounds (round_id, start_time, yellow_pool, red_pool)
-                VALUES (?, ?, ?, ?)
-            ''', (round_id, datetime.datetime.now().isoformat(), 0, 0))
+                INSERT INTO fortune_rounds (round_id, start_time, yellow_pool, red_pool, end_time)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (round_id, datetime.datetime.now().isoformat(), 0, 0,
+                  datetime.datetime.fromtimestamp(current_fortune_round['end_time']).isoformat()))
     return current_fortune_round
 
 
@@ -2739,47 +2740,43 @@ def end_fortune_round_internal():
     total_pool = yellow_pool + red_pool
 
     if total_pool == 0:
-        # Никто не ставил - просто сбрасываем
+        # Никто не ставил - просто создаём новый раунд
         create_new_fortune_round()
         return
 
-    # Определяем победителя на основе шансов (НЕ ИЗМЕНЯЕМ)
+    # Определяем победителя на основе шансов
     yellow_chance = yellow_pool / total_pool if total_pool > 0 else 0.5
     winner_team = 'yellow' if random.random() < yellow_chance else 'red'
 
     # ВЕСЬ фонд идёт победившей команде
-    winner_pool = yellow_pool + red_pool  # Весь фонд!
+    winner_pool = yellow_pool + red_pool
     winner_bets = current_fortune_round['yellow_bets'] if winner_team == 'yellow' else current_fortune_round['red_bets']
 
     # Считаем общую сумму ставок победителей
     total_winner_bets = sum(bet['net_amount'] for bet in winner_bets)
 
-    if total_winner_bets == 0:
-        create_new_fortune_round()
-        return
+    if total_winner_bets > 0:
+        # Выплата победителям пропорционально их ставке
+        for bet in winner_bets:
+            share = bet['net_amount'] / total_winner_bets
+            win_amount = round(winner_pool * share, 2)
 
-    # Выплата победителям пропорционально их ставке
-    for bet in winner_bets:
-        # Доля игрока в пуле победителей
-        share = bet['net_amount'] / total_winner_bets
-        win_amount = round(winner_pool * share, 2)  # ВЕСЬ фонд * доля игрока
+            # Начисляем выигрыш
+            user = get_user(bet['user_id'])
+            safe_update_user(bet['user_id'], wg=user['wg'] + win_amount)
 
-        # Начисляем выигрыш
-        user = get_user(bet['user_id'])
-        safe_update_user(bet['user_id'], wg=user['wg'] + win_amount)
+            # Логируем историю
+            with db.get_cursor() as cursor:
+                cursor.execute('''
+                    INSERT INTO fortune_history (user_id, round_id, team, amount, result, win_amount)
+                    VALUES (?, ?, ?, ?, 'win', ?)
+                ''', (bet['user_id'], current_fortune_round['round_id'], winner_team, bet['amount'], win_amount))
 
-        # Логируем историю
-        with db.get_cursor() as cursor:
-            cursor.execute('''
-                INSERT INTO fortune_history (user_id, round_id, team, amount, result, win_amount)
-                VALUES (?, ?, ?, ?, 'win', ?)
-            ''', (bet['user_id'], current_fortune_round['round_id'], winner_team, bet['amount'], win_amount))
-
-        add_log(f"🎲 ФОРТУНА: ПОБЕДА! Вы выиграли {win_amount} WG (ставка {bet['amount']} WG)",
-                bet['user_id'], user['username'], old_value=user['wg'], new_value=user['wg'] + win_amount,
-                currency="wg")
-        send_telegram_message(bet['user_id'],
-                              f"🎉 **Командная Фортуна!**\n\nВы выиграли {win_amount} WG!\nКоманда: {'🟡 Жёлтые' if winner_team == 'yellow' else '🔴 Красные'}")
+            add_log(f"🎲 ФОРТУНА: ПОБЕДА! Вы выиграли {win_amount} WG (ставка {bet['amount']} WG)",
+                    bet['user_id'], user['username'], old_value=user['wg'], new_value=user['wg'] + win_amount,
+                    currency="wg")
+            send_telegram_message(bet['user_id'],
+                                  f"🎉 **Командная Фортуна!**\n\nВы выиграли {win_amount} WG!\nКоманда: {'🟡 Жёлтые' if winner_team == 'yellow' else '🔴 Красные'}")
 
     # Проигравшие - только логируем
     loser_bets = current_fortune_round['red_bets'] if winner_team == 'yellow' else current_fortune_round['yellow_bets']
@@ -2800,7 +2797,7 @@ def end_fortune_round_internal():
         ''', (winner_team, datetime.datetime.now().isoformat(), yellow_pool, red_pool,
               current_fortune_round['round_id']))
 
-    # СОЗДАЁМ НОВЫЙ РАУНД (сбрасываем таймер)
+    # СОЗДАЁМ НОВЫЙ РАУНД
     create_new_fortune_round()
 
 

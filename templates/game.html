@@ -9247,24 +9247,72 @@ async function endFortuneRound() {
 
             // Сбрасываем данные
             fortuneData = {
-                timeLeft: 0,
+                timeLeft: 300,  // НОВЫЙ РАУНД - 5 минут
                 yellowPool: 0,
                 redPool: 0,
                 yellowPlayers: [],
                 redPlayers: [],
                 userBetTeam: null,
-                isActive: false
+                userBetAmount: 0,
+                isActive: true   // АКТИВИРУЕМ СРАЗУ
             };
 
+            // Очищаем кеши хешей
+            lastYellowHash = '';
+            lastRedHash = '';
+            yellowCacheHtml = '';
+            redCacheHtml = '';
+
+            // Обновляем UI
             updateFortuneUI();
             updateTeamHighlightUI();
             updateTimerDisplay();
 
+            // ПЕРЕЗАПУСКАЕМ ТАЙМЕР
+            if (fortuneUI.timerInterval) {
+                clearInterval(fortuneUI.timerInterval);
+                fortuneUI.timerInterval = null;
+            }
+            startFortuneTimer();
+
+            // Принудительно загружаем свежие данные с сервера
+            setTimeout(() => loadFortuneData(), 500);
+
             // Обновляем глобальные данные
             if (typeof syncData === 'function') syncData(true);
+        } else {
+            // Если сервер не создал новый раунд, создаём локально
+            console.warn('Сервер не создал новый раунд, создаём локально');
+            fortuneData = {
+                timeLeft: 300,
+                yellowPool: 0,
+                redPool: 0,
+                yellowPlayers: [],
+                redPlayers: [],
+                userBetTeam: null,
+                userBetAmount: 0,
+                isActive: true
+            };
+            updateFortuneUI();
+            updateTimerDisplay();
+            startFortuneTimer();
         }
     } catch(e) {
         console.error('End round error:', e);
+        // В случае ошибки - перезапускаем локально
+        fortuneData = {
+            timeLeft: 300,
+            yellowPool: 0,
+            redPool: 0,
+            yellowPlayers: [],
+            redPlayers: [],
+            userBetTeam: null,
+            userBetAmount: 0,
+            isActive: true
+        };
+        updateFortuneUI();
+        updateTimerDisplay();
+        startFortuneTimer();
     }
 }
 
