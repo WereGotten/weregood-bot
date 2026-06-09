@@ -2989,6 +2989,16 @@ def api_fortune_bet():
         if current_fortune_round.get('end_time', 0) <= time.time():
             return jsonify({"success": False, "error": "Раунд завершён, ставки больше не принимаются"}), 400
 
+        # ========== НОВАЯ ПРОВЕРКА: НЕТ ЛИ СТАВКИ НА ДРУГУЮ КОМАНДУ ==========
+        # Проверяем ставку на противоположную команду
+        other_team = 'red' if team == 'yellow' else 'yellow'
+        other_bets = current_fortune_round['red_bets'] if team == 'yellow' else current_fortune_round['yellow_bets']
+
+        for bet in other_bets:
+            if bet.get('user_id') == user_id:
+                return jsonify({"success": False,
+                                "error": f"❌ Вы уже сделали ставку на команду {'Красных 🔴' if other_team == 'red' else 'Жёлтых 🟡'}! Можно ставить только на одну команду за раунд."}), 400
+
         commission = amount * FORTUNE_COMMISSION
         net_amount = amount - commission
 
@@ -2996,7 +3006,7 @@ def api_fortune_bet():
 
         round_id = current_fortune_round['round_id']
 
-        # ПРОВЕРЯЕМ ЕСТЬ ЛИ УЖЕ СТАВКА В БД
+        # Проверяем есть ли уже ставка на ЭТУ же команду (для суммирования)
         existing_bet = None
         bet_list = current_fortune_round['yellow_bets'] if team == 'yellow' else current_fortune_round['red_bets']
 
@@ -3007,7 +3017,7 @@ def api_fortune_bet():
 
         with db.get_cursor() as cursor:
             if existing_bet:
-                # Обновляем существующую ставку в БД
+                # Обновляем существующую ставку в БД (суммируем)
                 cursor.execute('''
                     UPDATE fortune_active_bets 
                     SET amount = amount + ?, net_amount = net_amount + ?

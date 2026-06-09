@@ -9411,12 +9411,25 @@ let betModalState = {
     team: null
 };
 
-function openBetModal(team) {
-    // УБИРАЕМ ПРОВЕРКУ НА userBetTeam - теперь можно ставить несколько раз на одну команду!
-    // if (fortuneData.userBetTeam) {
-    //     showToast(`❌ Вы уже сделали ставку на команду ${fortuneData.userBetTeam === 'yellow' ? 'Жёлтых 🟡' : 'Красных 🔴'}!`, 'error');
-    //     return;
-    // }
+async function openBetModal(team) {
+    // Проверяем, есть ли уже ставка у пользователя (свежие данные с сервера)
+    try {
+        const response = await fetch('/api/fortune/user_total_bet', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId })
+        });
+        const data = await response.json();
+
+        if (data.success && data.team && data.amount > 0) {
+            // Уже есть ставка на команду
+            const teamName = data.team === 'yellow' ? 'Жёлтых 🟡' : 'Красных 🔴';
+            showFortuneMessage(`❌ Вы уже сделали ставку на команду ${teamName}! Можно ставить только на одну команду за раунд.`, 'error');
+            return;
+        }
+    } catch(e) {
+        console.error('Check user bet error:', e);
+    }
 
     betModalState.team = team;
     betModalState.isOpen = true;
@@ -9461,12 +9474,24 @@ async function submitBet() {
         return;
     }
 
-    // УБИРАЕМ ПРОВЕРКУ НА userBetTeam
-    // if (fortuneData.userBetTeam) {
-    //     showFortuneMessage(`❌ Вы уже сделали ставку!`, 'error');
-    //     closeBetModal();
-    //     return;
-    // }
+    // ПРОВЕРЯЕМ ЕЩЁ РАЗ ПЕРЕД ОТПРАВКОЙ
+    try {
+        const checkResponse = await fetch('/api/fortune/user_total_bet', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId })
+        });
+        const checkData = await checkResponse.json();
+
+        if (checkData.success && checkData.team && checkData.amount > 0) {
+            const teamName = checkData.team === 'yellow' ? 'Жёлтых 🟡' : 'Красных 🔴';
+            showFortuneMessage(`❌ Вы уже сделали ставку на команду ${teamName}! Можно ставить только на одну команду за раунд.`, 'error');
+            closeBetModal();
+            return;
+        }
+    } catch(e) {
+        console.error('Check before bet error:', e);
+    }
 
     const amount = parseFloat(document.getElementById('betAmount')?.value || '0');
     if (isNaN(amount) || amount < 10) {
