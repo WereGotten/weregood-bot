@@ -2739,8 +2739,31 @@ def end_fortune_round_internal():
     red_pool = current_fortune_round['red_pool']
     total_pool = yellow_pool + red_pool
 
+    # СЛУЧАЙ 1: Ставки только на одной команде
+    if (yellow_pool > 0 and red_pool == 0) or (red_pool > 0 and yellow_pool == 0):
+        # Просто перезапускаем таймер, ставки НЕ ОЧИЩАЕМ
+        current_fortune_round['end_time'] = time.time() + FORTUNE_ROUND_DURATION
+        with db.get_cursor() as cursor:
+            cursor.execute('''
+                UPDATE fortune_rounds SET end_time = ? WHERE round_id = ?
+            ''', (datetime.datetime.fromtimestamp(current_fortune_round['end_time']).isoformat(),
+                  current_fortune_round['round_id']))
+
+        # Отправляем уведомление через SocketIO
+        try:
+            socketio.emit('fortune_timer_reset', {
+                'message': '⏰ Ставки только на одной команде! Таймер перезапущен.',
+                'time_left': FORTUNE_ROUND_DURATION
+            })
+        except:
+            pass
+
+        add_log(f"🎲 ФОРТУНА: Таймер перезапущен (ставки только на {'Жёлтых' if yellow_pool > 0 else 'Красных'})",
+                0, "System")
+        return
+
+    # СЛУЧАЙ 2: Ставки на обеих командах - определяем победителя
     if total_pool == 0:
-        # Никто не ставил - просто создаём новый раунд
         create_new_fortune_round()
         return
 
@@ -2797,7 +2820,7 @@ def end_fortune_round_internal():
         ''', (winner_team, datetime.datetime.now().isoformat(), yellow_pool, red_pool,
               current_fortune_round['round_id']))
 
-    # СОЗДАЁМ НОВЫЙ РАУНД
+    # СОЗДАЁМ НОВЫЙ РАУНД (ставки очищаются)
     create_new_fortune_round()
 
 

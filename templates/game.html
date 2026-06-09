@@ -7336,68 +7336,80 @@ function updateRecentPlayersFast(players) {
         }
 
         function initSocket() {
-            socket = io({
-                reconnection: true,
-                reconnectionAttempts: 3,
-                reconnectionDelay: 2000,
-                transports: ['websocket']
-            });
-            socket.on('connect', () => {
-                socket.emit('get_draw_status', {});
-                socket.emit('get_remaining_time', {});
-            });
-            socket.on('connect_error', (error) => console.log('Socket connection error:', error));
-            socket.on('disconnect', (reason) => {
-                if (reason === 'io server disconnect') socket.connect();
-            });
-            socket.on('remaining_time', (data) => {
-                if (data.seconds > 0 && isDrawn) {
-                    const endTime = new Date(Date.now() + data.seconds * 1000);
-                    startTimer(endTime.toISOString());
-                }
-            });
-            socket.on('draw_status', (data) => {
-                isDrawn = data.is_drawn;
-                winningNumbers = data.winning_numbers || [];
-                updateDrawUI();
-                if (isDrawn) loadUserTickets();
-            });
-            socket.on('draw_completed', (data) => {
-                isDrawn = true;
-                winningNumbers = data.winning_numbers || [];
-                updateDrawUI();
-                showToast(data.message, 'success');
-                if (data.end_time) startTimer(data.end_time);
-                updateLottery();
-                loadUserTickets();
-            });
-            socket.on('auto_revealed', (data) => {
-                showToast(data.message, 'info');
-                loadUserTickets();
-                updateTopPlayers();
-                stopTimer();
-            });
-            socket.on('prizes_distributed', (data) => {
-                showToast(data.message, 'success');
-                stopTimer();
-                updateStatus();
-                updateLottery();
-                loadUserTickets();
-            });
-            socket.on('draw_reset', (data) => {
-                isDrawn = false;
-                winningNumbers = [];
-                updateDrawUI();
-                showToast(data.message, 'info');
-                updateLottery();
-                loadUserTickets();
-                stopTimer();
-            });
-            socket.on('cell_revealed', (data) => {
-                loadUserTickets();
-                updateTopPlayers();
-            });
+    socket = io({
+        reconnection: true,
+        reconnectionAttempts: 3,
+        reconnectionDelay: 2000,
+        transports: ['websocket']
+    });
+    socket.on('connect', () => {
+        socket.emit('get_draw_status', {});
+        socket.emit('get_remaining_time', {});
+    });
+    socket.on('connect_error', (error) => console.log('Socket connection error:', error));
+    socket.on('disconnect', (reason) => {
+        if (reason === 'io server disconnect') socket.connect();
+    });
+    socket.on('remaining_time', (data) => {
+        if (data.seconds > 0 && isDrawn) {
+            const endTime = new Date(Date.now() + data.seconds * 1000);
+            startTimer(endTime.toISOString());
         }
+    });
+    socket.on('draw_status', (data) => {
+        isDrawn = data.is_drawn;
+        winningNumbers = data.winning_numbers || [];
+        updateDrawUI();
+        if (isDrawn) loadUserTickets();
+    });
+    socket.on('draw_completed', (data) => {
+        isDrawn = true;
+        winningNumbers = data.winning_numbers || [];
+        updateDrawUI();
+        showToast(data.message, 'success');
+        if (data.end_time) startTimer(data.end_time);
+        updateLottery();
+        loadUserTickets();
+    });
+    socket.on('auto_revealed', (data) => {
+        showToast(data.message, 'info');
+        loadUserTickets();
+        updateTopPlayers();
+        stopTimer();
+    });
+    socket.on('prizes_distributed', (data) => {
+        showToast(data.message, 'success');
+        stopTimer();
+        updateStatus();
+        updateLottery();
+        loadUserTickets();
+    });
+    socket.on('draw_reset', (data) => {
+        isDrawn = false;
+        winningNumbers = [];
+        updateDrawUI();
+        showToast(data.message, 'info');
+        updateLottery();
+        loadUserTickets();
+        stopTimer();
+    });
+    socket.on('cell_revealed', (data) => {
+        loadUserTickets();
+        updateTopPlayers();
+    });
+
+    // ========== СЮДА ДОБАВЬ НОВЫЙ ОБРАБОТЧИК ==========
+    socket.on('fortune_timer_reset', (data) => {
+        if (data.time_left) {
+            fortuneData.timeLeft = data.time_left;
+            updateTimerDisplay();
+            if (!fortuneUI.timerInterval) {
+                startFortuneTimer();
+            }
+            showToast(data.message || '⏰ Таймер перезапущен!', 'info');
+        }
+    });
+}
 
         // ==================== РЕКЛАМА ====================
         let adController = null;
@@ -9073,12 +9085,12 @@ function startFortuneTimer() {
             // ПРОВЕРЯЕМ: если ставки только на одной команде
             if ((fortuneData.yellowPool > 0 && fortuneData.redPool === 0) ||
                 (fortuneData.redPool > 0 && fortuneData.yellowPool === 0)) {
-                // Перезапускаем таймер
+                // Перезапускаем таймер, ставки НЕ ОЧИЩАЕМ
                 fortuneData.timeLeft = 300;
                 startFortuneTimer();
                 showToast('⏰ Ставки только на одной команде! Таймер перезапущен.', 'info');
             } else if (fortuneData.yellowPool > 0 && fortuneData.redPool > 0) {
-                // Обе команды имеют ставки - завершаем раунд
+                // Обе команды имеют ставки - завершаем раунд (ставки очистятся)
                 endFortuneRound();
             } else {
                 // Нет ставок вообще
@@ -9142,7 +9154,7 @@ async function loadFortuneData() {
         updateFortuneUI();
 
         // Загружаем текущую ставку пользователя
-        await loadUserFortuneBet();
+        await loadUserCurrentBet();
 
         // Обновляем подсветку
         updateTeamHighlightUI();
@@ -9237,38 +9249,47 @@ async function loadFortuneHistory() {
 }
 
 // ========== ЗАВЕРШЕНИЕ РАУНДА ==========
+// ========== ЗАВЕРШЕНИЕ РАУНДА (КОГДА СТАВКИ НА ОБЕИХ КОМАНДАХ) ==========
 async function endFortuneRound() {
     try {
         const response = await fetch('/api/fortune/end_round', { method: 'POST' });
         const data = await response.json();
 
         if (data.success) {
-            showToast(data.message || '🎲 Раунд завершён!', 'success');
+            showToast(data.message || '🎲 Раунд завершён! Призы распределены!', 'success');
 
-            // Сбрасываем данные
+            // ПОЛНОСТЬЮ ОЧИЩАЕМ ВСЕ ДАННЫЕ ДЛЯ НОВОГО РАУНДА
             fortuneData = {
-                timeLeft: 300,  // НОВЫЙ РАУНД - 5 минут
+                timeLeft: 300,
                 yellowPool: 0,
                 redPool: 0,
                 yellowPlayers: [],
                 redPlayers: [],
                 userBetTeam: null,
                 userBetAmount: 0,
-                isActive: true   // АКТИВИРУЕМ СРАЗУ
+                isActive: true
             };
 
-            // Очищаем кеши хешей
+            // Очищаем все кеши
             lastYellowHash = '';
             lastRedHash = '';
             yellowCacheHtml = '';
             redCacheHtml = '';
+            lastDomUpdate = 0;
 
-            // Обновляем UI
-            updateFortuneUI();
+            // Обновляем UI полностью
+            if (fortuneUI.elements.yellowPlayers) {
+                fortuneUI.elements.yellowPlayers.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
+            }
+            if (fortuneUI.elements.redPlayers) {
+                fortuneUI.elements.redPlayers.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
+            }
+
+            updateFortuneNumbers();
             updateTeamHighlightUI();
             updateTimerDisplay();
 
-            // ПЕРЕЗАПУСКАЕМ ТАЙМЕР
+            // Перезапускаем таймер
             if (fortuneUI.timerInterval) {
                 clearInterval(fortuneUI.timerInterval);
                 fortuneUI.timerInterval = null;
@@ -9281,39 +9302,52 @@ async function endFortuneRound() {
             // Обновляем глобальные данные
             if (typeof syncData === 'function') syncData(true);
         } else {
-            // Если сервер не создал новый раунд, создаём локально
-            console.warn('Сервер не создал новый раунд, создаём локально');
-            fortuneData = {
-                timeLeft: 300,
-                yellowPool: 0,
-                redPool: 0,
-                yellowPlayers: [],
-                redPlayers: [],
-                userBetTeam: null,
-                userBetAmount: 0,
-                isActive: true
-            };
-            updateFortuneUI();
-            updateTimerDisplay();
-            startFortuneTimer();
+            // Если сервер вернул ошибку - перезапускаем локально
+            console.warn('Сервер не завершил раунд, перезапускаем локально');
+            resetFortuneLocally();
         }
     } catch(e) {
         console.error('End round error:', e);
-        // В случае ошибки - перезапускаем локально
-        fortuneData = {
-            timeLeft: 300,
-            yellowPool: 0,
-            redPool: 0,
-            yellowPlayers: [],
-            redPlayers: [],
-            userBetTeam: null,
-            userBetAmount: 0,
-            isActive: true
-        };
-        updateFortuneUI();
-        updateTimerDisplay();
-        startFortuneTimer();
+        resetFortuneLocally();
     }
+}
+
+// ========== ЛОКАЛЬНЫЙ СБРОС ФОРТУНЫ (ПРИ ОШИБКЕ) ==========
+function resetFortuneLocally() {
+    fortuneData = {
+        timeLeft: 300,
+        yellowPool: 0,
+        redPool: 0,
+        yellowPlayers: [],
+        redPlayers: [],
+        userBetTeam: null,
+        userBetAmount: 0,
+        isActive: true
+    };
+
+    lastYellowHash = '';
+    lastRedHash = '';
+    yellowCacheHtml = '';
+    redCacheHtml = '';
+
+    if (fortuneUI.elements.yellowPlayers) {
+        fortuneUI.elements.yellowPlayers.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
+    }
+    if (fortuneUI.elements.redPlayers) {
+        fortuneUI.elements.redPlayers.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
+    }
+
+    updateFortuneNumbers();
+    updateTeamHighlightUI();
+    updateTimerDisplay();
+
+    if (fortuneUI.timerInterval) {
+        clearInterval(fortuneUI.timerInterval);
+        fortuneUI.timerInterval = null;
+    }
+    startFortuneTimer();
+
+    showToast('🔄 Фортуна перезапущена! Делайте ставки!', 'info');
 }
 
 // ========== СТАВКИ (ОПТИМИЗИРОВАННЫЕ) ==========
