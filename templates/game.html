@@ -5875,7 +5875,6 @@
     </div>
 
     <!-- МОДАЛЬНОЕ ОКНО КОМАНДНОЙ ФОРТУНЫ -->
-<!-- МОДАЛЬНОЕ ОКНО КОМАНДНОЙ ФОРТУНЫ -->
 <div id="fortuneModal" class="game-modal-full">
     <div class="game-modal-full-content">
         <div class="game-modal-full-header">
@@ -9521,7 +9520,11 @@ window.openGame = function(gameName) {
 };
 
 window.closeFortuneGame = function() {
-    const fortuneModal = document
+    const fortuneModal = document.getElementById('fortuneModal');
+    if (fortuneModal) fortuneModal.classList.remove('active');
+    document.body.style.overflow = '';
+    if (fortuneTimerInterval) clearInterval(fortuneTimerInterval);
+};
 
         // ==================== DOMCONTENTLOADED ====================
         document.addEventListener("DOMContentLoaded", () => {
