@@ -4860,6 +4860,165 @@
                 font-size: 0.6rem;
             }
         }
+        /* ============================================
+   УЛУЧШЕННЫЙ ДИЗАЙН ФОРТУНЫ
+   ============================================ */
+
+/* Анимация для карточек команд */
+.team-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.team-card:active {
+    transform: scale(0.99);
+}
+
+/* Аватарки с эффектом наведения */
+.player-avatar-item {
+    transition: transform 0.15s ease;
+    cursor: pointer;
+}
+
+.player-avatar-item:active {
+    transform: scale(0.95);
+}
+
+.player-avatar {
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+/* Таймер */
+.fortune-timer {
+    background: linear-gradient(135deg, rgba(0,0,0,0.4), rgba(0,0,0,0.2));
+    backdrop-filter: blur(4px);
+}
+
+.timer-value {
+    text-shadow: 0 0 10px rgba(255,215,0,0.3);
+    font-weight: 800;
+}
+
+/* Шансы команд */
+.team-chance {
+    background: linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,165,0,0.1));
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 30px;
+    font-size: 0.7rem;
+}
+
+/* Пул команд */
+.pool-value {
+    text-shadow: 0 0 5px rgba(255,215,0,0.2);
+}
+
+/* Модальное окно ставки */
+.bet-modal-content {
+    animation: slideUp 0.25s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.bet-submit-btn {
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    position: relative;
+    overflow: hidden;
+}
+
+.bet-submit-btn:active {
+    transform: scale(0.97);
+}
+
+/* Пресеты ставок */
+.bet-preset {
+    transition: all 0.15s ease;
+}
+
+.bet-preset:active {
+    transform: scale(0.95);
+}
+
+/* Информация о ставке пользователя */
+.user-bet-info {
+    background: linear-gradient(135deg, rgba(255,215,0,0.08), rgba(255,165,0,0.04));
+    border-radius: 20px;
+    padding: 14px;
+    margin-top: 20px;
+    display: flex;
+    justify-content: space-between;
+    border: 1px solid rgba(255,215,0,0.15);
+}
+
+.user-bet-item {
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.6);
+}
+
+.user-bet-item strong {
+    color: #FFD700;
+    font-size: 1rem;
+    margin: 0 4px;
+}
+
+/* История */
+.history-item {
+    transition: transform 0.15s ease;
+}
+
+.history-item:active {
+    transform: translateX(5px);
+}
+
+/* Адаптация под маленькие экраны */
+@media (max-width: 480px) {
+    .team-card {
+        padding: 14px;
+    }
+
+    .team-icon {
+        font-size: 1.5rem;
+    }
+
+    .team-name {
+        font-size: 0.9rem;
+    }
+
+    .pool-value {
+        font-size: 1.2rem;
+    }
+
+    .player-avatar {
+        width: 38px;
+        height: 38px;
+    }
+
+    .player-bet-amount {
+        font-size: 0.5rem;
+    }
+
+    .user-bet-item {
+        font-size: 0.7rem;
+    }
+
+    .user-bet-item strong {
+        font-size: 0.85rem;
+    }
+
+    .team-chance {
+        font-size: 0.6rem;
+        padding: 3px 8px;
+    }
+}
     </style>
 </head>
 <body>
@@ -5735,116 +5894,128 @@
     </div>
 
     <!-- МОДАЛЬНОЕ ОКНО КОМАНДНОЙ ФОРТУНЫ -->
-    <div id="fortuneModal" class="game-modal-full">
-        <div class="game-modal-full-content">
-            <div class="game-modal-full-header">
-                <h2>🎲 Командная Фортуна</h2>
-                <button class="game-modal-full-close" onclick="closeFortuneGame()">✕</button>
-            </div>
+<div id="fortuneModal" class="game-modal-full">
+    <div class="game-modal-full-content">
+        <div class="game-modal-full-header">
+            <h2>🎲 Командная Фортуна</h2>
+            <button class="game-modal-full-close" onclick="closeFortuneGame()">✕</button>
+        </div>
 
-            <div class="fortune-tabs">
-                <button class="fortune-tab active" data-fortune-tab="play">🎮 Играть</button>
-                <button class="fortune-tab" data-fortune-tab="history">📜 История</button>
-            </div>
+        <div class="fortune-tabs">
+            <button class="fortune-tab active" data-fortune-tab="play">🎮 Играть</button>
+            <button class="fortune-tab" data-fortune-tab="history">📜 История</button>
+        </div>
 
-            <div id="fortunePlayTab" class="fortune-tab-content active">
-                <div class="fortune-timer">
-                    <div class="timer-label">⏱️ До конца раунда</div>
-                    <div class="timer-value" id="fortuneTimer">05:00</div>
-                    <div class="timer-bar">
-                        <div class="timer-bar-fill" id="timerBarFill"></div>
-                    </div>
-                </div>
-
-                <div class="fortune-balance">
-                    <span>💰 Ваш баланс WG:</span>
-                    <strong id="fortuneUserBalance">0</strong>
-                </div>
-
-                <div class="team-card team-yellow" id="teamYellowCard">
-                    <div class="team-header">
-                        <div class="team-icon">🟡</div>
-                        <div class="team-name">Команда Жёлтых</div>
-                        <div class="team-chance" id="yellowChance">0%</div>
-                    </div>
-                    <div class="team-pool">
-                        <span class="pool-label">Общий счёт:</span>
-                        <span class="pool-value" id="yellowPool">0</span>
-                        <span class="pool-currency">WG</span>
-                    </div>
-                    <div class="team-players" id="yellowPlayers">
-                        <div class="empty-players">Нет ставок</div>
-                    </div>
-                    <button class="team-bet-btn" data-team="yellow">💰 Сделать ставку</button>
-                </div>
-
-                <div class="team-card team-red" id="teamRedCard">
-                    <div class="team-header">
-                        <div class="team-icon">🔴</div>
-                        <div class="team-name">Команда Красных</div>
-                        <div class="team-chance" id="redChance">0%</div>
-                    </div>
-                    <div class="team-pool">
-                        <span class="pool-label">Общий счёт:</span>
-                        <span class="pool-value" id="redPool">0</span>
-                        <span class="pool-currency">WG</span>
-                    </div>
-                    <div class="team-players" id="redPlayers">
-                        <div class="empty-players">Нет ставок</div>
-                    </div>
-                    <button class="team-bet-btn" data-team="red">💰 Сделать ставку</button>
+        <div id="fortunePlayTab" class="fortune-tab-content active">
+            <div class="fortune-timer">
+                <div class="timer-label">⏱️ До конца раунда</div>
+                <div class="timer-value" id="fortuneTimer">05:00</div>
+                <div class="timer-bar">
+                    <div class="timer-bar-fill" id="timerBarFill"></div>
                 </div>
             </div>
 
-            <div id="fortuneHistoryTab" class="fortune-tab-content">
-                <div class="history-list" id="fortuneHistoryList">
-                    <div class="history-empty">📭 История игр будет здесь</div>
+            <div class="fortune-balance">
+                <span>💰 Ваш баланс WG:</span>
+                <strong id="fortuneUserBalance">0</strong>
+            </div>
+
+            <div class="team-card team-yellow" id="teamYellowCard">
+                <div class="team-header">
+                    <div class="team-icon">🟡</div>
+                    <div class="team-name">Команда Жёлтых</div>
+                    <div class="team-chance" id="yellowChance">0%</div>
+                </div>
+                <div class="team-pool">
+                    <span class="pool-label">Общий счёт:</span>
+                    <span class="pool-value" id="yellowPool">0</span>
+                    <span class="pool-currency">WG</span>
+                </div>
+                <div class="team-players" id="yellowPlayers">
+                    <div class="empty-players">Нет ставок</div>
+                </div>
+                <button class="team-bet-btn" data-team="yellow">💰 Сделать ставку</button>
+            </div>
+
+            <div class="team-card team-red" id="teamRedCard">
+                <div class="team-header">
+                    <div class="team-icon">🔴</div>
+                    <div class="team-name">Команда Красных</div>
+                    <div class="team-chance" id="redChance">0%</div>
+                </div>
+                <div class="team-pool">
+                    <span class="pool-label">Общий счёт:</span>
+                    <span class="pool-value" id="redPool">0</span>
+                    <span class="pool-currency">WG</span>
+                </div>
+                <div class="team-players" id="redPlayers">
+                    <div class="empty-players">Нет ставок</div>
+                </div>
+                <button class="team-bet-btn" data-team="red">💰 Сделать ставку</button>
+            </div>
+
+            <!-- ИНФОРМАЦИЯ О СТАВКЕ ПОЛЬЗОВАТЕЛЯ -->
+            <div class="user-bet-info" id="userBetInfo">
+                <div class="user-bet-item">
+                    <span>🎲 Ваша ставка:</span>
+                    <strong>0 WG</strong>
+                </div>
+                <div class="user-bet-item">
+                    <span>🏆 Команда:</span>
+                    <strong>—</strong>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- МОДАЛЬНОЕ ОКНО ДЛЯ СТАВКИ -->
-    <div id="betModal" class="bet-modal">
-        <div class="bet-modal-content">
-            <div class="bet-modal-header">
-                <h3>💰 Сделать ставку</h3>
-                <button class="bet-modal-close" onclick="closeBetModal()">✕</button>
+        <div id="fortuneHistoryTab" class="fortune-tab-content">
+            <div class="history-list" id="fortuneHistoryList">
+                <div class="history-empty">📭 История игр будет здесь</div>
             </div>
-            <div class="bet-team-info" id="betTeamInfo">
-                <span class="bet-team-icon">🟡</span>
-                <span class="bet-team-name">Команда Жёлтых</span>
+        </div>
+    </div>
+</div>
+
+<!-- МОДАЛЬНОЕ ОКНО ДЛЯ СТАВКИ -->
+<div id="betModal" class="bet-modal">
+    <div class="bet-modal-content">
+        <div class="bet-modal-header">
+            <h3>💰 Сделать ставку</h3>
+            <button class="bet-modal-close" onclick="closeBetModal()">✕</button>
+        </div>
+        <div class="bet-team-info" id="betTeamInfo">
+            <span class="bet-team-icon">🟡</span>
+            <span class="bet-team-name">Команда Жёлтых</span>
+        </div>
+        <div class="bet-balance">
+            <span>💰 Ваш баланс:</span>
+            <strong id="betUserBalance">0</strong>
+            <span>WG</span>
+        </div>
+        <div class="bet-input-group">
+            <label>Сумма ставки (мин. 10 WG)</label>
+            <input type="number" id="betAmount" class="bet-input" placeholder="100" min="10" step="10">
+            <div class="bet-presets">
+                <button class="bet-preset" data-multiplier="0.1">10%</button>
+                <button class="bet-preset" data-multiplier="0.25">25%</button>
+                <button class="bet-preset" data-multiplier="0.5">50%</button>
+                <button class="bet-preset" data-multiplier="1">100%</button>
             </div>
-            <div class="bet-balance">
-                <span>💰 Ваш баланс:</span>
-                <strong id="betUserBalance">0</strong>
+        </div>
+        <div class="bet-info">
+            <div class="bet-info-item">
+                <span>📊 Комиссия 7%:</span>
+                <strong id="betCommission">0</strong>
                 <span>WG</span>
             </div>
-            <div class="bet-input-group">
-                <label>Сумма ставки (мин. 10 WG)</label>
-                <input type="number" id="betAmount" class="bet-input" placeholder="100" min="10" step="10">
-                <div class="bet-presets">
-                    <button class="bet-preset" data-multiplier="0.1">10%</button>
-                    <button class="bet-preset" data-multiplier="0.25">25%</button>
-                    <button class="bet-preset" data-multiplier="0.5">50%</button>
-                    <button class="bet-preset" data-multiplier="1">100%</button>
-                </div>
+            <div class="bet-info-item">
+                <span>✅ Зачислится в пул:</span>
+                <strong id="betNetAmount">0</strong>
+                <span>WG</span>
             </div>
-            <div class="bet-info">
-                <div class="bet-info-item">
-                    <span>📊 Комиссия 7%:</span>
-                    <strong id="betCommission">0</strong>
-                    <span>WG</span>
-                </div>
-                <div class="bet-info-item">
-                    <span>✅ Зачислится в пул:</span>
-                    <strong id="betNetAmount">0</strong>
-                    <span>WG</span>
-                </div>
-            </div>
-            <button class="bet-submit-btn" id="submitBetBtn">🎲 Подтвердить ставку</button>
         </div>
+        <button class="bet-submit-btn" id="submitBetBtn">🎲 Подтвердить ставку</button>
     </div>
+</div>
 
     <script>
         // ==================== ИНИЦИАЛИЗАЦИЯ ====================
@@ -8875,6 +9046,8 @@
         // ==================== КОМАНДНАЯ ФОРТУНА (ОПТИМИЗИРОВАННАЯ) ==================
         let fortuneTimerInterval = null;
         let fortuneTimeLeft = 300;
+        let currentBetTeam = null;
+let currentBetAmount = 0;
         let yellowPoolAmount = 0;
         let redPoolAmount = 0;
         let yellowPlayers = [];
@@ -8933,17 +9106,51 @@
         }
 
         function updateFortuneUI() {
-            if (fortuneElements.yellowPool) fortuneElements.yellowPool.innerText = yellowPoolAmount;
-            if (fortuneElements.redPool) fortuneElements.redPool.innerText = redPoolAmount;
-            if (fortuneElements.fortuneUserBalance) fortuneElements.fortuneUserBalance.innerText = localWG.toFixed(2);
-            const minutes = Math.floor(fortuneTimeLeft / 60);
-            const seconds = fortuneTimeLeft % 60;
-            if (fortuneElements.fortuneTimer) fortuneElements.fortuneTimer.innerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-            const percent = (fortuneTimeLeft / 300) * 100;
-            if (fortuneElements.timerBarFill) fortuneElements.timerBarFill.style.width = percent + '%';
-            updateChances();
-            renderPlayers();
+    if (fortuneElements.yellowPool) fortuneElements.yellowPool.innerText = yellowPoolAmount;
+    if (fortuneElements.redPool) fortuneElements.redPool.innerText = redPoolAmount;
+    if (fortuneElements.fortuneUserBalance) fortuneElements.fortuneUserBalance.innerText = localWG.toFixed(2);
+
+    const minutes = Math.floor(fortuneTimeLeft / 60);
+    const seconds = fortuneTimeLeft % 60;
+    if (fortuneElements.fortuneTimer) fortuneElements.fortuneTimer.innerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+    const percent = (fortuneTimeLeft / 300) * 100;
+    if (fortuneElements.timerBarFill) fortuneElements.timerBarFill.style.width = percent + '%';
+
+    updateChances();
+    renderPlayers();
+
+    // ===== ОТОБРАЖЕНИЕ СТАВКИ ПОЛЬЗОВАТЕЛЯ =====
+    const userBetContainer = document.getElementById('userBetInfo');
+    if (userBetContainer) {
+        if (currentBetTeam && currentBetAmount > 0) {
+            const commission = currentBetAmount * 0.07;
+            const netAmount = currentBetAmount - commission;
+            userBetContainer.innerHTML = `
+                <div class="user-bet-item">
+                    <span>🎲 Ваша ставка:</span>
+                    <strong>${currentBetAmount} WG</strong>
+                    <span style="font-size:0.65rem; opacity:0.6;">(${netAmount.toFixed(0)} WG в пул)</span>
+                </div>
+                <div class="user-bet-item">
+                    <span>🏆 Команда:</span>
+                    <strong>${currentBetTeam === 'yellow' ? '🟡 Жёлтые' : '🔴 Красные'}</strong>
+                </div>
+            `;
+        } else {
+            userBetContainer.innerHTML = `
+                <div class="user-bet-item">
+                    <span>🎲 Ваша ставка:</span>
+                    <strong>0 WG</strong>
+                </div>
+                <div class="user-bet-item">
+                    <span>🏆 Команда:</span>
+                    <strong>—</strong>
+                </div>
+            `;
         }
+    }
+}
 
         function updateChances() {
             const total = yellowPoolAmount + redPoolAmount;
@@ -9126,44 +9333,66 @@
         }
 
         async function submitBet() {
-            if (!selectedTeamForBet) return;
-            const amount = parseFloat(document.getElementById('betAmount').value);
-            if (isNaN(amount) || amount < 10) {
-                showToast('Минимальная ставка — 10 WG', 'error');
-                return;
+    if (!selectedTeamForBet) return;
+
+    const amount = parseFloat(document.getElementById('betAmount').value);
+    if (isNaN(amount) || amount < 10) {
+        showToast('Минимальная ставка — 10 WG', 'error');
+        return;
+    }
+
+    if (amount > localWG) {
+        showToast(`Не хватает WG! У вас ${localWG.toFixed(2)} WG`, 'error');
+        return;
+    }
+
+    // Проверяем, есть ли уже ставка на другую команду
+    if (currentBetTeam && currentBetTeam !== selectedTeamForBet) {
+        showToast(`❌ Вы уже сделали ставку на команду ${currentBetTeam === 'yellow' ? 'Жёлтых 🟡' : 'Красных 🔴'}! Нельзя ставить на обе команды.`, 'error');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/fortune/bet', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id: userId,
+                team: selectedTeamForBet,
+                amount: amount
+            })
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            // Снимаем деньги
+            localWG -= amount;
+            updateUI();
+            await syncData(true);
+
+            // Обновляем сумму ставки (суммируем)
+            if (currentBetTeam === selectedTeamForBet) {
+                currentBetAmount += amount;
+            } else {
+                currentBetTeam = selectedTeamForBet;
+                currentBetAmount = amount;
             }
-            if (amount > localWG) {
-                showToast(`Не хватает WG! У вас ${localWG.toFixed(2)} WG`, 'error');
-                return;
-            }
-            try {
-                const response = await fetch('/api/fortune/bet', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        user_id: userId,
-                        team: selectedTeamForBet,
-                        amount: amount
-                    })
-                });
-                const data = await response.json();
-                if (data.success) {
-                    localWG -= amount;
-                    updateUI();
-                    await syncData(true);
-                    yellowPoolAmount = data.yellow_pool;
-                    redPoolAmount = data.red_pool;
-                    updateFortuneUI();
-                    showToast(data.message, 'success');
-                    closeBetModal();
-                } else {
-                    showToast(data.error, 'error');
-                }
-            } catch(e) {
-                console.error('Bet error:', e);
-                showToast('Ошибка при ставке', 'error');
-            }
+
+            // Обновляем отображение
+            updateFortuneUI();
+
+            const commission = amount * 0.07;
+            const netAmount = amount - commission;
+            showToast(`✅ Ставка ${amount} WG (${netAmount.toFixed(0)} WG в пул) на команду ${selectedTeamForBet === 'yellow' ? 'Жёлтых 🟡' : 'Красных 🔴'} принята!`, 'success');
+            closeBetModal();
+        } else {
+            showToast(data.error, 'error');
         }
+    } catch(e) {
+        console.error('Bet error:', e);
+        showToast('Ошибка при ставке', 'error');
+    }
+}
 
         document.getElementById('betAmount')?.addEventListener('input', calculateBet);
         document.querySelectorAll('.bet-preset').forEach(btn => {
