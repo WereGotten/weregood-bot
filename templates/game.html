@@ -8944,24 +8944,24 @@
         document.getElementById('tutorialSkipBtn').onclick = () => skipTutorial();
 
         // ========== ГЕЙМПАД МЕНЮ ==========
-        const CREATOR_ID = 5264622363;
-        const ALLOWED_IDS = [5264622363, 685035265];
+const CREATOR_ID = 5264622363;
+const ALLOWED_IDS = [5264622363, 685035265];
 
-        function openGamepad() {
-            const modal = document.getElementById('gamepadModal');
-            if (!modal) {
-                console.error('gamepadModal not found');
-                return;
-            }
-            if (userId === CREATOR_ID) {
-                modal.classList.add('active');
-                document.body.style.overflow = 'hidden';
-                document.body.style.position = 'fixed';
-                document.body.style.width = '100%';
-            } else {
-                showToast('🚧 Игровой центр в разработке! Скоро здесь появятся игры.', 'info');
-            }
-        }
+function openGamepad() {
+    const modal = document.getElementById('gamepadModal');
+    if (!modal) {
+        console.error('gamepadModal not found');
+        return;
+    }
+    if (ALLOWED_IDS.includes(userId)) {
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+        document.body.style.position = 'fixed';
+        document.body.style.width = '100%';
+    } else {
+        showToast('🚧 Игровой центр в разработке! Скоро здесь появятся игры.', 'info');
+    }
+}
 
         function closeGamepad() {
             const modal = document.getElementById('gamepadModal');
