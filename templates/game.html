@@ -9453,25 +9453,6 @@ let betModalState = {
 };
 
 async function openBetModal(team) {
-    // Проверяем, есть ли уже ставка у пользователя (свежие данные с сервера)
-    try {
-        const response = await fetch('/api/fortune/user_total_bet', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId })
-        });
-        const data = await response.json();
-
-        if (data.success && data.team && data.amount > 0) {
-            // Уже есть ставка на команду
-            const teamName = data.team === 'yellow' ? 'Жёлтых 🟡' : 'Красных 🔴';
-            showFortuneMessage(`❌ Вы уже сделали ставку на команду ${teamName}! Можно ставить только на одну команду за раунд.`, 'error');
-            return;
-        }
-    } catch(e) {
-        console.error('Check user bet error:', e);
-    }
-
     betModalState.team = team;
     betModalState.isOpen = true;
 
@@ -9542,16 +9523,12 @@ async function submitBet() {
         const data = await response.json();
 
         if (data.success) {
-            // ✅ ОБНОВЛЯЕМ ЛОКАЛЬНЫЙ БАЛАНС
             localWG = (localWG || 0) - amount;
-
-            // ✅ ОБНОВЛЯЕМ ДАННЫЕ ФОРТУНЫ
             fortuneData.yellowPool = data.yellow_pool;
             fortuneData.redPool = data.red_pool;
             fortuneData.userBetTeam = betModalState.team;
             fortuneData.userBetAmount = data.user_total_bet || amount;
 
-            // ✅ ОБНОВЛЯЕМ СПИСКИ ИГРОКОВ
             const targetList = betModalState.team === 'yellow' ? fortuneData.yellowPlayers : fortuneData.redPlayers;
             const existingIndex = targetList.findIndex(p => p.userId == userId);
 
@@ -9569,12 +9546,10 @@ async function submitBet() {
                 targetList.push(updatedPlayer);
             }
 
-            // ✅ ОБНОВЛЯЕМ UI
             if (typeof updateUI === 'function') updateUI();
             updateFortuneUI();
             updateTeamHighlightUI();
 
-            // ✅ ПОКАЗЫВАЕМ СООБЩЕНИЕ С ОБЩЕЙ СУММОЙ
             showFortuneMessage(`✅ Ставка ${amount} WG принята! Всего на команду: ${fortuneData.userBetAmount} WG`, 'success');
 
             closeBetModal();
