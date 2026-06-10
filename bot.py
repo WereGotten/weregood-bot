@@ -2679,7 +2679,6 @@ def end_fortune_round():
             row = cursor.fetchone()
             if row and row['winner_team'] is not None:
                 print(f"⚠️ [ФОРТУНА] Раунд {round_id} уже завершён в БД")
-                create_new_fortune_round()
                 return
 
         yellow_pool = current_fortune_round['yellow_pool']
@@ -2692,8 +2691,7 @@ def end_fortune_round():
             all_bets = cursor.fetchall()
 
         if not all_bets or total_pool == 0:
-            print("📭 [ФОРТУНА] Нет ставок, просто создаём новый раунд")
-            create_new_fortune_round()
+            print("📭 [ФОРТУНА] Нет ставок, выходим к созданию нового раунда")
             return
 
         # Проверяем, есть ли ставки на обеих командах
@@ -2712,7 +2710,6 @@ def end_fortune_round():
                         bet['user_id'], user['username'])
 
                 with db.get_cursor() as cursor:
-                    # ИСПРАВЛЕНО: Четкое соответствие 6 полей, 6 знаков '?' и 6 переменных
                     cursor.execute('''
                         INSERT INTO fortune_history (user_id, round_id, team, amount, result, win_amount)
                         VALUES (?, ?, ?, ?, ?, ?)
@@ -2730,8 +2727,6 @@ def end_fortune_round():
                 'winner': 'refund',
                 'message': '⚖️ Ставки были только на одной команде — все ставки возвращены!'
             })
-
-            create_new_fortune_round()
             return
 
         # Определяем победителя с учётом веса ставок
@@ -2752,7 +2747,6 @@ def end_fortune_round():
             safe_update_user(bet['user_id'], wg=user['wg'] + win_amount)
 
             with db.get_cursor() as cursor:
-                # ИСПРАВЛЕНО: Четкое соответствие 6 полей, 6 знаков '?' и 6 переменных
                 cursor.execute('''
                     INSERT INTO fortune_history (user_id, round_id, team, amount, result, win_amount)
                     VALUES (?, ?, ?, ?, ?, ?)
@@ -2772,13 +2766,12 @@ def end_fortune_round():
         for bet in all_bets:
             if bet['team'] != winner_team:
                 with db.get_cursor() as cursor:
-                    # ИСПРАВЛЕНО: Четкое соответствие 6 полей, 6 знаков '?' и 6 переменных
                     cursor.execute('''
                         INSERT INTO fortune_history (user_id, round_id, team, amount, result, win_amount)
                         VALUES (?, ?, ?, ?, ?, ?)
                     ''', (bet['user_id'], round_id, bet['team'], bet['amount'], 'lose', 0))
 
-        # Обновляем запись раунда
+        # Обновляем запись раунда в бд
         with db.get_cursor() as cursor:
             cursor.execute('''
                 UPDATE fortune_rounds 
@@ -2787,16 +2780,21 @@ def end_fortune_round():
             ''', (winner_team, datetime.datetime.now().isoformat(), yellow_pool, red_pool, round_id))
             cursor.execute("DELETE FROM fortune_active_bets WHERE round_id = ?", (round_id,))
 
-        # Уведомляем всех через сокет
+        # ГЕНЕРИРУЕМ ТОЧНЫЙ КОЭФФИЦИЕНТ ДЛЯ СИНХРОНИЗАЦИИ ЭКРАНОВ ПК И МОБИЛОК
+        # Число от 0.15 до 0.85, чтобы стрелка не останавливалась прямо на стыке секторов
+        sector_factor = round(random.uniform(0.15, 0.85), 4)
+
+        # Уведомляем всех через сокет (передаем единый сектор)
         socketio.emit('fortune_round_ended', {
             'winner': winner_team,
+            'sector_factor': sector_factor,
             'message': f'🎉 Победила команда {"Жёлтых 🟡" if winner_team == "yellow" else "Красных 🔴"}! Призы распределены!'
         })
 
     except Exception as e:
         logger.error(f"Ошибка завершения раунда: {e}", exc_info=True)
     finally:
-        # Создаём новый раунд
+        # Гарантированно создаём новый раунд, что бы ни упало в блоке выше
         create_new_fortune_round()
         print(f"✅ [ФОРТУНА] Раунд {round_id} завершён, создан новый раунд")
 
