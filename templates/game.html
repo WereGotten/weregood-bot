@@ -6299,6 +6299,10 @@ async function syncData(force = false) {
             updateRecentPlayersFast(data.recent_players);
         }
 
+        // ========== ДОБАВЬ ЭТУ СТРОКУ ==========
+        updateUI();
+        // ======================================
+
     } catch(e) {
         console.error('Sync error:', e);
         setTimeout(() => syncData(true), 5000);
