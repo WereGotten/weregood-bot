@@ -6661,110 +6661,135 @@ function updateRecentPlayersFast(players) {
         };
 
         window.buyEnergyUpgrade = async function() {
-            if (localEnergyUpgrades >= 15) {
-                showToast('Вы уже достигли максимума улучшений! (15/15)', 'error');
-                return;
-            }
-            showToast('💰 Создаём счёт для оплаты...', 'info');
-            try {
-                let res = await fetch('/api/create_stars_invoice', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: userId, chat_id: chatId })
-                });
-                let data = await res.json();
-                if (!data.success) {
-                    showToast(data.msg || 'Ошибка создания счёта', 'error');
-                    return;
-                }
-                if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openInvoice) {
-                    window.Telegram.WebApp.openInvoice(data.invoice_link, async (status) => {
-                        if (status === 'paid') {
-                            showToast('✨ Улучшение активировано!', 'success');
-                            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.showPopup) {
-                                window.Telegram.WebApp.showPopup({
-                                    title: '🎉 Покупка успешна!',
-                                    message: '✨ Вы получили +40 к макс. энергии\n💎 +50 LP на баланс',
-                                    buttons: [{ type: 'ok' }]
-                                });
-                            }
-                            setTimeout(() => {
-                                updateStatus();
-                                const energyBar = document.getElementById('energyBar');
-                                if (energyBar) {
-                                    energyBar.style.transition = 'width 0.5s ease';
-                                }
-                            }, 500);
-                        } else if (status === 'failed' || status === 'cancelled') {
-                            showToast('❌ Оплата отменена или не удалась', 'error');
-                            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.showPopup) {
-                                window.Telegram.WebApp.showPopup({
-                                    title: '❌ Ошибка',
-                                    message: 'Платеж не был завершен. Попробуйте снова.',
-                                    buttons: [{ type: 'ok' }]
-                                });
-                            }
-                        }
+    if (localEnergyUpgrades >= 15) {
+        showToast('Вы уже достигли максимума улучшений! (15/15)', 'error');
+        return;
+    }
+
+    const btn = document.getElementById('energyUpgradeBtn');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '⏳ Создание счёта...';
+    btn.disabled = true;
+
+    try {
+        const response = await fetch('/api/create_stars_invoice', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId, chat_id: chatId })
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+            showToast(data.msg || 'Ошибка создания счёта', 'error');
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            return;
+        }
+
+        // Используем новую функцию для оплаты
+        const success = await openTelegramInvoice(
+            data.invoice_link,
+            () => {
+                // Успешная оплата
+                showToast('✨ Улучшение активировано!', 'success');
+                if (tg && tg.showPopup) {
+                    tg.showPopup({
+                        title: '🎉 Покупка успешна!',
+                        message: '✨ +40 к макс. энергии\n💎 +50 LP на баланс',
+                        buttons: [{ type: 'ok' }]
                     });
-                } else {
-                    window.open(data.invoice_link, '_blank');
-                    showToast('🔗 Оплатите по ссылке в новом окне', 'info');
                 }
-            } catch(e) {
-                console.error('Ошибка при оплате:', e);
-                showToast('Ошибка при создании платежа. Попробуйте позже.', 'error');
+                setTimeout(() => syncData(true), 500);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            },
+            (errorMsg) => {
+                // Ошибка или отмена
+                showToast('❌ ' + errorMsg, 'error');
+                btn.innerHTML = originalText;
+                btn.disabled = false;
             }
-        };
+        );
+
+        if (!success) {
+            // Если openInvoice не сработал — открываем ссылку
+            showToast('🔗 Оплатите по ссылке в новом окне', 'info');
+            window.open(data.invoice_link, '_blank');
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+
+    } catch(e) {
+        console.error('Ошибка:', e);
+        showToast('Ошибка при создании платежа', 'error');
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+};
 
         // ==================== LP БУСТЕР ====================
         window.buyLPBoostStars = async function() {
-            showToast('💰 Создаём счёт для оплаты...', 'info');
-            try {
-                let res = await fetch('/api/create_lp_boost_invoice', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: userId, chat_id: chatId })
-                });
-                let data = await res.json();
-                if (!data.success) {
-                    showToast(data.msg || 'Ошибка создания счёта', 'error');
-                    return;
-                }
-                if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openInvoice) {
-                    window.Telegram.WebApp.openInvoice(data.invoice_link, async (status) => {
-                        if (status === 'paid') {
-                            showToast('✨ LP Бустер активирован!', 'success');
-                            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.showPopup) {
-                                window.Telegram.WebApp.showPopup({
-                                    title: '🎉 Покупка успешна!',
-                                    message: '💎 Вы получили +50 LP на баланс!',
-                                    buttons: [{ type: 'ok' }]
-                                });
-                            }
-                            setTimeout(() => {
-                                updateStatus();
-                                updateLPBoostCount();
-                            }, 500);
-                        } else if (status === 'failed' || status === 'cancelled') {
-                            showToast('❌ Оплата отменена или не удалась', 'error');
-                            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.showPopup) {
-                                window.Telegram.WebApp.showPopup({
-                                    title: '❌ Ошибка',
-                                    message: 'Платеж не был завершен. Попробуйте снова.',
-                                    buttons: [{ type: 'ok' }]
-                                });
-                            }
-                        }
+    const btn = document.getElementById('lpBoostStarsBtn');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '⏳ Создание счёта...';
+    btn.disabled = true;
+
+    try {
+        const response = await fetch('/api/create_lp_boost_invoice', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId, chat_id: chatId })
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+            showToast(data.msg || 'Ошибка создания счёта', 'error');
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            return;
+        }
+
+        const success = await openTelegramInvoice(
+            data.invoice_link,
+            () => {
+                showToast('✨ LP Бустер активирован!', 'success');
+                if (tg && tg.showPopup) {
+                    tg.showPopup({
+                        title: '🎉 Покупка успешна!',
+                        message: '💎 Вы получили +50 LP на баланс!',
+                        buttons: [{ type: 'ok' }]
                     });
-                } else {
-                    window.open(data.invoice_link, '_blank');
-                    showToast('🔗 Оплатите по ссылке в новом окне', 'info');
                 }
-            } catch(e) {
-                console.error('Ошибка при оплате:', e);
-                showToast('Ошибка при создании платежа. Попробуйте позже.', 'error');
+                setTimeout(() => {
+                    syncData(true);
+                    updateLPBoostCount();
+                }, 500);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            },
+            (errorMsg) => {
+                showToast('❌ ' + errorMsg, 'error');
+                btn.innerHTML = originalText;
+                btn.disabled = false;
             }
-        };
+        );
+
+        if (!success) {
+            showToast('🔗 Оплатите по ссылке в новом окне', 'info');
+            window.open(data.invoice_link, '_blank');
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+
+    } catch(e) {
+        console.error('Ошибка:', e);
+        showToast('Ошибка при создании платежа', 'error');
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+};
 
         window.buyLPBoostTon = async function() {
             if (!tonConnectUI) {
@@ -10117,10 +10142,36 @@ window.endFortuneRound = async function() {
             }
         }
 
-        if (tg) {
-            tg.ready();
-            tg.expand();
+        // ВАЖНО: Активируем WebApp и готовим к оплате
+if (tg) {
+    tg.ready();
+    tg.expand();
+    console.log('✅ Telegram WebApp инициализирован');
+    console.log('openInvoice доступен:', typeof tg.openInvoice);
+} else {
+    console.warn('⚠️ Telegram WebApp не найден');
+}
+
+// Функция для открытия инвойса (РАБОЧАЯ)
+async function openTelegramInvoice(invoiceLink, onSuccess, onError) {
+    // Проверяем наличие WebApp
+    if (!tg || typeof tg.openInvoice !== 'function') {
+        console.error('❌ openInvoice не доступен');
+        if (onError) onError('Система оплаты не доступна');
+        return false;
+    }
+
+    tg.openInvoice(invoiceLink, (status) => {
+        console.log('Статус оплаты:', status);
+        if (status === 'paid') {
+            if (onSuccess) onSuccess();
+        } else if (status === 'failed' || status === 'cancelled') {
+            if (onError) onError('Оплата отменена или не удалась');
         }
+    });
+
+    return true;
+}
 
         // ========== НОВЫЕ ОБРАБОТЧИКИ ДЛЯ ФОРТУНЫ ==========
         // Закрытие модального окна ставки
