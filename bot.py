@@ -325,6 +325,10 @@ def end_fortune_round():
             if row and row['winner_team'] is not None:
                 print(f"⚠️ [ФОРТУНА] Раунд {round_id} уже завершён в БД")
                 create_new_fortune_round()
+                # Сбрасываем флаг
+                with fortune_round_lock:
+                    if current_fortune_round:
+                        current_fortune_round['is_ending'] = False
                 return {"success": False, "error": "Round already finished in DB"}
 
         yellow_pool = current_fortune_round['yellow_pool']
@@ -339,6 +343,10 @@ def end_fortune_round():
         if not all_bets or total_pool == 0:
             print("📭 [ФОРТУНА] Нет ставок, просто создаём новый раунд")
             create_new_fortune_round()
+            # Сбрасываем флаг
+            with fortune_round_lock:
+                if current_fortune_round:
+                    current_fortune_round['is_ending'] = False
             return {"success": True, "message": "No bets, new round created"}
 
         # Проверяем, есть ли ставки на обеих командах
@@ -376,6 +384,10 @@ def end_fortune_round():
             })
 
             create_new_fortune_round()
+            # Сбрасываем флаг
+            with fortune_round_lock:
+                if current_fortune_round:
+                    current_fortune_round['is_ending'] = False
             return {"success": True, "winner": "refund", "message": "All bets refunded"}
 
         # Определяем победителя с учётом веса ставок
@@ -429,6 +441,9 @@ def end_fortune_round():
             ''', (winner_team, datetime.datetime.now().isoformat(), yellow_pool, red_pool, round_id))
             cursor.execute("DELETE FROM fortune_active_bets WHERE round_id = ?", (round_id,))
 
+        # Создаём новый раунд
+        create_new_fortune_round()
+
         # Уведомляем всех через сокет
         socketio.emit('fortune_round_ended', {
             'winner': winner_team,
@@ -437,10 +452,11 @@ def end_fortune_round():
             'message': f'🎉 Победила команда {"Жёлтых 🟡" if winner_team == "yellow" else "Красных 🔴"}! Призы распределены!'
         })
 
-        # Создаём новый раунд
-        create_new_fortune_round()
+        # ========== СБРАСЫВАЕМ ФЛАГ И ВОЗВРАЩАЕМ РЕЗУЛЬТАТ ==========
+        with fortune_round_lock:
+            if current_fortune_round:
+                current_fortune_round['is_ending'] = False
 
-        # ========== ВАЖНО: ВОЗВРАЩАЕМ РЕЗУЛЬТАТ ==========
         return {
             "success": True,
             "winner": winner_team,
@@ -453,6 +469,10 @@ def end_fortune_round():
         logger.error(f"Ошибка завершения раунда: {e}")
         import traceback
         traceback.print_exc()
+        # Сбрасываем флаг при ошибке
+        with fortune_round_lock:
+            if current_fortune_round:
+                current_fortune_round['is_ending'] = False
         return {"success": False, "error": str(e)}
 
 

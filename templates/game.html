@@ -9281,66 +9281,105 @@ function attachPlayerClickHandlers() {
     }
 }
 
-// ========== ТАЙМЕР (ОПТИМИЗИРОВАННЫЙ) ==========
+// ========== ТАЙМЕР ФОРТУНЫ (КЛИЕНТСКАЯ ВЕРСИЯ) ==========
+let isEndingFortune = false;  // Флаг для предотвращения повторных вызовов
+
 function startFortuneTimer() {
     if (fortuneUI.timerInterval) clearInterval(fortuneUI.timerInterval);
+
+    let lastSecond = -1;
+    let timerEndTriggered = false;  // Флаг, что завершение уже запущено
 
     fortuneUI.timerInterval = setInterval(() => {
         if (!fortuneUI.elements.modal?.classList.contains('active')) return;
 
+        // Обновляем таймер
         if (fortuneData.timeLeft > 0) {
             fortuneData.timeLeft--;
-            updateTimerDisplay();
-        } else if (fortuneData.timeLeft <= 0) {
-            // Таймер достиг 0
+
+            // Обновляем UI только при изменении секунды
+            const currentSecond = Math.floor(fortuneData.timeLeft);
+            if (currentSecond !== lastSecond) {
+                lastSecond = currentSecond;
+                updateTimerDisplay();
+            }
+        }
+
+        // ТАЙМЕР ДОСТИГ 0
+        if (fortuneData.timeLeft <= 0 && !timerEndTriggered) {
+            timerEndTriggered = true;  // Защита от повторного входа
             clearInterval(fortuneUI.timerInterval);
             fortuneUI.timerInterval = null;
 
             console.log('⏰ Таймер достиг 0! fortuneData:', fortuneData);
 
-            // ПРОВЕРЯЕМ: если ставки только на одной команде
+            // Случай 1: Ставки только на одной команде
             if ((fortuneData.yellowPool > 0 && fortuneData.redPool === 0) ||
                 (fortuneData.redPool > 0 && fortuneData.yellowPool === 0)) {
-                // Перезапускаем таймер, ставки НЕ ОЧИЩАЕМ
+
+                console.log('🔄 Ставки только на одной команде, перезапускаем таймер');
                 fortuneData.timeLeft = 300;
+                timerEndTriggered = false;
                 startFortuneTimer();
                 showFortuneMessage('⏰ Ставки только на одной команде! Таймер перезапущен.', 'info');
-            } else if (fortuneData.yellowPool > 0 && fortuneData.redPool > 0) {
-                // Обе команды имеют ставки - завершаем раунд
+                return;
+            }
+
+            // Случай 2: Есть ставки на обеих командах
+            if (fortuneData.yellowPool > 0 && fortuneData.redPool > 0) {
+                if (isEndingFortune) {
+                    console.log('⚠️ Завершение раунда уже в процессе, пропускаем');
+                    return;
+                }
+
+                isEndingFortune = true;
                 showFortuneMessage('🎲 Раунд завершается! Определяем победителя...', 'info');
 
-                // ========== ВЫЗЫВАЕМ API НАПРЯМУЮ ==========
+                console.log('📡 Отправляем запрос на завершение раунда...');
+
                 fetch('/api/fortune/end_round', { method: 'POST' })
-                    .then(response => response.json())
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}`);
+                        }
+                        return response.json();
+                    })
                     .then(data => {
                         console.log('✅ Ответ сервера:', data);
-                        if (data.success && data.winner) {
+                        isEndingFortune = false;
+
+                        if (data.success && data.winner && data.winner !== 'refund') {
                             // Запускаем колесо
                             if (typeof startWheelAnimation === 'function') {
+                                console.log('🎡 Запускаем анимацию колеса');
                                 startWheelAnimation(data.winner, fortuneData.yellowPool, fortuneData.redPool);
                             } else {
+                                console.warn('startWheelAnimation не определена');
                                 showToast(`🎉 Победила команда ${data.winner === 'yellow' ? 'Жёлтые 🟡' : 'Красные 🔴'}!`, 'success');
-                                loadFortuneData();
+                                setTimeout(() => loadFortuneData(), 2000);
                             }
                         } else if (data.winner === 'refund') {
                             showToast('⚖️ Ставки были только на одной команде — возврат средств', 'info');
-                            loadFortuneData();
+                            setTimeout(() => loadFortuneData(), 1500);
                         } else {
                             showToast(data.message || 'Раунд завершён', 'info');
-                            loadFortuneData();
+                            setTimeout(() => loadFortuneData(), 1500);
                         }
                     })
                     .catch(err => {
                         console.error('❌ Ошибка завершения раунда:', err);
+                        isEndingFortune = false;
                         showFortuneMessage('❌ Ошибка при завершении раунда, попробуйте обновить страницу', 'error');
-                        resetFortuneLocally();
+                        setTimeout(() => resetFortuneLocally(), 2000);
                     });
-            } else {
-                // Нет ставок вообще
-                fortuneData.isActive = false;
-                updateTimerDisplay();
-                showFortuneMessage('🤝 Пока нет ставок! Сделайте первую ставку!', 'info');
+                return;
             }
+
+            // Случай 3: Нет ставок
+            console.log('📭 Нет ставок, таймер остановлен');
+            fortuneData.isActive = false;
+            updateTimerDisplay();
+            showFortuneMessage('🤝 Пока нет ставок! Сделайте первую ставку!', 'info');
         }
     }, 1000);
 }
