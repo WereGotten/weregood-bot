@@ -5988,16 +5988,6 @@
             setTimeout(() => toast.className = 'toast', 1500);
         }
 
-        function calculateBet() {
-    const betAmountInput = document.getElementById('betAmount');
-    if (!betAmountInput) return;
-    let value = parseFloat(betAmountInput.value);
-    if (isNaN(value)) value = 0;
-    if (value < 10 && value > 0) {
-        betAmountInput.value = 10;
-    }
-}
-
         function playPurchaseSound() {
             const soundsToggle = document.getElementById('soundsToggle');
             const soundEnabled = soundsToggle ? soundsToggle.checked : true;
