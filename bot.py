@@ -1890,7 +1890,7 @@ def create_stars_invoice(chat_id, user_id):
         payload = json.dumps({"user_id": user_id, "type": "energy_upgrade"})
         provider_token = ""
         currency = "XTR"
-        prices = [{"label": "Энергетический усилитель", "amount": 25}]
+        prices = [{"label": "Энергетический усилитель", "amount": 27}]
         url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/createInvoiceLink"
         data = {"title": title, "description": description, "payload": payload, "provider_token": provider_token,
                 "currency": currency, "prices": prices}
@@ -2703,7 +2703,7 @@ def api_ton_create_payment():
     if not proj_wallet:
         logger.critical("🚨 КРИТИЧЕСКАЯ ОШИБКА: PROJECT_WALLET_ADDRESS отсутствует в переменных сервера!")
         return jsonify({"success": False, "error": "Ошибка конфигурации платежного шлюза на сервере"}), 500
-    payment_amount_ton = 0.18
+    payment_amount_ton = 0.20
     payment_amount_nano = int(payment_amount_ton * 1e9)
     return jsonify({
         "success": True,
@@ -2835,7 +2835,7 @@ def api_ton_create_lp_boost_payment():
     if not proj_wallet:
         logger.critical("🚨 PROJECT_WALLET_ADDRESS отсутствует!")
         return jsonify({"success": False, "error": "Ошибка конфигурации платежного шлюза"}), 500
-    payment_amount_ton = 0.13
+    payment_amount_ton = 0.16
     payment_amount_nano = int(payment_amount_ton * 1e9)
     return jsonify({
         "success": True,
