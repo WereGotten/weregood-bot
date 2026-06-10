@@ -450,7 +450,7 @@ def init_fortune():
     with fortune_round_lock:
         restore_fortune_round_from_db()
         fortune_round_active = True
-        start_fortune_timer_loop()
+        # start_fortune_timer_loop()  # <-- КОММЕНТИРУЕМ, таймер теперь на клиенте
 
 
 def process_click_worker():

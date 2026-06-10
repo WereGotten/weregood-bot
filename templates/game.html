@@ -9296,18 +9296,45 @@ function startFortuneTimer() {
             clearInterval(fortuneUI.timerInterval);
             fortuneUI.timerInterval = null;
 
+            console.log('⏰ Таймер достиг 0! fortuneData:', fortuneData);
+
             // ПРОВЕРЯЕМ: если ставки только на одной команде
             if ((fortuneData.yellowPool > 0 && fortuneData.redPool === 0) ||
                 (fortuneData.redPool > 0 && fortuneData.yellowPool === 0)) {
                 // Перезапускаем таймер, ставки НЕ ОЧИЩАЕМ
                 fortuneData.timeLeft = 300;
                 startFortuneTimer();
-                // ПОКАЗЫВАЕМ ОПОВЕЩЕНИЕ ВНУТРИ ФОРТУНЫ (а не глобальный тост)
                 showFortuneMessage('⏰ Ставки только на одной команде! Таймер перезапущен.', 'info');
             } else if (fortuneData.yellowPool > 0 && fortuneData.redPool > 0) {
-                // Обе команды имеют ставки - завершаем раунд (ставки очистятся)
+                // Обе команды имеют ставки - завершаем раунд
                 showFortuneMessage('🎲 Раунд завершается! Определяем победителя...', 'info');
-                endFortuneRound();
+
+                // ========== ВЫЗЫВАЕМ API НАПРЯМУЮ ==========
+                fetch('/api/fortune/end_round', { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('✅ Ответ сервера:', data);
+                        if (data.success && data.winner) {
+                            // Запускаем колесо
+                            if (typeof startWheelAnimation === 'function') {
+                                startWheelAnimation(data.winner, fortuneData.yellowPool, fortuneData.redPool);
+                            } else {
+                                showToast(`🎉 Победила команда ${data.winner === 'yellow' ? 'Жёлтые 🟡' : 'Красные 🔴'}!`, 'success');
+                                loadFortuneData();
+                            }
+                        } else if (data.winner === 'refund') {
+                            showToast('⚖️ Ставки были только на одной команде — возврат средств', 'info');
+                            loadFortuneData();
+                        } else {
+                            showToast(data.message || 'Раунд завершён', 'info');
+                            loadFortuneData();
+                        }
+                    })
+                    .catch(err => {
+                        console.error('❌ Ошибка завершения раунда:', err);
+                        showFortuneMessage('❌ Ошибка при завершении раунда, попробуйте обновить страницу', 'error');
+                        resetFortuneLocally();
+                    });
             } else {
                 // Нет ставок вообще
                 fortuneData.isActive = false;
