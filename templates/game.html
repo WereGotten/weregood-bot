@@ -9970,185 +9970,187 @@ if (document.readyState === 'loading') {
     initFortuneEventHandlers();
 }
 
-// ========== УЛЬТРА-ОПТИМИЗИРОВАННОЕ КОЛЕСО ФОРТУНЫ НЕКСТГЕН ==========
+// ========== УЛЬТРА-ОПТИМИЗИРОВАННОЕ КИБЕРПАНК КОЛЕСО (15s + PRE-RENDER + ФИЗИКА СТАРТА) ==========
 let wheelCanvas = document.getElementById('wheelCanvas');
 let wheelCtx = wheelCanvas?.getContext('2d');
 let wheelAnimationId = null;
 let wheelRotation = 0;
 let wheelTargetRotation = 0;
 let wheelStartTime = 0;
-let wheelDuration = 12000; // 12 секунд сочного кручения
 let wheelWinner = null;
 let wheelPrizes = {};
 
-// Глобальные градиенты (чтобы не создавать их каждый кадр)
-let yellowGradGlobal, redGradGlobal, boltGradGlobal, textGradGlobal;
+// Глобальные настройки времени и оборотов
+let wheelDuration = 15000;   // Ровно 15 секунд захватывающего шоу
+let fullRotationsCount = 12; // 12 полных кругов для бешеной скорости на старте
 
-// Функция инициализации градиентов (вызывается один раз)
-function initWheelColors() {
-    if (!wheelCtx || !wheelCanvas) return;
-    const centerX = wheelCanvas.width / 2;
-    const centerY = wheelCanvas.height / 2;
-    const radius = wheelCanvas.width / 2 - 22;
+// Скрытый виртуальный холст для мгновенного кэширования графики
+let cachedWheelCanvas = document.createElement('canvas');
+let cachedWheelCtx = cachedWheelCanvas.getContext('2d');
+let isWheelCached = false;
 
-    // Глянцевые 3D градиенты секторов
-    yellowGradGlobal = wheelCtx.createRadialGradient(centerX, centerY, radius * 0.1, centerX, centerY, radius);
-    yellowGradGlobal.addColorStop(0, '#FFE666');  // Светлый блик
-    yellowGradGlobal.addColorStop(0.5, '#F1C40F'); // Основной золотой
-    yellowGradGlobal.addColorStop(1, '#A88300');   // Тень на внешнем стыке
+// 1. Функция предварительной отрисовки основы колеса (вызывается 1 раз за раунд)
+function cacheWheelGraphics(yellowChance, redChance) {
+    if (!wheelCanvas || !cachedWheelCtx) return;
 
-    redGradGlobal = wheelCtx.createRadialGradient(centerX, centerY, radius * 0.1, centerX, centerY, radius);
-    redGradGlobal.addColorStop(0, '#FF8080');  // Неоновый внутренний свет
-    redGradGlobal.addColorStop(0.5, '#E74C3C'); // Насыщенный красный
-    redGradGlobal.addColorStop(1, '#8A2016');   // Глубокий бордовый
+    // Синхронизируем размеры виртуального холста с оригиналом
+    cachedWheelCanvas.width = wheelCanvas.width;
+    cachedWheelCanvas.height = wheelCanvas.height;
 
-    // Упрощенный градиент для болтов (хром)
-    boltGradGlobal = wheelCtx.createLinearGradient(-3, -3, 3, 3);
-    boltGradGlobal.addColorStop(0, '#FFFFFF');
-    boltGradGlobal.addColorStop(0.5, '#AAAAAA');
-    boltGradGlobal.addColorStop(1, '#444444');
+    const size = cachedWheelCanvas.width;
+    const centerX = size / 2;
+    const centerY = size / 2;
+    const radius = size / 2 - 22; // Идеальный отступ под стальной обод
 
-    // Текст логотипа WG
-    textGradGlobal = wheelCtx.createLinearGradient(centerX, centerY - 12, centerX, centerY + 12);
-    textGradGlobal.addColorStop(0, '#FFFFFF');
-    textGradGlobal.addColorStop(0.5, '#F1C40F');
-    textGradGlobal.addColorStop(1, '#F39C12');
+    cachedWheelCtx.clearRect(0, 0, size, size);
+
+    // Создаем оптимизированные глянцевые градиенты
+    let yellowGrad = cachedWheelCtx.createRadialGradient(centerX, centerY, radius * 0.1, centerX, centerY, radius);
+    yellowGrad.addColorStop(0, '#FFE666');
+    yellowGrad.addColorStop(0.5, '#F1C40F');
+    yellowGrad.addColorStop(1, '#8A6900');
+
+    let redGrad = cachedWheelCtx.createRadialGradient(centerX, centerY, radius * 0.1, centerX, centerY, radius);
+    redGrad.addColorStop(0, '#FF8080');
+    redGrad.addColorStop(0.5, '#E74C3C');
+    redGrad.addColorStop(1, '#6B160E');
+
+    const yellowAngle = (yellowChance / 100) * Math.PI * 2;
+    const redAngle = (Math.PI * 2) - yellowAngle;
+
+    // --- ШАГ 1: ЖЁЛТЫЙ СЕКТОР ---
+    cachedWheelCtx.beginPath();
+    cachedWheelCtx.moveTo(centerX, centerY);
+    cachedWheelCtx.arc(centerX, centerY, radius, 0, yellowAngle);
+    cachedWheelCtx.closePath();
+    cachedWheelCtx.fillStyle = yellowGrad;
+    cachedWheelCtx.fill();
+
+    // --- ШАГ 2: КРАСНЫЙ СЕКТОР ---
+    cachedWheelCtx.beginPath();
+    cachedWheelCtx.moveTo(centerX, centerY);
+    cachedWheelCtx.arc(centerX, centerY, radius, yellowAngle, Math.PI * 2);
+    cachedWheelCtx.closePath();
+    cachedWheelCtx.fillStyle = redGrad;
+    cachedWheelCtx.fill();
+
+    // --- ШАГ 3: МЯГКИЕ СВЕТОВЫЕ СТЫКИ-РАЗДЕЛИТЕЛИ ---
+    cachedWheelCtx.lineWidth = 4;
+    cachedWheelCtx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+
+    cachedWheelCtx.beginPath();
+    cachedWheelCtx.moveTo(centerX, centerY);
+    cachedWheelCtx.lineTo(centerX + radius * Math.cos(0), centerY + radius * Math.sin(0));
+    cachedWheelCtx.stroke();
+
+    cachedWheelCtx.beginPath();
+    cachedWheelCtx.moveTo(centerX, centerY);
+    cachedWheelCtx.lineTo(centerX + radius * Math.cos(yellowAngle), centerY + radius * Math.sin(yellowAngle));
+    cachedWheelCtx.stroke();
+
+    // --- ШАГ 4: ЖИРНЫЙ ФУТУРИСТИЧЕСКИЙ ТЕКСТ ПРОЦЕНТОВ (С ТЕНЬЮ) ---
+    cachedWheelCtx.save();
+    cachedWheelCtx.font = '900 26px "Arial Black", Gadget, sans-serif';
+    cachedWheelCtx.textAlign = 'center';
+    cachedWheelCtx.textBaseline = 'middle';
+    cachedWheelCtx.fillStyle = '#FFFFFF';
+    cachedWheelCtx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+    cachedWheelCtx.shadowBlur = 8;
+
+    // Жёлтые %
+    const yellowMidAngle = yellowAngle / 2;
+    const yellowTextX = centerX + radius * 0.62 * Math.cos(yellowMidAngle);
+    const yellowTextY = centerY + radius * 0.62 * Math.sin(yellowMidAngle);
+    cachedWheelCtx.fillText(`${Math.round(yellowChance)}%`, yellowTextX, yellowTextY);
+
+    // Красные %
+    const redMidAngle = yellowAngle + redAngle / 2;
+    const redTextX = centerX + radius * 0.62 * Math.cos(redMidAngle);
+    const redTextY = centerY + radius * 0.62 * Math.sin(redMidAngle);
+    cachedWheelCtx.fillText(`${Math.round(redChance)}%`, redTextX, redTextY);
+    cachedWheelCtx.restore();
+
+    // --- ШАГ 5: ТИТАНОВЫЙ ОБОД И ЗАКЛЕПКИ ---
+    // Теперь они часть кэша — крутятся плавно без микрофризов
+    cachedWheelCtx.beginPath();
+    cachedWheelCtx.arc(centerX, centerY, radius + 11, 0, Math.PI * 2);
+    cachedWheelCtx.lineWidth = 20;
+    cachedWheelCtx.strokeStyle = '#181831';
+    cachedWheelCtx.stroke();
+
+    const totalBolts = 24;
+    for (let i = 0; i < totalBolts; i++) {
+        let boltAngle = (i * (Math.PI * 2 / totalBolts));
+        let boltX = centerX + (radius + 11) * Math.cos(boltAngle);
+        let boltY = centerY + (radius + 11) * Math.sin(boltAngle);
+
+        cachedWheelCtx.beginPath();
+        cachedWheelCtx.arc(boltX, boltY, 5, 0, Math.PI * 2);
+        cachedWheelCtx.fillStyle = '#CCCCCC';
+        cachedWheelCtx.fill();
+
+        cachedWheelCtx.beginPath();
+        cachedWheelCtx.arc(boltX, boltY, 1.5, 0, Math.PI * 2);
+        cachedWheelCtx.fillStyle = '#111116';
+        cachedWheelCtx.fill();
+    }
+
+    isWheelCached = true;
 }
 
-function drawWheel(winnerTeam, yellowChance, redChance) {
-    if (!wheelCtx || !wheelCanvas) return;
+// 2. Оптимизированная отрисовка сцены (вызывается 60 раз в секунду)
+function drawWheel(winnerTeam) {
+    if (!wheelCtx || !wheelCanvas || !isWheelCached) return;
 
     const size = wheelCanvas.width;
     const centerX = size / 2;
     const centerY = size / 2;
-    const radius = size / 2 - 22;
 
-    // Очищаем Canvas
+    // Моментальная очистка основного экрана
     wheelCtx.clearRect(0, 0, size, size);
 
-    // Убедимся, что градиенты созданы
-    if (!yellowGradGlobal) initWheelColors();
-
-    const yellowAngle = (yellowChance / 100) * Math.PI * 2;
-    const redAngle = (Math.PI * 2) - yellowAngle;
-    let startAngle = wheelRotation;
-
-    // Оптимизация: убрали тяжелые фильтры Motion Blur кодом.
-
-    // --- 1. ЖЁЛТЫЙ (ЗОЛОТОЙ) СЕКТОР С ГЛЯНЦЕМ ---
-    wheelCtx.beginPath();
-    wheelCtx.moveTo(centerX, centerY);
-    wheelCtx.arc(centerX, centerY, radius, startAngle, startAngle + yellowAngle);
-    wheelCtx.closePath();
-    wheelCtx.fillStyle = yellowGradGlobal;
-    wheelCtx.fill();
-
-    // --- 2. КРАСНЫЙ (КИБЕРПАНК) СЕКТОР С ГЛЯНЦЕМ ---
-    wheelCtx.beginPath();
-    wheelCtx.moveTo(centerX, centerY);
-    wheelCtx.arc(centerX, centerY, radius, startAngle + yellowAngle, startAngle + Math.PI * 2);
-    wheelCtx.closePath();
-    wheelCtx.fillStyle = redGradGlobal;
-    wheelCtx.fill();
-
-    // --- 3. НЕОНОВЫЕ СТЫКИ-РАЗДЕЛИТЕЛИ ---
-    wheelCtx.lineWidth = 4;
-    wheelCtx.strokeStyle = 'rgba(255, 255, 255, 0.3)'; // Мягкая белая линия
-
-    // Оптимизация: Убрали тяжелый shadowBlur для стыков.
-
-    wheelCtx.beginPath();
-    wheelCtx.moveTo(centerX, centerY);
-    wheelCtx.lineTo(centerX + radius * Math.cos(startAngle), centerY + radius * Math.sin(startAngle));
-    wheelCtx.stroke();
-
-    wheelCtx.beginPath();
-    wheelCtx.moveTo(centerX, centerY);
-    wheelCtx.lineTo(centerX + radius * Math.cos(startAngle + yellowAngle), centerY + radius * Math.sin(startAngle + yellowAngle));
-    wheelCtx.stroke();
-
-    // --- 4. ЖИРНЫЙ ТЕКСТ ПРОЦЕНТОВ (С ТЕНЬЮ) ---
+    // ВРАЩАЕМ КЭШ: Просто крутим готовую текстуру
     wheelCtx.save();
-    wheelCtx.font = '900 26px "Arial Black", Gadget, sans-serif';
-    wheelCtx.textAlign = 'center';
-    wheelCtx.textBaseline = 'middle';
-    wheelCtx.fillStyle = '#FFFFFF';
-
-    // Глобальная тень только для текста
-    wheelCtx.shadowColor = 'rgba(0, 0, 0, 0.7)';
-    wheelCtx.shadowBlur = 8;
-
-    // Жёлтые %
-    const yellowMidAngle = startAngle + yellowAngle / 2;
-    const yellowTextX = centerX + radius * 0.6 * Math.cos(yellowMidAngle);
-    const yellowTextY = centerY + radius * 0.6 * Math.sin(yellowMidAngle);
-    wheelCtx.fillText(`${Math.round(yellowChance)}%`, yellowTextX, yellowTextY);
-
-    // Красные %
-    const redMidAngle = startAngle + yellowAngle + redAngle / 2;
-    const redTextX = centerX + radius * 0.6 * Math.cos(redMidAngle);
-    const redTextY = centerY + radius * 0.6 * Math.sin(redMidAngle);
-    wheelCtx.fillText(`${Math.round(redChance)}%`, redTextX, redTextY);
+    wheelCtx.translate(centerX, centerY);
+    wheelCtx.rotate(wheelRotation);
+    wheelCtx.drawImage(cachedWheelCanvas, -centerX, -centerY);
     wheelCtx.restore();
 
-    // --- 5. СТАЛЬНОЙ ОБОД И ВРАЩАЮЩИЕСЯ БОЛТЫ (ОПТИМИЗИРОВАНО) ---
-    wheelCtx.beginPath();
-    wheelCtx.arc(centerX, centerY, radius + 11, 0, Math.PI * 2);
-    wheelCtx.lineWidth = 20;
-    wheelCtx.strokeStyle = '#1a1a35'; // Темная сталь
-    wheelCtx.stroke();
-
-    // Заклепки крутятся вместе с колесом
-    const totalBolts = 24;
-    for (let i = 0; i < totalBolts; i++) {
-        let boltAngle = startAngle + (i * (Math.PI * 2 / totalBolts));
-        let boltX = centerX + (radius + 11) * Math.cos(boltAngle);
-        let boltY = centerY + (radius + 11) * Math.sin(boltAngle);
-
-        // Оптимизация: Простые глянцевые заклепки без сложного хром-эффекта
-        wheelCtx.beginPath();
-        wheelCtx.arc(boltX, boltY, 5, 0, Math.PI * 2);
-        wheelCtx.fillStyle = '#CCCCCC'; // Серебристый глянец
-        wheelCtx.fill();
-
-        // Внутреннее отверстие болта
-        wheelCtx.beginPath();
-        wheelCtx.arc(boltX, boltY, 1.5, 0, Math.PI * 2);
-        wheelCtx.fillStyle = '#111120';
-        wheelCtx.fill();
-    }
-
-    // --- 6. ЦЕНТРАЛЬНАЯ НЕОНОВАЯ СТУПИЦА "WG" (ОПТИМИЗИРОВАНО) ---
-    // Внешнее темное кольцо
+    // СТАТИКА (СТУПИЦА WG): Рисуется поверх, не тратит силы на поворот
     wheelCtx.beginPath();
     wheelCtx.arc(centerX, centerY, 42, 0, Math.PI * 2);
     wheelCtx.fillStyle = '#0f0f20';
-    // Оптимизация: Убрали тяжелую динамическую тень
     wheelCtx.fill();
 
-    // Золотой кант
+    // Золотой неоновый ободок центра
     wheelCtx.beginPath();
     wheelCtx.arc(centerX, centerY, 36, 0, Math.PI * 2);
     wheelCtx.lineWidth = 4;
-    wheelCtx.strokeStyle = '#FFD700'; // Золото
+    wheelCtx.strokeStyle = '#FFD700';
     wheelCtx.stroke();
 
-    // Ядро ступицы
     wheelCtx.beginPath();
     wheelCtx.arc(centerX, centerY, 33, 0, Math.PI * 2);
     wheelCtx.fillStyle = '#16162d';
     wheelCtx.fill();
 
-    // Оптимизация текста: Убрали тяжелое shadowBlur для центрального WG
+    // Отрендеренный бренд WG
     wheelCtx.save();
     wheelCtx.font = 'bold 22px "Arial Black", sans-serif';
     wheelCtx.textAlign = 'center';
     wheelCtx.textBaseline = 'middle';
-    wheelCtx.fillStyle = textGradGlobal; // Премиальный неон
+
+    let textGrad = wheelCtx.createLinearGradient(centerX, centerY - 12, centerX, centerY + 12);
+    textGrad.addColorStop(0, '#FFFFFF');
+    textGrad.addColorStop(0.5, '#F1C40F');
+    textGrad.addColorStop(1, '#F39C12');
+    wheelCtx.fillStyle = textGrad;
+
     wheelCtx.fillText('WG', centerX, centerY + 2);
     wheelCtx.restore();
 }
 
+// 3. Главный цикл анимации (Новая двухфазная физика движения)
 function animateWheel(timestamp) {
     if (!wheelStartTime) {
         wheelStartTime = timestamp;
@@ -10159,17 +10161,27 @@ function animateWheel(timestamp) {
     const elapsed = timestamp - wheelStartTime;
     let progress = Math.min(1, elapsed / wheelDuration);
 
-    // Плавное затухание скорости (Quartic EaseOut)
-    const easeOut = 1 - Math.pow(1 - progress, 4);
+    let easeProgress;
+    // Разделяем анимацию на 2 фазы: быстрый рывок и затухание
+    if (progress < 0.2) {
+        // Фаза 1: Взрывной старт (первые 20% времени или 3 секунды)
+        // Колесо мгновенно срывается с нуля и набирает пиковую скорость
+        easeProgress = Math.pow(progress * 5, 2) * 0.15;
+    } else {
+        // Фаза 2: Постепенное драматичное замедление (оставшиеся 80% времени или 12 секунд)
+        // Степень 5 даёт невероятно тягучий финиш, заставляя игроков затаить дыхание
+        const normalizedProgress = (progress - 0.2) / 0.8;
+        easeProgress = 0.15 + (1 - Math.pow(1 - normalizedProgress, 5)) * 0.85;
+    }
 
-    const currentRotation = wheelTargetRotation * easeOut;
-    wheelRotation = currentRotation;
+    // Применяем рассчитанный угол вращения
+    wheelRotation = wheelTargetRotation * easeProgress;
 
-    // Оптимизация: Передаем в drawWheel только пулы, не рассчитывая скорость
-    drawWheel(wheelWinner, wheelPrizes.yellowChance, wheelPrizes.redChance);
+    // Рендерим оптимизированный кадр
+    drawWheel(wheelWinner);
 
     if (progress < 1) {
-        requestAnimationFrame(animateWheel);
+        wheelAnimationId = requestAnimationFrame(animateWheel);
     } else {
         cancelAnimationFrame(wheelAnimationId);
         wheelAnimationId = null;
@@ -10182,17 +10194,16 @@ function animateWheel(timestamp) {
         }
 
         const closeBtn = document.getElementById('wheelCloseBtn');
-        if (closeBtn) {
-            closeBtn.classList.add('show');
-        }
+        if (closeBtn) closeBtn.classList.add('show');
 
-        // Плавное обновление данных
+        // Плавная подгрузка бэкенд-данных после завершения графики
         if (typeof loadFortuneData === 'function') setTimeout(() => loadFortuneData(), 500);
         if (typeof loadFortuneHistory === 'function') setTimeout(() => loadFortuneHistory(), 1000);
         if (typeof syncData === 'function') setTimeout(() => syncData(true), 1500);
     }
 }
 
+// 4. Логика запуска анимации
 function startWheelAnimation(winnerTeam, yellowPool, redPool, sectorFactor) {
     const total = yellowPool + redPool;
     const yellowChance = total > 0 ? (yellowPool / total) * 100 : 50;
@@ -10201,23 +10212,22 @@ function startWheelAnimation(winnerTeam, yellowPool, redPool, sectorFactor) {
     wheelWinner = winnerTeam;
     wheelPrizes = { yellowChance, redChance };
 
-    // Инициализируем цвета один раз, если они ещё не созданы
-    if (!yellowGradGlobal) initWheelColors();
+    // ВАЖНО: Кэшируем всю тяжелую графику ОДИН раз прямо перед запуском колеса
+    cacheWheelGraphics(yellowChance, redChance);
 
     const factor = (sectorFactor !== undefined && sectorFactor !== null) ? sectorFactor : 0.5;
     let targetSegmentAngle;
 
-    // Математический расчет сектора под верхний триггер стрелки (-Math.PI/2)
+    // Точный расчет угла посадки под стрелку
     if (winnerTeam === 'yellow') {
         targetSegmentAngle = (yellowChance / 100) * Math.PI * 2 * factor;
     } else {
         targetSegmentAngle = (yellowChance / 100) * Math.PI * 2 + (redChance / 100) * Math.PI * 2 * factor;
     }
 
-    // Ровно 8 полных оборотов
-    const fullRotations = 8 * Math.PI * 2;
+    const fullRotations = fullRotationsCount * Math.PI * 2;
 
-    // Итоговый угол поворота
+    // Корректируем конечную точку вращения под верхний триггер стрелки (-Math.PI / 2)
     wheelTargetRotation = fullRotations + (Math.PI * 1.5 - targetSegmentAngle);
 
     if (wheelAnimationId) cancelAnimationFrame(wheelAnimationId);
@@ -10234,6 +10244,7 @@ function startWheelAnimation(winnerTeam, yellowPool, redPool, sectorFactor) {
     const resultDiv = document.getElementById('wheelResult');
     if (resultDiv) resultDiv.classList.remove('show');
 
+    // Погнали!
     requestAnimationFrame(animateWheel);
 }
 
@@ -10243,7 +10254,7 @@ document.getElementById('wheelCloseBtn')?.addEventListener('click', () => {
     if (typeof window.isFortuneRoundEnding !== 'undefined') window.isFortuneRoundEnding = false;
 });
 
-// Кнопка принудительного админского форсирования раунда из панели
+// Кнопка принудительного админского форсирования раунда из панели управления
 const originalEndFortuneRound = endFortuneRound;
 window.endFortuneRound = async function() {
     try {
