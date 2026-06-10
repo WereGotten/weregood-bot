@@ -7716,6 +7716,14 @@ function updateRecentPlayersFast(players) {
     if (data && data.winner === 'refund') {
         if (data.message) showToast(data.message, 'info');
         if (typeof loadFortuneData === 'function') loadFortuneData();
+
+        // ========== ОБНОВЛЯЕМ ИСТОРИЮ ДАЖЕ ПРИ REFUND ==========
+        setTimeout(() => {
+            if (typeof loadFortuneHistory === 'function') {
+                loadFortuneHistory();
+                console.log('📜 История Фортуны обновлена (refund)');
+            }
+        }, 1000);
         return;
     }
 
@@ -7733,6 +7741,14 @@ function updateRecentPlayersFast(players) {
             if (data.message) showToast(data.message, 'info');
             if (typeof loadFortuneData === 'function') loadFortuneData();
         }
+
+        // ========== ОБНОВЛЯЕМ ИСТОРИЮ ПОСЛЕ КАЖДОГО РАУНДА ==========
+        setTimeout(() => {
+            if (typeof loadFortuneHistory === 'function') {
+                loadFortuneHistory();
+                console.log('📜 История Фортуны обновлена после раунда');
+            }
+        }, 2000);
     }
 
     // ПРИНУДИТЕЛЬНАЯ ОЧИСТКА И ПЕРЕЗАГРУЗКА ДАННЫХ
@@ -7759,93 +7775,92 @@ function updateRecentPlayersFast(players) {
     if (typeof syncData === 'function') syncData(true);
 });
 
-    // ========== НОВЫЙ ОБРАБОТЧИК: ОБНОВЛЕНИЕ ПУЛОВ ПОСЛЕ СТАВКИ ==========
-    socket.on('fortune_pools_update', (data) => {
-        console.log('🔄 Обновление пулов Фортуны в реальном времени:', data);
+// ========== НОВЫЙ ОБРАБОТЧИК: ОБНОВЛЕНИЕ ПУЛОВ ПОСЛЕ СТАВКИ ==========
+socket.on('fortune_pools_update', (data) => {
+    console.log('🔄 Обновление пулов Фортуны в реальном времени:', data);
 
-        if (typeof fortuneData !== 'undefined') {
-            fortuneData.yellowPool = data.yellow_pool || 0;
-            fortuneData.redPool = data.red_pool || 0;
-            fortuneData.yellowPlayers = data.yellow_players || [];
-            fortuneData.redPlayers = data.red_players || [];
+    if (typeof fortuneData !== 'undefined') {
+        fortuneData.yellowPool = data.yellow_pool || 0;
+        fortuneData.redPool = data.red_pool || 0;
+        fortuneData.yellowPlayers = data.yellow_players || [];
+        fortuneData.redPlayers = data.red_players || [];
 
-            if (typeof updateFortuneUI === 'function') {
-                updateFortuneUI();
+        if (typeof updateFortuneUI === 'function') {
+            updateFortuneUI();
+        } else {
+            // Ручное обновление, если updateFortuneUI не определена
+            const yellowPoolEl = document.getElementById('yellowPool');
+            const redPoolEl = document.getElementById('redPool');
+            const yellowChanceEl = document.getElementById('yellowChance');
+            const redChanceEl = document.getElementById('redChance');
+
+            if (yellowPoolEl) yellowPoolEl.innerText = (data.yellow_pool || 0).toFixed(2) + ' WG';
+            if (redPoolEl) redPoolEl.innerText = (data.red_pool || 0).toFixed(2) + ' WG';
+
+            const total = (data.yellow_pool || 0) + (data.red_pool || 0);
+            if (total > 0) {
+                const yellowPercent = Math.round((data.yellow_pool / total) * 100);
+                const redPercent = Math.round((data.red_pool / total) * 100);
+                if (yellowChanceEl) yellowChanceEl.innerText = yellowPercent + '%';
+                if (redChanceEl) redChanceEl.innerText = redPercent + '%';
             } else {
-                // Ручное обновление, если updateFortuneUI не определена
-                const yellowPoolEl = document.getElementById('yellowPool');
-                const redPoolEl = document.getElementById('redPool');
-                const yellowChanceEl = document.getElementById('yellowChance');
-                const redChanceEl = document.getElementById('redChance');
+                if (yellowChanceEl) yellowChanceEl.innerText = '0%';
+                if (redChanceEl) redChanceEl.innerText = '0%';
+            }
 
-                if (yellowPoolEl) yellowPoolEl.innerText = (data.yellow_pool || 0).toFixed(2) + ' WG';
-                if (redPoolEl) redPoolEl.innerText = (data.red_pool || 0).toFixed(2) + ' WG';
+            // Обновляем списки игроков
+            const yellowContainer = document.getElementById('yellowPlayers');
+            const redContainer = document.getElementById('redPlayers');
 
-                const total = (data.yellow_pool || 0) + (data.red_pool || 0);
-                if (total > 0) {
-                    const yellowPercent = Math.round((data.yellow_pool / total) * 100);
-                    const redPercent = Math.round((data.red_pool / total) * 100);
-                    if (yellowChanceEl) yellowChanceEl.innerText = yellowPercent + '%';
-                    if (redChanceEl) redChanceEl.innerText = redPercent + '%';
+            if (yellowContainer && data.yellow_players) {
+                if (data.yellow_players.length === 0) {
+                    yellowContainer.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
                 } else {
-                    if (yellowChanceEl) yellowChanceEl.innerText = '0%';
-                    if (redChanceEl) redChanceEl.innerText = '0%';
+                    yellowContainer.innerHTML = data.yellow_players.map(p => `
+                        <div class="player-card-premium" data-userid="${p.userId}">
+                            <div class="player-avatar-premium">${p.avatarUrl ? `<img src="${p.avatarUrl}" loading="lazy">` : '🟡'}</div>
+                            <div class="player-bet-premium">${(p.netAmount || p.amount || 0).toFixed(0)} WG</div>
+                        </div>
+                    `).join('');
                 }
+            }
 
-                // Обновляем списки игроков
-                const yellowContainer = document.getElementById('yellowPlayers');
-                const redContainer = document.getElementById('redPlayers');
-
-                if (yellowContainer && data.yellow_players) {
-                    if (data.yellow_players.length === 0) {
-                        yellowContainer.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
-                    } else {
-                        yellowContainer.innerHTML = data.yellow_players.map(p => `
-                            <div class="player-card-premium" data-userid="${p.userId}">
-                                <div class="player-avatar-premium">${p.avatarUrl ? `<img src="${p.avatarUrl}" loading="lazy">` : '🟡'}</div>
-                                <div class="player-bet-premium">${(p.netAmount || p.amount || 0).toFixed(0)} WG</div>
-                            </div>
-                        `).join('');
-                    }
-                }
-
-                if (redContainer && data.red_players) {
-                    if (data.red_players.length === 0) {
-                        redContainer.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
-                    } else {
-                        redContainer.innerHTML = data.red_players.map(p => `
-                            <div class="player-card-premium" data-userid="${p.userId}">
-                                <div class="player-avatar-premium">${p.avatarUrl ? `<img src="${p.avatarUrl}" loading="lazy">` : '🔴'}</div>
-                                <div class="player-bet-premium">${(p.netAmount || p.amount || 0).toFixed(0)} WG</div>
-                            </div>
-                        `).join('');
-                    }
+            if (redContainer && data.red_players) {
+                if (data.red_players.length === 0) {
+                    redContainer.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
+                } else {
+                    redContainer.innerHTML = data.red_players.map(p => `
+                        <div class="player-card-premium" data-userid="${p.userId}">
+                            <div class="player-avatar-premium">${p.avatarUrl ? `<img src="${p.avatarUrl}" loading="lazy">` : '🔴'}</div>
+                            <div class="player-bet-premium">${(p.netAmount || p.amount || 0).toFixed(0)} WG</div>
+                        </div>
+                    `).join('');
                 }
             }
         }
+    }
 
-        // Обновляем баланс пользователя (WG) после ставки
-        if (typeof syncData === 'function') {
-            syncData(true);
-        }
-    });
+    // Обновляем баланс пользователя (WG) после ставки
+    if (typeof syncData === 'function') {
+        syncData(true);
+    }
+});
 
-    // Обработчик сброса таймера
-    socket.on('fortune_timer_reset', (data) => {
-        if (data.time_left) {
-            if (typeof fortuneData !== 'undefined') {
-                fortuneData.timeLeft = data.time_left;
-            }
-            if (typeof updateTimerDisplay === 'function') {
-                updateTimerDisplay();
-            }
-            if (typeof startFortuneTimer === 'function' && (!fortuneUI || !fortuneUI.timerInterval)) {
-                startFortuneTimer();
-            }
-            showToast(data.message || '⏰ Таймер перезапущен!', 'info');
+// Обработчик сброса таймера
+socket.on('fortune_timer_reset', (data) => {
+    if (data.time_left) {
+        if (typeof fortuneData !== 'undefined') {
+            fortuneData.timeLeft = data.time_left;
         }
-    });
-}
+        if (typeof updateTimerDisplay === 'function') {
+            updateTimerDisplay();
+        }
+        if (typeof startFortuneTimer === 'function' && (!fortuneUI || !fortuneUI.timerInterval)) {
+            startFortuneTimer();
+        }
+        showToast(data.message || '⏰ Таймер перезапущен!', 'info');
+    }
+});
 
         // ==================== РЕКЛАМА ====================
         let adController = null;
@@ -10056,7 +10071,9 @@ function initFortuneTabs() {
             document.querySelectorAll('.fortune-tab').forEach(t => t.classList.remove('active'));
             playTab.classList.add('active');
             document.querySelectorAll('.fortune-tab-content').forEach(c => c.classList.remove('active'));
-            if (fortuneUI.elements.playTab) fortuneUI.elements.playTab.classList.add('active');
+            if (fortuneUI.elements.playTab) {
+                fortuneUI.elements.playTab.classList.add('active');
+            }
         });
     }
 
@@ -10065,7 +10082,10 @@ function initFortuneTabs() {
             document.querySelectorAll('.fortune-tab').forEach(t => t.classList.remove('active'));
             historyTab.classList.add('active');
             document.querySelectorAll('.fortune-tab-content').forEach(c => c.classList.remove('active'));
-            if (fortuneUI.elements.historyTab) fortuneUI.elements.historyTab.classList.add('active');
+            if (fortuneUI.elements.historyTab) {
+                fortuneUI.elements.historyTab.classList.add('active');
+            }
+            // Загружаем историю при переключении на вкладку
             loadFortuneHistory();
         });
     }
