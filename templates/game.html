@@ -6660,134 +6660,101 @@ function updateRecentPlayersFast(players) {
             }
         };
 
-        window.buyEnergyUpgrade = async function() {
+        // ========== ПОКУПКА ЗА 25 ЗВЁЗД ==========
+window.buyEnergyUpgrade = async function() {
     if (localEnergyUpgrades >= 15) {
         showToast('Вы уже достигли максимума улучшений! (15/15)', 'error');
         return;
     }
-
-    const btn = document.getElementById('energyUpgradeBtn');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '⏳ Создание счёта...';
-    btn.disabled = true;
-
+    showToast('💰 Создаём счёт для оплаты...', 'info');
     try {
-        const response = await fetch('/api/create_stars_invoice', {
+        let res = await fetch('/api/create_stars_invoice', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ user_id: userId, chat_id: chatId })
         });
-
-        const data = await response.json();
-
+        let data = await res.json();
         if (!data.success) {
             showToast(data.msg || 'Ошибка создания счёта', 'error');
-            btn.innerHTML = originalText;
-            btn.disabled = false;
             return;
         }
-
-        // Используем новую функцию для оплаты
-        const success = await openTelegramInvoice(
-            data.invoice_link,
-            () => {
-                // Успешная оплата
-                showToast('✨ Улучшение активировано!', 'success');
-                if (tg && tg.showPopup) {
-                    tg.showPopup({
-                        title: '🎉 Покупка успешна!',
-                        message: '✨ +40 к макс. энергии\n💎 +50 LP на баланс',
-                        buttons: [{ type: 'ok' }]
-                    });
+        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openInvoice) {
+            window.Telegram.WebApp.openInvoice(data.invoice_link, (status) => {
+                if (status === 'paid') {
+                    showToast('✅ Оплата прошла успешно! Улучшение активируется через несколько секунд...', 'success');
+                    setTimeout(() => {
+                        updateStatus();
+                        showToast('✨ Улучшение активировано! +50 к макс. энергии и +50 LP!', 'success');
+                    }, 3000);
+                } else if (status === 'failed' || status === 'cancelled') {
+                    showToast('❌ Оплата отменена или не удалась', 'error');
                 }
-                setTimeout(() => syncData(true), 500);
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-            },
-            (errorMsg) => {
-                // Ошибка или отмена
-                showToast('❌ ' + errorMsg, 'error');
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-            }
-        );
-
-        if (!success) {
-            // Если openInvoice не сработал — открываем ссылку
-            showToast('🔗 Оплатите по ссылке в новом окне', 'info');
+            });
+        } else {
             window.open(data.invoice_link, '_blank');
-            btn.innerHTML = originalText;
-            btn.disabled = false;
+            showToast('🔗 Оплатите по ссылке в новом окне', 'info');
         }
-
     } catch(e) {
-        console.error('Ошибка:', e);
-        showToast('Ошибка при создании платежа', 'error');
-        btn.innerHTML = originalText;
-        btn.disabled = false;
+        console.error('Ошибка при оплате:', e);
+        showToast('Ошибка при создании платежа. Попробуйте позже.', 'error');
     }
 };
 
-        // ==================== LP БУСТЕР ====================
-        window.buyLPBoostStars = async function() {
+// ========== ПОКУПКА LP БУСТЕР ЗА 22 ЗВЁЗД ==========
+window.buyLPBoostStars = async function() {
     const btn = document.getElementById('lpBoostStarsBtn');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '⏳ Создание счёта...';
-    btn.disabled = true;
-
+    const originalText = btn ? btn.innerHTML : 'Купить';
+    if (btn) {
+        btn.innerHTML = '⏳ Создание счёта...';
+        btn.disabled = true;
+    }
     try {
-        const response = await fetch('/api/create_lp_boost_invoice', {
+        let res = await fetch('/api/create_lp_boost_invoice', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ user_id: userId, chat_id: chatId })
         });
-
-        const data = await response.json();
-
+        let data = await res.json();
         if (!data.success) {
             showToast(data.msg || 'Ошибка создания счёта', 'error');
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-            return;
-        }
-
-        const success = await openTelegramInvoice(
-            data.invoice_link,
-            () => {
-                showToast('✨ LP Бустер активирован!', 'success');
-                if (tg && tg.showPopup) {
-                    tg.showPopup({
-                        title: '🎉 Покупка успешна!',
-                        message: '💎 Вы получили +50 LP на баланс!',
-                        buttons: [{ type: 'ok' }]
-                    });
-                }
-                setTimeout(() => {
-                    syncData(true);
-                    updateLPBoostCount();
-                }, 500);
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-            },
-            (errorMsg) => {
-                showToast('❌ ' + errorMsg, 'error');
+            if (btn) {
                 btn.innerHTML = originalText;
                 btn.disabled = false;
             }
-        );
-
-        if (!success) {
-            showToast('🔗 Оплатите по ссылке в новом окне', 'info');
+            return;
+        }
+        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openInvoice) {
+            window.Telegram.WebApp.openInvoice(data.invoice_link, async (status) => {
+                if (status === 'paid') {
+                    showToast('✅ Оплата прошла успешно! LP Бустер активируется...', 'success');
+                    setTimeout(() => {
+                        syncData(true);
+                        updateLPBoostCount();
+                        showToast('💎 +50 LP зачислены на баланс!', 'success');
+                    }, 3000);
+                } else if (status === 'failed' || status === 'cancelled') {
+                    showToast('❌ Оплата отменена или не удалась', 'error');
+                }
+                if (btn) {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
+            });
+        } else {
             window.open(data.invoice_link, '_blank');
+            showToast('🔗 Оплатите по ссылке в новом окне', 'info');
+            if (btn) {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+    } catch(e) {
+        console.error('Ошибка при оплате:', e);
+        showToast('Ошибка при создании платежа. Попробуйте позже.', 'error');
+        if (btn) {
             btn.innerHTML = originalText;
             btn.disabled = false;
         }
-
-    } catch(e) {
-        console.error('Ошибка:', e);
-        showToast('Ошибка при создании платежа', 'error');
-        btn.innerHTML = originalText;
-        btn.disabled = false;
     }
 };
 
@@ -10096,147 +10063,157 @@ window.endFortuneRound = async function() {
             }
         }
 
-        document.addEventListener("DOMContentLoaded", () => {
-    initTonConnect();
-    initSocket();
-    autoRegister();
-    loadAvatar();
-    logGameEntry();
-    syncData(true);
-    loadReferralLink();
-    loadReferrals();
-    loadSettings();
-    loadDailyStatus();
-    setTimeout(checkAndStartTutorial, 2000);
-    setInterval(() => syncData(), 5000);
-    setInterval(() => loadReferrals(), 30000);
-    startDailyLeaderboardTimer();
-    updateLPBoostCount();
+        // ==================== DOMCONTENTLOADED ====================
+    document.addEventListener("DOMContentLoaded", () => {
+        initTonConnect();
+        initSocket();
+        autoRegister();
+        loadAvatar();
+        logGameEntry();
+        syncData(true);
+        loadReferralLink();
+        loadReferrals();
+        loadSettings();
+        loadDailyStatus();
+        setTimeout(checkAndStartTutorial, 2000);
+        setInterval(() => syncData(), 5000);
+        setInterval(() => loadReferrals(), 30000);
+        startDailyLeaderboardTimer();
+        updateLPBoostCount();
 
-    if (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
-        const startParam = tg.initDataUnsafe.start_param;
-        if (startParam && startParam.startsWith('claim_')) {
-            const promoCode = startParam.replace('claim_', '');
-            setTimeout(() => {
-                openPromoModalWithCode(promoCode);
-                showToast(`🎫 Промокод ${promoCode} готов к активации!`, 'success');
-            }, 2000);
-        } else if (startParam && !startParam.startsWith('claim_')) {
-            const refCode = startParam;
-            setTimeout(async () => {
-                try {
-                    const response = await fetch('/api/set_referral', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ user_id: userId, referral_code: refCode })
-                    });
-                    const data = await response.json();
-                    if (data.success) {
-                        showToast('🎉 Реферальный код активирован!', 'success');
+        if (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
+            const startParam = tg.initDataUnsafe.start_param;
+            if (startParam && startParam.startsWith('claim_')) {
+                const promoCode = startParam.replace('claim_', '');
+                setTimeout(() => {
+                    openPromoModalWithCode(promoCode);
+                    showToast(`🎫 Промокод ${promoCode} готов к активации!`, 'success');
+                }, 2000);
+            } else if (startParam && !startParam.startsWith('claim_')) {
+                const refCode = startParam;
+                setTimeout(async () => {
+                    try {
+                        const response = await fetch('/api/set_referral', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ user_id: userId, referral_code: refCode })
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            showToast('🎉 Реферальный код активирован!', 'success');
+                        }
+                    } catch(e) {
+                        console.error('Error sending referral code:', e);
                     }
-                } catch(e) {
-                    console.error('Error sending referral code:', e);
-                }
-            }, 1500);
-        }
-    }
-
-    // ========== НОВЫЕ ОБРАБОТЧИКИ ДЛЯ ФОРТУНЫ ==========
-    const closeBetModalBtn = document.querySelector('#betModal .bet-modal-close');
-    if (closeBetModalBtn) {
-        closeBetModalBtn.addEventListener('click', closeBetModal);
-    }
-
-    const submitBetBtn = document.getElementById('submitBetBtn');
-    if (submitBetBtn) {
-        submitBetBtn.addEventListener('click', submitBet);
-    }
-
-    const betAmountInput = document.getElementById('betAmount');
-    if (betAmountInput) {
-        betAmountInput.addEventListener('input', calculateBet);
-    }
-
-    document.querySelectorAll('.bet-preset-premium').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const multiplier = parseFloat(btn.getAttribute('data-multiplier'));
-            if (!isNaN(multiplier) && betAmountInput) {
-                const presetAmount = Math.floor(localWG * multiplier);
-                betAmountInput.value = presetAmount;
-                calculateBet();
+                }, 1500);
             }
+        }
+
+        if (tg) {
+            tg.ready();
+            tg.expand();
+        }
+
+        // ========== НОВЫЕ ОБРАБОТЧИКИ ДЛЯ ФОРТУНЫ ==========
+        // Закрытие модального окна ставки
+        const closeBetModalBtn = document.querySelector('#betModal .bet-modal-close');
+        if (closeBetModalBtn) {
+            closeBetModalBtn.addEventListener('click', closeBetModal);
+        }
+
+        // Кнопка подтверждения ставки
+        const submitBetBtn = document.getElementById('submitBetBtn');
+        if (submitBetBtn) {
+            submitBetBtn.addEventListener('click', submitBet);
+        }
+
+        // Поле ввода суммы ставки (расчёт комиссии)
+        const betAmountInput = document.getElementById('betAmount');
+        if (betAmountInput) {
+            betAmountInput.addEventListener('input', calculateBet);
+        }
+        // Кнопки предустановок суммы ставки (10%, 25%, 50%, 100%)
+        document.querySelectorAll('.bet-preset-premium').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const multiplier = parseFloat(btn.getAttribute('data-multiplier'));
+                if (!isNaN(multiplier) && betAmountInput) {
+                    const presetAmount = Math.floor(localWG * multiplier);
+                    betAmountInput.value = presetAmount;
+                    calculateBet();
+                }
+            });
         });
+
+        // Кнопки ставок в Фортуне (через ID)
+        const betBtnYellow = document.getElementById('betBtnYellow');
+        if (betBtnYellow) {
+            betBtnYellow.addEventListener('click', (e) => {
+                e.stopPropagation();
+                console.log('Ставка на Жёлтых');
+                openBetModal('yellow');
+            });
+        }
+
+        const betBtnRed = document.getElementById('betBtnRed');
+        if (betBtnRed) {
+            betBtnRed.addEventListener('click', (e) => {
+                e.stopPropagation();
+                console.log('Ставка на Красных');
+                openBetModal('red');
+            });
+        }
     });
 
-    const betBtnYellow = document.getElementById('betBtnYellow');
-    if (betBtnYellow) {
-        betBtnYellow.addEventListener('click', (e) => {
+    // А это ОСТАВЬ СНАРУЖИ (глобальный обработчик на случай, если кнопки ещё не загрузились)
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.bet-btn-premium');
+        if (btn && btn.getAttribute('data-team')) {
             e.stopPropagation();
-            console.log('Ставка на Жёлтых');
-            openBetModal('yellow');
-        });
-    }
-
-    const betBtnRed = document.getElementById('betBtnRed');
-    if (betBtnRed) {
-        betBtnRed.addEventListener('click', (e) => {
-            e.stopPropagation();
-            console.log('Ставка на Красных');
-            openBetModal('red');
-        });
-    }
-});
-
-// Глобальный обработчик для ставок
-document.addEventListener('click', function(e) {
-    const btn = e.target.closest('.bet-btn-premium');
-    if (btn && btn.getAttribute('data-team')) {
-        e.stopPropagation();
-        const team = btn.getAttribute('data-team');
-        if (team === 'yellow' || team === 'red') {
-            openBetModal(team);
+            const team = btn.getAttribute('data-team');
+            if (team === 'yellow' || team === 'red') {
+                openBetModal(team);
+            }
         }
-    }
-});
+    });
 
-function loadAvatar() {
-    if (photoUrl && photoUrl !== '') {
-        const userAvatar = document.getElementById('userAvatar');
-        const avatarPlaceholder = document.getElementById('avatarPlaceholder');
-        if (userAvatar) {
-            userAvatar.src = photoUrl;
-            userAvatar.style.display = 'block';
-            if (avatarPlaceholder) avatarPlaceholder.style.display = 'none';
-        }
-    } else {
-        const avatarPlaceholder = document.getElementById('avatarPlaceholder');
-        if (avatarPlaceholder) avatarPlaceholder.style.display = 'flex';
-    }
-}
+            function loadAvatar() {
+                if (photoUrl && photoUrl !== '') {
+                    const userAvatar = document.getElementById('userAvatar');
+                    const avatarPlaceholder = document.getElementById('avatarPlaceholder');
+                    if (userAvatar) {
+                        userAvatar.src = photoUrl;
+                        userAvatar.style.display = 'block';
+                        if (avatarPlaceholder) avatarPlaceholder.style.display = 'none';
+                    }
+                } else {
+                    const avatarPlaceholder = document.getElementById('avatarPlaceholder');
+                    if (avatarPlaceholder) avatarPlaceholder.style.display = 'flex';
+                }
+            }
 
-function logGameEntry() {
-    fetch('/api/log_game_entry', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: userId })
-    }).catch(e => console.log('Log entry error:', e));
-}
+            function logGameEntry() {
+                fetch('/api/log_game_entry', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId })
+                }).catch(e => console.log('Log entry error:', e));
+            }
 
-function updateStatus() {
-    syncData(true);
-}
+            function updateStatus() {
+                syncData(true);
+            }
 
-function updateLeaderboard() {
-    syncData(true);
-}
+            function updateLeaderboard() {
+                syncData(true);
+            }
 
-function updateLottery() {
-    syncData(true);
-}
+            function updateLottery() {
+                syncData(true);
+            }
 
-function loadRecentPlayers() {
-    syncData(true);
-}
+            function loadRecentPlayers() {
+                syncData(true);
+            }
         </script>
     </body>
     </html>
