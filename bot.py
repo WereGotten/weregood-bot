@@ -265,9 +265,14 @@ def start_fortune_timer_loop():
 
         while fortune_round_active:
             try:
+                # Проверяем время без блокировки
+                should_end = False
+                round_id_for_log = None
+
                 with fortune_round_lock:
                     if current_fortune_round and not current_fortune_round.get('is_ending', False):
                         now = time.time()
+                        round_id_for_log = current_fortune_round['round_id']
 
                         # Отправляем обновление таймера на клиент каждую секунду
                         if now - last_update_time >= 1:
@@ -277,8 +282,13 @@ def start_fortune_timer_loop():
 
                         # Проверяем, не истёк ли таймер
                         if now >= current_fortune_round['end_time']:
-                            print(f"⏰ [ФОРТУНА] Таймер истёк для раунда {current_fortune_round['round_id']}")
-                            end_fortune_round()
+                            should_end = True
+
+                # ВЫЗЫВАЕМ end_fortune_round() ВНЕ БЛОКИРОВКИ!
+                if should_end:
+                    print(f"⏰ [ФОРТУНА] Таймер истёк для раунда {round_id_for_log}")
+                    end_fortune_round()
+
             except Exception as e:
                 logger.error(f"Fortune timer loop error: {e}")
 
