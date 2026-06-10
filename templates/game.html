@@ -7676,10 +7676,10 @@ function updateRecentPlayersFast(players) {
     });
 
     // Обработчик завершения раунда
-socket.on('fortune_round_ended', async (data) => {
+    socket.on('fortune_round_ended', async (data) => {
     console.log('🎲 Раунд Фортуны завершён:', data);
 
-    // ========== ПОЛУЧАЕМ СТАВКУ ПОЛЬЗОВАТЕЛЯ ==========
+    // ========== ИСПОЛЬЗУЕМ ПЕРЕДАННЫЕ СТАВКИ ВМЕСТО API ==========
     let userBetTeam = null;
     let userBetAmount = 0;
 
@@ -7693,7 +7693,7 @@ socket.on('fortune_round_ended', async (data) => {
         }
     }
 
-    // Если не нашли в данных раунда, пробуем API (запасной вариант)
+    // Если не нашли в данных раунда, пробуем API (как запасной вариант)
     if (!userBetTeam) {
         try {
             const response = await fetch('/api/fortune/user_total_bet', {
@@ -7712,12 +7712,12 @@ socket.on('fortune_round_ended', async (data) => {
         }
     }
 
-    // ========== СЛУЧАЙ 1: ВОЗВРАТ СРЕДСТВ (REFUND) ==========
+    // 1. Если был возврат средств (refund) — колесо крутить не нужно
     if (data && data.winner === 'refund') {
         if (data.message) showToast(data.message, 'info');
         if (typeof loadFortuneData === 'function') loadFortuneData();
 
-        // Обновляем историю
+        // ========== ОБНОВЛЯЕМ ИСТОРИЮ ДАЖЕ ПРИ REFUND ==========
         setTimeout(() => {
             if (typeof loadFortuneHistory === 'function') {
                 loadFortuneHistory();
@@ -7727,7 +7727,7 @@ socket.on('fortune_round_ended', async (data) => {
         return;
     }
 
-    // ========== СЛУЧАЙ 2: РЕАЛЬНЫЙ ПОБЕДИТЕЛЬ ==========
+    // 2. Если определился реальный победитель
     if (data && data.winner) {
         const yellowPool = (typeof fortuneData !== 'undefined' && fortuneData.yellowPool) ? fortuneData.yellowPool : 50;
         const redPool = (typeof fortuneData !== 'undefined' && fortuneData.redPool) ? fortuneData.redPool : 50;
@@ -7742,7 +7742,7 @@ socket.on('fortune_round_ended', async (data) => {
             if (typeof loadFortuneData === 'function') loadFortuneData();
         }
 
-        // Обновляем историю после раунда
+        // ========== ОБНОВЛЯЕМ ИСТОРИЮ ПОСЛЕ КАЖДОГО РАУНДА ==========
         setTimeout(() => {
             if (typeof loadFortuneHistory === 'function') {
                 loadFortuneHistory();
@@ -7751,7 +7751,7 @@ socket.on('fortune_round_ended', async (data) => {
         }, 2000);
     }
 
-    // ========== ОЧИСТКА ДАННЫХ ДЛЯ НОВОГО РАУНДА ==========
+    // ПРИНУДИТЕЛЬНАЯ ОЧИСТКА И ПЕРЕЗАГРУЗКА ДАННЫХ
     if (typeof fortuneData !== 'undefined') {
         fortuneData.yellowPool = 0;
         fortuneData.redPool = 0;
@@ -7762,13 +7762,11 @@ socket.on('fortune_round_ended', async (data) => {
         fortuneData.userBetAmount = 0;
     }
 
-    // Очищаем UI списки игроков
     const yellowPlayersDiv = document.getElementById('yellowPlayers');
     const redPlayersDiv = document.getElementById('redPlayers');
     if (yellowPlayersDiv) yellowPlayersDiv.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
     if (redPlayersDiv) redPlayersDiv.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
 
-    // Обновляем UI и синхронизируем данные
     if (typeof updateFortuneUI === 'function') updateFortuneUI();
     if (typeof loadFortuneData === 'function') {
         setTimeout(() => loadFortuneData(), 500);
@@ -7777,7 +7775,7 @@ socket.on('fortune_round_ended', async (data) => {
     if (typeof syncData === 'function') syncData(true);
 });
 
-// ========== ОБНОВЛЕНИЕ ПУЛОВ ПОСЛЕ СТАВКИ ==========
+// ========== НОВЫЙ ОБРАБОТЧИК: ОБНОВЛЕНИЕ ПУЛОВ ПОСЛЕ СТАВКИ ==========
 socket.on('fortune_pools_update', (data) => {
     console.log('🔄 Обновление пулов Фортуны в реальном времени:', data);
 
@@ -7790,7 +7788,7 @@ socket.on('fortune_pools_update', (data) => {
         if (typeof updateFortuneUI === 'function') {
             updateFortuneUI();
         } else {
-            // Ручное обновление (запасной вариант)
+            // Ручное обновление, если updateFortuneUI не определена
             const yellowPoolEl = document.getElementById('yellowPool');
             const redPoolEl = document.getElementById('redPool');
             const yellowChanceEl = document.getElementById('yellowChance');
@@ -7805,6 +7803,9 @@ socket.on('fortune_pools_update', (data) => {
                 const redPercent = Math.round((data.red_pool / total) * 100);
                 if (yellowChanceEl) yellowChanceEl.innerText = yellowPercent + '%';
                 if (redChanceEl) redChanceEl.innerText = redPercent + '%';
+            } else {
+                if (yellowChanceEl) yellowChanceEl.innerText = '0%';
+                if (redChanceEl) redChanceEl.innerText = '0%';
             }
 
             // Обновляем списки игроков
@@ -7839,13 +7840,13 @@ socket.on('fortune_pools_update', (data) => {
         }
     }
 
-    // Обновляем баланс пользователя после ставки
+    // Обновляем баланс пользователя (WG) после ставки
     if (typeof syncData === 'function') {
         syncData(true);
     }
 });
 
-// ========== ОБРАБОТЧИК СБРОСА ТАЙМЕРА ==========
+// Обработчик сброса таймера
 socket.on('fortune_timer_reset', (data) => {
     if (data.time_left) {
         if (typeof fortuneData !== 'undefined') {
@@ -7860,6 +7861,7 @@ socket.on('fortune_timer_reset', (data) => {
         showToast(data.message || '⏰ Таймер перезапущен!', 'info');
     }
 });
+}
 
         // ==================== РЕКЛАМА ====================
         let adController = null;
