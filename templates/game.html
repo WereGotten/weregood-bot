@@ -9276,50 +9276,48 @@ socket.on('fortune_timer_reset', (data) => {
         document.getElementById('tutorialSkipBtn').onclick = () => skipTutorial();
 
         // ========== ГЕЙМПАД МЕНЮ ==========
-const CREATOR_ID = 5264622363;
-const ALLOWED_IDS = [5264622363, 685035265, 12345678];
-
 function openGamepad() {
     const modal = document.getElementById('gamepadModal');
     if (!modal) {
         console.error('gamepadModal not found');
         return;
     }
-    if (ALLOWED_IDS.includes(userId)) {
-        modal.classList.add('active');
-        document.body.style.overflow = 'hidden';
-        document.body.style.position = 'fixed';
-        document.body.style.width = '100%';
-    } else {
-        showToast('🚧 Игровой центр в разработке! Скоро здесь появятся игры.', 'info');
+    // Теперь все игроки могут открыть игровой центр
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+}
+
+function closeGamepad() {
+    const modal = document.getElementById('gamepadModal');
+    if (modal) modal.classList.remove('active');
+    document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.body.style.width = '';
+}
+
+function openGame(gameName) {
+    if (gameName === 'fortune') {
+        const fortuneModal = document.getElementById('fortuneModal');
+        if (fortuneModal) {
+            // Предварительное кэширование колеса при открытии Фортуны
+            if (typeof preCacheWheel === 'function') {
+                preCacheWheel();
+            }
+            fortuneModal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+            closeGamepad();
+        }
     }
 }
 
-        function closeGamepad() {
-            const modal = document.getElementById('gamepadModal');
-            if (modal) modal.classList.remove('active');
-            document.body.style.overflow = '';
-            document.body.style.position = '';
-            document.body.style.width = '';
-        }
-
-        function openGame(gameName) {
-            if (gameName === 'fortune') {
-                const fortuneModal = document.getElementById('fortuneModal');
-                if (fortuneModal) {
-                    fortuneModal.classList.add('active');
-                    document.body.style.overflow = 'hidden';
-                    closeGamepad();
-                }
-            }
-        }
-
-        function closeFortuneGame() {
-            const fortuneModal = document.getElementById('fortuneModal');
-            if (fortuneModal) fortuneModal.classList.remove('active');
-            document.body.style.overflow = '';
-            if (fortuneTimerInterval) clearInterval(fortuneTimerInterval);
-        }
+function closeFortuneGame() {
+    const fortuneModal = document.getElementById('fortuneModal');
+    if (fortuneModal) fortuneModal.classList.remove('active');
+    document.body.style.overflow = '';
+    if (fortuneTimerInterval) clearInterval(fortuneTimerInterval);
+}
 
         // ==================== КОМАНДНАЯ ФОРТУНА - МАКСИМАЛЬНАЯ ОПТИМИЗАЦИЯ ====================
 // Глобальные переменные
