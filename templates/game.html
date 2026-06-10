@@ -9513,62 +9513,45 @@ async function loadFortuneHistory() {
 async function endFortuneRound() {
     try {
         const response = await fetch('/api/fortune/end_round', { method: 'POST' });
+
+        // Проверяем, что ответ вообще пришёл
+        if (!response) {
+            console.error('Нет ответа от сервера');
+            resetFortuneLocally();
+            return;
+        }
+
         const data = await response.json();
 
-        if (data.success) {
-            showToast(data.message || '🎲 Раунд завершён! Призы распределены!', 'success');
-
-            // ПОЛНОСТЬЮ ОЧИЩАЕМ ВСЕ ДАННЫЕ ДЛЯ НОВОГО РАУНДА
-            fortuneData = {
-                timeLeft: 300,
-                yellowPool: 0,
-                redPool: 0,
-                yellowPlayers: [],
-                redPlayers: [],
-                userBetTeam: null,
-                userBetAmount: 0,
-                isActive: true
-            };
-
-            // Очищаем все кеши
-            lastYellowHash = '';
-            lastRedHash = '';
-            yellowCacheHtml = '';
-            redCacheHtml = '';
-            lastDomUpdate = 0;
-
-            // Обновляем UI полностью
-            if (fortuneUI.elements.yellowPlayers) {
-                fortuneUI.elements.yellowPlayers.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
-            }
-            if (fortuneUI.elements.redPlayers) {
-                fortuneUI.elements.redPlayers.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
-            }
-
-            updateFortuneUI();
-            updateTeamHighlightUI();
-            updateTimerDisplay();
-
-            // Перезапускаем таймер
-            if (fortuneUI.timerInterval) {
-                clearInterval(fortuneUI.timerInterval);
-                fortuneUI.timerInterval = null;
-            }
-            startFortuneTimer();
-
-            // Принудительно загружаем свежие данные с сервера
-            setTimeout(() => loadFortuneData(), 500);
-
-            // Обновляем глобальные данные
-            if (typeof syncData === 'function') syncData(true);
-        } else {
-            // Если сервер вернул ошибку - перезапускаем локально
-            console.warn('Сервер не завершил раунд, перезапускаем локально');
+        // Проверяем, что data не пустой
+        if (!data) {
+            console.error('Пустой ответ от сервера');
             resetFortuneLocally();
+            return;
+        }
+
+        if (data.success && data.winner) {
+            const yellowPool = fortuneData?.yellowPool || 0;
+            const redPool = fortuneData?.redPool || 0;
+            if (typeof startWheelAnimation === 'function') {
+                startWheelAnimation(data.winner, yellowPool, redPool);
+            } else {
+                console.warn('startWheelAnimation не определена');
+                showToast(data.message || '🎲 Раунд завершён! Призы распределены!', 'info');
+            }
+        } else if (data.success && data.winner === 'refund') {
+            showToast('⚖️ Ставки были только на одной команде — ставки возвращены', 'info');
+            if (typeof loadFortuneData === 'function') loadFortuneData();
+        } else {
+            showToast(data.message || 'Раунд завершён', 'info');
+            if (typeof loadFortuneData === 'function') loadFortuneData();
         }
     } catch(e) {
         console.error('End round error:', e);
-        resetFortuneLocally();
+        // Если ошибка - просто перезапускаем локально
+        if (typeof resetFortuneLocally === 'function') {
+            resetFortuneLocally();
+        }
     }
 }
 
