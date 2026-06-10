@@ -4971,13 +4971,10 @@
 
 /* ХАК ДЛЯ СТАБИЛЬНЫХ 60 FPS НА ТЕЛЕФОНАХ */
 .wheel-canvas canvas {
-    width: 320px !important;
-    height: 320px !important;
     display: block;
     border-radius: 50%;
-    will-change: transform;
-    transform: translateZ(0);
-}
+    max-width: 100%;
+    max-height: 100%;
 
     /* Принудительно отдаем обработку графическому чипу смартфона (GPU) */
     will-change: transform;
@@ -5096,11 +5093,11 @@
 
 /* ========== АДАПТИВ ПОД СМАРТФОНЫ (ИДЕАЛЬНЫЙ ТАЙЛИНГ БЕЗ СЖАТИЯ ПИКСЕЛЕЙ) ========== */
 @media (max-width: 480px) {
-    .wheel-canvas canvas {
-        width: 260px !important;
-        height: 260px !important;
+    .wheel-container {
+        width: 90vw;
+        padding: 24px 16px;
+        border-radius: 24px;
     }
-}
 
     /* Меняем размеры самого бокса-контейнера, чтобы Canvas внутри не деформировался */
     .wheel-canvas {
@@ -9997,7 +9994,7 @@ if (document.readyState === 'loading') {
     initFortuneEventHandlers();
 }
 
-// ========== УЛЬТИМАТИВНОЕ НЕКСТГЕН КОЛЕСО (PIXEL-RATIO OPTIMIZED + FULL CACHE) ==========
+// ========== УЛЬТРА-ОПТИМИЗИРОВАННОЕ КИБЕРПАНК КОЛЕСО (15s + PRE-RENDER + GPU-BOOST) ==========
 let wheelCanvas = document.getElementById('wheelCanvas');
 let wheelCtx = wheelCanvas?.getContext('2d');
 let wheelAnimationId = null;
@@ -10007,60 +10004,45 @@ let wheelStartTime = 0;
 let wheelWinner = null;
 let wheelPrizes = {};
 
-// Глобальные настройки времени
-let wheelDuration = 15000;   // 15 секунд шоу
-let fullRotationsCount = 12; // Космическая скорость на старте
+// Глобальные настройки времени и оборотов
+let wheelDuration = 15000;   // Ровно 15 секунд сочного, драматичного шоу
+let fullRotationsCount = 12; // 12 полных кругов для бешеной скорости на старте
 
-// Скрытый виртуальный холст для кэширования
+// Скрытый виртуальный холст для кэширования всей тяжелой графики
 let cachedWheelCanvas = document.createElement('canvas');
 let cachedWheelCtx = cachedWheelCanvas.getContext('2d');
 let isWheelCached = false;
 
-// 1. Умная функция подстройки разрешения под экран телефона и кэширования графики
+// 1. Функция предварительной отрисовки основы колеса (вызывается ВСЕГО 1 РАЗ за весь раунд)
 function cacheWheelGraphics(yellowChance, redChance) {
     if (!wheelCanvas || !cachedWheelCtx) return;
 
-    // Секретный соус: учитываем реальную плотность пикселей смартфона (Retina/AMOLED)
-    const dpr = window.devicePixelRatio || 1;
+    // Синхронизируем размеры виртуального холста с оригиналом
+    cachedWheelCanvas.width = wheelCanvas.width;
+    cachedWheelCanvas.height = wheelCanvas.height;
 
-    // Базовый логический размер, который задан в CSS
-    const logicalSize = 320;
-
-    // Устанавливаем ФИЗИЧЕСКОЕ разрешение холстов (умножаем на dpr)
-    wheelCanvas.width = logicalSize * dpr;
-    wheelCanvas.height = logicalSize * dpr;
-    cachedWheelCanvas.width = logicalSize * dpr;
-    cachedWheelCanvas.height = logicalSize * dpr;
-
-    // Масштабируем контекст основного холста, чтобы координаты внутри JS не ломались
-    wheelCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-    const size = logicalSize; // Работаем в логических координатах для удобства
+    const size = cachedWheelCanvas.width;
     const centerX = size / 2;
     const centerY = size / 2;
-    const radius = size / 2 - 22;
+    const radius = size / 2 - 22; // Зазор под стальной обод
 
-    cachedWheelCtx.clearRect(0, 0, cachedWheelCanvas.width, cachedWheelCanvas.height);
+    cachedWheelCtx.clearRect(0, 0, size, size);
 
-    // Масштабируем и виртуальный контекст кэша под dpr
-    cachedWheelCtx.save();
-    cachedWheelCtx.scale(dpr, dpr);
-
-    // Градиенты секторов
+    // Создаем глянцевые градиенты один раз для кэша
     let yellowGrad = cachedWheelCtx.createRadialGradient(centerX, centerY, radius * 0.1, centerX, centerY, radius);
     yellowGrad.addColorStop(0, '#FFE666');
-    yellowGrad.addColorStop(0.5, '#F1C40F');
+    yellowGrad.addColorStop(0.5, '#F1C40F'); // Золотой
     yellowGrad.addColorStop(1, '#8A6900');
 
     let redGrad = cachedWheelCtx.createRadialGradient(centerX, centerY, radius * 0.1, centerX, centerY, radius);
     redGrad.addColorStop(0, '#FF8080');
-    redGrad.addColorStop(0.5, '#E74C3C');
+    redGrad.addColorStop(0.5, '#E74C3C'); // Киберпанк-красный
     redGrad.addColorStop(1, '#6B160E');
 
     const yellowAngle = (yellowChance / 100) * Math.PI * 2;
     const redAngle = (Math.PI * 2) - yellowAngle;
 
-    // --- 1. ЖЁЛТЫЙ СЕКТОР ---
+    // --- ШАГ 1: ЖЁЛТЫЙ СЕКТОР ---
     cachedWheelCtx.beginPath();
     cachedWheelCtx.moveTo(centerX, centerY);
     cachedWheelCtx.arc(centerX, centerY, radius, 0, yellowAngle);
@@ -10068,7 +10050,7 @@ function cacheWheelGraphics(yellowChance, redChance) {
     cachedWheelCtx.fillStyle = yellowGrad;
     cachedWheelCtx.fill();
 
-    // --- 2. КРАСНЫЙ СЕКТОР ---
+    // --- ШАГ 2: КРАСНЫЙ СЕКТОР ---
     cachedWheelCtx.beginPath();
     cachedWheelCtx.moveTo(centerX, centerY);
     cachedWheelCtx.arc(centerX, centerY, radius, yellowAngle, Math.PI * 2);
@@ -10076,7 +10058,7 @@ function cacheWheelGraphics(yellowChance, redChance) {
     cachedWheelCtx.fillStyle = redGrad;
     cachedWheelCtx.fill();
 
-    // --- 3. СТЫКИ ---
+    // --- ШАГ 3: МЯГКИЕ СВЕТОВЫЕ СТЫКИ-РАЗДЕЛИТЕЛИ ---
     cachedWheelCtx.lineWidth = 4;
     cachedWheelCtx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
 
@@ -10090,7 +10072,7 @@ function cacheWheelGraphics(yellowChance, redChance) {
     cachedWheelCtx.lineTo(centerX + radius * Math.cos(yellowAngle), centerY + radius * Math.sin(yellowAngle));
     cachedWheelCtx.stroke();
 
-    // --- 4. ТЕКСТ ПРОЦЕНТОВ (ТЕПЕРЬ ИДЕАЛЬНО ЧЁТКИЙ) ---
+    // --- ШАГ 4: ЖИРНЫЙ ФУТУРИСТИЧЕСКИЙ ТЕКСТ ПРОЦЕНТОВ (С ТЕНЬЮ) ---
     cachedWheelCtx.save();
     cachedWheelCtx.font = '900 26px "Arial Black", Gadget, sans-serif';
     cachedWheelCtx.textAlign = 'center';
@@ -10099,14 +10081,21 @@ function cacheWheelGraphics(yellowChance, redChance) {
     cachedWheelCtx.shadowColor = 'rgba(0, 0, 0, 0.7)';
     cachedWheelCtx.shadowBlur = 8;
 
+    // Жёлтые %
     const yellowMidAngle = yellowAngle / 2;
-    cachedWheelCtx.fillText(`${Math.round(yellowChance)}%`, centerX + radius * 0.62 * Math.cos(yellowMidAngle), centerY + radius * 0.62 * Math.sin(yellowMidAngle));
+    const yellowTextX = centerX + radius * 0.62 * Math.cos(yellowMidAngle);
+    const yellowTextY = centerY + radius * 0.62 * Math.sin(yellowMidAngle);
+    cachedWheelCtx.fillText(`${Math.round(yellowChance)}%`, yellowTextX, yellowTextY);
 
+    // Красные %
     const redMidAngle = yellowAngle + redAngle / 2;
-    cachedWheelCtx.fillText(`${Math.round(redChance)}%`, centerX + radius * 0.62 * Math.cos(redMidAngle), centerY + radius * 0.62 * Math.sin(redMidAngle));
+    const redTextX = centerX + radius * 0.62 * Math.cos(redMidAngle);
+    const redTextY = centerY + radius * 0.62 * Math.sin(redMidAngle);
+    cachedWheelCtx.fillText(`${Math.round(redChance)}%`, redTextX, redTextY);
     cachedWheelCtx.restore();
 
-    // --- 5. ТИТАНОВЫЙ ОБОД И ЗАКЛЕПКИ ---
+    // --- ШАГ 5: ТИТАНОВЫЙ ОБОД И ЗАКЛЕПКИ ---
+    // Они вшиваются в текстуру кэша — это полностью ликвидирует микрофризы
     cachedWheelCtx.beginPath();
     cachedWheelCtx.arc(centerX, centerY, radius + 11, 0, Math.PI * 2);
     cachedWheelCtx.lineWidth = 20;
@@ -10130,62 +10119,63 @@ function cacheWheelGraphics(yellowChance, redChance) {
         cachedWheelCtx.fill();
     }
 
-    // --- ВНИМАНИЕ: ВЖИВАЕМ ЦЕНТРАЛЬНУЮ СТУПИЦУ С "WG" ПРЯМО В КЭШ ---
-    // Нам больше не нужно рисовать её каждый кадр анимации! Это экономит 40% ресурсов GPU!
-    cachedWheelCtx.beginPath();
-    cachedWheelCtx.arc(centerX, centerY, 42, 0, Math.PI * 2);
-    cachedWheelCtx.fillStyle = '#0f0f20';
-    cachedWheelCtx.fill();
+    isWheelCached = true;
+    console.log('🚀 Графика колеса Фортуны успешно закэширована в памяти.');
+}
 
-    cachedWheelCtx.beginPath();
-    cachedWheelCtx.arc(centerX, centerY, 36, 0, Math.PI * 2);
-    cachedWheelCtx.lineWidth = 4;
-    cachedWheelCtx.strokeStyle = '#FFD700';
-    cachedWheelCtx.stroke();
+// 2. Ультра-быстрая отрисовка сцены (вызывается 60 раз в секунду, работает на GPU)
+function drawWheel(winnerTeam) {
+    if (!wheelCtx || !wheelCanvas || !isWheelCached) return;
 
-    cachedWheelCtx.beginPath();
-    cachedWheelCtx.arc(centerX, centerY, 33, 0, Math.PI * 2);
-    cachedWheelCtx.fillStyle = '#16162d';
-    cachedWheelCtx.fill();
+    const size = wheelCanvas.width;
+    const centerX = size / 2;
+    const centerY = size / 2;
 
-    cachedWheelCtx.save();
-    cachedWheelCtx.font = 'bold 22px "Arial Black", sans-serif';
-    cachedWheelCtx.textAlign = 'center';
-    cachedWheelCtx.textBaseline = 'middle';
-    let textGrad = cachedWheelCtx.createLinearGradient(centerX, centerY - 12, centerX, centerY + 12);
+    // Моментальная очистка основного экрана
+    wheelCtx.clearRect(0, 0, size, size);
+
+    // ВРАЩАЕМ КЭШ: Просто крутим готовую картинку из ОЗУ. Процессор отдыхает!
+    wheelCtx.save();
+    wheelCtx.translate(centerX, centerY);
+    wheelCtx.rotate(wheelRotation);
+    wheelCtx.drawImage(cachedWheelCanvas, -centerX, -centerY);
+    wheelCtx.restore();
+
+    // СТАТИКА (СТУПИЦА WG): Рисуется поверх, не тратит ресурсы на поворот матрицы
+    wheelCtx.beginPath();
+    wheelCtx.arc(centerX, centerY, 42, 0, Math.PI * 2);
+    wheelCtx.fillStyle = '#0f0f20';
+    wheelCtx.fill();
+
+    // Золотой неоновый ободок центра
+    wheelCtx.beginPath();
+    wheelCtx.arc(centerX, centerY, 36, 0, Math.PI * 2);
+    wheelCtx.lineWidth = 4;
+    wheelCtx.strokeStyle = '#FFD700';
+    wheelCtx.stroke();
+
+    wheelCtx.beginPath();
+    wheelCtx.arc(centerX, centerY, 33, 0, Math.PI * 2);
+    wheelCtx.fillStyle = '#16162d';
+    wheelCtx.fill();
+
+    // Отрендеренный бренд WG
+    wheelCtx.save();
+    wheelCtx.font = 'bold 22px "Arial Black", sans-serif';
+    wheelCtx.textAlign = 'center';
+    wheelCtx.textBaseline = 'middle';
+
+    let textGrad = wheelCtx.createLinearGradient(centerX, centerY - 12, centerX, centerY + 12);
     textGrad.addColorStop(0, '#FFFFFF');
     textGrad.addColorStop(0.5, '#F1C40F');
     textGrad.addColorStop(1, '#F39C12');
-    cachedWheelCtx.fillStyle = textGrad;
-    cachedWheelCtx.fillText('WG', centerX, centerY + 2);
-    cachedWheelCtx.restore();
+    wheelCtx.fillStyle = textGrad;
 
-    cachedWheelCtx.restore(); // Сбрасываем dpr-масштабирование для кэша
-    isWheelCached = true;
-}
-
-// 2. СВЕРХСКОРОСТНАЯ ОТРИСОВКА (Ровно одна операция переноса матрицы — 0% лагов)
-function drawWheel() {
-    if (!wheelCtx || !wheelCanvas || !isWheelCached) return;
-
-    const logicalSize = 320;
-    const centerX = logicalSize / 2;
-    const centerY = logicalSize / 2;
-
-    // Очищаем только логическую область экрана
-    wheelCtx.clearRect(0, 0, logicalSize, logicalSize);
-
-    wheelCtx.save();
-    // Сдвигаем центр координат
-    wheelCtx.translate(centerX, centerY);
-    // Крутим
-    wheelCtx.rotate(wheelRotation);
-    // Рисуем готовый HD-слепок из памяти, подгоняя физический размер кэша под логический размер сцены
-    wheelCtx.drawImage(cachedWheelCanvas, 0, 0, cachedWheelCanvas.width, cachedWheelCanvas.height, -centerX, -centerY, logicalSize, logicalSize);
+    wheelCtx.fillText('WG', centerX, centerY + 2);
     wheelCtx.restore();
 }
 
-// 3. Цикл анимации (Идеальное сглаживание)
+// 3. Главный цикл анимации (Двухфазная физика: мягкий рывок + бесконечный финиш)
 function animateWheel(timestamp) {
     if (!wheelStartTime) {
         wheelStartTime = timestamp;
@@ -10198,20 +10188,23 @@ function animateWheel(timestamp) {
 
     let easeProgress;
 
+    // ИСПРАВЛЕННАЯ ФИЗИКА ДЛЯ МОБИЛОК: Смягчаем пиковый скачок, чтобы убрать пропуск кадров
     if (progress < 0.15) {
-        // Фаза 1: Ультра-мягкий, но быстрый разгон (2.25 сек). Телефон успевает обработать старт без микрофризов
+        // Фаза 1: Плавный, но быстрый разгон (первые ~2.2 секунды)
+        // Использование степени 1.5 вместо жесткого куба не дает телефону «заикнуться» в стартовый клик
         easeProgress = Math.pow(progress / 0.15, 1.5) * 0.12;
     } else {
-        // Фаза 2: Сумасшедшее, кинематографичное замедление (12.75 сек)
-        // Степень 4 создаёт невероятный, затягивающий накат на финише
+        // Фаза 2: Постепенное драматичное замедление (оставшиеся ~12.7 секунд)
+        // Четвертая степень дает сумасшедший кинематографичный накат на финише
         const normalizedProgress = (progress - 0.15) / 0.85;
         easeProgress = 0.12 + (1 - Math.pow(1 - normalizedProgress, 4)) * 0.88;
     }
 
+    // Применяем рассчитанный угол вращения
     wheelRotation = wheelTargetRotation * easeProgress;
 
-    // Рендерим кадр одной левой
-    drawWheel();
+    // Рендерим оптимизированный кадр
+    drawWheel(wheelWinner);
 
     if (progress < 1) {
         wheelAnimationId = requestAnimationFrame(animateWheel);
@@ -10219,6 +10212,7 @@ function animateWheel(timestamp) {
         cancelAnimationFrame(wheelAnimationId);
         wheelAnimationId = null;
 
+        // Отключаем слежение за слоем после остановки для экономии батареи смартфона
         if (wheelCanvas) wheelCanvas.style.transform = 'none';
 
         const winnerName = wheelWinner === 'yellow' ? 'Жёлтые 🟡' : 'Красные 🔴';
@@ -10231,13 +10225,14 @@ function animateWheel(timestamp) {
         const closeBtn = document.getElementById('wheelCloseBtn');
         if (closeBtn) closeBtn.classList.add('show');
 
+        // Плавная бесконфликтная синхронизация бэка
         if (typeof loadFortuneData === 'function') setTimeout(() => loadFortuneData(), 500);
         if (typeof loadFortuneHistory === 'function') setTimeout(() => loadFortuneHistory(), 1000);
         if (typeof syncData === 'function') setTimeout(() => syncData(true), 1500);
     }
 }
 
-// 4. Логика инициализации и пуска
+// 4. Логика инициализации и запуска
 function startWheelAnimation(winnerTeam, yellowPool, redPool, sectorFactor) {
     const total = yellowPool + redPool;
     const yellowChance = total > 0 ? (yellowPool / total) * 100 : 50;
@@ -10246,10 +10241,10 @@ function startWheelAnimation(winnerTeam, yellowPool, redPool, sectorFactor) {
     wheelWinner = winnerTeam;
     wheelPrizes = { yellowChance, redChance };
 
-    // Генерируем HD-кэш с учётом Pixel Ratio телефона
+    // ШАГ 1: Кэшируем всю тяжелую геометрию в фоновый поток ОДИН раз
     cacheWheelGraphics(yellowChance, redChance);
 
-    // Переводим Canvas в аппаратный 3D-слой
+    // ШАГ 2: Врубаем аппаратное 3D/GPU-ускорение холста через CSS-трансформы!
     if (wheelCanvas) {
         wheelCanvas.style.willChange = 'transform';
         wheelCanvas.style.transform = 'translateZ(0)';
@@ -10258,6 +10253,7 @@ function startWheelAnimation(winnerTeam, yellowPool, redPool, sectorFactor) {
     const factor = (sectorFactor !== undefined && sectorFactor !== null) ? sectorFactor : 0.5;
     let targetSegmentAngle;
 
+    // Расчет точки остановки под верхнюю стрелку (-Math.PI / 2)
     if (winnerTeam === 'yellow') {
         targetSegmentAngle = (yellowChance / 100) * Math.PI * 2 * factor;
     } else {
@@ -10281,8 +10277,42 @@ function startWheelAnimation(winnerTeam, yellowPool, redPool, sectorFactor) {
     const resultDiv = document.getElementById('wheelResult');
     if (resultDiv) resultDiv.classList.remove('show');
 
+    // Старт!
     requestAnimationFrame(animateWheel);
 }
+
+document.getElementById('wheelCloseBtn')?.addEventListener('click', () => {
+    const overlay = document.getElementById('wheelOverlay');
+    if (overlay) overlay.classList.remove('active');
+    if (typeof window.isFortuneRoundEnding !== 'undefined') window.isFortuneRoundEnding = false;
+});
+
+// Кнопка принудительного админского форсирования раунда из панели
+const originalEndFortuneRound = endFortuneRound;
+window.endFortuneRound = async function() {
+    try {
+        const response = await fetch('/api/fortune/end_round', { method: 'POST' });
+        const data = await response.json();
+
+        if (data.success && data.winner) {
+            const yellowPool = fortuneData?.yellowPool || 0;
+            const redPool = fortuneData?.redPool || 0;
+            const factor = data.sector_factor !== undefined ? data.sector_factor : 0.5;
+
+            startWheelAnimation(data.winner, yellowPool, redPool, factor);
+            showToast('🎡 Колесо Фортуны запущено!', 'info');
+        } else if (data.success && data.winner === 'refund') {
+            showToast('⚖️ Ставки были только на одной команде — ставки возвращены', 'info');
+            if (typeof loadFortuneData === 'function') loadFortuneData();
+        } else {
+            showToast(data.message || 'Раунд завершён', 'info');
+            if (typeof loadFortuneData === 'function') loadFortuneData();
+        }
+    } catch(e) {
+        console.error('End round error:', e);
+        if (typeof originalEndFortuneRound === 'function') originalEndFortuneRound();
+    }
+};
 
         // ==================== СЧЁТЧИК ПОКУПОК LP БУСТЕРА ====================
         async function updateLPBoostCount() {
