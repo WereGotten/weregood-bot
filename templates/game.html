@@ -9637,12 +9637,19 @@ function updateTimerDisplay() {
 // ========== ЗАГРУЗКА ДАННЫХ С СЕРВЕРА ==========
 // Функция загрузки данных Фортуны с сервера
 async function loadFortuneData() {
+    // ЗАЩИТА: Если колесо крутится или идет отрисовка результатов,
+    // не даем данным из нового раунда перезаписать текущее состояние
+    if (window.isFortuneRoundEnding) {
+        console.log('🔄 Фортуна: обновление пропущено (колесо крутится)');
+        return;
+    }
+
     try {
         const response = await fetch('/api/fortune/status');
         const data = await response.json();
 
         if (data.success) {
-            // Обновляем глобальные переменные
+            // Безопасное обновление глобального объекта fortuneData
             if (typeof fortuneData !== 'undefined') {
                 fortuneData.timeLeft = data.time_left || 0;
                 fortuneData.yellowPool = data.yellow_pool || 0;
@@ -9651,22 +9658,24 @@ async function loadFortuneData() {
                 fortuneData.redPlayers = data.red_bets || [];
             }
 
-            // Обновляем UI через общую функцию (ВМЕСТО прямого обновления)
+            // Обновляем UI
             if (typeof updateFortuneUI === 'function') {
                 updateFortuneUI();
             } else {
-                // Fallback на случай, если updateFortuneUI не определена
-                const yellowPoolEl = document.getElementById('yellowPool');
-                const redPoolEl = document.getElementById('redPool');
-                const fortuneTimer = document.getElementById('fortuneTimer');
+                // Fallback (если вдруг функции UI еще не инициализированы)
+                const elements = {
+                    yellowPool: document.getElementById('yellowPool'),
+                    redPool: document.getElementById('redPool'),
+                    timer: document.getElementById('fortuneTimer')
+                };
 
-                if (yellowPoolEl) yellowPoolEl.innerText = (data.yellow_pool || 0).toFixed(2) + ' WG';
-                if (redPoolEl) redPoolEl.innerText = (data.red_pool || 0).toFixed(2) + ' WG';
+                if (elements.yellowPool) elements.yellowPool.innerText = (data.yellow_pool || 0).toFixed(2) + ' WG';
+                if (elements.redPool) elements.redPool.innerText = (data.red_pool || 0).toFixed(2) + ' WG';
 
-                if (fortuneTimer) {
-                    const minutes = Math.floor((data.time_left || 0) / 60);
-                    const seconds = (data.time_left || 0) % 60;
-                    fortuneTimer.innerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                if (elements.timer) {
+                    const m = Math.floor((data.time_left || 0) / 60);
+                    const s = (data.time_left || 0) % 60;
+                    elements.timer.innerText = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
                 }
 
                 if (typeof updatePlayersListAsync === 'function') {
@@ -9674,8 +9683,8 @@ async function loadFortuneData() {
                 }
             }
         }
-    } catch(e) {
-        console.error('loadFortuneData error:', e);
+    } catch (e) {
+        console.error('Ошибка при загрузке данных Фортуны:', e);
     }
 }
 
@@ -10336,7 +10345,7 @@ function drawWheel() {
     wheelCtx.restore();
 }
 
-// 3. Главный цикл анимации (Двухфазная физика + Разделение экранов результатов)
+    // 3. Главный цикл анимации (Двухфазная физика + Разделение экранов результатов)
 function animateWheel(timestamp) {
     if (!wheelStartTime) {
         wheelStartTime = timestamp;
