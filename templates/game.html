@@ -7408,6 +7408,51 @@ function updateRecentPlayersFast(players) {
         updateTopPlayers();
     });
 
+    // Обработчик обновления таймера
+socket.on('fortune_timer_update', (data) => {
+    if (data && data.time_left !== undefined) {
+        // Обновляем глобальную переменную
+        if (typeof fortuneData !== 'undefined') {
+            fortuneData.timeLeft = data.time_left;
+        }
+        // Обновляем отображение таймера
+        const timerElement = document.getElementById('fortuneTimer');
+        if (timerElement) {
+            const minutes = Math.floor(data.time_left / 60);
+            const seconds = data.time_left % 60;
+            timerElement.innerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+        // Обновляем прогресс-бар
+        const timerBarFill = document.getElementById('timerBarFill');
+        if (timerBarFill) {
+            const percent = (data.time_left / 300) * 100;
+            timerBarFill.style.width = percent + '%';
+        }
+    }
+});
+
+// Обработчик завершения раунда
+socket.on('fortune_round_ended', (data) => {
+    console.log('🎲 Раунд Фортуны завершён:', data);
+
+    if (data && data.message) {
+        showToast(data.message, 'info');
+    }
+
+    // Полностью обновляем данные Фортуны
+    if (typeof loadFortuneData === 'function') {
+        setTimeout(() => loadFortuneData(), 1000);
+    }
+
+    // Если открыта история — обновляем её
+    const historyTab = document.querySelector('[data-fortune-tab="history"]');
+    if (historyTab && historyTab.classList.contains('active')) {
+        if (typeof loadFortuneHistory === 'function') {
+            setTimeout(() => loadFortuneHistory(), 1500);
+        }
+    }
+});
+
     // ========== СЮДА ДОБАВЬ НОВЫЙ ОБРАБОТЧИК ==========
     socket.on('fortune_timer_reset', (data) => {
         if (data.time_left) {
@@ -8888,7 +8933,10 @@ let fortuneData = {
     yellowPlayers: [],
     redPlayers: [],
     userBetTeam: null,
-    isActive: false
+    userBetAmount: 0,
+    isActive: false,
+    lastYellowHash: '',
+    lastRedHash: ''
 };
 
 let fortuneUI = {
@@ -9175,68 +9223,44 @@ function updateTimerDisplay() {
 }
 
 // ========== ЗАГРУЗКА ДАННЫХ С СЕРВЕРА ==========
+// Функция загрузки данных Фортуны с сервера
 async function loadFortuneData() {
     try {
         const response = await fetch('/api/fortune/status');
-        if (!response.ok) return;
-
         const data = await response.json();
-        if (!data.success) return;
 
-        // Обновляем основные данные
-        fortuneData.yellowPool = data.yellow_pool || 0;
-        fortuneData.redPool = data.red_pool || 0;
-        fortuneData.timeLeft = data.time_left || 0;
-        fortuneData.isActive = fortuneData.timeLeft > 0;
-
-        // Обновляем списки игроков
-        fortuneData.yellowPlayers = (data.yellow_bets || []).map(bet => ({
-            userId: bet.userId || bet.user_id,
-            amount: bet.amount || 0,
-            netAmount: bet.netAmount || bet.amount || 0,
-            avatarUrl: bet.avatarUrl || '',
-            username: bet.username || 'Игрок'
-        }));
-
-        fortuneData.redPlayers = (data.red_bets || []).map(bet => ({
-            userId: bet.userId || bet.user_id,
-            amount: bet.amount || 0,
-            netAmount: bet.netAmount || bet.amount || 0,
-            avatarUrl: bet.avatarUrl || '',
-            username: bet.username || 'Игрок'
-        }));
-
-        // Загружаем текущую ставку пользователя
-        await loadUserCurrentBet();
-
-        // ========== ДОПОЛНИТЕЛЬНАЯ СИНХРОНИЗАЦИЯ ==========
-        // Если у пользователя есть ставка, но её нет в списках — добавляем
-        if (fortuneData.userBetTeam && fortuneData.userBetAmount > 0) {
-            const targetList = fortuneData.userBetTeam === 'yellow' ? fortuneData.yellowPlayers : fortuneData.redPlayers;
-            const existingBet = targetList.find(p => p.userId == userId);
-
-            if (!existingBet) {
-                // Добавляем пользователя в список, если его там нет
-                targetList.push({
-                    userId: userId,
-                    amount: fortuneData.userBetAmount,
-                    netAmount: fortuneData.userBetAmount,
-                    avatarUrl: photoUrl || '',
-                    username: firstName || username || 'Игрок'
-                });
-            } else if (existingBet.amount !== fortuneData.userBetAmount) {
-                // Обновляем сумму, если она изменилась
-                existingBet.amount = fortuneData.userBetAmount;
-                existingBet.netAmount = fortuneData.userBetAmount;
+        if (data.success) {
+            // Обновляем глобальные переменные
+            if (typeof fortuneData !== 'undefined') {
+                fortuneData.timeLeft = data.time_left || 0;
+                fortuneData.yellowPool = data.yellow_pool || 0;
+                fortuneData.redPool = data.red_pool || 0;
+                fortuneData.yellowPlayers = data.yellow_bets || [];
+                fortuneData.redPlayers = data.red_bets || [];
             }
+
+            // Обновляем UI
+            const yellowPoolEl = document.getElementById('yellowPool');
+            const redPoolEl = document.getElementById('redPool');
+            const fortuneTimer = document.getElementById('fortuneTimer');
+
+            if (yellowPoolEl) yellowPoolEl.innerText = (data.yellow_pool || 0).toFixed(2) + ' WG';
+            if (redPoolEl) redPoolEl.innerText = (data.red_pool || 0).toFixed(2) + ' WG';
+
+            if (fortuneTimer) {
+                const minutes = Math.floor((data.time_left || 0) / 60);
+                const seconds = (data.time_left || 0) % 60;
+                fortuneTimer.innerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+
+            // Обновляем списки игроков
+            // Обновляем списки игроков
+if (typeof updatePlayersListAsync === 'function') {
+    updatePlayersListAsync();
+}
         }
-
-        // Обновляем UI
-        updateFortuneUI();
-        updateTeamHighlightUI();
-
     } catch(e) {
-        console.warn('Load fortune error:', e);
+        console.error('loadFortuneData error:', e);
     }
 }
 
@@ -9547,6 +9571,7 @@ async function submitBet() {
             }
 
             if (typeof updateUI === 'function') updateUI();
+else if (typeof syncData === 'function') syncData(true);
             updateFortuneUI();
             updateTeamHighlightUI();
 
