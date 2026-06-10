@@ -6066,66 +6066,72 @@
         }
 
         function updateUI() {
-            document.getElementById('wgBalance').innerText = localWG.toFixed(2);
-            document.getElementById('lpBalance').innerText = localLP;
-            document.getElementById('energyValue').innerText = localEnergy;
-            document.getElementById('maxEnergyValue').innerText = localMaxEnergy;
-            document.getElementById('energyHeader').innerText = localEnergy;
-            let percent = (localEnergy / localMaxEnergy) * 100;
-            document.getElementById('energyBar').style.width = percent + '%';
-            document.getElementById('totalWG').innerText = localWG.toFixed(2);
-            document.getElementById('totalLP').innerText = localLP;
-            document.getElementById('totalWGmini').innerText = localWG.toFixed(2);
-            document.getElementById('lotteryLPBalance').innerText = localLP;
-            document.getElementById('totalClicksMini').innerText = localClicks;
-            document.getElementById('profileClicks').innerText = localClicks;
-            document.getElementById('profileUSDT').innerText = localUSDT.toFixed(2);
-            document.getElementById('profileWins').innerText = localWins;
-            document.getElementById('earningPerClick').innerText = localEarning.toFixed(2);
-            document.getElementById('clickAmount').innerText = localEarning.toFixed(2);
-            document.getElementById('totalTickets').innerText = currentTickets.length;
-            document.getElementById('totalTicketsMini').innerText = currentTickets.length;
-            document.getElementById('upgradeCount1').innerText = upgradeCounts[1];
-            document.getElementById('upgradeCount2').innerText = upgradeCounts[2];
-            document.getElementById('upgradeCount3').innerText = upgradeCounts[3];
-            document.getElementById('upgradeCost1').innerHTML = upgradeCosts[1].toFixed(2);
-            document.getElementById('upgradeCost2').innerHTML = upgradeCosts[2].toFixed(2);
-            document.getElementById('upgradeCost3').innerHTML = upgradeCosts[3].toFixed(2);
-            document.getElementById('starsBalance').innerText = localStars;
-            document.getElementById('currentMaxEnergy').innerText = localMaxEnergy;
-            document.getElementById('energyUpgradeCount').innerText = localEnergyUpgrades;
-            document.getElementById('energyUpgradeCountProgress').innerText = localEnergyUpgrades;
-            let upgradesLeft = Math.max(0, 15 - localEnergyUpgrades);
-            document.getElementById('energyUpgradesLeft').innerText = upgradesLeft;
-            let progressPercent = (localEnergyUpgrades / 15) * 100;
-            document.getElementById('energyUpgradeProgressFill').style.width = progressPercent + '%';
+    // ========== ПЕРЕСЧЁТ АКТУАЛЬНЫХ ЦЕН ==========
+    upgradeCosts[1] = getUpgradeCost(1, upgradeCounts[1] || 0);
+    upgradeCosts[2] = getUpgradeCost(2, upgradeCounts[2] || 0);
+    upgradeCosts[3] = getUpgradeCost(3, upgradeCounts[3] || 0);
+    // ============================================
 
-            let upgradeBtn = document.getElementById('energyUpgradeBtn');
-            let upgradeCard = document.getElementById('energyUpgradeCard');
-            if (upgradeBtn && upgradeCard) {
-                if (localEnergyUpgrades >= 15) {
-                    upgradeBtn.innerText = '✅ Максимум достигнут';
-                    upgradeBtn.disabled = true;
-                    upgradeBtn.classList.add('disabled');
-                    upgradeCard.classList.add('disabled');
-                } else {
-                    upgradeBtn.innerHTML = '<img src="/static/star_small.png" alt="Stars" style="width: 16px; height: 16px;"> Купить за 25 звёзд';
-                    upgradeBtn.disabled = false;
-                    upgradeBtn.classList.remove('disabled');
-                    upgradeCard.classList.remove('disabled');
-                }
-            }
+    document.getElementById('wgBalance').innerText = localWG.toFixed(2);
+    document.getElementById('lpBalance').innerText = localLP;
+    document.getElementById('energyValue').innerText = localEnergy;
+    document.getElementById('maxEnergyValue').innerText = localMaxEnergy;
+    document.getElementById('energyHeader').innerText = localEnergy;
+    let percent = (localEnergy / localMaxEnergy) * 100;
+    document.getElementById('energyBar').style.width = percent + '%';
+    document.getElementById('totalWG').innerText = localWG.toFixed(2);
+    document.getElementById('totalLP').innerText = localLP;
+    document.getElementById('totalWGmini').innerText = localWG.toFixed(2);
+    document.getElementById('lotteryLPBalance').innerText = localLP;
+    document.getElementById('totalClicksMini').innerText = localClicks;
+    document.getElementById('profileClicks').innerText = localClicks;
+    document.getElementById('profileUSDT').innerText = localUSDT.toFixed(2);
+    document.getElementById('profileWins').innerText = localWins;
+    document.getElementById('earningPerClick').innerText = localEarning.toFixed(2);
+    document.getElementById('clickAmount').innerText = localEarning.toFixed(2);
+    document.getElementById('totalTickets').innerText = currentTickets.length;
+    document.getElementById('totalTicketsMini').innerText = currentTickets.length;
+    document.getElementById('upgradeCount1').innerText = upgradeCounts[1];
+    document.getElementById('upgradeCount2').innerText = upgradeCounts[2];
+    document.getElementById('upgradeCount3').innerText = upgradeCounts[3];
+    document.getElementById('upgradeCost1').innerHTML = upgradeCosts[1].toFixed(2);
+    document.getElementById('upgradeCost2').innerHTML = upgradeCosts[2].toFixed(2);
+    document.getElementById('upgradeCost3').innerHTML = upgradeCosts[3].toFixed(2);
+    document.getElementById('starsBalance').innerText = localStars;
+    document.getElementById('currentMaxEnergy').innerText = localMaxEnergy;
+    document.getElementById('energyUpgradeCount').innerText = localEnergyUpgrades;
+    document.getElementById('energyUpgradeCountProgress').innerText = localEnergyUpgrades;
+    let upgradesLeft = Math.max(0, 15 - localEnergyUpgrades);
+    document.getElementById('energyUpgradesLeft').innerText = upgradesLeft;
+    let progressPercent = (localEnergyUpgrades / 15) * 100;
+    document.getElementById('energyUpgradeProgressFill').style.width = progressPercent + '%';
 
-            const badgesContainer = document.getElementById('profileBadges');
-            if (badgesContainer) {
-                let badgesHtml = '';
-                if (localRole === 'founder') badgesHtml += '<span class="role-badge founder">👑 ОСНОВАТЕЛЬ</span>';
-                else if (localRole === 'legend') badgesHtml += '<span class="role-badge legend">👑 ЛЕГЕНДА</span>';
-                else if (localRole === 'pioneer') badgesHtml += '<span class="role-badge pioneer">⭐ ПЕРВООТКРЫВАТЕЛЬ</span>';
-                else badgesHtml += '<span class="role-badge player">🎮 Игрок</span>';
-                badgesContainer.innerHTML = badgesHtml;
-            }
+    let upgradeBtn = document.getElementById('energyUpgradeBtn');
+    let upgradeCard = document.getElementById('energyUpgradeCard');
+    if (upgradeBtn && upgradeCard) {
+        if (localEnergyUpgrades >= 15) {
+            upgradeBtn.innerText = '✅ Максимум достигнут';
+            upgradeBtn.disabled = true;
+            upgradeBtn.classList.add('disabled');
+            upgradeCard.classList.add('disabled');
+        } else {
+            upgradeBtn.innerHTML = '<img src="/static/star_small.png" alt="Stars" style="width: 16px; height: 16px;"> Купить за 25 звёзд';
+            upgradeBtn.disabled = false;
+            upgradeBtn.classList.remove('disabled');
+            upgradeCard.classList.remove('disabled');
         }
+    }
+
+    const badgesContainer = document.getElementById('profileBadges');
+    if (badgesContainer) {
+        let badgesHtml = '';
+        if (localRole === 'founder') badgesHtml += '<span class="role-badge founder">👑 ОСНОВАТЕЛЬ</span>';
+        else if (localRole === 'legend') badgesHtml += '<span class="role-badge legend">👑 ЛЕГЕНДА</span>';
+        else if (localRole === 'pioneer') badgesHtml += '<span class="role-badge pioneer">⭐ ПЕРВООТКРЫВАТЕЛЬ</span>';
+        else badgesHtml += '<span class="role-badge player">🎮 Игрок</span>';
+        badgesContainer.innerHTML = badgesHtml;
+    }
+}
 
         function updateModalBadges(role) {
             const badgesContainer = document.getElementById('playerModalBadges');
