@@ -10415,7 +10415,21 @@ function animateWheel(timestamp) {
     drawWheel();
 
     if (progress < 1) {
-        wheelAnimationId = requestAnimationFrame(animateWheel);
+        // Проверяем, открыта ли модалка Фортуны
+        const fortuneModal = document.getElementById('fortuneModal');
+        if (fortuneModal && fortuneModal.classList.contains('active')) {
+            wheelAnimationId = requestAnimationFrame(animateWheel);
+        } else {
+            // Если модалка закрыта - останавливаем анимацию
+            if (wheelAnimationId) {
+                cancelAnimationFrame(wheelAnimationId);
+                wheelAnimationId = null;
+            }
+            window.isFortuneRoundEnding = false;
+            const overlay = document.getElementById('wheelOverlay');
+            if (overlay) overlay.classList.remove('active');
+            return;
+        }
     } else {
         cancelAnimationFrame(wheelAnimationId);
         wheelAnimationId = null;
