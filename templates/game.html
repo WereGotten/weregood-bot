@@ -7676,10 +7676,10 @@ function updateRecentPlayersFast(players) {
     });
 
     // Обработчик завершения раунда
-    socket.on('fortune_round_ended', async (data) => {
+socket.on('fortune_round_ended', async (data) => {
     console.log('🎲 Раунд Фортуны завершён:', data);
 
-    // ========== ИСПОЛЬЗУЕМ ПЕРЕДАННЫЕ СТАВКИ ВМЕСТО API ==========
+    // ========== ПОЛУЧАЕМ СТАВКУ ПОЛЬЗОВАТЕЛЯ ==========
     let userBetTeam = null;
     let userBetAmount = 0;
 
@@ -7693,7 +7693,7 @@ function updateRecentPlayersFast(players) {
         }
     }
 
-    // Если не нашли в данных раунда, пробуем API (как запасной вариант)
+    // Если не нашли в данных раунда, пробуем API (запасной вариант)
     if (!userBetTeam) {
         try {
             const response = await fetch('/api/fortune/user_total_bet', {
@@ -7712,12 +7712,12 @@ function updateRecentPlayersFast(players) {
         }
     }
 
-    // 1. Если был возврат средств (refund) — колесо крутить не нужно
+    // ========== СЛУЧАЙ 1: ВОЗВРАТ СРЕДСТВ (REFUND) ==========
     if (data && data.winner === 'refund') {
         if (data.message) showToast(data.message, 'info');
         if (typeof loadFortuneData === 'function') loadFortuneData();
 
-        // ========== ОБНОВЛЯЕМ ИСТОРИЮ ДАЖЕ ПРИ REFUND ==========
+        // Обновляем историю
         setTimeout(() => {
             if (typeof loadFortuneHistory === 'function') {
                 loadFortuneHistory();
@@ -7727,7 +7727,7 @@ function updateRecentPlayersFast(players) {
         return;
     }
 
-    // 2. Если определился реальный победитель
+    // ========== СЛУЧАЙ 2: РЕАЛЬНЫЙ ПОБЕДИТЕЛЬ ==========
     if (data && data.winner) {
         const yellowPool = (typeof fortuneData !== 'undefined' && fortuneData.yellowPool) ? fortuneData.yellowPool : 50;
         const redPool = (typeof fortuneData !== 'undefined' && fortuneData.redPool) ? fortuneData.redPool : 50;
@@ -7742,7 +7742,7 @@ function updateRecentPlayersFast(players) {
             if (typeof loadFortuneData === 'function') loadFortuneData();
         }
 
-        // ========== ОБНОВЛЯЕМ ИСТОРИЮ ПОСЛЕ КАЖДОГО РАУНДА ==========
+        // Обновляем историю после раунда
         setTimeout(() => {
             if (typeof loadFortuneHistory === 'function') {
                 loadFortuneHistory();
@@ -7751,7 +7751,7 @@ function updateRecentPlayersFast(players) {
         }, 2000);
     }
 
-    // ПРИНУДИТЕЛЬНАЯ ОЧИСТКА И ПЕРЕЗАГРУЗКА ДАННЫХ
+    // ========== ОЧИСТКА ДАННЫХ ДЛЯ НОВОГО РАУНДА ==========
     if (typeof fortuneData !== 'undefined') {
         fortuneData.yellowPool = 0;
         fortuneData.redPool = 0;
@@ -7762,11 +7762,13 @@ function updateRecentPlayersFast(players) {
         fortuneData.userBetAmount = 0;
     }
 
+    // Очищаем UI списки игроков
     const yellowPlayersDiv = document.getElementById('yellowPlayers');
     const redPlayersDiv = document.getElementById('redPlayers');
     if (yellowPlayersDiv) yellowPlayersDiv.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
     if (redPlayersDiv) redPlayersDiv.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
 
+    // Обновляем UI и синхронизируем данные
     if (typeof updateFortuneUI === 'function') updateFortuneUI();
     if (typeof loadFortuneData === 'function') {
         setTimeout(() => loadFortuneData(), 500);
@@ -7775,7 +7777,7 @@ function updateRecentPlayersFast(players) {
     if (typeof syncData === 'function') syncData(true);
 });
 
-// ========== НОВЫЙ ОБРАБОТЧИК: ОБНОВЛЕНИЕ ПУЛОВ ПОСЛЕ СТАВКИ ==========
+// ========== ОБНОВЛЕНИЕ ПУЛОВ ПОСЛЕ СТАВКИ ==========
 socket.on('fortune_pools_update', (data) => {
     console.log('🔄 Обновление пулов Фортуны в реальном времени:', data);
 
@@ -7788,7 +7790,7 @@ socket.on('fortune_pools_update', (data) => {
         if (typeof updateFortuneUI === 'function') {
             updateFortuneUI();
         } else {
-            // Ручное обновление, если updateFortuneUI не определена
+            // Ручное обновление (запасной вариант)
             const yellowPoolEl = document.getElementById('yellowPool');
             const redPoolEl = document.getElementById('redPool');
             const yellowChanceEl = document.getElementById('yellowChance');
@@ -7803,9 +7805,6 @@ socket.on('fortune_pools_update', (data) => {
                 const redPercent = Math.round((data.red_pool / total) * 100);
                 if (yellowChanceEl) yellowChanceEl.innerText = yellowPercent + '%';
                 if (redChanceEl) redChanceEl.innerText = redPercent + '%';
-            } else {
-                if (yellowChanceEl) yellowChanceEl.innerText = '0%';
-                if (redChanceEl) redChanceEl.innerText = '0%';
             }
 
             // Обновляем списки игроков
@@ -7840,13 +7839,13 @@ socket.on('fortune_pools_update', (data) => {
         }
     }
 
-    // Обновляем баланс пользователя (WG) после ставки
+    // Обновляем баланс пользователя после ставки
     if (typeof syncData === 'function') {
         syncData(true);
     }
 });
 
-// Обработчик сброса таймера
+// ========== ОБРАБОТЧИК СБРОСА ТАЙМЕРА ==========
 socket.on('fortune_timer_reset', (data) => {
     if (data.time_left) {
         if (typeof fortuneData !== 'undefined') {
@@ -10071,9 +10070,7 @@ function initFortuneTabs() {
             document.querySelectorAll('.fortune-tab').forEach(t => t.classList.remove('active'));
             playTab.classList.add('active');
             document.querySelectorAll('.fortune-tab-content').forEach(c => c.classList.remove('active'));
-            if (fortuneUI.elements.playTab) {
-                fortuneUI.elements.playTab.classList.add('active');
-            }
+            if (fortuneUI.elements.playTab) fortuneUI.elements.playTab.classList.add('active');
         });
     }
 
@@ -10082,11 +10079,8 @@ function initFortuneTabs() {
             document.querySelectorAll('.fortune-tab').forEach(t => t.classList.remove('active'));
             historyTab.classList.add('active');
             document.querySelectorAll('.fortune-tab-content').forEach(c => c.classList.remove('active'));
-            if (fortuneUI.elements.historyTab) {
-                fortuneUI.elements.historyTab.classList.add('active');
-            }
-            // Загружаем историю при переключении на вкладку
-            loadFortuneHistory();
+            if (fortuneUI.elements.historyTab) fortuneUI.elements.historyTab.classList.add('active');
+            loadFortuneHistory();  // ← УБЕДИСЬ, ЧТО ЭТА СТРОКА ЕСТЬ
         });
     }
 }
