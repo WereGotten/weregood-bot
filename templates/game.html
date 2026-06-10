@@ -9665,10 +9665,10 @@ async function loadUserCurrentBet() {
         });
         const data = await response.json();
         if (data.success) {
-            fortuneData.userBetTeam = data.team;
+            fortuneData.userBetTeam = data.team;   // ← 'yellow' или 'red' или null
             fortuneData.userBetAmount = data.amount || 0;
 
-            // ========== ВАЖНО: ДОПОЛНИТЕЛЬНО ПРОВЕРЯЕМ СПИСКИ ==========
+            // Если нашли ставку, но её нет в списках — добавляем принудительно
             if (data.team && data.amount > 0) {
                 const targetList = data.team === 'yellow' ? fortuneData.yellowPlayers : fortuneData.redPlayers;
                 const existingBet = targetList.find(p => p.userId == userId);
@@ -9681,21 +9681,18 @@ async function loadUserCurrentBet() {
                         avatarUrl: photoUrl || '',
                         username: firstName || username || 'Игрок'
                     });
-                    // После добавления обновляем UI
                     if (typeof updatePlayersListAsync === 'function') {
-                        updatePlayersListAsync(true); // force = true
+                        updatePlayersListAsync(true);
                     }
                 } else if (existingBet.amount !== data.amount) {
                     existingBet.amount = data.amount;
                     existingBet.netAmount = data.amount;
-                    // После обновления обновляем UI
                     if (typeof updatePlayersListAsync === 'function') {
                         updatePlayersListAsync(true);
                     }
                 }
             }
 
-            // Обновляем подсветку карточки команды (текущая ставка пользователя)
             if (typeof updateTeamHighlightUI === 'function') {
                 updateTeamHighlightUI();
             }
@@ -10354,8 +10351,10 @@ function animateWheel(timestamp) {
         const winnerName = winnerSide === 'yellow' ? 'Жёлтые 🟡' : 'Красные 🔴';
 
         // Получаем данные о текущей ставке пользователя из глобального кэша
-        const userSide = typeof fortuneData !== 'undefined' ? fortuneData.userSide : null;
-        const userBet = typeof fortuneData !== 'undefined' ? (fortuneData.userBet || 0) : 0;
+        const userSide = (typeof fortuneData !== 'undefined' && fortuneData.userBetTeam) ? fortuneData.userBetTeam : null;
+const userBet = (typeof fortuneData !== 'undefined' && fortuneData.userBetAmount) ? fortuneData.userBetAmount : 0;
+
+console.log('🎡 Колесо: userSide =', userSide, 'userBet =', userBet, 'winner =', winnerSide);
 
         // Получаем пулы для расчёта выигрыша
         const yellowPool = wheelPrizes?.yellowTotalPool || 0;
