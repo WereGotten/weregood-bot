@@ -8948,7 +8948,7 @@ socket.on('fortune_timer_reset', (data) => {
             const walletStatus = document.getElementById('tonWalletStatus');
             if (!walletStatus) return;
             if (address) {
-                const shortAddress = address.slice(0, 6) + '...' + address.slice(-4);
+                const shortAddress = address.slice(0, 5) + '...' + address.slice(-4);
                 walletStatus.innerText = shortAddress;
                 walletStatus.style.color = '#22c55e';
             } else {
@@ -9424,7 +9424,7 @@ function updatePlayersListAsync(force = false) {
             } else {
                 const sorted = [...players]
                     .sort((a, b) => (b.netAmount || 0) - (a.netAmount || 0))
-                    .slice(0, 6);
+                    .slice(0, 5);
 
                 let html = '';
                 for (let i = 0; i < sorted.length; i++) {
@@ -9463,7 +9463,7 @@ function updatePlayersListAsync(force = false) {
             } else {
                 const sorted = [...players]
                     .sort((a, b) => (b.netAmount || 0) - (a.netAmount || 0))
-                    .slice(0, 6);
+                    .slice(0, 5);
 
                 let html = '';
                 for (let i = 0; i < sorted.length; i++) {
