@@ -10127,9 +10127,10 @@ window.openGame = function(gameName) {
             fortuneModal.classList.add('active');
             document.body.style.overflow = 'hidden';
 
-            if (typeof closeGamepad === 'function') closeGamepad();
+            // ========== ДОБАВЬ ЭТУ СТРОКУ ==========
+            preCacheWheel();
 
-            // Запускаем обновления
+            if (typeof closeGamepad === 'function') closeGamepad();
             startFortunePolling();
             startFortuneTimer();
             initFortuneTabs();
@@ -10200,6 +10201,9 @@ let wheelTargetRotation = 0;
 let wheelStartTime = 0;
 let wheelWinner = null;
 let wheelPrizes = {};
+
+// ========== ДОБАВЛЕНО: ПЕРЕМЕННАЯ ДЛЯ ПРЕДВАРИТЕЛЬНОГО КЭША ==========
+let isPreCaching = false;
 
 // Глобальные настройки времени и оборотов
 let wheelDuration = 15000;   // Ровно 15 секунд сочного, драматичного шоу
@@ -10316,7 +10320,6 @@ function cacheWheelGraphics(yellowChance, redChance) {
     }
 
     // --- ШАГ 6: ВШИВАЕМ ЦЕНТРАЛЬНУЮ СТУПИЦУ "WG" В КЭШ ---
-    // Перенесли сюда, чтобы убрать лишнюю отрисовку из цикла анимации!
     cachedWheelCtx.beginPath();
     cachedWheelCtx.arc(centerX, centerY, 42, 0, Math.PI * 2);
     cachedWheelCtx.fillStyle = '#0f0f20';
@@ -10351,7 +10354,26 @@ function cacheWheelGraphics(yellowChance, redChance) {
     console.log('🚀 Графика колеса Фортуны успешно закэширована в памяти.');
 }
 
-// 2. Ультра-быстрая отрисовка сцены (Выполняет ровно одну команду drawImage — 0% лагов)
+// ========== ДОБАВЛЕНО: ФУНКЦИЯ ПРЕДВАРИТЕЛЬНОГО КЭШИРОВАНИЯ ==========
+function preCacheWheel() {
+    if (isPreCaching || isWheelCached) return;
+    isPreCaching = true;
+
+    if (!cachedWheelCtx) {
+        cachedWheelCanvas = document.createElement('canvas');
+        cachedWheelCtx = cachedWheelCanvas.getContext('2d');
+    }
+
+    setTimeout(() => {
+        if (wheelCanvas) {
+            cacheWheelGraphics(50, 50);
+            console.log('🎡 Предварительное кэширование колеса выполнено');
+        }
+        isPreCaching = false;
+    }, 50);
+}
+
+// 2. Ультра-быстрая отрисовка сцены
 function drawWheel() {
     if (!wheelCtx || !wheelCanvas || !isWheelCached) return;
 
@@ -10368,7 +10390,7 @@ function drawWheel() {
     wheelCtx.restore();
 }
 
-    // 3. Главный цикл анимации (Двухфазная физика + Разделение экранов результатов)
+// 3. Главный цикл анимации
 function animateWheel(timestamp) {
     if (!wheelStartTime) {
         wheelStartTime = timestamp;
@@ -10390,7 +10412,6 @@ function animateWheel(timestamp) {
 
     wheelRotation = wheelTargetRotation * easeProgress;
 
-    // Рендерим оптимизированный кадр
     drawWheel();
 
     if (progress < 1) {
@@ -10399,36 +10420,29 @@ function animateWheel(timestamp) {
         cancelAnimationFrame(wheelAnimationId);
         wheelAnimationId = null;
 
-        // ========== СНИМАЕМ БЛОКИРОВКУ ОБНОВЛЕНИЙ ==========
         window.isFortuneRoundEnding = false;
 
         if (wheelCanvas) wheelCanvas.style.transform = 'none';
 
-        // --- ЛОГИКА ОПРЕДЕЛЕНИЯ ВЫИГРЫША / ПРОИГРЫША С СУММОЙ ---
-        const winnerSide = wheelWinner; // 'yellow' или 'red'
+        const winnerSide = wheelWinner;
         const winnerName = winnerSide === 'yellow' ? 'Жёлтые 🟡' : 'Красные 🔴';
 
-        // Получаем данные о ставке пользователя ИЗ КОЛЕСА (переданы при запуске)
         const userSide = wheelPrizes?.userBetTeam || null;
         const userBet = wheelPrizes?.userBetAmount || 0;
 
         console.log('🎡 Анимация: userSide =', userSide, 'userBet =', userBet, 'winner =', winnerSide);
 
-        // Получаем пулы для расчёта выигрыша
         const yellowPool = wheelPrizes?.yellowTotalPool || 0;
         const redPool = wheelPrizes?.redTotalPool || 0;
         const totalPool = yellowPool + redPool;
 
-        // Расчёт выигрыша/проигрыша
         let winAmount = 0;
         let loseAmount = 0;
 
         if (userSide && userBet > 0) {
             if (userSide === winnerSide && totalPool > 0) {
-                // Примерный коэффициент выигрыша
                 const winnerPool = winnerSide === 'yellow' ? yellowPool : redPool;
                 if (winnerPool > 0) {
-                    // Коэффициент = (общий пул проигравших + пул победителей) / пул победителей
                     const odds = totalPool / winnerPool;
                     winAmount = Math.round(userBet * odds * 100) / 100;
                 } else {
@@ -10460,28 +10474,24 @@ function animateWheel(timestamp) {
             resultDiv.classList.add('show');
         }
 
-        // Выводим универсальную кнопку закрытия для всех
         const closeBtn = document.getElementById('wheelCloseBtn');
         if (closeBtn) {
             closeBtn.innerText = "Закрыть";
             closeBtn.classList.add('show');
         }
 
-        // Плавная бесконфликтная синхронизация бэка
         if (typeof loadFortuneData === 'function') setTimeout(() => loadFortuneData(), 500);
         if (typeof loadFortuneHistory === 'function') setTimeout(() => loadFortuneHistory(), 1000);
         if (typeof syncData === 'function') setTimeout(() => syncData(true), 1500);
     }
 }
 
-// 4. Логика инициализации и запуска (С защитой от пустых пулов 50/50)
+// 4. Логика инициализации и запуска
 function startWheelAnimation(winnerTeam, yellowPool, redPool, sectorFactor, userBetTeam = null, userBetAmount = 0) {
-    // ========== БЛОКИРУЕМ ОБНОВЛЕНИЯ ПОКА КРУТИТСЯ КОЛЕСО ==========
     window.isFortuneRoundEnding = true;
 
     const total = yellowPool + redPool;
 
-    // Сохраняем пулы и СТАВКУ ПОЛЬЗОВАТЕЛЯ для расчёта выигрыша в анимации
     wheelPrizes = {
         yellowTotalPool: yellowPool,
         redTotalPool: redPool,
@@ -10489,23 +10499,22 @@ function startWheelAnimation(winnerTeam, yellowPool, redPool, sectorFactor, user
         userBetAmount: userBetAmount
     };
 
-    // АНТИ-БАГ: Если ставок нет (начало раунда/обнуление), жестко выставляем 50% на 50%
     let yellowChance = 50;
     let redChance = 50;
 
     if (total > 0) {
         yellowChance = (yellowPool / total) * 100;
         redChance = (redPool / total) * 100;
-
-        // Жесткие лимиты на случай если вся ставка только на одной стороне
         if (yellowPool > 0 && redPool === 0) { yellowChance = 100; redChance = 0; }
         if (redPool > 0 && yellowPool === 0) { yellowChance = 0; redChance = 100; }
     }
 
     wheelWinner = winnerTeam;
 
-    // Кэшируем графику в фоновый поток ОДИН раз
-    cacheWheelGraphics(yellowChance, redChance);
+    // Если кэш уже есть, не перерисовываем (ускоряем)
+    if (!isWheelCached) {
+        cacheWheelGraphics(yellowChance, redChance);
+    }
 
     if (wheelCanvas) {
         wheelCanvas.style.willChange = 'transform';
@@ -10557,12 +10566,10 @@ window.endFortuneRound = async function() {
         const data = await response.json();
 
         if (data.success && data.winner) {
-            // ФИКС РАССИНХРОНА: Берем пулы, которые прислал бэкенд НА МОМЕНТ ЗАКРЫТИЯ, а не старые из кэша!
             const yellowPool = data.yellowPool !== undefined ? data.yellowPool : (fortuneData?.yellowPool || 0);
             const redPool = data.redPool !== undefined ? data.redPool : (fortuneData?.redPool || 0);
             const factor = data.sector_factor !== undefined ? data.sector_factor : 0.5;
 
-            // Загружаем ставку пользователя перед запуском колеса
             let userBetTeam = null;
             let userBetAmount = 0;
             try {
