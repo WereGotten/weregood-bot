@@ -7579,7 +7579,23 @@ socket.on('fortune_round_ended', (data) => {
         showToast(data.message, 'info');
     }
 
-    // Полностью обновляем данные Фортуны
+    // Если есть победитель (не refund) — запускаем колесо
+    if (data && data.winner && data.winner !== 'refund') {
+        // Получаем пулы из данных или из fortuneData
+        const yellowPool = data.yellow_pool || fortuneData?.yellowPool || 0;
+        const redPool = data.red_pool || fortuneData?.redPool || 0;
+
+        // Запускаем анимацию колеса
+        if (typeof startWheelAnimation === 'function') {
+            startWheelAnimation(data.winner, yellowPool, redPool);
+        } else {
+            console.error('startWheelAnimation не определена!');
+            // Если функции нет, но колесо должно работать — показываем тост
+            showToast(`🎉 Победила команда ${data.winner === 'yellow' ? 'Жёлтые 🟡' : 'Красные 🔴'}!`, 'success');
+        }
+    }
+
+    // Обновляем данные Фортуны
     if (typeof loadFortuneData === 'function') {
         setTimeout(() => loadFortuneData(), 1000);
     }
