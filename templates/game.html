@@ -7713,43 +7713,27 @@ function updateRecentPlayersFast(players) {
     }
 
     // 1. Если был возврат средств (refund) — колесо крутить не нужно
-    if (data && data.winner === 'refund') {
-        if (data.message) showToast(data.message, 'info');
-        if (typeof loadFortuneData === 'function') loadFortuneData();
-
-        // ========== ОБНОВЛЯЕМ ИСТОРИЮ ДАЖЕ ПРИ REFUND ==========
-        setTimeout(() => {
-            if (typeof loadFortuneHistory === 'function') {
-                loadFortuneHistory();
-                console.log('📜 История Фортуны обновлена (refund)');
-            }
-        }, 1000);
-        return;
-    }
+if (data && data.winner === 'refund') {
+    if (data.message) showToast(data.message, 'info');
+    if (typeof loadFortuneData === 'function') loadFortuneData();
+    return;
+}
 
     // 2. Если определился реальный победитель
-    if (data && data.winner) {
-        const yellowPool = (typeof fortuneData !== 'undefined' && fortuneData.yellowPool) ? fortuneData.yellowPool : 50;
-        const redPool = (typeof fortuneData !== 'undefined' && fortuneData.redPool) ? fortuneData.redPool : 50;
-        const sectorFactor = (data && data.sector_factor !== undefined) ? data.sector_factor : 0.5;
+if (data && data.winner) {
+    const yellowPool = (typeof fortuneData !== 'undefined' && fortuneData.yellowPool) ? fortuneData.yellowPool : 50;
+    const redPool = (typeof fortuneData !== 'undefined' && fortuneData.redPool) ? fortuneData.redPool : 50;
+    const sectorFactor = (data && data.sector_factor !== undefined) ? data.sector_factor : 0.5;
 
-        if (typeof startWheelAnimation === 'function') {
-            console.log(`🎡 Запуск анимации колеса. Команда: ${data.winner}, Смещение: ${sectorFactor}`);
-            startWheelAnimation(data.winner, yellowPool, redPool, sectorFactor, userBetTeam, userBetAmount);
-            showToast('🎡 Колесо Фортуны запущено!', 'info');
-        } else {
-            if (data.message) showToast(data.message, 'info');
-            if (typeof loadFortuneData === 'function') loadFortuneData();
-        }
-
-        // ========== ОБНОВЛЯЕМ ИСТОРИЮ ПОСЛЕ КАЖДОГО РАУНДА ==========
-        setTimeout(() => {
-            if (typeof loadFortuneHistory === 'function') {
-                loadFortuneHistory();
-                console.log('📜 История Фортуны обновлена после раунда');
-            }
-        }, 2000);
+    if (typeof startWheelAnimation === 'function') {
+        console.log(`🎡 Запуск анимации колеса. Команда: ${data.winner}, Смещение: ${sectorFactor}`);
+        startWheelAnimation(data.winner, yellowPool, redPool, sectorFactor, userBetTeam, userBetAmount);
+        showToast('🎡 Колесо Фортуны запущено!', 'info');
+    } else {
+        if (data.message) showToast(data.message, 'info');
+        if (typeof loadFortuneData === 'function') loadFortuneData();
     }
+}
 
     // ПРИНУДИТЕЛЬНАЯ ОЧИСТКА И ПЕРЕЗАГРУЗКА ДАННЫХ
     if (typeof fortuneData !== 'undefined') {
