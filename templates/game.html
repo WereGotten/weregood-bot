@@ -7679,24 +7679,37 @@ function updateRecentPlayersFast(players) {
     socket.on('fortune_round_ended', async (data) => {
     console.log('🎲 Раунд Фортуны завершён:', data);
 
-    // ========== ВАЖНО: ЗАГРУЖАЕМ СТАВКУ ПОЛЬЗОВАТЕЛЯ ПЕРЕД ЗАПУСКОМ КОЛЕСА ==========
+    // ========== ИСПОЛЬЗУЕМ ПЕРЕДАННЫЕ СТАВКИ ВМЕСТО API ==========
     let userBetTeam = null;
     let userBetAmount = 0;
 
-    try {
-        const response = await fetch('/api/fortune/user_total_bet', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId })
-        });
-        const betData = await response.json();
-        if (betData.success) {
-            userBetTeam = betData.team;
-            userBetAmount = betData.amount || 0;
-            console.log('✅ Загружена ставка пользователя:', userBetTeam, userBetAmount);
+    // Ищем свою ставку в переданных данных
+    if (data.all_bets) {
+        const myBet = data.all_bets.find(bet => bet.user_id == userId);
+        if (myBet) {
+            userBetTeam = myBet.team;
+            userBetAmount = myBet.amount;
+            console.log('✅ Найдена ставка пользователя в данных раунда:', userBetTeam, userBetAmount);
         }
-    } catch(e) {
-        console.error('Ошибка загрузки ставки перед колесом:', e);
+    }
+
+    // Если не нашли в данных раунда, пробуем API (как запасной вариант)
+    if (!userBetTeam) {
+        try {
+            const response = await fetch('/api/fortune/user_total_bet', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: userId })
+            });
+            const betData = await response.json();
+            if (betData.success) {
+                userBetTeam = betData.team;
+                userBetAmount = betData.amount || 0;
+                console.log('✅ Загружена ставка пользователя из API:', userBetTeam, userBetAmount);
+            }
+        } catch(e) {
+            console.error('Ошибка загрузки ставки:', e);
+        }
     }
 
     // 1. Если был возврат средств (refund) — колесо крутить не нужно
@@ -7714,7 +7727,6 @@ function updateRecentPlayersFast(players) {
 
         if (typeof startWheelAnimation === 'function') {
             console.log(`🎡 Запуск анимации колеса. Команда: ${data.winner}, Смещение: ${sectorFactor}`);
-            // ========== ПЕРЕДАЁМ СТАВКУ В КОЛЕСО ==========
             startWheelAnimation(data.winner, yellowPool, redPool, sectorFactor, userBetTeam, userBetAmount);
             showToast('🎡 Колесо Фортуны запущено!', 'info');
         } else {
