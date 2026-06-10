@@ -9649,6 +9649,10 @@ async function loadFortuneData() {
         const data = await response.json();
 
         if (data.success) {
+            // ========== СОХРАНЯЕМ СТАВКУ ПОЛЬЗОВАТЕЛЯ ПЕРЕД ОБНОВЛЕНИЕМ ==========
+            const savedUserBetTeam = fortuneData?.userBetTeam;
+            const savedUserBetAmount = fortuneData?.userBetAmount;
+
             // Безопасное обновление глобального объекта fortuneData
             if (typeof fortuneData !== 'undefined') {
                 fortuneData.timeLeft = data.time_left || 0;
@@ -9656,6 +9660,13 @@ async function loadFortuneData() {
                 fortuneData.redPool = data.red_pool || 0;
                 fortuneData.yellowPlayers = data.yellow_bets || [];
                 fortuneData.redPlayers = data.red_bets || [];
+
+                // ========== ВОССТАНАВЛИВАЕМ СТАВКУ ПОЛЬЗОВАТЕЛЯ ==========
+                if (savedUserBetTeam && savedUserBetAmount > 0) {
+                    fortuneData.userBetTeam = savedUserBetTeam;
+                    fortuneData.userBetAmount = savedUserBetAmount;
+                    console.log('🔄 Восстановлена ставка пользователя:', savedUserBetTeam, savedUserBetAmount);
+                }
             }
 
             // Обновляем UI
@@ -10376,19 +10387,20 @@ function animateWheel(timestamp) {
         cancelAnimationFrame(wheelAnimationId);
         wheelAnimationId = null;
 
+        // ========== СНИМАЕМ БЛОКИРОВКУ ОБНОВЛЕНИЙ ==========
+        window.isFortuneRoundEnding = false;
+
         if (wheelCanvas) wheelCanvas.style.transform = 'none';
 
         // --- ЛОГИКА ОПРЕДЕЛЕНИЯ ВЫИГРЫША / ПРОИГРЫША С СУММОЙ ---
         const winnerSide = wheelWinner; // 'yellow' или 'red'
         const winnerName = winnerSide === 'yellow' ? 'Жёлтые 🟡' : 'Красные 🔴';
 
-        // Получаем данные о текущей ставке пользователя из глобального кэша
-
         // Получаем данные о ставке пользователя ИЗ КОЛЕСА (переданы при запуске)
-const userSide = wheelPrizes?.userBetTeam || null;
-const userBet = wheelPrizes?.userBetAmount || 0;
+        const userSide = wheelPrizes?.userBetTeam || null;
+        const userBet = wheelPrizes?.userBetAmount || 0;
 
-console.log('🎡 Анимация: userSide =', userSide, 'userBet =', userBet, 'winner =', winnerSide);
+        console.log('🎡 Анимация: userSide =', userSide, 'userBet =', userBet, 'winner =', winnerSide);
 
         // Получаем пулы для расчёта выигрыша
         const yellowPool = wheelPrizes?.yellowTotalPool || 0;
@@ -10401,8 +10413,7 @@ console.log('🎡 Анимация: userSide =', userSide, 'userBet =', userBet,
 
         if (userSide && userBet > 0) {
             if (userSide === winnerSide && totalPool > 0) {
-                // Примерный коэффициент выигрыша (можно точнее из сервера)
-                // Если ставили на победившую команду
+                // Примерный коэффициент выигрыша
                 const winnerPool = winnerSide === 'yellow' ? yellowPool : redPool;
                 if (winnerPool > 0) {
                     // Коэффициент = (общий пул проигравших + пул победителей) / пул победителей
@@ -10453,14 +10464,17 @@ console.log('🎡 Анимация: userSide =', userSide, 'userBet =', userBet,
 
 // 4. Логика инициализации и запуска (С защитой от пустых пулов 50/50)
 function startWheelAnimation(winnerTeam, yellowPool, redPool, sectorFactor, userBetTeam = null, userBetAmount = 0) {
+    // ========== БЛОКИРУЕМ ОБНОВЛЕНИЯ ПОКА КРУТИТСЯ КОЛЕСО ==========
+    window.isFortuneRoundEnding = true;
+
     const total = yellowPool + redPool;
 
     // Сохраняем пулы и СТАВКУ ПОЛЬЗОВАТЕЛЯ для расчёта выигрыша в анимации
     wheelPrizes = {
         yellowTotalPool: yellowPool,
         redTotalPool: redPool,
-        userBetTeam: userBetTeam,      // ← ДОБАВЛЕНО
-        userBetAmount: userBetAmount   // ← ДОБАВЛЕНО
+        userBetTeam: userBetTeam,
+        userBetAmount: userBetAmount
     };
 
     // АНТИ-БАГ: Если ставок нет (начало раунда/обнуление), жестко выставляем 50% на 50%
@@ -10518,7 +10532,9 @@ function startWheelAnimation(winnerTeam, yellowPool, redPool, sectorFactor, user
 document.getElementById('wheelCloseBtn')?.addEventListener('click', () => {
     const overlay = document.getElementById('wheelOverlay');
     if (overlay) overlay.classList.remove('active');
-    if (typeof window.isFortuneRoundEnding !== 'undefined') window.isFortuneRoundEnding = false;
+    if (typeof window.isFortuneRoundEnding !== 'undefined') {
+        window.isFortuneRoundEnding = false;
+    }
 });
 
 // Кнопка принудительного админского форсирования раунда из панели
