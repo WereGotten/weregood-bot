@@ -347,10 +347,11 @@ def end_fortune_round():
                         bet['user_id'], user['username'])
 
                 with db.get_cursor() as cursor:
+                    # ИСПРАВЛЕНО: Четкое соответствие 6 полей, 6 знаков '?' и 6 переменных
                     cursor.execute('''
                         INSERT INTO fortune_history (user_id, round_id, team, amount, result, win_amount)
-                        VALUES (?, ?, ?, ?, 'refund', ?)
-                    ''', (bet['user_id'], round_id, bet['team'], bet['amount'], bet['amount']))
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    ''', (bet['user_id'], round_id, bet['team'], bet['amount'], 'refund', bet['amount']))
 
             with db.get_cursor() as cursor:
                 cursor.execute('''
@@ -386,10 +387,11 @@ def end_fortune_round():
             safe_update_user(bet['user_id'], wg=user['wg'] + win_amount)
 
             with db.get_cursor() as cursor:
+                # ИСПРАВЛЕНО: Четкое соответствие 6 полей, 6 знаков '?' и 6 переменных
                 cursor.execute('''
                     INSERT INTO fortune_history (user_id, round_id, team, amount, result, win_amount)
-                    VALUES (?, ?, ?, ?, 'win', ?)
-                ''', (bet['user_id'], round_id, winner_team, bet['amount'], win_amount))
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (bet['user_id'], round_id, winner_team, bet['amount'], 'win', win_amount))
 
             add_log(f"🎲 ФОРТУНА: ПОБЕДА! +{win_amount} WG", bet['user_id'], user['username'])
 
@@ -405,10 +407,11 @@ def end_fortune_round():
         for bet in all_bets:
             if bet['team'] != winner_team:
                 with db.get_cursor() as cursor:
+                    # ИСПРАВЛЕНО: Четкое соответствие 6 полей, 6 знаков '?' и 6 переменных
                     cursor.execute('''
                         INSERT INTO fortune_history (user_id, round_id, team, amount, result, win_amount)
-                        VALUES (?, ?, ?, ?, 'lose', 0)
-                    ''', (bet['user_id'], round_id, bet['team'], bet['amount'], 0))
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    ''', (bet['user_id'], round_id, bet['team'], bet['amount'], 'lose', 0))
 
         # Обновляем запись раунда
         with db.get_cursor() as cursor:
@@ -426,7 +429,7 @@ def end_fortune_round():
         })
 
     except Exception as e:
-        logger.error(f"Ошибка завершения раунда: {e}")
+        logger.error(f"Ошибка завершения раунда: {e}", exc_info=True)
     finally:
         # Создаём новый раунд
         create_new_fortune_round()
