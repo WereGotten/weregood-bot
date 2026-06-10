@@ -10096,183 +10096,147 @@ window.endFortuneRound = async function() {
             }
         }
 
-        // ==================== DOMCONTENTLOADED ====================
-    document.addEventListener("DOMContentLoaded", () => {
-        initTonConnect();
-        initSocket();
-        autoRegister();
-        loadAvatar();
-        logGameEntry();
-        syncData(true);
-        loadReferralLink();
-        loadReferrals();
-        loadSettings();
-        loadDailyStatus();
-        setTimeout(checkAndStartTutorial, 2000);
-        setInterval(() => syncData(), 5000);
-        setInterval(() => loadReferrals(), 30000);
-        startDailyLeaderboardTimer();
-        updateLPBoostCount();
+        document.addEventListener("DOMContentLoaded", () => {
+    initTonConnect();
+    initSocket();
+    autoRegister();
+    loadAvatar();
+    logGameEntry();
+    syncData(true);
+    loadReferralLink();
+    loadReferrals();
+    loadSettings();
+    loadDailyStatus();
+    setTimeout(checkAndStartTutorial, 2000);
+    setInterval(() => syncData(), 5000);
+    setInterval(() => loadReferrals(), 30000);
+    startDailyLeaderboardTimer();
+    updateLPBoostCount();
 
-        if (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
-            const startParam = tg.initDataUnsafe.start_param;
-            if (startParam && startParam.startsWith('claim_')) {
-                const promoCode = startParam.replace('claim_', '');
-                setTimeout(() => {
-                    openPromoModalWithCode(promoCode);
-                    showToast(`🎫 Промокод ${promoCode} готов к активации!`, 'success');
-                }, 2000);
-            } else if (startParam && !startParam.startsWith('claim_')) {
-                const refCode = startParam;
-                setTimeout(async () => {
-                    try {
-                        const response = await fetch('/api/set_referral', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ user_id: userId, referral_code: refCode })
-                        });
-                        const data = await response.json();
-                        if (data.success) {
-                            showToast('🎉 Реферальный код активирован!', 'success');
-                        }
-                    } catch(e) {
-                        console.error('Error sending referral code:', e);
+    if (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
+        const startParam = tg.initDataUnsafe.start_param;
+        if (startParam && startParam.startsWith('claim_')) {
+            const promoCode = startParam.replace('claim_', '');
+            setTimeout(() => {
+                openPromoModalWithCode(promoCode);
+                showToast(`🎫 Промокод ${promoCode} готов к активации!`, 'success');
+            }, 2000);
+        } else if (startParam && !startParam.startsWith('claim_')) {
+            const refCode = startParam;
+            setTimeout(async () => {
+                try {
+                    const response = await fetch('/api/set_referral', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ user_id: userId, referral_code: refCode })
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        showToast('🎉 Реферальный код активирован!', 'success');
                     }
-                }, 1500);
-            }
+                } catch(e) {
+                    console.error('Error sending referral code:', e);
+                }
+            }, 1500);
         }
-
-        // ВАЖНО: Активируем WebApp и готовим к оплате
-if (tg) {
-    tg.ready();
-    tg.expand();
-    console.log('✅ Telegram WebApp инициализирован');
-    console.log('openInvoice доступен:', typeof tg.openInvoice);
-} else {
-    console.warn('⚠️ Telegram WebApp не найден');
-}
-
-// Функция для открытия инвойса (РАБОЧАЯ)
-async function openTelegramInvoice(invoiceLink, onSuccess, onError) {
-    // Проверяем наличие WebApp
-    if (!tg || typeof tg.openInvoice !== 'function') {
-        console.error('❌ openInvoice не доступен');
-        if (onError) onError('Система оплаты не доступна');
-        return false;
     }
 
-    tg.openInvoice(invoiceLink, (status) => {
-        console.log('Статус оплаты:', status);
-        if (status === 'paid') {
-            if (onSuccess) onSuccess();
-        } else if (status === 'failed' || status === 'cancelled') {
-            if (onError) onError('Оплата отменена или не удалась');
-        }
+    // ========== НОВЫЕ ОБРАБОТЧИКИ ДЛЯ ФОРТУНЫ ==========
+    const closeBetModalBtn = document.querySelector('#betModal .bet-modal-close');
+    if (closeBetModalBtn) {
+        closeBetModalBtn.addEventListener('click', closeBetModal);
+    }
+
+    const submitBetBtn = document.getElementById('submitBetBtn');
+    if (submitBetBtn) {
+        submitBetBtn.addEventListener('click', submitBet);
+    }
+
+    const betAmountInput = document.getElementById('betAmount');
+    if (betAmountInput) {
+        betAmountInput.addEventListener('input', calculateBet);
+    }
+
+    document.querySelectorAll('.bet-preset-premium').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const multiplier = parseFloat(btn.getAttribute('data-multiplier'));
+            if (!isNaN(multiplier) && betAmountInput) {
+                const presetAmount = Math.floor(localWG * multiplier);
+                betAmountInput.value = presetAmount;
+                calculateBet();
+            }
+        });
     });
 
-    return true;
+    const betBtnYellow = document.getElementById('betBtnYellow');
+    if (betBtnYellow) {
+        betBtnYellow.addEventListener('click', (e) => {
+            e.stopPropagation();
+            console.log('Ставка на Жёлтых');
+            openBetModal('yellow');
+        });
+    }
+
+    const betBtnRed = document.getElementById('betBtnRed');
+    if (betBtnRed) {
+        betBtnRed.addEventListener('click', (e) => {
+            e.stopPropagation();
+            console.log('Ставка на Красных');
+            openBetModal('red');
+        });
+    }
+});
+
+// Глобальный обработчик для ставок
+document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.bet-btn-premium');
+    if (btn && btn.getAttribute('data-team')) {
+        e.stopPropagation();
+        const team = btn.getAttribute('data-team');
+        if (team === 'yellow' || team === 'red') {
+            openBetModal(team);
+        }
+    }
+});
+
+function loadAvatar() {
+    if (photoUrl && photoUrl !== '') {
+        const userAvatar = document.getElementById('userAvatar');
+        const avatarPlaceholder = document.getElementById('avatarPlaceholder');
+        if (userAvatar) {
+            userAvatar.src = photoUrl;
+            userAvatar.style.display = 'block';
+            if (avatarPlaceholder) avatarPlaceholder.style.display = 'none';
+        }
+    } else {
+        const avatarPlaceholder = document.getElementById('avatarPlaceholder');
+        if (avatarPlaceholder) avatarPlaceholder.style.display = 'flex';
+    }
 }
 
-        // ========== НОВЫЕ ОБРАБОТЧИКИ ДЛЯ ФОРТУНЫ ==========
-        // Закрытие модального окна ставки
-        const closeBetModalBtn = document.querySelector('#betModal .bet-modal-close');
-        if (closeBetModalBtn) {
-            closeBetModalBtn.addEventListener('click', closeBetModal);
-        }
+function logGameEntry() {
+    fetch('/api/log_game_entry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId })
+    }).catch(e => console.log('Log entry error:', e));
+}
 
-        // Кнопка подтверждения ставки
-        const submitBetBtn = document.getElementById('submitBetBtn');
-        if (submitBetBtn) {
-            submitBetBtn.addEventListener('click', submitBet);
-        }
+function updateStatus() {
+    syncData(true);
+}
 
-        // Поле ввода суммы ставки (расчёт комиссии)
-        const betAmountInput = document.getElementById('betAmount');
-        if (betAmountInput) {
-            betAmountInput.addEventListener('input', calculateBet);
-        }
-        // Кнопки предустановок суммы ставки (10%, 25%, 50%, 100%)
-        document.querySelectorAll('.bet-preset-premium').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const multiplier = parseFloat(btn.getAttribute('data-multiplier'));
-                if (!isNaN(multiplier) && betAmountInput) {
-                    const presetAmount = Math.floor(localWG * multiplier);
-                    betAmountInput.value = presetAmount;
-                    calculateBet();
-                }
-            });
-        });
+function updateLeaderboard() {
+    syncData(true);
+}
 
-        // Кнопки ставок в Фортуне (через ID)
-        const betBtnYellow = document.getElementById('betBtnYellow');
-        if (betBtnYellow) {
-            betBtnYellow.addEventListener('click', (e) => {
-                e.stopPropagation();
-                console.log('Ставка на Жёлтых');
-                openBetModal('yellow');
-            });
-        }
+function updateLottery() {
+    syncData(true);
+}
 
-        const betBtnRed = document.getElementById('betBtnRed');
-        if (betBtnRed) {
-            betBtnRed.addEventListener('click', (e) => {
-                e.stopPropagation();
-                console.log('Ставка на Красных');
-                openBetModal('red');
-            });
-        }
-    });
-
-    // А это ОСТАВЬ СНАРУЖИ (глобальный обработчик на случай, если кнопки ещё не загрузились)
-    document.addEventListener('click', function(e) {
-        const btn = e.target.closest('.bet-btn-premium');
-        if (btn && btn.getAttribute('data-team')) {
-            e.stopPropagation();
-            const team = btn.getAttribute('data-team');
-            if (team === 'yellow' || team === 'red') {
-                openBetModal(team);
-            }
-        }
-    });
-
-            function loadAvatar() {
-                if (photoUrl && photoUrl !== '') {
-                    const userAvatar = document.getElementById('userAvatar');
-                    const avatarPlaceholder = document.getElementById('avatarPlaceholder');
-                    if (userAvatar) {
-                        userAvatar.src = photoUrl;
-                        userAvatar.style.display = 'block';
-                        if (avatarPlaceholder) avatarPlaceholder.style.display = 'none';
-                    }
-                } else {
-                    const avatarPlaceholder = document.getElementById('avatarPlaceholder');
-                    if (avatarPlaceholder) avatarPlaceholder.style.display = 'flex';
-                }
-            }
-
-            function logGameEntry() {
-                fetch('/api/log_game_entry', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: userId })
-                }).catch(e => console.log('Log entry error:', e));
-            }
-
-            function updateStatus() {
-                syncData(true);
-            }
-
-            function updateLeaderboard() {
-                syncData(true);
-            }
-
-            function updateLottery() {
-                syncData(true);
-            }
-
-            function loadRecentPlayers() {
-                syncData(true);
-            }
+function loadRecentPlayers() {
+    syncData(true);
+}
         </script>
     </body>
     </html>
