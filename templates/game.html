@@ -10202,48 +10202,46 @@ let wheelStartTime = 0;
 let wheelWinner = null;
 let wheelPrizes = {};
 
-// ========== ДОБАВЛЕНО: ПЕРЕМЕННАЯ ДЛЯ ПРЕДВАРИТЕЛЬНОГО КЭША ==========
+// ========== ПЕРЕМЕННАЯ ДЛЯ ПРЕДВАРИТЕЛЬНОГО КЭША ==========
 let isPreCaching = false;
 
 // Глобальные настройки времени и оборотов
-let wheelDuration = 15000;   // Ровно 15 секунд сочного, драматичного шоу
-let fullRotationsCount = 12; // 12 полных кругов для бешеной скорости на старте
+let wheelDuration = 15000;
+let fullRotationsCount = 12;
 
 // Скрытый виртуальный холст для кэширования всей тяжелой графики
 let cachedWheelCanvas = document.createElement('canvas');
 let cachedWheelCtx = cachedWheelCanvas.getContext('2d');
 let isWheelCached = false;
 
-// 1. Функция предварительной отрисовки основы колеса (вызывается ВСЕГО 1 РАЗ за весь раунд)
+// 1. Функция предварительной отрисовки основы колеса
 function cacheWheelGraphics(yellowChance, redChance) {
     if (!wheelCanvas || !cachedWheelCtx) return;
 
-    // Синхронизируем размеры виртуального холста с оригиналом
     cachedWheelCanvas.width = wheelCanvas.width;
     cachedWheelCanvas.height = wheelCanvas.height;
 
     const size = cachedWheelCanvas.width;
     const centerX = size / 2;
     const centerY = size / 2;
-    const radius = size / 2 - 22; // Зазор под стальной обод
+    const radius = size / 2 - 22;
 
     cachedWheelCtx.clearRect(0, 0, size, size);
 
-    // Создаем глянцевые градиенты один раз для кэша
     let yellowGrad = cachedWheelCtx.createRadialGradient(centerX, centerY, radius * 0.1, centerX, centerY, radius);
     yellowGrad.addColorStop(0, '#FFE666');
-    yellowGrad.addColorStop(0.5, '#F1C40F'); // Золотой
+    yellowGrad.addColorStop(0.5, '#F1C40F');
     yellowGrad.addColorStop(1, '#8A6900');
 
     let redGrad = cachedWheelCtx.createRadialGradient(centerX, centerY, radius * 0.1, centerX, centerY, radius);
     redGrad.addColorStop(0, '#FF8080');
-    redGrad.addColorStop(0.5, '#E74C3C'); // Киберпанк-красный
+    redGrad.addColorStop(0.5, '#E74C3C');
     redGrad.addColorStop(1, '#6B160E');
 
     const yellowAngle = (yellowChance / 100) * Math.PI * 2;
     const redAngle = (Math.PI * 2) - yellowAngle;
 
-    // --- ШАГ 1: ЖЁЛТЫЙ СЕКТОР ---
+    // Жёлтый сектор
     cachedWheelCtx.beginPath();
     cachedWheelCtx.moveTo(centerX, centerY);
     cachedWheelCtx.arc(centerX, centerY, radius, 0, yellowAngle);
@@ -10251,7 +10249,7 @@ function cacheWheelGraphics(yellowChance, redChance) {
     cachedWheelCtx.fillStyle = yellowGrad;
     cachedWheelCtx.fill();
 
-    // --- ШАГ 2: КРАСНЫЙ СЕКТОР ---
+    // Красный сектор
     cachedWheelCtx.beginPath();
     cachedWheelCtx.moveTo(centerX, centerY);
     cachedWheelCtx.arc(centerX, centerY, radius, yellowAngle, Math.PI * 2);
@@ -10259,21 +10257,19 @@ function cacheWheelGraphics(yellowChance, redChance) {
     cachedWheelCtx.fillStyle = redGrad;
     cachedWheelCtx.fill();
 
-    // --- ШАГ 3: МЯГКИЕ СВЕТОВЫЕ СТЫКИ-РАЗДЕЛИТЕЛИ ---
+    // Разделители
     cachedWheelCtx.lineWidth = 4;
     cachedWheelCtx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
-
     cachedWheelCtx.beginPath();
     cachedWheelCtx.moveTo(centerX, centerY);
     cachedWheelCtx.lineTo(centerX + radius * Math.cos(0), centerY + radius * Math.sin(0));
     cachedWheelCtx.stroke();
-
     cachedWheelCtx.beginPath();
     cachedWheelCtx.moveTo(centerX, centerY);
     cachedWheelCtx.lineTo(centerX + radius * Math.cos(yellowAngle), centerY + radius * Math.sin(yellowAngle));
     cachedWheelCtx.stroke();
 
-    // --- ШАГ 4: ЖИРНЫЙ ФУТУРИСТИЧЕСКИЙ ТЕКСТ ПРОЦЕНТОВ (С ТЕНЬЮ) ---
+    // Текст процентов
     cachedWheelCtx.save();
     cachedWheelCtx.font = '900 26px "Arial Black", Gadget, sans-serif';
     cachedWheelCtx.textAlign = 'center';
@@ -10282,20 +10278,18 @@ function cacheWheelGraphics(yellowChance, redChance) {
     cachedWheelCtx.shadowColor = 'rgba(0, 0, 0, 0.7)';
     cachedWheelCtx.shadowBlur = 8;
 
-    // Жёлтые %
     const yellowMidAngle = yellowAngle / 2;
     const yellowTextX = centerX + radius * 0.62 * Math.cos(yellowMidAngle);
     const yellowTextY = centerY + radius * 0.62 * Math.sin(yellowMidAngle);
     cachedWheelCtx.fillText(`${Math.round(yellowChance)}%`, yellowTextX, yellowTextY);
 
-    // Красные %
     const redMidAngle = yellowAngle + redAngle / 2;
     const redTextX = centerX + radius * 0.62 * Math.cos(redMidAngle);
     const redTextY = centerY + radius * 0.62 * Math.sin(redMidAngle);
     cachedWheelCtx.fillText(`${Math.round(redChance)}%`, redTextX, redTextY);
     cachedWheelCtx.restore();
 
-    // --- ШАГ 5: ТИТАНОВЫЙ ОБОД И ЗАКЛЕПКИ ---
+    // Обод и заклёпки
     cachedWheelCtx.beginPath();
     cachedWheelCtx.arc(centerX, centerY, radius + 11, 0, Math.PI * 2);
     cachedWheelCtx.lineWidth = 20;
@@ -10319,7 +10313,7 @@ function cacheWheelGraphics(yellowChance, redChance) {
         cachedWheelCtx.fill();
     }
 
-    // --- ШАГ 6: ВШИВАЕМ ЦЕНТРАЛЬНУЮ СТУПИЦУ "WG" В КЭШ ---
+    // Центральная ступица
     cachedWheelCtx.beginPath();
     cachedWheelCtx.arc(centerX, centerY, 42, 0, Math.PI * 2);
     cachedWheelCtx.fillStyle = '#0f0f20';
@@ -10354,7 +10348,7 @@ function cacheWheelGraphics(yellowChance, redChance) {
     console.log('🚀 Графика колеса Фортуны успешно закэширована в памяти.');
 }
 
-// ========== ДОБАВЛЕНО: ФУНКЦИЯ ПРЕДВАРИТЕЛЬНОГО КЭШИРОВАНИЯ ==========
+// ========== ФУНКЦИЯ ПРЕДВАРИТЕЛЬНОГО КЭШИРОВАНИЯ ==========
 function preCacheWheel() {
     if (isPreCaching || isWheelCached) return;
     isPreCaching = true;
@@ -10415,12 +10409,10 @@ function animateWheel(timestamp) {
     drawWheel();
 
     if (progress < 1) {
-        // Проверяем, открыта ли модалка Фортуны
         const fortuneModal = document.getElementById('fortuneModal');
         if (fortuneModal && fortuneModal.classList.contains('active')) {
             wheelAnimationId = requestAnimationFrame(animateWheel);
         } else {
-            // Если модалка закрыта - останавливаем анимацию
             if (wheelAnimationId) {
                 cancelAnimationFrame(wheelAnimationId);
                 wheelAnimationId = null;
@@ -10525,7 +10517,6 @@ function startWheelAnimation(winnerTeam, yellowPool, redPool, sectorFactor, user
 
     wheelWinner = winnerTeam;
 
-    // Если кэш уже есть, не перерисовываем (ускоряем)
     if (!isWheelCached) {
         cacheWheelGraphics(yellowChance, redChance);
     }
@@ -10552,16 +10543,25 @@ function startWheelAnimation(winnerTeam, yellowPool, redPool, sectorFactor, user
     wheelStartTime = 0;
     wheelRotation = 0;
 
-    const overlay = document.getElementById('wheelOverlay');
-    if (overlay) overlay.classList.add('active');
+    // Показываем колесо только если Фортуна открыта
+    const fortuneModal = document.getElementById('fortuneModal');
+    if (fortuneModal && fortuneModal.classList.contains('active')) {
+        const overlay = document.getElementById('wheelOverlay');
+        if (overlay) overlay.classList.add('active');
 
-    const closeBtn = document.getElementById('wheelCloseBtn');
-    if (closeBtn) closeBtn.classList.remove('show');
+        const closeBtn = document.getElementById('wheelCloseBtn');
+        if (closeBtn) closeBtn.classList.remove('show');
 
-    const resultDiv = document.getElementById('wheelResult');
-    if (resultDiv) resultDiv.classList.remove('show');
+        const resultDiv = document.getElementById('wheelResult');
+        if (resultDiv) resultDiv.classList.remove('show');
 
-    requestAnimationFrame(animateWheel);
+        requestAnimationFrame(animateWheel);
+    } else {
+        console.log('🎡 Колесо не показано (Фортуна закрыта)');
+        window.isFortuneRoundEnding = false;
+        if (typeof loadFortuneData === 'function') loadFortuneData();
+        if (typeof syncData === 'function') syncData(true);
+    }
 }
 
 document.getElementById('wheelCloseBtn')?.addEventListener('click', () => {
