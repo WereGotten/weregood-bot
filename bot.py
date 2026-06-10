@@ -2639,7 +2639,7 @@ def end_fortune_round():
     """Завершает текущий раунд: определяет победителя, выдаёт призы, создаёт новый раунд"""
     global current_fortune_round
 
-    with fortune_round_lock:
+    with fortune_lock:
         if not current_fortune_round:
             print("⚠️ [ФОРТУНА] Нет активного раунда для завершения")
             return
@@ -2965,9 +2965,14 @@ def api_fortune_history():
 
 @app.route('/api/fortune/end_round', methods=['POST'])
 def api_fortune_end_round():
-    """Ручное завершение раунда (для админки или тестирования)"""
-    result = end_fortune_round_manual()
-    return jsonify(result)
+    """Завершение раунда фортуны"""
+    try:
+        # Вызываем твою основную функцию, код которой ты скидывал
+        end_fortune_round()
+        return jsonify({"status": "success", "message": "Раунд успешно завершен"})
+    except Exception as e:
+        logger.error(f"Ошибка в роуте end_round: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
 @app.route('/api/fortune/user_bet', methods=['POST'])
