@@ -3077,11 +3077,6 @@ def api_fortune_history():
 def api_fortune_end_round():
     """Ручное завершение раунда (для админки)"""
     result = end_fortune_round()
-    # Добавляем пулы в ответ
-    with fortune_round_lock:
-        if current_fortune_round:
-            result['yellow_pool'] = current_fortune_round.get('yellow_pool', 0)
-            result['red_pool'] = current_fortune_round.get('red_pool', 0)
     return jsonify(result)
 
 
