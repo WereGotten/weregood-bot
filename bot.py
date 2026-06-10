@@ -30,37 +30,6 @@ from dotenv import load_dotenv
 
 from cachetools import TTLCache, cached
 
-# ========== FIX ДЛЯ РОССИИ: ЗЕРКАЛО TELEGRAM (ОБХОД БЛОКИРОВКИ) ==========
-# Этот патч перенаправляет все запросы к api.telegram.org на рабочее зеркало
-_original_request = requests.Session.request
-
-def _patched_request(self, method, url, *args, **kwargs):
-    if 'api.telegram.org' in url:
-        url = url.replace('api.telegram.org', 'telegram.sweetpixel.dev')
-        print(f"🔄 [ЗЕРКАЛО] Перенаправлен запрос: {url}")
-    return _original_request(self, method, url, *args, **kwargs)
-
-requests.Session.request = _patched_request
-
-# Также патчим прямые вызовы requests.get и requests.post
-_original_get = requests.get
-_original_post = requests.post
-
-def _patched_get(url, *args, **kwargs):
-    if 'api.telegram.org' in url:
-        url = url.replace('api.telegram.org', 'telegram.sweetpixel.dev')
-    return _original_get(url, *args, **kwargs)
-
-def _patched_post(url, *args, **kwargs):
-    if 'api.telegram.org' in url:
-        url = url.replace('api.telegram.org', 'telegram.sweetpixel.dev')
-    return _original_post(url, *args, **kwargs)
-
-requests.get = _patched_get
-requests.post = _patched_post
-print("✅ [ЗЕРКАЛО] Telegram API перенаправлен через telegram.sweetpixel.dev")
-# =====================================================
-
 # ========== ОПТИМИЗАЦИЯ ==========
 sqlite3.enable_callback_tracebacks(True)
 
@@ -1907,7 +1876,7 @@ def add_referral_earning(referrer_id, referred_id, spent_lp):
 def create_stars_invoice(chat_id, user_id):
     try:
         title = "✨ Энергетический усилитель"
-        description = "Увеличивает максимальную энергию на +40 и даёт +50 LP на баланс!"
+        description = "Увеличивает максимальную энергию на +50 и даёт +50 LP на баланс!"
         payload = json.dumps({"user_id": user_id, "type": "energy_upgrade"})
         provider_token = ""
         currency = "XTR"
@@ -2757,7 +2726,7 @@ def check_ton_payment_endpoint():
                 logger.info(f"🎁 [API] Успех! Игроку {user_id} начислено улучшение через TON!")
                 user = get_user(user_id)
                 add_admin_log(
-                    f"💎 Купил энергетический усилитель за TON ({expected_amount} TON) | +40 макс. энергии, +50 LP",
+                    f"💎 Купил энергетический усилитель за TON ({expected_amount} TON) | +50 макс. энергии, +50 LP",
                     user_id,
                     user.get('username') or f"User_{user_id}",
                     details=f"Хэш транзакции: {tx_hash}, кошелёк: {sender_wallet}"
@@ -2766,7 +2735,7 @@ def check_ton_payment_endpoint():
                     try:
                         send_telegram_message(user_id,
                                               f"✨ **Оплата через TON получена!**\n\n"
-                                              f"⚡️ +40 к максимальной энергии\n"
+                                              f"⚡️ +50 к максимальной энергии\n"
                                               f"💎 +50 LP на баланс\n\n"
                                               f"💪 Энергетический усилитель успешно активирован!")
                     except Exception as tg_err:
@@ -5510,14 +5479,11 @@ def handle_telegram_updates():
                                 send_telegram_message(chat_id, "⛔ У вас нет доступа к админ-панели")
                     elif "pre_checkout_query" in update:
                         query = update["pre_checkout_query"]
-                        print(f"💰 [СТАРС] Получен pre_checkout_query: {query['id']} от юзера {query.get('from', {}).get('id')}")
                         answer_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/answerPreCheckoutQuery"
-                        result = requests.post(answer_url, json={"pre_checkout_query_id": query["id"], "ok": True}, timeout=5,
+                        requests.post(answer_url, json={"pre_checkout_query_id": query["id"], "ok": True}, timeout=5,
                                       verify=verify_ssl)
-                        print(f"💰 [СТАРС] Ответ на pre_checkout: статус {result.status_code}, тело: {result.text}")
                     elif "message" in update and "successful_payment" in update["message"]:
                         chat_id = update["message"]["chat"]["id"]
-                        print(f"🎉 [СТАРС] Получен successful_payment от {chat_id}!")
                         handle_successful_payment(chat_id, update["message"]["successful_payment"])
             time.sleep(1)
         except Exception as e:
@@ -5539,10 +5505,6 @@ if __name__ == '__main__':
     print("   • Ставки полностью сбрасываются после завершения")
     print("   • Возврат ставок если только одна команда")
     print("   • Нет бесконечных циклов и дублей")
-    print("")
-    print("✅ ДОБАВЛЕНО:")
-    print("   • Зеркало Telegram (telegram.sweetpixel.dev) для обхода блокировок")
-    print("   • Логи для отладки Stars оплаты")
     print("=" * 60)
     print(f"🌐 Игра: http://0.0.0.0:5000")
     print(f"👑 Админ-панель: http://0.0.0.0:5000/admin?key={ADMIN_SECRET}")
