@@ -7676,53 +7676,76 @@ function updateRecentPlayersFast(players) {
     });
 
     // Обработчик завершения раунда
-    socket.on('fortune_round_ended', (data) => {
-        console.log('🎲 Раунд Фортуны завершён:', data);
+    socket.on('fortune_round_ended', async (data) => {
+    console.log('🎲 Раунд Фортуны завершён:', data);
 
-        if (data && data.winner === 'refund') {
+    // ========== ВАЖНО: ЗАГРУЖАЕМ СТАВКУ ПОЛЬЗОВАТЕЛЯ ПЕРЕД ЗАПУСКОМ КОЛЕСА ==========
+    let userBetTeam = null;
+    let userBetAmount = 0;
+
+    try {
+        const response = await fetch('/api/fortune/user_total_bet', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId })
+        });
+        const betData = await response.json();
+        if (betData.success) {
+            userBetTeam = betData.team;
+            userBetAmount = betData.amount || 0;
+            console.log('✅ Загружена ставка пользователя:', userBetTeam, userBetAmount);
+        }
+    } catch(e) {
+        console.error('Ошибка загрузки ставки перед колесом:', e);
+    }
+
+    // 1. Если был возврат средств (refund) — колесо крутить не нужно
+    if (data && data.winner === 'refund') {
+        if (data.message) showToast(data.message, 'info');
+        if (typeof loadFortuneData === 'function') loadFortuneData();
+        return;
+    }
+
+    // 2. Если определился реальный победитель
+    if (data && data.winner) {
+        const yellowPool = (typeof fortuneData !== 'undefined' && fortuneData.yellowPool) ? fortuneData.yellowPool : 50;
+        const redPool = (typeof fortuneData !== 'undefined' && fortuneData.redPool) ? fortuneData.redPool : 50;
+        const sectorFactor = (data && data.sector_factor !== undefined) ? data.sector_factor : 0.5;
+
+        if (typeof startWheelAnimation === 'function') {
+            console.log(`🎡 Запуск анимации колеса. Команда: ${data.winner}, Смещение: ${sectorFactor}`);
+            // ========== ПЕРЕДАЁМ СТАВКУ В КОЛЕСО ==========
+            startWheelAnimation(data.winner, yellowPool, redPool, sectorFactor, userBetTeam, userBetAmount);
+            showToast('🎡 Колесо Фортуны запущено!', 'info');
+        } else {
             if (data.message) showToast(data.message, 'info');
             if (typeof loadFortuneData === 'function') loadFortuneData();
-            return;
         }
+    }
 
-        if (data && data.winner) {
-            const yellowPool = (typeof fortuneData !== 'undefined' && fortuneData.yellowPool) ? fortuneData.yellowPool : 50;
-            const redPool = (typeof fortuneData !== 'undefined' && fortuneData.redPool) ? fortuneData.redPool : 50;
-            const sectorFactor = (data && data.sector_factor !== undefined) ? data.sector_factor : 0.5;
+    // ПРИНУДИТЕЛЬНАЯ ОЧИСТКА И ПЕРЕЗАГРУЗКА ДАННЫХ
+    if (typeof fortuneData !== 'undefined') {
+        fortuneData.yellowPool = 0;
+        fortuneData.redPool = 0;
+        fortuneData.yellowPlayers = [];
+        fortuneData.redPlayers = [];
+        fortuneData.timeLeft = 300;
+        fortuneData.userBetTeam = null;
+        fortuneData.userBetAmount = 0;
+    }
 
-            if (typeof startWheelAnimation === 'function') {
-                console.log(`🎡 Запуск анимации колеса. Команда: ${data.winner}, Смещение: ${sectorFactor}`);
-                startWheelAnimation(data.winner, yellowPool, redPool, sectorFactor);
-                showToast('🎡 Колесо Фортуны запущено!', 'info');
-            } else {
-                if (data.message) showToast(data.message, 'info');
-                if (typeof loadFortuneData === 'function') loadFortuneData();
-            }
-        }
+    const yellowPlayersDiv = document.getElementById('yellowPlayers');
+    const redPlayersDiv = document.getElementById('redPlayers');
+    if (yellowPlayersDiv) yellowPlayersDiv.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
+    if (redPlayersDiv) redPlayersDiv.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
 
-        // ПРИНУДИТЕЛЬНАЯ ОЧИСТКА И ПЕРЕЗАГРУЗКА ДАННЫХ
-        if (typeof fortuneData !== 'undefined') {
-            fortuneData.yellowPool = 0;
-            fortuneData.redPool = 0;
-            fortuneData.yellowPlayers = [];
-            fortuneData.redPlayers = [];
-            fortuneData.timeLeft = 300;
-            fortuneData.userBetTeam = null;
-            fortuneData.userBetAmount = 0;
-        }
-
-        const yellowPlayersDiv = document.getElementById('yellowPlayers');
-        const redPlayersDiv = document.getElementById('redPlayers');
-        if (yellowPlayersDiv) yellowPlayersDiv.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
-        if (redPlayersDiv) redPlayersDiv.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
-
-        if (typeof updateFortuneUI === 'function') updateFortuneUI();
-        if (typeof loadFortuneData === 'function') {
-            setTimeout(() => loadFortuneData(), 500);
-            setTimeout(() => loadFortuneData(), 2000);
-        }
-        if (typeof syncData === 'function') syncData(true);
-    });
+    if (typeof updateFortuneUI === 'function') updateFortuneUI();
+    if (typeof loadFortuneData === 'function') {
+        setTimeout(() => loadFortuneData(), 500);
+        setTimeout(() => loadFortuneData(), 2000);
+    }
+    if (typeof syncData === 'function') syncData(true);
+});
 
     // ========== НОВЫЙ ОБРАБОТЧИК: ОБНОВЛЕНИЕ ПУЛОВ ПОСЛЕ СТАВКИ ==========
     socket.on('fortune_pools_update', (data) => {
@@ -9320,9 +9343,9 @@ function cacheFortuneDOM() {
 }
 
 // ========== БЫСТРОЕ ОБНОВЛЕНИЕ UI (ТОЛЬКО ИЗМЕНЁННЫЕ ДАННЫЕ) ==========
+
 let lastDomUpdate = 0;
 const DOM_UPDATE_THROTTLE = 100;
-
 function updateFortuneUI(force = false) {
     const now = Date.now();
     if (!force && now - lastDomUpdate < DOM_UPDATE_THROTTLE) return;
@@ -10351,10 +10374,12 @@ function animateWheel(timestamp) {
         const winnerName = winnerSide === 'yellow' ? 'Жёлтые 🟡' : 'Красные 🔴';
 
         // Получаем данные о текущей ставке пользователя из глобального кэша
-        const userSide = (typeof fortuneData !== 'undefined' && fortuneData.userBetTeam) ? fortuneData.userBetTeam : null;
-const userBet = (typeof fortuneData !== 'undefined' && fortuneData.userBetAmount) ? fortuneData.userBetAmount : 0;
 
-console.log('🎡 Колесо: userSide =', userSide, 'userBet =', userBet, 'winner =', winnerSide);
+        // Получаем данные о ставке пользователя ИЗ КОЛЕСА (переданы при запуске)
+const userSide = wheelPrizes?.userBetTeam || null;
+const userBet = wheelPrizes?.userBetAmount || 0;
+
+console.log('🎡 Анимация: userSide =', userSide, 'userBet =', userBet, 'winner =', winnerSide);
 
         // Получаем пулы для расчёта выигрыша
         const yellowPool = wheelPrizes?.yellowTotalPool || 0;
@@ -10418,13 +10443,15 @@ console.log('🎡 Колесо: userSide =', userSide, 'userBet =', userBet, 'wi
 }
 
 // 4. Логика инициализации и запуска (С защитой от пустых пулов 50/50)
-function startWheelAnimation(winnerTeam, yellowPool, redPool, sectorFactor) {
+function startWheelAnimation(winnerTeam, yellowPool, redPool, sectorFactor, userBetTeam = null, userBetAmount = 0) {
     const total = yellowPool + redPool;
 
-    // Сохраняем пулы для расчёта выигрыша в анимации
+    // Сохраняем пулы и СТАВКУ ПОЛЬЗОВАТЕЛЯ для расчёта выигрыша в анимации
     wheelPrizes = {
         yellowTotalPool: yellowPool,
-        redTotalPool: redPool
+        redTotalPool: redPool,
+        userBetTeam: userBetTeam,      // ← ДОБАВЛЕНО
+        userBetAmount: userBetAmount   // ← ДОБАВЛЕНО
     };
 
     // АНТИ-БАГ: Если ставок нет (начало раунда/обнуление), жестко выставляем 50% на 50%
@@ -10498,7 +10525,26 @@ window.endFortuneRound = async function() {
             const redPool = data.redPool !== undefined ? data.redPool : (fortuneData?.redPool || 0);
             const factor = data.sector_factor !== undefined ? data.sector_factor : 0.5;
 
-            startWheelAnimation(data.winner, yellowPool, redPool, factor);
+            // Загружаем ставку пользователя перед запуском колеса
+            let userBetTeam = null;
+            let userBetAmount = 0;
+            try {
+                const betResponse = await fetch('/api/fortune/user_total_bet', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId })
+                });
+                const betData = await betResponse.json();
+                if (betData.success) {
+                    userBetTeam = betData.team;
+                    userBetAmount = betData.amount || 0;
+                    console.log('✅ Загружена ставка пользователя в админ-форсировании:', userBetTeam, userBetAmount);
+                }
+            } catch(e) {
+                console.error('Ошибка загрузки ставки:', e);
+            }
+
+            startWheelAnimation(data.winner, yellowPool, redPool, factor, userBetTeam, userBetAmount);
             showToast('🎡 Колесо Фортуны запущено!', 'info');
         } else if (data.success && data.winner === 'refund') {
             showToast('⚖️ Ставки были только на одной команде — ставки возвращены', 'info');
