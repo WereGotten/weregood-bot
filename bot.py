@@ -2521,19 +2521,24 @@ def api_get_lp_boost_count():
 
 def create_new_fortune_round():
     global current_fortune_round
+
+    # 1. Сначала проверяем базу БЕЗ глобального лока, чтобы не заклинило restore
+    with db.get_cursor() as cursor:
+        cursor.execute('''
+            SELECT round_id FROM fortune_rounds 
+            WHERE winner_team IS NULL 
+            LIMIT 1
+        ''')
+        existing_round = cursor.fetchone()
+
+    # Если раунд есть — выходим из функции создания и запускаем восстановление СНАРУЖИ
+    if existing_round:
+        print(f"⚠️ Активный раунд {existing_round['round_id']} уже существует, восстанавливаю...")
+        restore_fortune_from_db()
+        return
+
+    # 2. Если раунда нет — только тогда берем лок и создаем новый
     with fortune_lock:
-        with db.get_cursor() as cursor:
-            cursor.execute('''
-                SELECT round_id FROM fortune_rounds 
-                WHERE winner_team IS NULL 
-                AND (end_time > datetime('now') OR end_time IS NULL)
-                LIMIT 1
-            ''')
-            existing_round = cursor.fetchone()
-            if existing_round:
-                print(f"⚠️ Активный раунд {existing_round['round_id']} уже существует, не создаю новый")
-                restore_fortune_from_db()
-                return
         round_id = str(uuid.uuid4())[:8]
         current_fortune_round = {
             "round_id": round_id,
