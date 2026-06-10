@@ -4905,7 +4905,7 @@
     from { opacity: 0; transform: translateY(-10px); }
     to { opacity: 1; transform: translateY(0); }
 }
-        /* ========== КИБЕРПАНК КОЛЕСО ФОРТУНЫ (UPDATED DESIGN) ========== */
+        /* ========== КИБЕРПАНК КОЛЕСО ФОРТУНЫ (MAX ULTRA OPTIMIZATION) ========== */
 .wheel-overlay {
     display: none;
     position: fixed;
@@ -4913,11 +4913,12 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(7, 7, 20, 0.85); /* Более мягкий глубокий цвет */
+    background: rgba(6, 6, 14, 0.88); /* Глубокий премиальный темный */
     z-index: 20000;
     justify-content: center;
     align-items: center;
-    backdrop-filter: blur(12px); /* Сильнее размываем задний фон для дорогого эффекта */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px); /* Поддержка для iOS (Safari) */
     opacity: 0;
     transition: opacity 0.3s ease;
 }
@@ -4931,17 +4932,16 @@
     background: linear-gradient(145deg, #16162d, #0b0b16);
     border-radius: 32px;
     padding: 32px 24px;
-    max-width: 90vw;
-    width: 400px;
+    max-width: 95vw;
+    width: 380px;
     text-align: center;
-    border: 2px solid rgba(255, 215, 0, 0.4);
-    /* Мощное неоновое свечение вокруг модалки */
-    box-shadow: 0 0 30px rgba(255, 215, 0, 0.15),
-                0 20px 50px rgba(0, 0, 0, 0.6),
-                inset 0 0 20px rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(255, 215, 0, 0.35);
+    box-shadow: 0 0 35px rgba(255, 215, 0, 0.12),
+                0 25px 60px rgba(0, 0, 0, 0.65),
+                inset 0 0 20px rgba(255, 255, 255, 0.03);
     position: relative;
-    transform: scale(0.9);
-    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transform: scale(0.85);
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .wheel-overlay.active .wheel-container {
@@ -4949,16 +4949,16 @@
 }
 
 .wheel-title {
-    font-size: 1.3rem;
+    font-size: 1.25rem;
     font-weight: 900;
     color: #fff;
     text-transform: uppercase;
     letter-spacing: 2px;
-    margin-bottom: 28px;
-    text-shadow: 0 0 10px rgba(255, 215, 0, 0.5), 0 2px 4px rgba(0,0,0,0.5);
+    margin-bottom: 24px;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.4), 0 2px 4px rgba(0,0,0,0.6);
 }
 
-/* ИСПРАВЛЕНО: Убрали паддинги и фоны, чтобы обертка не сжимала Canvas и не ломала точность стрелки */
+/* Контейнер-обертка колеса */
 .wheel-canvas {
     width: 320px;
     height: 320px;
@@ -4969,50 +4969,63 @@
     align-items: center;
 }
 
-/* ИСПРАВЛЕНО: Убрали старые CSS-тени и бордеры. Теперь объёмный металл и неоновое свечение рисует сам Canvas */
+/* ХАК ДЛЯ СТАБИЛЬНЫХ 60 FPS НА ТЕЛЕФОНАХ */
 .wheel-canvas canvas {
-    width: 100%;
-    height: 100%;
     display: block;
     border-radius: 50%;
+    max-width: 100%;
+    max-height: 100%;
+
+    /* Принудительно отдаем обработку графическому чипу смартфона (GPU) */
+    will-change: transform;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+
+    /* Убираем размытие, мыло и мерцание пикселей при бешеной скорости */
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    -webkit-perspective: 1000;
+    perspective: 1000px;
 }
 
 /* Изящная неоновая стрелка-указатель */
 .wheel-arrow {
     position: absolute;
-    top: -12px;
+    top: -10px;
     left: 50%;
     transform: translateX(-50%);
-    width: 32px;
-    height: 42px;
+    width: 30px;
+    height: 38px;
     background: linear-gradient(to bottom, #FFD700, #FF8C00);
-    clip-path: polygon(50% 100%, 0 0, 100% 0); /* Создает идеальный треугольник */
-    filter: drop-shadow(0 0 8px rgba(255, 140, 0, 0.8));
+    clip-path: polygon(50% 100%, 0 0, 100% 0); /* Четкий треугольник без лишней разметки */
+    -webkit-clip-path: polygon(50% 100%, 0 0, 100% 0);
+    filter: drop-shadow(0 4px 8px rgba(255, 140, 0, 0.7));
     z-index: 10;
-    animation: arrowFloat 1.5s ease-in-out infinite; /* Эффект парения */
 }
 
-/* Убираем старый кривой костыль со значком ▼ */
-.wheel-arrow::after {
-    display: none;
+/* Анимация парения работает ТОЛЬКО когда колесо СТОИТ (пока оверлей не активен в режиме кручения) */
+.wheel-overlay:not(.active) .wheel-arrow {
+    animation: arrowFloat 1.5s ease-in-out infinite;
 }
 
 @keyframes arrowFloat {
-    0%, 100% { top: -12px; }
-    50% { top: -6px; } /* Плавный ход вверх-вниз */
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50% { transform: translateX(-50%) translateY(5px); } /* Плавный ход строго по вертикали */
 }
 
 .wheel-result {
-    margin-top: 28px;
-    font-size: 1.25rem;
+    margin-top: 24px;
+    font-size: 1.2rem;
     font-weight: 800;
     line-height: 1.5;
     color: #fff;
-    text-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+    text-shadow: 0 0 15px rgba(255, 255, 255, 0.15);
     display: none;
-    padding: 12px;
+    padding: 14px;
     border-radius: 16px;
-    background: rgba(255, 255, 255, 0.03);
+    background: rgba(255, 255, 255, 0.02);
     border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
@@ -5022,25 +5035,25 @@
 }
 
 @keyframes resultPopIn {
-    0% { transform: scale(0.8); opacity: 0; }
+    0% { transform: scale(0.85); opacity: 0; }
     100% { transform: scale(1); opacity: 1; }
 }
 
-/* Топовая геймерская кнопка с эффектом перелива */
+/* Премиальная кнопка закрытия */
 .wheel-close-btn {
-    margin-top: 24px;
+    margin-top: 20px;
     width: 100%;
     background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FF8C00 100%);
     border: none;
     border-radius: 16px;
-    padding: 16px 32px;
+    padding: 15px 32px;
     font-weight: 800;
-    font-size: 1rem;
+    font-size: 0.95rem;
     color: #070714;
     text-transform: uppercase;
     letter-spacing: 1px;
     cursor: pointer;
-    box-shadow: 0 0 20px rgba(255, 165, 0, 0.4), inset 0 -4px 0 rgba(0,0,0,0.15);
+    box-shadow: 0 0 20px rgba(255, 165, 0, 0.35), inset 0 -4px 0 rgba(0,0,0,0.15);
     position: relative;
     overflow: hidden;
     display: none;
@@ -5049,7 +5062,7 @@
 
 .wheel-close-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 0 25px rgba(255, 165, 0, 0.6);
+    box-shadow: 0 0 25px rgba(255, 165, 0, 0.5);
 }
 
 .wheel-close-btn:active {
@@ -5060,7 +5073,7 @@
     display: block;
 }
 
-/* Эффект сверкающего блика на кнопке */
+/* Эффект перелива блика */
 .wheel-close-btn::before {
     content: '';
     position: absolute;
@@ -5068,7 +5081,7 @@
     left: -100%;
     width: 50%;
     height: 100%;
-    background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%);
+    background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.35) 50%, rgba(255,255,255,0) 100%);
     transform: skewX(-25deg);
     animation: shimmer 3s infinite;
 }
@@ -5078,29 +5091,40 @@
     30%, 100% { left: 150%; }
 }
 
-/* Адаптив под мобилки */
+/* ========== АДАПТИВ ПОД СМАРТФОНЫ (ИДЕАЛЬНЫЙ ТАЙЛИНГ БЕЗ СЖАТИЯ ПИКСЕЛЕЙ) ========== */
 @media (max-width: 480px) {
     .wheel-container {
-        width: 92vw;
+        width: 90vw;
         padding: 24px 16px;
+        border-radius: 24px;
     }
-    /* ИСПРАВЛЕНО: Для мобилок просто пропорционально уменьшаем обертку */
+
+    /* Меняем размеры самого бокса-контейнера, чтобы Canvas внутри не деформировался */
     .wheel-canvas {
-        width: 270px;
-        height: 270px;
+        width: 260px;
+        height: 260px;
     }
+
     .wheel-title {
         font-size: 1.1rem;
-        margin-bottom: 20px;
+        margin-bottom: 18px;
     }
+
     .wheel-arrow {
-        top: -10px;
-        width: 26px;
-        height: 34px;
+        top: -8px;
+        width: 24px;
+        height: 32px;
     }
-    @keyframes arrowFloat {
-        0%, 100% { top: -10px; }
-        50% { top: -4px; }
+
+    .wheel-result {
+        font-size: 1.1rem;
+        padding: 10px;
+        margin-top: 18px;
+    }
+
+    .wheel-close-btn {
+        padding: 12px 24px;
+        font-size: 0.9rem;
     }
 }
     </style>
@@ -9970,7 +9994,7 @@ if (document.readyState === 'loading') {
     initFortuneEventHandlers();
 }
 
-// ========== УЛЬТРА-ОПТИМИЗИРОВАННОЕ КИБЕРПАНК КОЛЕСО (15s + PRE-RENDER + ФИЗИКА СТАРТА) ==========
+// ========== УЛЬТРА-ОПТИМИЗИРОВАННОЕ КИБЕРПАНК КОЛЕСО (15s + PRE-RENDER + GPU-BOOST) ==========
 let wheelCanvas = document.getElementById('wheelCanvas');
 let wheelCtx = wheelCanvas?.getContext('2d');
 let wheelAnimationId = null;
@@ -9981,15 +10005,15 @@ let wheelWinner = null;
 let wheelPrizes = {};
 
 // Глобальные настройки времени и оборотов
-let wheelDuration = 15000;   // Ровно 15 секунд захватывающего шоу
+let wheelDuration = 15000;   // Ровно 15 секунд сочного, драматичного шоу
 let fullRotationsCount = 12; // 12 полных кругов для бешеной скорости на старте
 
-// Скрытый виртуальный холст для мгновенного кэширования графики
+// Скрытый виртуальный холст для кэширования всей тяжелой графики
 let cachedWheelCanvas = document.createElement('canvas');
 let cachedWheelCtx = cachedWheelCanvas.getContext('2d');
 let isWheelCached = false;
 
-// 1. Функция предварительной отрисовки основы колеса (вызывается 1 раз за раунд)
+// 1. Функция предварительной отрисовки основы колеса (вызывается ВСЕГО 1 РАЗ за весь раунд)
 function cacheWheelGraphics(yellowChance, redChance) {
     if (!wheelCanvas || !cachedWheelCtx) return;
 
@@ -10000,19 +10024,19 @@ function cacheWheelGraphics(yellowChance, redChance) {
     const size = cachedWheelCanvas.width;
     const centerX = size / 2;
     const centerY = size / 2;
-    const radius = size / 2 - 22; // Идеальный отступ под стальной обод
+    const radius = size / 2 - 22; // Зазор под стальной обод
 
     cachedWheelCtx.clearRect(0, 0, size, size);
 
-    // Создаем оптимизированные глянцевые градиенты
+    // Создаем глянцевые градиенты один раз для кэша
     let yellowGrad = cachedWheelCtx.createRadialGradient(centerX, centerY, radius * 0.1, centerX, centerY, radius);
     yellowGrad.addColorStop(0, '#FFE666');
-    yellowGrad.addColorStop(0.5, '#F1C40F');
+    yellowGrad.addColorStop(0.5, '#F1C40F'); // Золотой
     yellowGrad.addColorStop(1, '#8A6900');
 
     let redGrad = cachedWheelCtx.createRadialGradient(centerX, centerY, radius * 0.1, centerX, centerY, radius);
     redGrad.addColorStop(0, '#FF8080');
-    redGrad.addColorStop(0.5, '#E74C3C');
+    redGrad.addColorStop(0.5, '#E74C3C'); // Киберпанк-красный
     redGrad.addColorStop(1, '#6B160E');
 
     const yellowAngle = (yellowChance / 100) * Math.PI * 2;
@@ -10071,7 +10095,7 @@ function cacheWheelGraphics(yellowChance, redChance) {
     cachedWheelCtx.restore();
 
     // --- ШАГ 5: ТИТАНОВЫЙ ОБОД И ЗАКЛЕПКИ ---
-    // Теперь они часть кэша — крутятся плавно без микрофризов
+    // Они вшиваются в текстуру кэша — это полностью ликвидирует микрофризы
     cachedWheelCtx.beginPath();
     cachedWheelCtx.arc(centerX, centerY, radius + 11, 0, Math.PI * 2);
     cachedWheelCtx.lineWidth = 20;
@@ -10096,9 +10120,10 @@ function cacheWheelGraphics(yellowChance, redChance) {
     }
 
     isWheelCached = true;
+    console.log('🚀 Графика колеса Фортуны успешно закэширована в памяти.');
 }
 
-// 2. Оптимизированная отрисовка сцены (вызывается 60 раз в секунду)
+// 2. Ультра-быстрая отрисовка сцены (вызывается 60 раз в секунду, работает на GPU)
 function drawWheel(winnerTeam) {
     if (!wheelCtx || !wheelCanvas || !isWheelCached) return;
 
@@ -10109,14 +10134,14 @@ function drawWheel(winnerTeam) {
     // Моментальная очистка основного экрана
     wheelCtx.clearRect(0, 0, size, size);
 
-    // ВРАЩАЕМ КЭШ: Просто крутим готовую текстуру
+    // ВРАЩАЕМ КЭШ: Просто крутим готовую картинку из ОЗУ. Процессор отдыхает!
     wheelCtx.save();
     wheelCtx.translate(centerX, centerY);
     wheelCtx.rotate(wheelRotation);
     wheelCtx.drawImage(cachedWheelCanvas, -centerX, -centerY);
     wheelCtx.restore();
 
-    // СТАТИКА (СТУПИЦА WG): Рисуется поверх, не тратит силы на поворот
+    // СТАТИКА (СТУПИЦА WG): Рисуется поверх, не тратит ресурсы на поворот матрицы
     wheelCtx.beginPath();
     wheelCtx.arc(centerX, centerY, 42, 0, Math.PI * 2);
     wheelCtx.fillStyle = '#0f0f20';
@@ -10150,7 +10175,7 @@ function drawWheel(winnerTeam) {
     wheelCtx.restore();
 }
 
-// 3. Главный цикл анимации (Новая двухфазная физика движения)
+// 3. Главный цикл анимации (Двухфазная физика: мягкий рывок + бесконечный финиш)
 function animateWheel(timestamp) {
     if (!wheelStartTime) {
         wheelStartTime = timestamp;
@@ -10162,16 +10187,17 @@ function animateWheel(timestamp) {
     let progress = Math.min(1, elapsed / wheelDuration);
 
     let easeProgress;
-    // Разделяем анимацию на 2 фазы: быстрый рывок и затухание
-    if (progress < 0.2) {
-        // Фаза 1: Взрывной старт (первые 20% времени или 3 секунды)
-        // Колесо мгновенно срывается с нуля и набирает пиковую скорость
-        easeProgress = Math.pow(progress * 5, 2) * 0.15;
+
+    // ИСПРАВЛЕННАЯ ФИЗИКА ДЛЯ МОБИЛОК: Смягчаем пиковый скачок, чтобы убрать пропуск кадров
+    if (progress < 0.15) {
+        // Фаза 1: Плавный, но быстрый разгон (первые ~2.2 секунды)
+        // Использование степени 1.5 вместо жесткого куба не дает телефону «заикнуться» в стартовый клик
+        easeProgress = Math.pow(progress / 0.15, 1.5) * 0.12;
     } else {
-        // Фаза 2: Постепенное драматичное замедление (оставшиеся 80% времени или 12 секунд)
-        // Степень 5 даёт невероятно тягучий финиш, заставляя игроков затаить дыхание
-        const normalizedProgress = (progress - 0.2) / 0.8;
-        easeProgress = 0.15 + (1 - Math.pow(1 - normalizedProgress, 5)) * 0.85;
+        // Фаза 2: Постепенное драматичное замедление (оставшиеся ~12.7 секунд)
+        // Четвертая степень дает сумасшедший кинематографичный накат на финише
+        const normalizedProgress = (progress - 0.15) / 0.85;
+        easeProgress = 0.12 + (1 - Math.pow(1 - normalizedProgress, 4)) * 0.88;
     }
 
     // Применяем рассчитанный угол вращения
@@ -10186,6 +10212,9 @@ function animateWheel(timestamp) {
         cancelAnimationFrame(wheelAnimationId);
         wheelAnimationId = null;
 
+        // Отключаем слежение за слоем после остановки для экономии батареи смартфона
+        if (wheelCanvas) wheelCanvas.style.transform = 'none';
+
         const winnerName = wheelWinner === 'yellow' ? 'Жёлтые 🟡' : 'Красные 🔴';
         const resultDiv = document.getElementById('wheelResult');
         if (resultDiv) {
@@ -10196,14 +10225,14 @@ function animateWheel(timestamp) {
         const closeBtn = document.getElementById('wheelCloseBtn');
         if (closeBtn) closeBtn.classList.add('show');
 
-        // Плавная подгрузка бэкенд-данных после завершения графики
+        // Плавная бесконфликтная синхронизация бэка
         if (typeof loadFortuneData === 'function') setTimeout(() => loadFortuneData(), 500);
         if (typeof loadFortuneHistory === 'function') setTimeout(() => loadFortuneHistory(), 1000);
         if (typeof syncData === 'function') setTimeout(() => syncData(true), 1500);
     }
 }
 
-// 4. Логика запуска анимации
+// 4. Логика инициализации и запуска
 function startWheelAnimation(winnerTeam, yellowPool, redPool, sectorFactor) {
     const total = yellowPool + redPool;
     const yellowChance = total > 0 ? (yellowPool / total) * 100 : 50;
@@ -10212,13 +10241,19 @@ function startWheelAnimation(winnerTeam, yellowPool, redPool, sectorFactor) {
     wheelWinner = winnerTeam;
     wheelPrizes = { yellowChance, redChance };
 
-    // ВАЖНО: Кэшируем всю тяжелую графику ОДИН раз прямо перед запуском колеса
+    // ШАГ 1: Кэшируем всю тяжелую геометрию в фоновый поток ОДИН раз
     cacheWheelGraphics(yellowChance, redChance);
+
+    // ШАГ 2: Врубаем аппаратное 3D/GPU-ускорение холста через CSS-трансформы!
+    if (wheelCanvas) {
+        wheelCanvas.style.willChange = 'transform';
+        wheelCanvas.style.transform = 'translateZ(0)';
+    }
 
     const factor = (sectorFactor !== undefined && sectorFactor !== null) ? sectorFactor : 0.5;
     let targetSegmentAngle;
 
-    // Точный расчет угла посадки под стрелку
+    // Расчет точки остановки под верхнюю стрелку (-Math.PI / 2)
     if (winnerTeam === 'yellow') {
         targetSegmentAngle = (yellowChance / 100) * Math.PI * 2 * factor;
     } else {
@@ -10226,8 +10261,6 @@ function startWheelAnimation(winnerTeam, yellowPool, redPool, sectorFactor) {
     }
 
     const fullRotations = fullRotationsCount * Math.PI * 2;
-
-    // Корректируем конечную точку вращения под верхний триггер стрелки (-Math.PI / 2)
     wheelTargetRotation = fullRotations + (Math.PI * 1.5 - targetSegmentAngle);
 
     if (wheelAnimationId) cancelAnimationFrame(wheelAnimationId);
@@ -10244,7 +10277,7 @@ function startWheelAnimation(winnerTeam, yellowPool, redPool, sectorFactor) {
     const resultDiv = document.getElementById('wheelResult');
     if (resultDiv) resultDiv.classList.remove('show');
 
-    // Погнали!
+    // Старт!
     requestAnimationFrame(animateWheel);
 }
 
@@ -10254,7 +10287,7 @@ document.getElementById('wheelCloseBtn')?.addEventListener('click', () => {
     if (typeof window.isFortuneRoundEnding !== 'undefined') window.isFortuneRoundEnding = false;
 });
 
-// Кнопка принудительного админского форсирования раунда из панели управления
+// Кнопка принудительного админского форсирования раунда из панели
 const originalEndFortuneRound = endFortuneRound;
 window.endFortuneRound = async function() {
     try {
