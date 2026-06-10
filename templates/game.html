@@ -10517,9 +10517,8 @@ function startWheelAnimation(winnerTeam, yellowPool, redPool, sectorFactor, user
 
     wheelWinner = winnerTeam;
 
-    if (!isWheelCached) {
-        cacheWheelGraphics(yellowChance, redChance);
-    }
+    // ========== ИСПРАВЛЕНО: Всегда перерисовываем с актуальными процентами ==========
+    cacheWheelGraphics(yellowChance, redChance);
 
     if (wheelCanvas) {
         wheelCanvas.style.willChange = 'transform';
