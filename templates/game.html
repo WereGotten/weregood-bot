@@ -4905,6 +4905,133 @@
     from { opacity: 0; transform: translateY(-10px); }
     to { opacity: 1; transform: translateY(0); }
 }
+        /* ========== КОЛЕСО ФОРТУНЫ ========== */
+.wheel-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.95);
+    z-index: 20000;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(8px);
+}
+
+.wheel-overlay.active {
+    display: flex;
+}
+
+.wheel-container {
+    background: linear-gradient(145deg, #1a1a2e, #0f0f20);
+    border-radius: 48px;
+    padding: 24px;
+    max-width: 90vw;
+    text-align: center;
+    border: 1px solid rgba(255,215,0,0.3);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+}
+
+.wheel-canvas {
+    width: 300px;
+    height: 300px;
+    margin: 0 auto;
+    position: relative;
+}
+
+.wheel-canvas canvas {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    box-shadow: 0 0 0 8px rgba(255,215,0,0.2), 0 0 0 12px rgba(0,0,0,0.3);
+    transition: box-shadow 0.2s;
+}
+
+.wheel-arrow {
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 20px solid transparent;
+    border-right: 20px solid transparent;
+    border-top: 40px solid #FFD700;
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
+    z-index: 10;
+}
+
+.wheel-arrow::after {
+    content: "▼";
+    position: absolute;
+    top: -48px;
+    left: -8px;
+    font-size: 20px;
+    color: #FFD700;
+    text-shadow: 0 0 5px rgba(0,0,0,0.5);
+}
+
+.wheel-result {
+    margin-top: 24px;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #FFD700;
+    display: none;
+}
+
+.wheel-result.show {
+    display: block;
+    animation: resultPulse 0.5s ease;
+}
+
+@keyframes resultPulse {
+    0% { transform: scale(0.8); opacity: 0; }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.wheel-close-btn {
+    margin-top: 20px;
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    border: none;
+    border-radius: 40px;
+    padding: 12px 24px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #0a0a1a;
+    cursor: pointer;
+    display: none;
+}
+
+.wheel-close-btn.show {
+    display: inline-block;
+}
+
+.wheel-title {
+    font-size: 1rem;
+    color: rgba(255,255,255,0.7);
+    margin-bottom: 16px;
+}
+
+@media (max-width: 480px) {
+    .wheel-canvas {
+        width: 260px;
+        height: 260px;
+    }
+    .wheel-arrow {
+        top: -15px;
+        border-left: 16px solid transparent;
+        border-right: 16px solid transparent;
+        border-top: 32px solid #FFD700;
+    }
+    .wheel-arrow::after {
+        top: -38px;
+        left: -7px;
+        font-size: 16px;
+    }
+}
     </style>
 </head>
 <body>
@@ -5607,6 +5734,19 @@
     </div>
 
     <div id="toast" class="toast"></div>
+
+    <!-- ========== КОЛЕСО ФОРТУНЫ ========== -->
+    <div id="wheelOverlay" class="wheel-overlay">
+        <div class="wheel-container">
+            <div class="wheel-title">🎡 КОЛЕСО ФОРТУНЫ 🎡</div>
+            <div class="wheel-canvas">
+                <canvas id="wheelCanvas" width="500" height="500"></canvas>
+                <div class="wheel-arrow"></div>
+            </div>
+            <div id="wheelResult" class="wheel-result"></div>
+            <button id="wheelCloseBtn" class="wheel-close-btn">💰 Забрать награду →</button>
+        </div>
+    </div>
 
     <audio id="errorSound" preload="auto"><source src="/static/error.mp3" type="audio/mpeg"></audio>
     <audio id="clickSound" preload="auto"><source src="/static/click.mp3" type="audio/mpeg"></audio>
@@ -9734,6 +9874,185 @@ if (document.readyState === 'loading') {
 } else {
     initFortuneEventHandlers();
 }
+
+// ========== КОЛЕСО ФОРТУНЫ ==========
+let wheelCanvas = document.getElementById('wheelCanvas');
+let wheelCtx = wheelCanvas?.getContext('2d');
+let wheelAnimationId = null;
+let wheelRotation = 0;
+let wheelTargetRotation = 0;
+let wheelStartTime = 0;
+let wheelDuration = 12000; // 12 секунд вращения
+let wheelWinner = null;
+let wheelPrizes = {};
+
+function drawWheel(winnerTeam, yellowChance, redChance) {
+    if (!wheelCtx) return;
+
+    const size = wheelCanvas.width;
+    const centerX = size / 2;
+    const centerY = size / 2;
+    const radius = size / 2 - 10;
+
+    wheelCtx.clearRect(0, 0, size, size);
+
+    const yellowAngle = (yellowChance / 100) * Math.PI * 2;
+    const redAngle = (Math.PI * 2) - yellowAngle;
+
+    let startAngle = wheelRotation;
+
+    // Жёлтый сектор
+    wheelCtx.beginPath();
+    wheelCtx.fillStyle = '#FFD700';
+    wheelCtx.moveTo(centerX, centerY);
+    wheelCtx.arc(centerX, centerY, radius, startAngle, startAngle + yellowAngle);
+    wheelCtx.closePath();
+    wheelCtx.fill();
+    wheelCtx.strokeStyle = '#333';
+    wheelCtx.lineWidth = 2;
+    wheelCtx.stroke();
+
+    // Красный сектор
+    wheelCtx.beginPath();
+    wheelCtx.fillStyle = '#FF4444';
+    wheelCtx.moveTo(centerX, centerY);
+    wheelCtx.arc(centerX, centerY, radius, startAngle + yellowAngle, startAngle + Math.PI * 2);
+    wheelCtx.closePath();
+    wheelCtx.fill();
+    wheelCtx.stroke();
+
+    // Центр
+    wheelCtx.beginPath();
+    wheelCtx.arc(centerX, centerY, 20, 0, Math.PI * 2);
+    wheelCtx.fillStyle = '#333';
+    wheelCtx.fill();
+    wheelCtx.fillStyle = '#FFD700';
+    wheelCtx.font = 'bold 24px Arial';
+    wheelCtx.textAlign = 'center';
+    wheelCtx.textBaseline = 'middle';
+    wheelCtx.fillText('?', centerX, centerY);
+
+    // Проценты
+    wheelCtx.save();
+    wheelCtx.font = 'bold 20px Arial';
+    wheelCtx.fillStyle = '#fff';
+    wheelCtx.shadowBlur = 0;
+
+    const yellowMidAngle = startAngle + yellowAngle / 2;
+    const yellowTextX = centerX + radius * 0.6 * Math.cos(yellowMidAngle);
+    const yellowTextY = centerY + radius * 0.6 * Math.sin(yellowMidAngle);
+    wheelCtx.fillStyle = '#8B6914';
+    wheelCtx.fillText(`${Math.round(yellowChance)}%`, yellowTextX, yellowTextY);
+
+    const redMidAngle = startAngle + yellowAngle + redAngle / 2;
+    const redTextX = centerX + radius * 0.6 * Math.cos(redMidAngle);
+    const redTextY = centerY + radius * 0.6 * Math.sin(redMidAngle);
+    wheelCtx.fillStyle = '#fff';
+    wheelCtx.fillText(`${Math.round(redChance)}%`, redTextX, redTextY);
+
+    wheelCtx.restore();
+}
+
+function animateWheel(timestamp) {
+    if (!wheelStartTime) {
+        wheelStartTime = timestamp;
+        requestAnimationFrame(animateWheel);
+        return;
+    }
+
+    const elapsed = timestamp - wheelStartTime;
+    let progress = Math.min(1, elapsed / wheelDuration);
+    const easeOut = 1 - Math.pow(1 - progress, 3);
+    const currentRotation = wheelTargetRotation * easeOut;
+    wheelRotation = currentRotation;
+
+    drawWheel(wheelWinner, wheelPrizes.yellowChance, wheelPrizes.redChance);
+
+    if (progress < 1) {
+        requestAnimationFrame(animateWheel);
+    } else {
+        cancelAnimationFrame(wheelAnimationId);
+        wheelAnimationId = null;
+
+        const winnerName = wheelWinner === 'yellow' ? 'Жёлтые 🟡' : 'Красные 🔴';
+        const resultDiv = document.getElementById('wheelResult');
+        resultDiv.innerHTML = `🎉 ПОБЕДИЛА КОМАНДА ${winnerName}! 🎉<br>💰 Призы распределены!`;
+        resultDiv.classList.add('show');
+
+        const closeBtn = document.getElementById('wheelCloseBtn');
+        closeBtn.classList.add('show');
+
+        if (typeof loadFortuneData === 'function') setTimeout(() => loadFortuneData(), 500);
+        if (typeof loadFortuneHistory === 'function') setTimeout(() => loadFortuneHistory(), 1000);
+        if (typeof syncData === 'function') setTimeout(() => syncData(true), 1500);
+    }
+}
+
+function startWheelAnimation(winnerTeam, yellowPool, redPool) {
+    const total = yellowPool + redPool;
+    const yellowChance = total > 0 ? (yellowPool / total) * 100 : 50;
+    const redChance = total > 0 ? (redPool / total) * 100 : 50;
+
+    wheelWinner = winnerTeam;
+    wheelPrizes = { yellowChance, redChance };
+
+    const arrowAngle = -Math.PI / 2;
+    let targetSegmentAngle;
+
+    if (winnerTeam === 'yellow') {
+        targetSegmentAngle = (yellowChance / 100) * Math.PI * 2 * Math.random();
+    } else {
+        targetSegmentAngle = (yellowChance / 100) * Math.PI * 2 + (redChance / 100) * Math.PI * 2 * Math.random();
+    }
+
+    const fullRotations = (Math.floor(Math.random() * 4) + 5) * Math.PI * 2;
+    wheelTargetRotation = fullRotations + targetSegmentAngle;
+
+    if (wheelAnimationId) cancelAnimationFrame(wheelAnimationId);
+
+    wheelStartTime = 0;
+    wheelRotation = 0;
+
+    const overlay = document.getElementById('wheelOverlay');
+    overlay.classList.add('active');
+
+    const closeBtn = document.getElementById('wheelCloseBtn');
+    closeBtn.classList.remove('show');
+    const resultDiv = document.getElementById('wheelResult');
+    resultDiv.classList.remove('show');
+
+    requestAnimationFrame(animateWheel);
+}
+
+document.getElementById('wheelCloseBtn')?.addEventListener('click', () => {
+    document.getElementById('wheelOverlay').classList.remove('active');
+    if (typeof window.isFortuneRoundEnding !== 'undefined') window.isFortuneRoundEnding = false;
+});
+
+// Переопределяем endFortuneRound для запуска колеса
+const originalEndFortuneRound = endFortuneRound;
+window.endFortuneRound = async function() {
+    try {
+        const response = await fetch('/api/fortune/end_round', { method: 'POST' });
+        const data = await response.json();
+
+        if (data.success && data.winner) {
+            const yellowPool = fortuneData?.yellowPool || 0;
+            const redPool = fortuneData?.redPool || 0;
+            startWheelAnimation(data.winner, yellowPool, redPool);
+            showToast('🎡 Колесо Фортуны запущено!', 'info');
+        } else if (data.success && data.winner === 'refund') {
+            showToast('⚖️ Ставки были только на одной команде — ставки возвращены', 'info');
+            if (typeof loadFortuneData === 'function') loadFortuneData();
+        } else {
+            showToast(data.message || 'Раунд завершён', 'info');
+            if (typeof loadFortuneData === 'function') loadFortuneData();
+        }
+    } catch(e) {
+        console.error('End round error:', e);
+        if (typeof originalEndFortuneRound === 'function') originalEndFortuneRound();
+    }
+};
 
         // ==================== СЧЁТЧИК ПОКУПОК LP БУСТЕРА ====================
         async function updateLPBoostCount() {
