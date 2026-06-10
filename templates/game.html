@@ -7585,20 +7585,28 @@ socket.on('fortune_timer_update', (data) => {
 socket.on('fortune_round_ended', (data) => {
     console.log('🎲 Раунд Фортуны завершён:', data);
 
-    if (data && data.message) {
-        showToast(data.message, 'info');
+    // 1. Если был возврат средств (refund) — колесо крутить не нужно
+    if (data && data.winner === 'refund') {
+        if (data.message) showToast(data.message, 'info');
+        if (typeof loadFortuneData === 'function') loadFortuneData();
+        return;
     }
 
-    // Полностью обновляем данные Фортуны
-    if (typeof loadFortuneData === 'function') {
-        setTimeout(() => loadFortuneData(), 1000);
-    }
+    // 2. Если определился реальный победитель
+    if (data && data.winner) {
+        // Достаем пулы из глобального объекта fortuneData (если его нет, ставим 50/50 для баланса)
+        const yellowPool = (typeof fortuneData !== 'undefined' && fortuneData.yellowPool) ? fortuneData.yellowPool : 50;
+        const redPool = (typeof fortuneData !== 'undefined' && fortuneData.redPool) ? fortuneData.redPool : 50;
 
-    // Если открыта история — обновляем её
-    const historyTab = document.querySelector('[data-fortune-tab="history"]');
-    if (historyTab && historyTab.classList.contains('active')) {
-        if (typeof loadFortuneHistory === 'function') {
-            setTimeout(() => loadFortuneHistory(), 1500);
+        // Запускаем 12-секундное колесо, которое ты скинул!
+        if (typeof startWheelAnimation === 'function') {
+            console.log(`🎡 Запуск анимации колеса для команды: ${data.winner}`);
+            startWheelAnimation(data.winner, yellowPool, redPool);
+            showToast('🎡 Колесо Фортуны запущено!', 'info');
+        } else {
+            // Запасной вариант, если функция анимации почему-то не подгрузилась
+            if (data.message) showToast(data.message, 'info');
+            if (typeof loadFortuneData === 'function') loadFortuneData();
         }
     }
 });
