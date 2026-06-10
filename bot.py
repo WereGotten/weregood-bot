@@ -1882,15 +1882,40 @@ def create_stars_invoice(chat_id, user_id):
         currency = "XTR"
         prices = [{"label": "Энергетический усилитель", "amount": 25}]
         url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/createInvoiceLink"
-        data = {"title": title, "description": description, "payload": payload, "provider_token": provider_token,
-                "currency": currency, "prices": prices}
+        data = {
+            "title": title,
+            "description": description,
+            "payload": payload,
+            "provider_token": provider_token,
+            "currency": currency,
+            "prices": prices
+        }
         verify_ssl = not DEBUG_MODE
+
+        # ДИАГНОСТИКА
+        print(f"🔗 [DIAG] Создаю инвойс для user_id={user_id}")
+        print(f"🔗 [DIAG] URL: {url}")
+        print(f"🔗 [DIAG] TELEGRAM_TOKEN: {TELEGRAM_TOKEN[:10]}... (скрыт)")
+
         response = requests.post(url, json=data, timeout=10, verify=verify_ssl)
         result = response.json()
+
+        # ДИАГНОСТИКА — ВЫВОДИМ ПОЛНЫЙ ОТВЕТ ОТ TELEGRAM
+        print(f"🔗 [DIAG] Статус ответа: {response.status_code}")
+        print(f"🔗 [DIAG] Ответ Telegram: {json.dumps(result, indent=2, ensure_ascii=False)}")
+
         if result.get("ok"):
+            print(f"✅ [DIAG] Инвойс создан: {result['result']}")
             return result["result"]
-        return None
+        else:
+            # ВЫВОДИМ ОШИБКУ
+            error_msg = result.get('description', 'Неизвестная ошибка')
+            print(f"❌ [DIAG] Ошибка Telegram: {error_msg}")
+            logger.error(f"Ошибка создания инвойса: {error_msg}")
+            return None
+
     except Exception as e:
+        print(f"❌ [DIAG] Исключение: {e}")
         logger.error(f"Ошибка в create_stars_invoice: {e}")
         return None
 
