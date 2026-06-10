@@ -4958,26 +4958,23 @@
     text-shadow: 0 0 10px rgba(255, 215, 0, 0.5), 0 2px 4px rgba(0,0,0,0.5);
 }
 
+/* ИСПРАВЛЕНО: Убрали паддинги и фоны, чтобы обертка не сжимала Canvas и не ломала точность стрелки */
 .wheel-canvas {
     width: 320px;
     height: 320px;
     margin: 0 auto;
     position: relative;
-    padding: 10px;
-    background: radial-gradient(circle, #222240 0%, #0f0f20 100%);
-    border-radius: 50%;
-    box-shadow: inset 0 0 15px rgba(0,0,0,0.5), 0 4px 20px rgba(0,0,0,0.4);
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
+/* ИСПРАВЛЕНО: Убрали старые CSS-тени и бордеры. Теперь объёмный металл и неоновое свечение рисует сам Canvas */
 .wheel-canvas canvas {
     width: 100%;
     height: 100%;
-    border-radius: 50%;
-    /* Красивый хромированный ободок для самого колеса */
-    box-shadow: 0 0 0 6px #1e1e38,
-                0 0 0 10px rgba(255, 215, 0, 0.6),
-                0 0 20px rgba(255, 215, 0, 0.4);
     display: block;
+    border-radius: 50%;
 }
 
 /* Изящная неоновая стрелка-указатель */
@@ -5087,6 +5084,7 @@
         width: 92vw;
         padding: 24px 16px;
     }
+    /* ИСПРАВЛЕНО: Для мобилок просто пропорционально уменьшаем обертку */
     .wheel-canvas {
         width: 270px;
         height: 270px;
@@ -9972,81 +9970,179 @@ if (document.readyState === 'loading') {
     initFortuneEventHandlers();
 }
 
-// ========== КОЛЕСО ФОРТУНЫ ==========
+// ========== КИБЕРПАНК КОЛЕСО ФОРТУНЫ НЕКСТГЕН (ПОЛНАЯ СИНХРОНИЗАЦИЯ) ==========
 let wheelCanvas = document.getElementById('wheelCanvas');
 let wheelCtx = wheelCanvas?.getContext('2d');
 let wheelAnimationId = null;
 let wheelRotation = 0;
 let wheelTargetRotation = 0;
 let wheelStartTime = 0;
-let wheelDuration = 12000; // 12 секунд вращения
+let wheelDuration = 12000; // 12 секунд сочного кручения
 let wheelWinner = null;
 let wheelPrizes = {};
 
-function drawWheel(winnerTeam, yellowChance, redChance) {
-    if (!wheelCtx) return;
+function drawWheel(winnerTeam, yellowChance, redChance, currentSpeed = 0) {
+    if (!wheelCtx || !wheelCanvas) return;
 
     const size = wheelCanvas.width;
     const centerX = size / 2;
     const centerY = size / 2;
-    const radius = size / 2 - 10;
+    const radius = size / 2 - 22; // Идеальный зазор под новый обод
 
     wheelCtx.clearRect(0, 0, size, size);
 
     const yellowAngle = (yellowChance / 100) * Math.PI * 2;
     const redAngle = (Math.PI * 2) - yellowAngle;
-
     let startAngle = wheelRotation;
 
-    // Жёлтый сектор
+    // Эффект Motion Blur при быстром вращении
+    if (currentSpeed > 0.04) {
+        wheelCtx.filter = `blur(${Math.min(currentSpeed * 18, 5)}px)`;
+    } else {
+        wheelCtx.filter = 'none';
+    }
+
+    // --- 1. ЖЁЛТЫЙ (ЗОЛОТОЙ) СЕКТОР С ТРЁХМЕРНЫМ ГРАДИЕНТОМ ---
     wheelCtx.beginPath();
-    wheelCtx.fillStyle = '#FFD700';
     wheelCtx.moveTo(centerX, centerY);
     wheelCtx.arc(centerX, centerY, radius, startAngle, startAngle + yellowAngle);
     wheelCtx.closePath();
-    wheelCtx.fill();
-    wheelCtx.strokeStyle = '#333';
-    wheelCtx.lineWidth = 2;
-    wheelCtx.stroke();
 
-    // Красный сектор
+    let yellowGrad = wheelCtx.createRadialGradient(centerX, centerY, radius * 0.1, centerX, centerY, radius);
+    yellowGrad.addColorStop(0, '#FFF59E');  // Яркий блик в центре
+    yellowGrad.addColorStop(0.5, '#F1C40F'); // Основной золотой
+    yellowGrad.addColorStop(1, '#826000');   // Глубокая тень у ободка
+    wheelCtx.fillStyle = yellowGrad;
+    wheelCtx.fill();
+
+    // --- 2. КРАСНЫЙ КИБЕРПАНК СЕКТОР С ОБЪЁМОМ ---
     wheelCtx.beginPath();
-    wheelCtx.fillStyle = '#FF4444';
     wheelCtx.moveTo(centerX, centerY);
     wheelCtx.arc(centerX, centerY, radius, startAngle + yellowAngle, startAngle + Math.PI * 2);
     wheelCtx.closePath();
+
+    let redGrad = wheelCtx.createRadialGradient(centerX, centerY, radius * 0.1, centerX, centerY, radius);
+    redGrad.addColorStop(0, '#FF7676');  // Внутреннее неоновое свечение
+    redGrad.addColorStop(0.5, '#E74C3C'); // Насыщенный красный
+    redGrad.addColorStop(1, '#63140C');   // Тёмный благородный кант
+    wheelCtx.fillStyle = redGrad;
     wheelCtx.fill();
+
+    // --- 3. СВЕТЯЩИЕСЯ НЕОНОВЫЕ СТЫКИ-РАЗДЕЛИТЕЛИ ---
+    wheelCtx.lineWidth = 4;
+    wheelCtx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+    wheelCtx.shadowColor = '#fff';
+    wheelCtx.shadowBlur = currentSpeed > 0.04 ? 12 : 3;
+
+    // Граница 1
+    wheelCtx.beginPath();
+    wheelCtx.moveTo(centerX, centerY);
+    wheelCtx.lineTo(centerX + radius * Math.cos(startAngle), centerY + radius * Math.sin(startAngle));
     wheelCtx.stroke();
 
-    // Центр
+    // Граница 2
     wheelCtx.beginPath();
-    wheelCtx.arc(centerX, centerY, 20, 0, Math.PI * 2);
-    wheelCtx.fillStyle = '#333';
-    wheelCtx.fill();
-    wheelCtx.fillStyle = '#FFD700';
-    wheelCtx.font = 'bold 24px Arial';
+    wheelCtx.moveTo(centerX, centerY);
+    wheelCtx.lineTo(centerX + radius * Math.cos(startAngle + yellowAngle), centerY + radius * Math.sin(startAngle + yellowAngle));
+    wheelCtx.stroke();
+
+    // Отключаем эффекты размытия и теней перед текстом и деталями обода
+    wheelCtx.shadowBlur = 0;
+    wheelCtx.filter = 'none';
+
+    // --- 4. ЖИРНЫЙ ФУТУРИСТИЧЕСКИЙ ТЕКСТ ПРОЦЕНТОВ ---
+    wheelCtx.save();
+    wheelCtx.font = '900 26px "Arial Black", Gadget, sans-serif';
     wheelCtx.textAlign = 'center';
     wheelCtx.textBaseline = 'middle';
-    wheelCtx.fillText('?', centerX, centerY);
+    wheelCtx.fillStyle = '#FFFFFF';
 
-    // Проценты
-    wheelCtx.save();
-    wheelCtx.font = 'bold 20px Arial';
-    wheelCtx.fillStyle = '#fff';
-    wheelCtx.shadowBlur = 0;
+    // Плотная тень под буквами, чтобы текст читался при любых раскладах пула
+    wheelCtx.shadowColor = 'rgba(0, 0, 0, 0.75)';
+    wheelCtx.shadowBlur = 8;
 
+    // Проценты Жёлтых
     const yellowMidAngle = startAngle + yellowAngle / 2;
-    const yellowTextX = centerX + radius * 0.6 * Math.cos(yellowMidAngle);
-    const yellowTextY = centerY + radius * 0.6 * Math.sin(yellowMidAngle);
-    wheelCtx.fillStyle = '#8B6914';
+    const yellowTextX = centerX + radius * 0.62 * Math.cos(yellowMidAngle);
+    const yellowTextY = centerY + radius * 0.62 * Math.sin(yellowMidAngle);
     wheelCtx.fillText(`${Math.round(yellowChance)}%`, yellowTextX, yellowTextY);
 
+    // Проценты Красных
     const redMidAngle = startAngle + yellowAngle + redAngle / 2;
-    const redTextX = centerX + radius * 0.6 * Math.cos(redMidAngle);
-    const redTextY = centerY + radius * 0.6 * Math.sin(redMidAngle);
-    wheelCtx.fillStyle = '#fff';
+    const redTextX = centerX + radius * 0.62 * Math.cos(redMidAngle);
+    const redTextY = centerY + radius * 0.62 * Math.sin(redMidAngle);
     wheelCtx.fillText(`${Math.round(redChance)}%`, redTextX, redTextY);
+    wheelCtx.restore();
 
+    // --- 5. МЕТАЛЛИЧЕСКИЙ СТАЛЬНОЙ ОБОД И ВРАЩАЮЩИЕСЯ БОЛТЫ ---
+    wheelCtx.beginPath();
+    wheelCtx.arc(centerX, centerY, radius + 11, 0, Math.PI * 2);
+    wheelCtx.lineWidth = 20;
+    wheelCtx.strokeStyle = '#16162d'; // Киберпанк-титан
+    wheelCtx.stroke();
+
+    // Рисуем заклепки, летящие вместе с колесом
+    const totalBolts = 24;
+    for (let i = 0; i < totalBolts; i++) {
+        let boltAngle = startAngle + (i * (Math.PI * 2 / totalBolts));
+        let boltX = centerX + (radius + 11) * Math.cos(boltAngle);
+        let boltY = centerY + (radius + 11) * Math.sin(boltAngle);
+
+        // Хромированная шляпка болта
+        wheelCtx.beginPath();
+        wheelCtx.arc(boltX, boltY, 5, 0, Math.PI * 2);
+        let boltGrad = wheelCtx.createLinearGradient(boltX - 3, boltY - 3, boltX + 3, boltY + 3);
+        boltGrad.addColorStop(0, '#FFFFFF');
+        boltGrad.addColorStop(0.4, '#9E9E9E');
+        boltGrad.addColorStop(1, '#252525');
+        wheelCtx.fillStyle = boltGrad;
+        wheelCtx.fill();
+
+        // Слот под отвертку в центре болта
+        wheelCtx.beginPath();
+        wheelCtx.arc(boltX, boltY, 1.5, 0, Math.PI * 2);
+        wheelCtx.fillStyle = '#111116';
+        wheelCtx.fill();
+    }
+
+    // --- 6. МОЩНАЯ НЕОНОВАЯ СТУПИЦА "WG" В ЦЕНТРЕ КОЛЕСА ---
+    // Внешнее кольцо ступицы с мягкой тенью на сектора
+    wheelCtx.beginPath();
+    wheelCtx.arc(centerX, centerY, 42, 0, Math.PI * 2);
+    wheelCtx.fillStyle = '#0b0b16';
+    wheelCtx.shadowColor = winnerTeam === 'yellow' ? 'rgba(241, 196, 15, 0.5)' : 'rgba(231, 76, 60, 0.5)';
+    wheelCtx.shadowBlur = 15;
+    wheelCtx.fill();
+    wheelCtx.shadowBlur = 0; // Сброс тени
+
+    // Золотое глянцевое обрамление центра
+    wheelCtx.beginPath();
+    wheelCtx.arc(centerX, centerY, 36, 0, Math.PI * 2);
+    wheelCtx.lineWidth = 3;
+    wheelCtx.strokeStyle = '#F1C40F';
+    wheelCtx.stroke();
+
+    // Ядро центральной кнопки
+    wheelCtx.beginPath();
+    wheelCtx.arc(centerX, centerY, 33, 0, Math.PI * 2);
+    wheelCtx.fillStyle = '#1a1a3a';
+    wheelCtx.fill();
+
+    // Логотип валюты WG
+    wheelCtx.save();
+    wheelCtx.font = 'bold 22px "Arial Black", sans-serif';
+    wheelCtx.textAlign = 'center';
+    wheelCtx.textBaseline = 'middle';
+
+    let textGrad = wheelCtx.createLinearGradient(centerX, centerY - 12, centerX, centerY + 12);
+    textGrad.addColorStop(0, '#FFFFFF');
+    textGrad.addColorStop(0.5, '#F1C40F');
+    textGrad.addColorStop(1, '#D35400');
+
+    wheelCtx.fillStyle = textGrad;
+    wheelCtx.shadowColor = '#F1C40F';
+    wheelCtx.shadowBlur = 5;
+    wheelCtx.fillText('WG', centerX, centerY + 2); // Посадка текста по центру
     wheelCtx.restore();
 }
 
@@ -10059,11 +10155,18 @@ function animateWheel(timestamp) {
 
     const elapsed = timestamp - wheelStartTime;
     let progress = Math.min(1, elapsed / wheelDuration);
-    const easeOut = 1 - Math.pow(1 - progress, 3);
+
+    // Плавное затухание скорости (Quartic EaseOut)
+    const easeOut = 1 - Math.pow(1 - progress, 4);
+
+    const prevRotation = wheelRotation;
     const currentRotation = wheelTargetRotation * easeOut;
     wheelRotation = currentRotation;
 
-    drawWheel(wheelWinner, wheelPrizes.yellowChance, wheelPrizes.redChance);
+    // Скорость изменения угла для расчёта Motion Blur
+    const currentSpeed = currentRotation - prevRotation;
+
+    drawWheel(wheelWinner, wheelPrizes.yellowChance, wheelPrizes.redChance, currentSpeed);
 
     if (progress < 1) {
         requestAnimationFrame(animateWheel);
@@ -10073,12 +10176,15 @@ function animateWheel(timestamp) {
 
         const winnerName = wheelWinner === 'yellow' ? 'Жёлтые 🟡' : 'Красные 🔴';
         const resultDiv = document.getElementById('wheelResult');
-        resultDiv.innerHTML = `🎉 ПОБЕДИЛА КОМАНДА ${winnerName}! 🎉<br>💰 Призы распределены!`;
-        resultDiv.classList.add('show');
+        if (resultDiv) {
+            resultDiv.innerHTML = `🎉 ПОБЕДИЛА КОМАНДА ${winnerName}! 🎉<br>💰 Призы распределены!`;
+            resultDiv.classList.add('show');
+        }
 
         const closeBtn = document.getElementById('wheelCloseBtn');
-        closeBtn.classList.add('show');
+        if (closeBtn) closeBtn.classList.add('show');
 
+        // Мягкое последовательное обновление данных на странице
         if (typeof loadFortuneData === 'function') setTimeout(() => loadFortuneData(), 500);
         if (typeof loadFortuneHistory === 'function') setTimeout(() => loadFortuneHistory(), 1000);
         if (typeof syncData === 'function') setTimeout(() => syncData(true), 1500);
@@ -10093,23 +10199,21 @@ function startWheelAnimation(winnerTeam, yellowPool, redPool, sectorFactor) {
     wheelWinner = winnerTeam;
     wheelPrizes = { yellowChance, redChance };
 
-    // Если бэкенд по какой-то причине не прислал коэффициент, ставим 0.5 (центр сектора)
+    // Защита: если бэкенд не вернул фактор, центрируем в секторе
     const factor = (sectorFactor !== undefined && sectorFactor !== null) ? sectorFactor : 0.5;
-
     let targetSegmentAngle;
 
-    // Рассчитываем угол строго по данным от бэкенда БЕЗ Math.random()
+    // Считаем угол попадания
     if (winnerTeam === 'yellow') {
         targetSegmentAngle = (yellowChance / 100) * Math.PI * 2 * factor;
     } else {
         targetSegmentAngle = (yellowChance / 100) * Math.PI * 2 + (redChance / 100) * Math.PI * 2 * factor;
     }
 
-    // Делаем ровно 7 полных кругов для всех девайсов, чтобы скорость вращения была одинаковой
-    const fullRotations = 7 * Math.PI * 2;
+    // Ровно 8 полных оборотов
+    const fullRotations = 8 * Math.PI * 2;
 
-    // ВАЖНО: Вычитаем угол из полных оборотов, так как Canvas рисует по часовой стрелке,
-    // а стрелка-указатель находится сверху (-Math.PI / 2). Корректируем конечную точку:
+    // Корректируем финальную точку под верхний триггер стрелки (-Math.PI / 2)
     wheelTargetRotation = fullRotations + (Math.PI * 1.5 - targetSegmentAngle);
 
     if (wheelAnimationId) cancelAnimationFrame(wheelAnimationId);
@@ -10135,7 +10239,7 @@ document.getElementById('wheelCloseBtn')?.addEventListener('click', () => {
     if (typeof window.isFortuneRoundEnding !== 'undefined') window.isFortuneRoundEnding = false;
 });
 
-// Переопределяем ручной админский запуск раунда (кнопка в панели)
+// Кнопка принудительного админского закрытия раунда из панели управления
 const originalEndFortuneRound = endFortuneRound;
 window.endFortuneRound = async function() {
     try {
@@ -10143,7 +10247,6 @@ window.endFortuneRound = async function() {
         const data = await response.json();
 
         if (data.success && data.winner) {
-            // Если админ запустил раунд вручную и сокет почему-то не отработал — подстраховываем
             const yellowPool = fortuneData?.yellowPool || 0;
             const redPool = fortuneData?.redPool || 0;
             const factor = data.sector_factor !== undefined ? data.sector_factor : 0.5;
