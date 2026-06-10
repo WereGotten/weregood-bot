@@ -2861,6 +2861,7 @@ def api_fortune_bet():
     user = get_user(user_id)
     if user['wg'] < amount:
         return jsonify({"success": False, "error": f"Не хватает WG! У вас {user['wg']:.2f} WG"}), 400
+
     with fortune_lock:
         if current_fortune_round.get('end_time', 0) <= time.time():
             # Если таймер истёк, но раунд не завершён — продлеваем
@@ -2937,6 +2938,35 @@ def api_fortune_bet():
                 SET yellow_pool = ?, red_pool = ?
                 WHERE round_id = ?
             ''', (current_fortune_round['yellow_pool'], current_fortune_round['red_pool'], round_id))
+
+        # ========== ОТПРАВЛЯЕМ ОБНОВЛЕНИЯ ВСЕМ ИГРОКАМ ЧЕРЕЗ SOCKET.IO ==========
+        try:
+            # Подготавливаем данные для отправки (топ-5 игроков для каждой команды)
+            yellow_players_sorted = sorted(current_fortune_round['yellow_bets'], key=lambda x: x['net_amount'],
+                                           reverse=True)[:5]
+            red_players_sorted = sorted(current_fortune_round['red_bets'], key=lambda x: x['net_amount'], reverse=True)[
+                :5]
+
+            socketio.emit('fortune_pools_update', {
+                'yellow_pool': current_fortune_round['yellow_pool'],
+                'red_pool': current_fortune_round['red_pool'],
+                'yellow_players': [{
+                    'userId': p['user_id'],
+                    'amount': p['amount'],
+                    'netAmount': p['net_amount'],
+                    'avatarUrl': p.get('avatar_url', ''),
+                    'username': p.get('username', '')
+                } for p in yellow_players_sorted],
+                'red_players': [{
+                    'userId': p['user_id'],
+                    'amount': p['amount'],
+                    'netAmount': p['net_amount'],
+                    'avatarUrl': p.get('avatar_url', ''),
+                    'username': p.get('username', '')
+                } for p in red_players_sorted]
+            })
+        except Exception as e:
+            logger.error(f"Socket emit error: {e}")
 
         return jsonify({
             "success": True,
