@@ -9994,7 +9994,7 @@ if (document.readyState === 'loading') {
     initFortuneEventHandlers();
 }
 
-// ========== УЛЬТРА-ОПТИМИЗИРОВАННОЕ КИБЕРПАНК КОЛЕСО (15s + PRE-RENDER + GPU-BOOST) ==========
+// ========== УЛЬТРА-ОПТИМИЗИРОВАННОЕ КИБЕРПАНК КОЛЕСО (15s + FULL CACHE + WIN/LOSE HANDLER) ==========
 let wheelCanvas = document.getElementById('wheelCanvas');
 let wheelCtx = wheelCanvas?.getContext('2d');
 let wheelAnimationId = null;
@@ -10095,7 +10095,6 @@ function cacheWheelGraphics(yellowChance, redChance) {
     cachedWheelCtx.restore();
 
     // --- ШАГ 5: ТИТАНОВЫЙ ОБОД И ЗАКЛЕПКИ ---
-    // Они вшиваются в текстуру кэша — это полностью ликвидирует микрофризы
     cachedWheelCtx.beginPath();
     cachedWheelCtx.arc(centerX, centerY, radius + 11, 0, Math.PI * 2);
     cachedWheelCtx.lineWidth = 20;
@@ -10119,63 +10118,60 @@ function cacheWheelGraphics(yellowChance, redChance) {
         cachedWheelCtx.fill();
     }
 
+    // --- ШАГ 6: ВШИВАЕМ ЦЕНТРАЛЬНУЮ СТУПИЦУ "WG" В КЭШ ---
+    // Перенесли сюда, чтобы убрать лишнюю отрисовку из цикла анимации!
+    cachedWheelCtx.beginPath();
+    cachedWheelCtx.arc(centerX, centerY, 42, 0, Math.PI * 2);
+    cachedWheelCtx.fillStyle = '#0f0f20';
+    cachedWheelCtx.fill();
+
+    cachedWheelCtx.beginPath();
+    cachedWheelCtx.arc(centerX, centerY, 36, 0, Math.PI * 2);
+    cachedWheelCtx.lineWidth = 4;
+    cachedWheelCtx.strokeStyle = '#FFD700';
+    cachedWheelCtx.stroke();
+
+    cachedWheelCtx.beginPath();
+    cachedWheelCtx.arc(centerX, centerY, 33, 0, Math.PI * 2);
+    cachedWheelCtx.fillStyle = '#16162d';
+    cachedWheelCtx.fill();
+
+    cachedWheelCtx.save();
+    cachedWheelCtx.font = 'bold 22px "Arial Black", sans-serif';
+    cachedWheelCtx.textAlign = 'center';
+    cachedWheelCtx.textBaseline = 'middle';
+
+    let textGrad = cachedWheelCtx.createLinearGradient(centerX, centerY - 12, centerX, centerY + 12);
+    textGrad.addColorStop(0, '#FFFFFF');
+    textGrad.addColorStop(0.5, '#F1C40F');
+    textGrad.addColorStop(1, '#F39C12');
+    cachedWheelCtx.fillStyle = textGrad;
+
+    cachedWheelCtx.fillText('WG', centerX, centerY + 2);
+    cachedWheelCtx.restore();
+
     isWheelCached = true;
     console.log('🚀 Графика колеса Фортуны успешно закэширована в памяти.');
 }
 
-// 2. Ультра-быстрая отрисовка сцены (вызывается 60 раз в секунду, работает на GPU)
-function drawWheel(winnerTeam) {
+// 2. Ультра-быстрая отрисовка сцены (Выполняет ровно одну команду drawImage — 0% лагов)
+function drawWheel() {
     if (!wheelCtx || !wheelCanvas || !isWheelCached) return;
 
     const size = wheelCanvas.width;
     const centerX = size / 2;
     const centerY = size / 2;
 
-    // Моментальная очистка основного экрана
     wheelCtx.clearRect(0, 0, size, size);
 
-    // ВРАЩАЕМ КЭШ: Просто крутим готовую картинку из ОЗУ. Процессор отдыхает!
     wheelCtx.save();
     wheelCtx.translate(centerX, centerY);
     wheelCtx.rotate(wheelRotation);
     wheelCtx.drawImage(cachedWheelCanvas, -centerX, -centerY);
     wheelCtx.restore();
-
-    // СТАТИКА (СТУПИЦА WG): Рисуется поверх, не тратит ресурсы на поворот матрицы
-    wheelCtx.beginPath();
-    wheelCtx.arc(centerX, centerY, 42, 0, Math.PI * 2);
-    wheelCtx.fillStyle = '#0f0f20';
-    wheelCtx.fill();
-
-    // Золотой неоновый ободок центра
-    wheelCtx.beginPath();
-    wheelCtx.arc(centerX, centerY, 36, 0, Math.PI * 2);
-    wheelCtx.lineWidth = 4;
-    wheelCtx.strokeStyle = '#FFD700';
-    wheelCtx.stroke();
-
-    wheelCtx.beginPath();
-    wheelCtx.arc(centerX, centerY, 33, 0, Math.PI * 2);
-    wheelCtx.fillStyle = '#16162d';
-    wheelCtx.fill();
-
-    // Отрендеренный бренд WG
-    wheelCtx.save();
-    wheelCtx.font = 'bold 22px "Arial Black", sans-serif';
-    wheelCtx.textAlign = 'center';
-    wheelCtx.textBaseline = 'middle';
-
-    let textGrad = wheelCtx.createLinearGradient(centerX, centerY - 12, centerX, centerY + 12);
-    textGrad.addColorStop(0, '#FFFFFF');
-    textGrad.addColorStop(0.5, '#F1C40F');
-    textGrad.addColorStop(1, '#F39C12');
-    wheelCtx.fillStyle = textGrad;
-
-    wheelCtx.fillText('WG', centerX, centerY + 2);
-    wheelCtx.restore();
 }
 
-// 3. Главный цикл анимации (Двухфазная физика: мягкий рывок + бесконечный финиш)
+// 3. Главный цикл анимации (Двухфазная физика + Разделение экранов результатов)
 function animateWheel(timestamp) {
     if (!wheelStartTime) {
         wheelStartTime = timestamp;
@@ -10188,23 +10184,17 @@ function animateWheel(timestamp) {
 
     let easeProgress;
 
-    // ИСПРАВЛЕННАЯ ФИЗИКА ДЛЯ МОБИЛОК: Смягчаем пиковый скачок, чтобы убрать пропуск кадров
     if (progress < 0.15) {
-        // Фаза 1: Плавный, но быстрый разгон (первые ~2.2 секунды)
-        // Использование степени 1.5 вместо жесткого куба не дает телефону «заикнуться» в стартовый клик
         easeProgress = Math.pow(progress / 0.15, 1.5) * 0.12;
     } else {
-        // Фаза 2: Постепенное драматичное замедление (оставшиеся ~12.7 секунд)
-        // Четвертая степень дает сумасшедший кинематографичный накат на финише
         const normalizedProgress = (progress - 0.15) / 0.85;
         easeProgress = 0.12 + (1 - Math.pow(1 - normalizedProgress, 4)) * 0.88;
     }
 
-    // Применяем рассчитанный угол вращения
     wheelRotation = wheelTargetRotation * easeProgress;
 
     // Рендерим оптимизированный кадр
-    drawWheel(wheelWinner);
+    drawWheel();
 
     if (progress < 1) {
         wheelAnimationId = requestAnimationFrame(animateWheel);
@@ -10212,18 +10202,37 @@ function animateWheel(timestamp) {
         cancelAnimationFrame(wheelAnimationId);
         wheelAnimationId = null;
 
-        // Отключаем слежение за слоем после остановки для экономии батареи смартфона
         if (wheelCanvas) wheelCanvas.style.transform = 'none';
 
-        const winnerName = wheelWinner === 'yellow' ? 'Жёлтые 🟡' : 'Красные 🔴';
+        // --- ЛОГИКА ОПРЕДЕЛЕНИЯ ВЫИГРЫША / ПРОИГРЫША ---
+        const winnerSide = wheelWinner; // 'yellow' или 'red'
+        const winnerName = winnerSide === 'yellow' ? 'Жёлтые 🟡' : 'Красные 🔴';
+
+        // Получаем данные о текущей ставке пользователя из глобального кэша
+        const userSide = typeof fortuneData !== 'undefined' ? fortuneData.userSide : null;
+        const userBet = typeof fortuneData !== 'undefined' ? (fortuneData.userBet || 0) : 0;
+
         const resultDiv = document.getElementById('wheelResult');
         if (resultDiv) {
-            resultDiv.innerHTML = `🎉 ПОБЕДИЛА КОМАНДА ${winnerName}! 🎉<br>💰 Призы распределены!`;
+            if (!userSide) {
+                // Юзер просто смотрел раунд, ставок не делал
+                resultDiv.innerHTML = `🔔 Раунд завершён!<br>Победила команда <b>${winnerName}</b>!`;
+            } else if (userSide === winnerSide) {
+                // Юзер победил!
+                resultDiv.innerHTML = `🎉 ПОЗДРАВЛЯЕМ, ВЫ ВЫИГРАЛИ! 🎉<br>Команда ${winnerName} затащила этот раунд!<br>💰 Ваша ставка в размере <b>${userBet} WG</b> успешно умножена!`;
+            } else {
+                // Юзер проиграл
+                resultDiv.innerHTML = `📉 К сожалению, вы проиграли...<br>Победила команда ${winnerName}.<br>Не расстраивайтесь, потеряно <b>${userBet} WG</b>. В следующий раз точно повезёт! 🍀`;
+            }
             resultDiv.classList.add('show');
         }
 
+        // Выводим универсальную кнопку закрытия для всех
         const closeBtn = document.getElementById('wheelCloseBtn');
-        if (closeBtn) closeBtn.classList.add('show');
+        if (closeBtn) {
+            closeBtn.innerText = "Закрыть";
+            closeBtn.classList.add('show');
+        }
 
         // Плавная бесконфликтная синхронизация бэка
         if (typeof loadFortuneData === 'function') setTimeout(() => loadFortuneData(), 500);
@@ -10232,19 +10241,29 @@ function animateWheel(timestamp) {
     }
 }
 
-// 4. Логика инициализации и запуска
+// 4. Логика инициализации и запуска (С защитой от пустых пулов 50/50)
 function startWheelAnimation(winnerTeam, yellowPool, redPool, sectorFactor) {
     const total = yellowPool + redPool;
-    const yellowChance = total > 0 ? (yellowPool / total) * 100 : 50;
-    const redChance = total > 0 ? (redPool / total) * 100 : 50;
+
+    // АНТИ-БАГ: Если ставок нет (начало раунда/обнуление), жестко выставляем 50% на 50%
+    let yellowChance = 50;
+    let redChance = 50;
+
+    if (total > 0) {
+        yellowChance = (yellowPool / total) * 100;
+        redChance = (redPool / total) * 100;
+
+        // Жесткие лимиты на случай если вся ставка только на одной стороне
+        if (yellowPool > 0 && redPool === 0) { yellowChance = 100; redChance = 0; }
+        if (redPool > 0 && yellowPool === 0) { yellowChance = 0; redChance = 100; }
+    }
 
     wheelWinner = winnerTeam;
     wheelPrizes = { yellowChance, redChance };
 
-    // ШАГ 1: Кэшируем всю тяжелую геометрию в фоновый поток ОДИН раз
+    // Кэшируем графику в фоновый поток ОДИН раз
     cacheWheelGraphics(yellowChance, redChance);
 
-    // ШАГ 2: Врубаем аппаратное 3D/GPU-ускорение холста через CSS-трансформы!
     if (wheelCanvas) {
         wheelCanvas.style.willChange = 'transform';
         wheelCanvas.style.transform = 'translateZ(0)';
@@ -10253,7 +10272,6 @@ function startWheelAnimation(winnerTeam, yellowPool, redPool, sectorFactor) {
     const factor = (sectorFactor !== undefined && sectorFactor !== null) ? sectorFactor : 0.5;
     let targetSegmentAngle;
 
-    // Расчет точки остановки под верхнюю стрелку (-Math.PI / 2)
     if (winnerTeam === 'yellow') {
         targetSegmentAngle = (yellowChance / 100) * Math.PI * 2 * factor;
     } else {
@@ -10277,7 +10295,6 @@ function startWheelAnimation(winnerTeam, yellowPool, redPool, sectorFactor) {
     const resultDiv = document.getElementById('wheelResult');
     if (resultDiv) resultDiv.classList.remove('show');
 
-    // Старт!
     requestAnimationFrame(animateWheel);
 }
 
@@ -10295,8 +10312,9 @@ window.endFortuneRound = async function() {
         const data = await response.json();
 
         if (data.success && data.winner) {
-            const yellowPool = fortuneData?.yellowPool || 0;
-            const redPool = fortuneData?.redPool || 0;
+            // ФИКС РАССИНХРОНА: Берем пулы, которые прислал бэкенд НА МОМЕНТ ЗАКРЫТИЯ, а не старые из кэша!
+            const yellowPool = data.yellowPool !== undefined ? data.yellowPool : (fortuneData?.yellowPool || 0);
+            const redPool = data.redPool !== undefined ? data.redPool : (fortuneData?.redPool || 0);
             const factor = data.sector_factor !== undefined ? data.sector_factor : 0.5;
 
             startWheelAnimation(data.winner, yellowPool, redPool, factor);
