@@ -2620,18 +2620,32 @@ def restore_fortune_from_db():
 
 # ========== ТАЙМЕР ТОЛЬКО ДЛЯ ОТОБРАЖЕНИЯ, НЕ ЗАВЕРШАЕТ РАУНД ==========
 def update_fortune_timer():
-    """Только обновляет таймер на клиенте, НЕ завершает раунд"""
+    """Обновляет таймер на клиенте и АВТОМАТИЧЕСКИ завершает раунд при 00:00"""
     global current_fortune_round
     while True:
         time.sleep(1)
         try:
+            should_end = False
             with fortune_lock:
                 if current_fortune_round and current_fortune_round.get('round_id'):
-                    time_left = max(0, int(current_fortune_round.get('end_time', 0) - time.time()))
-                    # Только обновляем таймер через сокет, НИЧЕГО не завершаем
+                    end_time = current_fortune_round.get('end_time', 0)
+                    now = time.time()
+                    time_left = max(0, int(end_time - now))
+
+                    # Отправляем тиканье таймера игрокам
                     socketio.emit('fortune_timer_update', {'time_left': time_left})
+
+                    # Если время вышло и раунд еще не в процессе завершения
+                    if time_left == 0 and not current_fortune_round.get('is_ending', False):
+                        should_end = True
+
+            # Вызываем завершение ВНЕ блока lock, чтобы не поймать deadlock (взаимную блокировку)
+            if should_end:
+                print("⏰ [ТАЙМЕР] Время вышло! Автоматически завершаем раунд...")
+                end_fortune_round()
+
         except Exception as e:
-            logger.error(f"Таймер Фортуны ошибка: {e}")
+            logger.error(f"Таймер Фортуны ошибка: {e}", exc_info=True)
 
 
 # ========== РУЧНОЕ ЗАВЕРШЕНИЕ РАУНДА (ТОЛЬКО ЧЕРЕЗ АДМИНКУ ИЛИ API) ==========
