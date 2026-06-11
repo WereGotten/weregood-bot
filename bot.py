@@ -874,35 +874,55 @@ def get_user_referrals_count(user_id):
         cursor.execute("SELECT COUNT(*) FROM referrals WHERE referrer_id = ?", (user_id,))
         return cursor.fetchone()[0]
 
-def update_fortune_achievements(user_id, bet_amount=None, is_win=False):
-        """Обновляет достижения, связанные с Фортуной"""
-        try:
-            with db.get_cursor() as cursor:
-                # Получаем текущие значения
+
+# ========== ДОСТИЖЕНИЯ ФОРТУНЫ ==========
+def update_fortune_achievements(user_id, bet_amount=None, is_win=False, is_new_round=True):
+    """Обновляет достижения, связанные с Фортуной
+
+    Args:
+        user_id: ID пользователя
+        bet_amount: Сумма ставки (для Лудомана)
+        is_win: Победа или нет (для Везучего)
+        is_new_round: Является ли это первой ставкой в раунде (для Бесстрашного и Сумасшедшего)
+    """
+    try:
+        with db.get_cursor() as cursor:
+            # Получаем текущие значения
+            cursor.execute("""
+                SELECT fortune_bets_count, fortune_wins_count, fortune_total_bet_amount 
+                FROM users WHERE user_id = ?
+            """, (user_id,))
+            row = cursor.fetchone()
+
+            if not row:
+                return
+
+            current_bets = row['fortune_bets_count'] or 0
+            current_wins = row['fortune_wins_count'] or 0
+            current_total_bet = row['fortune_total_bet_amount'] or 0
+
+            updated = False
+
+            # Обновляем количество ставок (ТОЛЬКО если это новая ставка в раунде)
+            if bet_amount is not None and bet_amount > 0:
+                new_total_bet = current_total_bet + bet_amount
                 cursor.execute("""
-                    SELECT fortune_bets_count, fortune_wins_count, fortune_total_bet_amount 
-                    FROM users WHERE user_id = ?
-                """, (user_id,))
-                row = cursor.fetchone()
+                    UPDATE users SET fortune_total_bet_amount = ? WHERE user_id = ?
+                """, (new_total_bet, user_id))
+                updated = True
 
-                if not row:
-                    return
+                # Проверяем достижение "Лудоман" (200 000 WG суммарно) - всегда обновляем сумму
+                if new_total_bet >= 200000:
+                    update_achievement_progress(user_id, 'gambler_fortune', set_value=200000)
+                else:
+                    update_achievement_progress(user_id, 'gambler_fortune', int(bet_amount))
 
-                current_bets = row['fortune_bets_count'] or 0
-                current_wins = row['fortune_wins_count'] or 0
-                current_total_bet = row['fortune_total_bet_amount'] or 0
-
-                updated = False
-
-                # Обновляем количество ставок (если передан bet_amount, значит это новая ставка)
-                if bet_amount is not None and bet_amount > 0:
+                # ========== КЛЮЧЕВОЕ ИЗМЕНЕНИЕ: обновляем счётчики ставок ТОЛЬКО для новых раундов ==========
+                if is_new_round:
                     new_bets = current_bets + 1
-                    new_total_bet = current_total_bet + bet_amount
                     cursor.execute("""
-                        UPDATE users 
-                        SET fortune_bets_count = ?, fortune_total_bet_amount = ? 
-                        WHERE user_id = ?
-                    """, (new_bets, new_total_bet, user_id))
+                        UPDATE users SET fortune_bets_count = ? WHERE user_id = ?
+                    """, (new_bets, user_id))
                     updated = True
 
                     # Проверяем достижение "Бесстрашный" (100 ставок)
@@ -914,31 +934,25 @@ def update_fortune_achievements(user_id, bet_amount=None, is_win=False):
                     else:
                         update_achievement_progress(user_id, 'crazy', 1)
 
-                    # Проверяем достижение "Лудоман" (200 000 WG суммарно)
-                    if new_total_bet >= 200000:
-                        update_achievement_progress(user_id, 'gambler_fortune', set_value=200000)
-                    else:
-                        update_achievement_progress(user_id, 'gambler_fortune', int(bet_amount))
+            # Обновляем количество побед
+            if is_win:
+                new_wins = current_wins + 1
+                cursor.execute("""
+                    UPDATE users SET fortune_wins_count = ? WHERE user_id = ?
+                """, (new_wins, user_id))
+                updated = True
 
-                # Обновляем количество побед
-                if is_win:
-                    new_wins = current_wins + 1
-                    cursor.execute("""
-                        UPDATE users SET fortune_wins_count = ? WHERE user_id = ?
-                    """, (new_wins, user_id))
-                    updated = True
+                # Проверяем достижение "Везучий" (100 побед)
+                if new_wins >= 100:
+                    update_achievement_progress(user_id, 'lucky_fortune', set_value=100)
+                else:
+                    update_achievement_progress(user_id, 'lucky_fortune', 1)
 
-                    # Проверяем достижение "Везучий" (100 побед)
-                    if new_wins >= 100:
-                        update_achievement_progress(user_id, 'lucky_fortune', set_value=100)
-                    else:
-                        update_achievement_progress(user_id, 'lucky_fortune', 1)
+            if updated:
+                invalidate_cache(user_id)
 
-                if updated:
-                    invalidate_cache(user_id)
-
-        except Exception as e:
-            logger.error(f"Ошибка обновления достижений Фортуны: {e}")
+    except Exception as e:
+        logger.error(f"Ошибка обновления достижений Фортуны: {e}")
 
 # ========== ИНИЦИАЛИЗАЦИЯ БД ==========
 def init_db():
@@ -2987,6 +3001,9 @@ def api_fortune_bet():
         net_amount = amount - commission
         safe_update_user(user_id, wg=user['wg'] - amount)
 
+        # ========== ФЛАГ: была ли у игрока ставка в этом раунде ДО этой операции ==========
+        had_bet_before = existing_bet is not None
+
         if existing_bet:
             new_total = existing_bet['amount'] + amount
             new_net_total = existing_bet['net_amount'] + net_amount
@@ -3003,8 +3020,10 @@ def api_fortune_bet():
                 user_id, user['username'], old_value=user['wg'], new_value=user['wg'] - amount, currency="wg")
             result_amount = new_total
 
-            # ========== ОБНОВЛЯЕМ ДОСТИЖЕНИЯ (добавление к существующей ставке) ==========
-            update_fortune_achievements(user_id, bet_amount=amount, is_win=False)
+            # ========== ОБНОВЛЯЕМ ДОСТИЖЕНИЯ ТОЛЬКО ЕСЛИ ЭТО ПЕРВАЯ СТАВКА В РАУНДЕ ==========
+            # Для добавления к ставке НЕ обновляем достижения (только сумму total_bet)
+            # Но сумму total_bet нужно обновить всегда
+            update_fortune_achievements(user_id, bet_amount=amount, is_win=False, is_new_round=False)
 
         else:
             bet_data = {
@@ -3025,8 +3044,8 @@ def api_fortune_bet():
                 user_id, user['username'], old_value=user['wg'], new_value=user['wg'] - amount, currency="wg")
             result_amount = amount
 
-            # ========== ОБНОВЛЯЕМ ДОСТИЖЕНИЯ (новая ставка) ==========
-            update_fortune_achievements(user_id, bet_amount=amount, is_win=False)
+            # ========== НОВАЯ СТАВКА В РАУНДЕ - ОБНОВЛЯЕМ ВСЁ ==========
+            update_fortune_achievements(user_id, bet_amount=amount, is_win=False, is_new_round=True)
 
         if team == 'yellow':
             current_fortune_round['yellow_pool'] += net_amount
@@ -3042,7 +3061,6 @@ def api_fortune_bet():
 
         # ========== ОТПРАВЛЯЕМ ОБНОВЛЕНИЯ ВСЕМ ИГРОКАМ ЧЕРЕЗ SOCKET.IO ==========
         try:
-            # Подготавливаем данные для отправки (топ-5 игроков для каждой команды)
             yellow_players_sorted = sorted(current_fortune_round['yellow_bets'], key=lambda x: x['net_amount'],
                                            reverse=True)[:5]
             red_players_sorted = sorted(current_fortune_round['red_bets'], key=lambda x: x['net_amount'], reverse=True)[
