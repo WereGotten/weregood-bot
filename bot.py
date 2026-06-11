@@ -2936,26 +2936,21 @@ def end_fortune_round():
         winner_team = 'yellow' if random.random() < yellow_weight else 'red'
 
     # ========== 2. МГНОВЕННО ОЧИЩАЕМ СТАВКИ В ГЛОБАЛЬНОЙ ПЕРЕМЕННОЙ ==========
-    # ЭТО КЛЮЧЕВОЕ ИЗМЕНЕНИЕ - очищаем ставки СРАЗУ!
     with fortune_lock:
-        # Сохраняем старые ставки для обработки призов
-        old_yellow_bets = current_fortune_round['yellow_bets'].copy()
-        old_red_bets = current_fortune_round['red_bets'].copy()
-
-        # МГНОВЕННО ОЧИЩАЕМ ставки и пулы
         current_fortune_round['yellow_bets'] = []
         current_fortune_round['red_bets'] = []
         current_fortune_round['yellow_pool'] = 0
         current_fortune_round['red_pool'] = 0
 
-    # ========== 3. ОТПРАВЛЯЕМ ОБНОВЛЕНИЕ НА ФРОНТЕНД (мгновенная очистка) ==========
+    # ========== 3. ОТПРАВЛЯЕМ ОБНОВЛЕНИЕ НА ФРОНТЕНД ==========
+    # Мгновенная очистка ставок
     socketio.emit('fortune_bets_cleared', {
         'round_id': round_id,
         'winner': winner_team,
         'sector_factor': sector_factor
     })
 
-    # ========== 4. ЗАПУСКАЕМ КОЛЕСО ==========
+    # Запуск колеса
     socketio.emit('fortune_round_ending_immediate', {
         'winner': winner_team,
         'sector_factor': sector_factor,
@@ -2964,7 +2959,13 @@ def end_fortune_round():
         'round_id': round_id
     })
 
-    # ========== 5. АСИНХРОННО ОБРАБАТЫВАЕМ ПРИЗЫ ==========
+    # ========== 4. МГНОВЕННЫЙ СБРОС ТАЙМЕРА НА ФРОНТЕНДЕ ==========
+    socketio.emit('fortune_timer_reset', {
+        'time_left': FORTUNE_ROUND_DURATION,
+        'message': '🔄 Новый раунд начался! Делайте ставки!'
+    })
+
+    # ========== 5. АСИНХРОННО ОБРАБАТЫВАЕМ ПРИЗЫ И СОЗДАЁМ НОВЫЙ РАУНД ==========
     def process_prizes_async():
         try:
             with db.get_cursor() as cursor:
@@ -2998,10 +2999,10 @@ def end_fortune_round():
                         add_log(f"🎲 ФОРТУНА: ПОБЕДА! +{win_amount} WG", bet['user_id'], user['username'])
                         team_name = "Жёлтых 🟡" if winner_team == 'yellow' else "Красных 🔴"
                         send_telegram_message(bet['user_id'],
-                                              f"🎉 **ПОБЕДА В КОМАНДНОЙ ФОРТУНЕ!**\n\n"
-                                              f"Команда {team_name} победила!\n"
-                                              f"💰 Вы выиграли {win_amount} WG!\n\n"
-                                              f"Поздравляем! 🎊")
+                            f"🎉 **ПОБЕДА В КОМАНДНОЙ ФОРТУНЕ!**\n\n"
+                            f"Команда {team_name} победила!\n"
+                            f"💰 Вы выиграли {win_amount} WG!\n\n"
+                            f"Поздравляем! 🎊")
 
                     for bet in all_bets:
                         if bet['team'] != winner_team:
@@ -3018,9 +3019,21 @@ def end_fortune_round():
 
                 cursor.execute("DELETE FROM fortune_active_bets WHERE round_id = ?", (round_id,))
 
-            # ========== 6. СОЗДАЁМ НОВЫЙ РАУНД ==========
+            # Создаём новый раунд
             create_new_fortune_round()
             print(f"✅ [ФОРТУНА] Раунд {round_id} завершён, создан новый раунд")
+
+            # Отправляем обновление состояния нового раунда
+            with fortune_lock:
+                if current_fortune_round:
+                    socketio.emit('fortune_state_update', {
+                        'round_id': current_fortune_round['round_id'],
+                        'time_left': FORTUNE_ROUND_DURATION,
+                        'yellow_pool': 0,
+                        'red_pool': 0,
+                        'yellow_bets': [],
+                        'red_bets': []
+                    })
 
         except Exception as e:
             logger.error(f"Ошибка при выдаче призов Фортуны: {e}", exc_info=True)
@@ -3030,6 +3043,7 @@ def end_fortune_round():
                 if current_fortune_round:
                     current_fortune_round['is_ending'] = False
 
+    # Запускаем обработку призов в фоне
     threading.Thread(target=process_prizes_async, daemon=True).start()
 
 
