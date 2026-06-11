@@ -2519,10 +2519,12 @@ def api_get_lp_boost_count():
 
 # ========== ФОРТУНА API (РУЧНОЕ УПРАВЛЕНИЕ - БЕЗ АВТОЗАВЕРШЕНИЯ) ==========
 
+# ========== ФОРТУНА API (ИСПРАВЛЕННАЯ ВЕРСИЯ) ==========
+
 def create_new_fortune_round():
     global current_fortune_round
 
-    # 1. Сначала проверяем базу БЕЗ глобального лока, чтобы не заклинило restore
+    # Проверяем, нет ли уже активного раунда в БД
     with db.get_cursor() as cursor:
         cursor.execute('''
             SELECT round_id FROM fortune_rounds 
@@ -2531,13 +2533,13 @@ def create_new_fortune_round():
         ''')
         existing_round = cursor.fetchone()
 
-    # Если раунд есть — выходим из функции создания и запускаем восстановление СНАРУЖИ
     if existing_round:
-        print(f"⚠️ Активный раунд {existing_round['round_id']} уже существует, восстанавливаю...")
-        restore_fortune_from_db()
+        # Раунд уже есть, просто загружаем его
+        print(f"⚠️ Активный раунд {existing_round['round_id']} уже существует")
+        restore_fortune_from_db(force=True)
         return
 
-    # 2. Если раунда нет — только тогда берем лок и создаем новый
+    # Создаём новый раунд
     with fortune_lock:
         round_id = str(uuid.uuid4())[:8]
         current_fortune_round = {
@@ -2557,7 +2559,7 @@ def create_new_fortune_round():
         print(f"✨ Создан новый раунд Фортуны: {round_id}")
 
 
-def restore_fortune_from_db():
+def restore_fortune_from_db(force=False):
     global current_fortune_round
     with fortune_lock:
         with db.get_cursor() as cursor:
@@ -2623,33 +2625,17 @@ def restore_fortune_from_db():
             print(f"✅ Восстановлено {len(yellow_bets) + len(red_bets)} ставок")
 
 
-# ========== ТАЙМЕР ТОЛЬКО ДЛЯ ОТОБРАЖЕНИЯ, НЕ ЗАВЕРШАЕТ РАУНД ==========
 def update_fortune_timer():
-    """Обновляет таймер на клиенте и мгновенно завершает раунд при 00:00"""
+    """Обновляет таймер на клиенте (НЕ завершает раунд автоматически)"""
     global current_fortune_round
     while True:
         time.sleep(1)
         try:
-            should_end = False
             with fortune_lock:
                 if current_fortune_round and current_fortune_round.get('round_id'):
                     end_time = current_fortune_round.get('end_time', 0)
-                    now = time.time()
-                    time_left = max(0, int(end_time - now))
-
-                    # Отправляем тиканье таймера игрокам
+                    time_left = max(0, int(end_time - time.time()))
                     socketio.emit('fortune_timer_update', {'time_left': time_left})
-
-                    # Если время вышло и раунд еще не в процессе завершения
-                    if time_left == 0 and not current_fortune_round.get('is_ending', False):
-                        should_end = True
-                        current_fortune_round['is_ending'] = True
-
-            # МГНОВЕННОЕ завершение раунда (в отдельном потоке)
-            if should_end:
-                print("⏰ [ТАЙМЕР] Время вышло! Мгновенно завершаем раунд...")
-                threading.Thread(target=instant_end_fortune_round, daemon=True).start()
-
         except Exception as e:
             logger.error(f"Таймер Фортуны ошибка: {e}", exc_info=True)
 
@@ -5474,6 +5460,8 @@ def handle_telegram_updates():
             logger.error(f"Ошибка в polling: {e}")
             time.sleep(5)
 
+restore_fortune_from_db()
+start_fortune_timer_thread()
 
 
 if __name__ == '__main__':
