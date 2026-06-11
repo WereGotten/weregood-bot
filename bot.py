@@ -3139,8 +3139,8 @@ def api_fortune_status():
             restore_fortune_from_db()
         time_left = max(0, int(current_fortune_round.get('end_time', 0) - time.time()))
         yellow_bets_sorted = sorted(current_fortune_round['yellow_bets'], key=lambda x: x['net_amount'], reverse=True)[
-            :5]
-        red_bets_sorted = sorted(current_fortune_round['red_bets'], key=lambda x: x['net_amount'], reverse=True)[:5]
+            :12]
+        red_bets_sorted = sorted(current_fortune_round['red_bets'], key=lambda x: x['net_amount'], reverse=True)[:12]
         return jsonify({
             "success": True,
             "round_id": current_fortune_round['round_id'],
