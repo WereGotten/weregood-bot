@@ -9547,27 +9547,10 @@ function attachPlayerClickHandlers() {
 
 // ========== ТАЙМЕР (ОПТИМИЗИРОВАННЫЙ) ==========
 function startFortuneTimer() {
-    // Уничтожаем старый таймер, если есть
-    if (fortuneUI.timerInterval) {
-        clearInterval(fortuneUI.timerInterval);
-        fortuneUI.timerInterval = null;
-    }
-
-    // Сбрасываем флаг завершения раунда
-    if (typeof window.isFortuneRoundEnding !== 'undefined') {
-        window.isFortuneRoundEnding = false;
-    }
+    if (fortuneUI.timerInterval) clearInterval(fortuneUI.timerInterval);
 
     fortuneUI.timerInterval = setInterval(() => {
-        // Проверяем, открыта ли Фортуна
-        if (!fortuneUI.elements.modal?.classList.contains('active')) {
-            return;
-        }
-
-        // Проверяем, не крутится ли колесо
-        if (window.isFortuneRoundEnding) {
-            return;
-        }
+        if (!fortuneUI.elements.modal?.classList.contains('active')) return;
 
         if (fortuneData.timeLeft > 0) {
             fortuneData.timeLeft--;
@@ -9577,25 +9560,23 @@ function startFortuneTimer() {
             clearInterval(fortuneUI.timerInterval);
             fortuneUI.timerInterval = null;
 
-            // Проверяем ставки
-            const hasYellow = fortuneData.yellowPool > 0;
-            const hasRed = fortuneData.redPool > 0;
-            const hasAnyBet = hasYellow || hasRed;
-
-            if (hasYellow && hasRed) {
-                // Ставки на обеих командах — завершаем раунд
-                showFortuneMessage('🎲 Раунд завершается! Определяем победителя...', 'info');
-                endFortuneRound();
-            } else if (hasAnyBet) {
-                // Ставки только на одной команде — возврат и новый раунд
-                showFortuneMessage('⚖️ Ставки были только на одной команде! Ставки возвращены.', 'info');
-                // Мгновенный сброс через сервер
-                endFortuneRound();
-            } else {
-                // Нет ставок — просто сбрасываем таймер
-                showFortuneMessage('🤝 Пока нет ставок! Сделайте первую ставку!', 'info');
+            // ПРОВЕРЯЕМ: если ставки только на одной команде
+            if ((fortuneData.yellowPool > 0 && fortuneData.redPool === 0) ||
+                (fortuneData.redPool > 0 && fortuneData.yellowPool === 0)) {
+                // Перезапускаем таймер, ставки НЕ ОЧИЩАЕМ
                 fortuneData.timeLeft = 300;
                 startFortuneTimer();
+                // ПОКАЗЫВАЕМ ОПОВЕЩЕНИЕ ВНУТРИ ФОРТУНЫ (а не глобальный тост)
+                showFortuneMessage('⏰ Ставки только на одной команде! Таймер перезапущен.', 'info');
+            } else if (fortuneData.yellowPool > 0 && fortuneData.redPool > 0) {
+                // Обе команды имеют ставки - завершаем раунд (ставки очистятся)
+                showFortuneMessage('🎲 Раунд завершается! Определяем победителя...', 'info');
+                endFortuneRound();
+            } else {
+                // Нет ставок вообще
+                fortuneData.isActive = false;
+                updateTimerDisplay();
+                showFortuneMessage('🤝 Пока нет ставок! Сделайте первую ставку!', 'info');
             }
         }
     }, 1000);
@@ -9664,72 +9645,65 @@ function updateTimerDisplay() {
 // ========== ЗАГРУЗКА ДАННЫХ С СЕРВЕРА ==========
 // Функция загрузки данных Фортуны с сервера
 async function loadFortuneData() {
-    // Защита от одновременных вызовов
-    if (isUpdatingFortune) {
-        console.log('🔄 Фортуна: уже идёт обновление, пропускаем');
-        return;
-    }
-
-    // Защита: если колесо крутится, не обновляем данные
+    // ЗАЩИТА: Если колесо крутится или идет отрисовка результатов,
+    // не даем данным из нового раунда перезаписать текущее состояние
     if (window.isFortuneRoundEnding) {
         console.log('🔄 Фортуна: обновление пропущено (колесо крутится)');
         return;
     }
 
-    // Проверяем, открыта ли Фортуна
-    const fortuneModal = document.getElementById('fortuneModal');
-    if (!fortuneModal || !fortuneModal.classList.contains('active')) {
-        return;
-    }
-
-    isUpdatingFortune = true;
-
     try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 секунд таймаут
-
-        const response = await fetch('/api/fortune/status', {
-            signal: controller.signal
-        });
-
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-
+        const response = await fetch('/api/fortune/status');
         const data = await response.json();
 
-        if (data.success && typeof fortuneData !== 'undefined') {
-            // Сохраняем ставку пользователя перед обновлением
-            const savedUserBetTeam = fortuneData.userBetTeam;
-            const savedUserBetAmount = fortuneData.userBetAmount;
+        if (data.success) {
+            // ========== СОХРАНЯЕМ СТАВКУ ПОЛЬЗОВАТЕЛЯ ПЕРЕД ОБНОВЛЕНИЕМ ==========
+            const savedUserBetTeam = fortuneData?.userBetTeam;
+            const savedUserBetAmount = fortuneData?.userBetAmount;
 
-            fortuneData.timeLeft = data.time_left || 0;
-            fortuneData.yellowPool = data.yellow_pool || 0;
-            fortuneData.redPool = data.red_pool || 0;
-            fortuneData.yellowPlayers = data.yellow_bets || [];
-            fortuneData.redPlayers = data.red_bets || [];
+            // Безопасное обновление глобального объекта fortuneData
+            if (typeof fortuneData !== 'undefined') {
+                fortuneData.timeLeft = data.time_left || 0;
+                fortuneData.yellowPool = data.yellow_pool || 0;
+                fortuneData.redPool = data.red_pool || 0;
+                fortuneData.yellowPlayers = data.yellow_bets || [];
+                fortuneData.redPlayers = data.red_bets || [];
 
-            // Восстанавливаем ставку пользователя
-            if (savedUserBetTeam && savedUserBetAmount > 0) {
-                fortuneData.userBetTeam = savedUserBetTeam;
-                fortuneData.userBetAmount = savedUserBetAmount;
+                // ========== ВОССТАНАВЛИВАЕМ СТАВКУ ПОЛЬЗОВАТЕЛЯ ==========
+                if (savedUserBetTeam && savedUserBetAmount > 0) {
+                    fortuneData.userBetTeam = savedUserBetTeam;
+                    fortuneData.userBetAmount = savedUserBetAmount;
+                    console.log('🔄 Восстановлена ставка пользователя:', savedUserBetTeam, savedUserBetAmount);
+                }
             }
 
-            // Обновляем UI только если данные изменились
+            // Обновляем UI
             if (typeof updateFortuneUI === 'function') {
                 updateFortuneUI();
+            } else {
+                // Fallback (если вдруг функции UI еще не инициализированы)
+                const elements = {
+                    yellowPool: document.getElementById('yellowPool'),
+                    redPool: document.getElementById('redPool'),
+                    timer: document.getElementById('fortuneTimer')
+                };
+
+                if (elements.yellowPool) elements.yellowPool.innerText = (data.yellow_pool || 0).toFixed(2) + ' WG';
+                if (elements.redPool) elements.redPool.innerText = (data.red_pool || 0).toFixed(2) + ' WG';
+
+                if (elements.timer) {
+                    const m = Math.floor((data.time_left || 0) / 60);
+                    const s = (data.time_left || 0) % 60;
+                    elements.timer.innerText = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+                }
+
+                if (typeof updatePlayersListAsync === 'function') {
+                    updatePlayersListAsync();
+                }
             }
         }
     } catch (e) {
-        if (e.name === 'AbortError') {
-            console.warn('⏰ Таймаут загрузки данных Фортуны');
-        } else {
-            console.error('Ошибка при загрузке данных Фортуны:', e);
-        }
-    } finally {
-        isUpdatingFortune = false;
+        console.error('Ошибка при загрузке данных Фортуны:', e);
     }
 }
 
@@ -9846,245 +9820,104 @@ async function loadFortuneHistory() {
     }
 }
 
-// ========== ЗАВЕРШЕНИЕ РАУНДА С ЗАЩИТОЙ ОТ ДУБЛИРОВАНИЯ ==========
-let isEndingRound = false;
-let endRoundRetryCount = 0;
-const MAX_END_ROUND_RETRIES = 3;
-
+// ========== ЗАВЕРШЕНИЕ РАУНДА ==========
+// ========== ЗАВЕРШЕНИЕ РАУНДА (КОГДА СТАВКИ НА ОБЕИХ КОМАНДАХ) ==========
 async function endFortuneRound() {
-    // Защита от множественных одновременных вызовов
-    if (isEndingRound) {
-        console.log('⚠️ [ФОРТУНА] Раунд уже завершается, пропускаем');
-        return;
-    }
-
-    // Защита: если колесо крутится, не завершаем раунд повторно
-    if (window.isFortuneRoundEnding) {
-        console.log('⚠️ [ФОРТУНА] Колесо крутится, завершение раунда отложено');
-        setTimeout(() => {
-            if (!window.isFortuneRoundEnding && !isEndingRound) {
-                endFortuneRound();
-            }
-        }, 2000);
-        return;
-    }
-
-    isEndingRound = true;
-
     try {
-        console.log('🎲 [ФОРТУНА] Отправляем запрос на завершение раунда...');
-
-        // Создаём контроллер для таймаута
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-        const response = await fetch('/api/fortune/end_round', {
-            method: 'POST',
-            signal: controller.signal
-        });
-
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-
+        const response = await fetch('/api/fortune/end_round', { method: 'POST' });
         const data = await response.json();
 
         if (data.success) {
-            console.log('✅ [ФОРТУНА] Раунд успешно завершён');
+            showToast(data.message || '🎲 Раунд завершён! Призы распределены!', 'success');
 
-            if (data.message) {
-                showToast(data.message, 'success');
+            // ПОЛНОСТЬЮ ОЧИЩАЕМ ВСЕ ДАННЫЕ ДЛЯ НОВОГО РАУНДА
+            fortuneData = {
+                timeLeft: 300,
+                yellowPool: 0,
+                redPool: 0,
+                yellowPlayers: [],
+                redPlayers: [],
+                userBetTeam: null,
+                userBetAmount: 0,
+                isActive: true
+            };
+
+            // Очищаем все кеши
+            lastYellowHash = '';
+            lastRedHash = '';
+            yellowCacheHtml = '';
+            redCacheHtml = '';
+            lastDomUpdate = 0;
+
+            // Обновляем UI полностью
+            if (fortuneUI.elements.yellowPlayers) {
+                fortuneUI.elements.yellowPlayers.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
+            }
+            if (fortuneUI.elements.redPlayers) {
+                fortuneUI.elements.redPlayers.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
             }
 
-            // Сбрасываем счётчик ретраев
-            endRoundRetryCount = 0;
+            updateFortuneUI();
+            updateTeamHighlightUI();
+            updateTimerDisplay();
 
-            // Полностью очищаем данные для нового раунда
-            await clearFortuneDataAndReset();
+            // Перезапускаем таймер
+            if (fortuneUI.timerInterval) {
+                clearInterval(fortuneUI.timerInterval);
+                fortuneUI.timerInterval = null;
+            }
+            startFortuneTimer();
 
+            // Принудительно загружаем свежие данные с сервера
+            setTimeout(() => loadFortuneData(), 500);
+
+            // Обновляем глобальные данные
+            if (typeof syncData === 'function') syncData(true);
         } else {
-            console.warn('⚠️ [ФОРТУНА] Сервер не завершил раунд:', data);
-            await handleEndRoundError();
+            // Если сервер вернул ошибку - перезапускаем локально
+            console.warn('Сервер не завершил раунд, перезапускаем локально');
+            resetFortuneLocally();
         }
-
     } catch(e) {
-        console.error('❌ [ФОРТУНА] Ошибка при завершении раунда:', e);
-        await handleEndRoundError();
-    } finally {
-        // Сбрасываем флаг через некоторое время
-        setTimeout(() => {
-            isEndingRound = false;
-        }, 3000);
-    }
-}
-
-// ========== ОБРАБОТКА ОШИБОК ЗАВЕРШЕНИЯ РАУНДА ==========
-async function handleEndRoundError() {
-    if (endRoundRetryCount < MAX_END_ROUND_RETRIES) {
-        endRoundRetryCount++;
-        console.log(`🔄 [ФОРТУНА] Повторная попытка ${endRoundRetryCount}/${MAX_END_ROUND_RETRIES} через 2 секунды...`);
-        setTimeout(() => {
-            isEndingRound = false;
-            endFortuneRound();
-        }, 2000);
-    } else {
-        console.error('❌ [ФОРТУНА] Достигнуто максимальное количество попыток, выполняем локальный сброс');
-        endRoundRetryCount = 0;
+        console.error('End round error:', e);
         resetFortuneLocally();
-    }
-}
-
-// ========== ОЧИСТКА ДАННЫХ ФОРТУНЫ И СБРОС ==========
-async function clearFortuneDataAndReset() {
-    // Очищаем глобальные данные
-    if (typeof fortuneData !== 'undefined') {
-        fortuneData = {
-            timeLeft: 300,
-            yellowPool: 0,
-            redPool: 0,
-            yellowPlayers: [],
-            redPlayers: [],
-            userBetTeam: null,
-            userBetAmount: 0,
-            isActive: true
-        };
-    }
-
-    // Очищаем все кеши
-    if (typeof lastYellowHash !== 'undefined') lastYellowHash = '';
-    if (typeof lastRedHash !== 'undefined') lastRedHash = '';
-    if (typeof yellowCacheHtml !== 'undefined') yellowCacheHtml = '';
-    if (typeof redCacheHtml !== 'undefined') redCacheHtml = '';
-    if (typeof lastDomUpdate !== 'undefined') lastDomUpdate = 0;
-
-    // Очищаем HTML элементы
-    if (fortuneUI && fortuneUI.elements) {
-        if (fortuneUI.elements.yellowPlayers) {
-            fortuneUI.elements.yellowPlayers.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
-        }
-        if (fortuneUI.elements.redPlayers) {
-            fortuneUI.elements.redPlayers.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
-        }
-        if (fortuneUI.elements.yellowPool) {
-            fortuneUI.elements.yellowPool.innerText = '0 WG';
-        }
-        if (fortuneUI.elements.redPool) {
-            fortuneUI.elements.redPool.innerText = '0 WG';
-        }
-        if (fortuneUI.elements.yellowChance) {
-            fortuneUI.elements.yellowChance.innerText = '0%';
-        }
-        if (fortuneUI.elements.redChance) {
-            fortuneUI.elements.redChance.innerText = '0%';
-        }
-    }
-
-    // Обновляем UI через функции
-    if (typeof updateFortuneUI === 'function') {
-        updateFortuneUI(true);
-    }
-    if (typeof updateTeamHighlightUI === 'function') {
-        updateTeamHighlightUI();
-    }
-    if (typeof updateTimerDisplay === 'function') {
-        updateTimerDisplay();
-    }
-
-    // Перезапускаем таймер
-    if (fortuneUI && fortuneUI.timerInterval) {
-        clearInterval(fortuneUI.timerInterval);
-        fortuneUI.timerInterval = null;
-    }
-    if (typeof startFortuneTimer === 'function') {
-        startFortuneTimer();
-    }
-
-    // Загружаем свежие данные с сервера
-    setTimeout(() => {
-        if (typeof loadFortuneData === 'function') {
-            loadFortuneData();
-        }
-    }, 500);
-
-    // Обновляем глобальные данные игрока
-    if (typeof syncData === 'function') {
-        setTimeout(() => syncData(true), 1000);
     }
 }
 
 // ========== ЛОКАЛЬНЫЙ СБРОС ФОРТУНЫ (ПРИ ОШИБКЕ) ==========
 function resetFortuneLocally() {
-    console.log('🔄 [ФОРТУНА] Выполняем локальный сброс...');
+    fortuneData = {
+        timeLeft: 300,
+        yellowPool: 0,
+        redPool: 0,
+        yellowPlayers: [],
+        redPlayers: [],
+        userBetTeam: null,
+        userBetAmount: 0,
+        isActive: true
+    };
 
-    // Сбрасываем флаг завершения, если он был установлен
-    if (typeof window.isFortuneRoundEnding !== 'undefined') {
-        window.isFortuneRoundEnding = false;
+    lastYellowHash = '';
+    lastRedHash = '';
+    yellowCacheHtml = '';
+    redCacheHtml = '';
+
+    if (fortuneUI.elements.yellowPlayers) {
+        fortuneUI.elements.yellowPlayers.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
+    }
+    if (fortuneUI.elements.redPlayers) {
+        fortuneUI.elements.redPlayers.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
     }
 
-    // Сбрасываем данные
-    if (typeof fortuneData !== 'undefined') {
-        fortuneData = {
-            timeLeft: 300,
-            yellowPool: 0,
-            redPool: 0,
-            yellowPlayers: [],
-            redPlayers: [],
-            userBetTeam: null,
-            userBetAmount: 0,
-            isActive: true
-        };
-    }
+    updateFortuneUI();
+    updateTeamHighlightUI();
+    updateTimerDisplay();
 
-    // Сбрасываем кеши
-    if (typeof lastYellowHash !== 'undefined') lastYellowHash = '';
-    if (typeof lastRedHash !== 'undefined') lastRedHash = '';
-    if (typeof yellowCacheHtml !== 'undefined') yellowCacheHtml = '';
-    if (typeof redCacheHtml !== 'undefined') redCacheHtml = '';
-    if (typeof lastDomUpdate !== 'undefined') lastDomUpdate = 0;
-
-    // Обновляем UI
-    if (fortuneUI && fortuneUI.elements) {
-        if (fortuneUI.elements.yellowPlayers) {
-            fortuneUI.elements.yellowPlayers.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
-        }
-        if (fortuneUI.elements.redPlayers) {
-            fortuneUI.elements.redPlayers.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
-        }
-        if (fortuneUI.elements.yellowPool) {
-            fortuneUI.elements.yellowPool.innerText = '0 WG';
-        }
-        if (fortuneUI.elements.redPool) {
-            fortuneUI.elements.redPool.innerText = '0 WG';
-        }
-        if (fortuneUI.elements.yellowChance) {
-            fortuneUI.elements.yellowChance.innerText = '0%';
-        }
-        if (fortuneUI.elements.redChance) {
-            fortuneUI.elements.redChance.innerText = '0%';
-        }
-    }
-
-    // Обновляем UI через функции
-    if (typeof updateFortuneUI === 'function') {
-        updateFortuneUI(true);
-    }
-    if (typeof updateTeamHighlightUI === 'function') {
-        updateTeamHighlightUI();
-    }
-    if (typeof updateTimerDisplay === 'function') {
-        updateTimerDisplay();
-    }
-
-    // Перезапускаем таймер
-    if (fortuneUI && fortuneUI.timerInterval) {
+    if (fortuneUI.timerInterval) {
         clearInterval(fortuneUI.timerInterval);
         fortuneUI.timerInterval = null;
     }
-    if (typeof startFortuneTimer === 'function') {
-        startFortuneTimer();
-    }
+    startFortuneTimer();
 
     showToast('🔄 Фортуна перезапущена! Делайте ставки!', 'info');
 }
@@ -10253,25 +10086,21 @@ function initBetPresets() {
     }
 }
 
+// ========== ОТКРЫТИЕ/ЗАКРЫТИЕ ФОРТУНЫ ==========
 let fortuneUpdateInterval = null;
-let isUpdatingFortune = false; // Флаг для предотвращения одновременных запросов
 
 function startFortunePolling() {
-    if (fortuneUpdateInterval) {
-        clearInterval(fortuneUpdateInterval);
-        fortuneUpdateInterval = null;
-    }
+    if (fortuneUpdateInterval) clearInterval(fortuneUpdateInterval);
 
     // Первый запрос сразу
     loadFortuneData();
 
-    // Затем каждые 10 секунд (НЕ 4!)
+    // Затем каждые 4 секунды
     fortuneUpdateInterval = setInterval(() => {
-        // Проверяем, что Фортуна открыта и нет активного запроса
-        if (fortuneUI.elements.modal?.classList.contains('active') && !isUpdatingFortune) {
+        if (fortuneUI.elements.modal?.classList.contains('active')) {
             loadFortuneData();
         }
-    }, 10000); // Увеличил с 4 до 10 секунд
+    }, 4000);
 }
 
 function stopFortunePolling() {
