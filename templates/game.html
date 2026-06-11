@@ -7714,74 +7714,116 @@ socket.on('fortune_round_ending_immediate', (data) => {
     }
 });
 
-// ========== ОСНОВНОЙ ОБРАБОТЧИК ЗАВЕРШЕНИЯ (ПРИЗЫ И ОЧИСТКА) ==========
+// ========== ОСНОВНОЙ ОБРАБОТЧИК ЗАВЕРШЕНИЯ (МГНОВЕННОЕ ОБНОВЛЕНИЕ) ==========
 socket.on('fortune_round_ended', (data) => {
-    console.log('🎲 Фортуна: получение призов и очистка', data);
+    console.log('🎲 Фортуна: раунд завершён, обновляем UI', data);
 
-    // 1. Если колесо НЕ было запущено через immediate (fallback)
-    if (data && data.winner && data.winner !== 'refund') {
-        // Проверяем, не запущено ли уже колесо
-        const overlay = document.getElementById('wheelOverlay');
-        if (!overlay || !overlay.classList.contains('active')) {
-            // Запускаем с минимальной задержкой
-            setTimeout(() => {
-                let userBetTeam = null;
-                let userBetAmount = 0;
+    // Мгновенно очищаем UI
+    if (typeof fortuneData !== 'undefined') {
+        fortuneData.yellowPool = 0;
+        fortuneData.redPool = 0;
+        fortuneData.yellowPlayers = [];
+        fortuneData.redPlayers = [];
+        fortuneData.userBetTeam = null;
+        fortuneData.userBetAmount = 0;
 
-                if (data.all_bets) {
-                    const myBet = data.all_bets.find(bet => bet.user_id == userId);
-                    if (myBet) {
-                        userBetTeam = myBet.team;
-                        userBetAmount = myBet.amount;
-                    }
-                }
+        // Очищаем HTML сразу
+        const yellowPlayersDiv = document.getElementById('yellowPlayers');
+        const redPlayersDiv = document.getElementById('redPlayers');
+        if (yellowPlayersDiv) yellowPlayersDiv.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
+        if (redPlayersDiv) redPlayersDiv.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
 
-                const yellowPool = data.yellow_pool || (typeof fortuneData !== 'undefined' ? fortuneData.yellowPool : 0);
-                const redPool = data.red_pool || (typeof fortuneData !== 'undefined' ? fortuneData.redPool : 0);
+        // Обновляем суммы
+        const yellowPoolEl = document.getElementById('yellowPool');
+        const redPoolEl = document.getElementById('redPool');
+        if (yellowPoolEl) yellowPoolEl.innerText = '0 WG';
+        if (redPoolEl) redPoolEl.innerText = '0 WG';
 
-                if (typeof startWheelAnimation === 'function') {
-                    startWheelAnimation(data.winner, yellowPool, redPool, data.sector_factor || 0.5, userBetTeam, userBetAmount);
-                }
-            }, 100);
-        }
+        // Сбрасываем шансы
+        const yellowChance = document.getElementById('yellowChance');
+        const redChance = document.getElementById('redChance');
+        if (yellowChance) yellowChance.innerText = '0%';
+        if (redChance) redChance.innerText = '0%';
     }
 
-    // 2. Показываем сообщение о возврате
-    if (data && data.winner === 'refund') {
+    // Принудительно загружаем свежие данные (без задержки)
+    if (typeof loadFortuneData === 'function') {
+        loadFortuneData();
+    }
+
+    // Обновляем баланс игрока
+    if (typeof syncData === 'function') {
+        syncData(true);
+    }
+
+    // Показываем сообщение если есть
+    if (data && data.message) {
+        showToast(data.message, 'info');
+    }
+});
+
+// ========== НОВЫЙ РАУНД (МГНОВЕННОЕ ОБНОВЛЕНИЕ) ==========
+socket.on('fortune_new_round', (data) => {
+    console.log('🎲 Фортуна: новый раунд создан', data);
+
+    if (data && data.time_left !== undefined) {
+        if (typeof fortuneData !== 'undefined') {
+            fortuneData.timeLeft = data.time_left;
+            fortuneData.isActive = true;
+        }
+
+        // Обновляем таймер
+        const timerElement = document.getElementById('fortuneTimer');
+        if (timerElement) {
+            const minutes = Math.floor(data.time_left / 60);
+            const seconds = data.time_left % 60;
+            timerElement.innerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        // Обновляем прогресс-бар
+        const timerBarFill = document.getElementById('timerBarFill');
+        if (timerBarFill) {
+            const percent = (data.time_left / 300) * 100;
+            timerBarFill.style.width = percent + '%';
+        }
+    }
+});
+
+// ========== МГНОВЕННЫЙ ЗАПУСК КОЛЕСА ==========
+socket.on('fortune_round_ending_immediate', (data) => {
+    console.log('⚡ МГНОВЕННЫЙ ЗАПУСК КОЛЕСА!', data);
+
+    if (!data || !data.winner) return;
+
+    // Возврат ставок — колесо не крутим
+    if (data.winner === 'refund') {
         if (data.message) showToast(data.message, 'info');
         if (typeof loadFortuneData === 'function') loadFortuneData();
         return;
     }
 
-    // 3. ОЧИСТКА ДАННЫХ (после того как колесо запущено)
+    // Получаем ставку пользователя
+    let userBetTeam = null;
+    let userBetAmount = 0;
+
     if (typeof fortuneData !== 'undefined') {
-        // НЕ ОБНУЛЯЕМ СРАЗУ, даём колесу время на анимацию
-        setTimeout(() => {
-            fortuneData.yellowPool = 0;
-            fortuneData.redPool = 0;
-            fortuneData.yellowPlayers = [];
-            fortuneData.redPlayers = [];
-            fortuneData.userBetTeam = null;
-            fortuneData.userBetAmount = 0;
-
-            const yellowPlayersDiv = document.getElementById('yellowPlayers');
-            const redPlayersDiv = document.getElementById('redPlayers');
-            if (yellowPlayersDiv) yellowPlayersDiv.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
-            if (redPlayersDiv) redPlayersDiv.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
-
-            if (typeof updateFortuneUI === 'function') updateFortuneUI();
-        }, 500);
+        userBetTeam = fortuneData.userBetTeam;
+        userBetAmount = fortuneData.userBetAmount;
     }
 
-    // 4. Загружаем свежие данные для нового раунда (с задержкой)
-    if (typeof loadFortuneData === 'function') {
-        setTimeout(() => loadFortuneData(), 2000);
-        setTimeout(() => loadFortuneData(), 4000);
-    }
+    // Запускаем колесо МГНОВЕННО
+    if (typeof startWheelAnimation === 'function') {
+        const yellowPool = data.yellow_pool || (typeof fortuneData !== 'undefined' ? fortuneData.yellowPool : 0);
+        const redPool = data.red_pool || (typeof fortuneData !== 'undefined' ? fortuneData.redPool : 0);
 
-    // 5. Обновляем глобальные данные игрока
-    if (typeof syncData === 'function') {
-        setTimeout(() => syncData(true), 3000);
+        startWheelAnimation(
+            data.winner,
+            yellowPool,
+            redPool,
+            data.sector_factor || 0.5,
+            userBetTeam,
+            userBetAmount
+        );
     }
 });
 
@@ -7825,7 +7867,7 @@ socket.on('fortune_pools_update', (data) => {
         if (redChanceEl) redChanceEl.innerText = '0%';
     }
 
-    // Обновляем списки игроков (только если изменились)
+    // Обновляем списки игроков
     const yellowContainer = document.getElementById('yellowPlayers');
     const redContainer = document.getElementById('redPlayers');
 
@@ -7873,9 +7915,31 @@ socket.on('fortune_pools_update', (data) => {
     }
 });
 
-// ========== СБРОС ТАЙМЕРА ==========
+// ========== ОБНОВЛЕНИЕ ТАЙМЕРА ==========
+socket.on('fortune_timer_update', (data) => {
+    if (data && data.time_left !== undefined) {
+        if (typeof fortuneData !== 'undefined') {
+            fortuneData.timeLeft = data.time_left;
+        }
+
+        const timerElement = document.getElementById('fortuneTimer');
+        if (timerElement) {
+            const minutes = Math.floor(data.time_left / 60);
+            const seconds = data.time_left % 60;
+            timerElement.innerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        const timerBarFill = document.getElementById('timerBarFill');
+        if (timerBarFill) {
+            const percent = (data.time_left / 300) * 100;
+            timerBarFill.style.width = percent + '%';
+        }
+    }
+});
+
+// ========== СБРОС ТАЙМЕРА (ДЛЯ ОСОБЫХ СЛУЧАЕВ) ==========
 socket.on('fortune_timer_reset', (data) => {
-    if (data && data.time_left) {
+    if (data && data.time_left !== undefined) {
         if (typeof fortuneData !== 'undefined') {
             fortuneData.timeLeft = data.time_left;
         }

@@ -2852,7 +2852,7 @@ def restore_fortune_from_db():
 
 # ========== ТАЙМЕР ТОЛЬКО ДЛЯ ОТОБРАЖЕНИЯ, НЕ ЗАВЕРШАЕТ РАУНД ==========
 def update_fortune_timer():
-    """Обновляет таймер на клиенте и АВТОМАТИЧЕСКИ завершает раунд при 00:00"""
+    """Обновляет таймер на клиенте и завершает раунд при 00:00 (оптимизированная версия)"""
     global current_fortune_round
     while True:
         time.sleep(1)
@@ -2868,22 +2868,118 @@ def update_fortune_timer():
                     socketio.emit('fortune_timer_update', {'time_left': time_left})
 
                     # Если время вышло и раунд еще не в процессе завершения
-                    if time_left == 0 and not current_fortune_round.get('is_ending', False):
-                        should_end = True
+                    if time_left <= 0 and not current_fortune_round.get('is_ending', False):
+                        # Проверяем, есть ли ставки на обеих командах
+                        has_yellow = len(current_fortune_round.get('yellow_bets', [])) > 0
+                        has_red = len(current_fortune_round.get('red_bets', [])) > 0
 
-            # Вызываем завершение ВНЕ блока lock, чтобы не поймать deadlock (взаимную блокировку)
+                        if has_yellow and has_red:
+                            # Ставки на обеих командах - запускаем колесо
+                            should_end = True
+                        elif has_yellow or has_red:
+                            # Ставки только на одной команде - возврат и МГНОВЕННЫЙ СБРОС
+                            print("⚠️ [ФОРТУНА] Ставки только на одной команде, мгновенный сброс")
+
+                            round_id = current_fortune_round['round_id']
+                            yellow_bets = current_fortune_round.get('yellow_bets', [])
+                            red_bets = current_fortune_round.get('red_bets', [])
+
+                            # Возвращаем ставки игрокам
+                            with db.get_cursor() as cursor:
+                                for bet in yellow_bets:
+                                    user = get_user(bet['user_id'])
+                                    safe_update_user(bet['user_id'], wg=user['wg'] + bet['amount'])
+                                    cursor.execute('''
+                                        INSERT INTO fortune_history (user_id, round_id, team, amount, result, win_amount)
+                                        VALUES (?, ?, ?, ?, ?, ?)
+                                    ''', (bet['user_id'], round_id, 'yellow', bet['amount'], 'refund', bet['amount']))
+
+                                for bet in red_bets:
+                                    user = get_user(bet['user_id'])
+                                    safe_update_user(bet['user_id'], wg=user['wg'] + bet['amount'])
+                                    cursor.execute('''
+                                        INSERT INTO fortune_history (user_id, round_id, team, amount, result, win_amount)
+                                        VALUES (?, ?, ?, ?, ?, ?)
+                                    ''', (bet['user_id'], round_id, 'red', bet['amount'], 'refund', bet['amount']))
+
+                                # Обновляем статус раунда в БД
+                                cursor.execute('''
+                                    UPDATE fortune_rounds 
+                                    SET winner_team = 'refund', end_time = ?
+                                    WHERE round_id = ?
+                                ''', (datetime.datetime.now().isoformat(), round_id))
+
+                                # Удаляем активные ставки
+                                cursor.execute("DELETE FROM fortune_active_bets WHERE round_id = ?", (round_id,))
+
+                            # МГНОВЕННО создаём новый раунд
+                            new_round_id = str(uuid.uuid4())[:8]
+                            new_end_time = time.time() + FORTUNE_ROUND_DURATION
+
+                            with db.get_cursor() as cursor:
+                                cursor.execute('''
+                                    INSERT INTO fortune_rounds (round_id, start_time, yellow_pool, red_pool, end_time)
+                                    VALUES (?, ?, ?, ?, ?)
+                                ''', (new_round_id, datetime.datetime.now().isoformat(), 0, 0,
+                                      datetime.datetime.fromtimestamp(new_end_time).isoformat()))
+
+                            with fortune_lock:
+                                current_fortune_round = {
+                                    "round_id": new_round_id,
+                                    "yellow_pool": 0,
+                                    "red_pool": 0,
+                                    "yellow_bets": [],
+                                    "red_bets": [],
+                                    "end_time": new_end_time,
+                                    "is_ending": False
+                                }
+
+                            # Отправляем обновления клиентам
+                            socketio.emit('fortune_new_round', {'time_left': FORTUNE_ROUND_DURATION})
+                            socketio.emit('fortune_timer_update', {'time_left': FORTUNE_ROUND_DURATION})
+                            socketio.emit('fortune_pools_update', {
+                                'yellow_pool': 0,
+                                'red_pool': 0,
+                                'yellow_players': [],
+                                'red_players': []
+                            })
+
+                            # Отправляем сообщение о возврате
+                            socketio.emit('fortune_round_ended', {
+                                'winner': 'refund',
+                                'message': '⚖️ Ставки были только на одной команде! Ставки возвращены.'
+                            })
+
+                            continue  # Пропускаем обычное завершение
+                        else:
+                            # Нет ставок вообще - просто перезапускаем таймер
+                            print("⚠️ [ФОРТУНА] Нет ставок, перезапускаем таймер")
+                            new_end_time = time.time() + FORTUNE_ROUND_DURATION
+
+                            with fortune_lock:
+                                current_fortune_round['end_time'] = new_end_time
+
+                            with db.get_cursor() as cursor:
+                                cursor.execute('''
+                                    UPDATE fortune_rounds SET end_time = ? WHERE round_id = ?
+                                ''', (datetime.datetime.fromtimestamp(new_end_time).isoformat(),
+                                      current_fortune_round['round_id']))
+
+                            socketio.emit('fortune_timer_update', {'time_left': FORTUNE_ROUND_DURATION})
+                            continue
+
+            # Вызываем завершение ВНЕ блока lock (только если есть ставки на обеих командах)
             if should_end:
-                print("⏰ [ТАЙМЕР] Время вышло! Автоматически завершаем раунд...")
+                print("⏰ [ТАЙМЕР] Время вышло! Завершаем раунд...")
                 end_fortune_round()
 
         except Exception as e:
             logger.error(f"Таймер Фортуны ошибка: {e}", exc_info=True)
 
 
-# ========== РУЧНОЕ ЗАВЕРШЕНИЕ РАУНДА (ТОЛЬКО ЧЕРЕЗ АДМИНКУ ИЛИ API) ==========
-# ========== ЗАМЕНИТЬ СУЩЕСТВУЮЩУЮ ФУНКЦИЮ end_fortune_round НА ЭТУ ==========
+# ========== ОПТИМИЗИРОВАННОЕ ЗАВЕРШЕНИЕ РАУНДА (МГНОВЕННОЕ ОБНОВЛЕНИЕ) ==========
 def end_fortune_round():
-    """Завершает текущий раунд: определяет победителя, выдаёт призы, создаёт новый раунд"""
+    """Завершает текущий раунд: определяет победителя, выдаёт призы, создаёт новый раунд МГНОВЕННО"""
     global current_fortune_round
 
     with fortune_lock:
@@ -2899,17 +2995,17 @@ def end_fortune_round():
         round_id = current_fortune_round['round_id']
         print(f"🎲 [ФОРТУНА] Начинаем завершение раунда {round_id}")
 
-    # ========== 1. МГНОВЕННО ПОЛУЧАЕМ ДАННЫЕ ДЛЯ КОЛЕСА (до любых БД операций) ==========
+    # ========== 1. МГНОВЕННО ПОЛУЧАЕМ ДАННЫЕ ДЛЯ КОЛЕСА ==========
     yellow_pool = current_fortune_round['yellow_pool']
     red_pool = current_fortune_round['red_pool']
     total_pool = yellow_pool + red_pool
 
-    # Получаем список ставок ДО того как начнём их удалять
+    # Получаем список ставок
     with db.get_cursor() as cursor:
         cursor.execute('SELECT * FROM fortune_active_bets WHERE round_id = ?', (round_id,))
         all_bets = cursor.fetchall()
 
-    # Определяем победителя и коэффициент ДО выдачи призов
+    # Определяем победителя
     has_yellow = any(b['team'] == 'yellow' for b in all_bets)
     has_red = any(b['team'] == 'red' for b in all_bets)
 
@@ -2917,71 +3013,124 @@ def end_fortune_round():
     sector_factor = random.uniform(0.15, 0.85)
 
     if not (has_yellow and has_red):
-        # Ставки только на одной команде - возврат
         winner_team = 'refund'
     else:
-        # Определяем победителя по весу пулов
         yellow_weight = yellow_pool / total_pool if total_pool > 0 else 0.5
         winner_team = 'yellow' if random.random() < yellow_weight else 'red'
 
     # ========== 2. МГНОВЕННО ОТПРАВЛЯЕМ КОМАНДУ НА ЗАПУСК КОЛЕСА ==========
-    # ОТПРАВЛЯЕМ ДО ТОГО КАК НАЧНЁМ ВЫДАВАТЬ ПРИЗЫ!
     socketio.emit('fortune_round_ending_immediate', {
         'winner': winner_team,
         'sector_factor': sector_factor,
         'yellow_pool': yellow_pool,
         'red_pool': red_pool,
-        'round_id': round_id
+        'round_id': round_id,
+        'all_bets': [{'user_id': b['user_id'], 'team': b['team'], 'amount': b['amount']} for b in all_bets]
     })
 
-    # Даём фронтенду 0.1 секунды на подготовку (опционально, можно убрать)
-    import time
-    time.sleep(0.1)
+    # ========== 3. СОЗДАЁМ НОВЫЙ РАУНД МГНОВЕННО (ещё до выдачи призов) ==========
+    new_round_id = str(uuid.uuid4())[:8]
+    new_end_time = time.time() + FORTUNE_ROUND_DURATION
 
-    # ========== 3. ТЕПЕРЬ МЕДЛЕННО ОБРАБАТЫВАЕМ ПРИЗЫ (асинхронно) ==========
-    # Запускаем в отдельном потоке, чтобы не блокировать сокеты
+    # Сохраняем данные старого раунда для фоновой обработки
+    old_round_data = {
+        'round_id': round_id,
+        'yellow_pool': yellow_pool,
+        'red_pool': red_pool,
+        'total_pool': total_pool,
+        'winner_team': winner_team,
+        'all_bets': all_bets
+    }
+
+    with fortune_lock:
+        # МГНОВЕННО создаём новый раунд
+        current_fortune_round = {
+            "round_id": new_round_id,
+            "yellow_pool": 0,
+            "red_pool": 0,
+            "yellow_bets": [],
+            "red_bets": [],
+            "end_time": new_end_time,
+            "is_ending": False
+        }
+
+        with db.get_cursor() as cursor:
+            # Помечаем старый раунд как завершённый
+            cursor.execute('''
+                UPDATE fortune_rounds 
+                SET winner_team = ?, end_time = ?, yellow_pool = ?, red_pool = ?
+                WHERE round_id = ?
+            ''', (winner_team, datetime.datetime.now().isoformat(), yellow_pool, red_pool, round_id))
+
+            # Создаём новый раунд в БД
+            cursor.execute('''
+                INSERT INTO fortune_rounds (round_id, start_time, yellow_pool, red_pool, end_time)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (new_round_id, datetime.datetime.now().isoformat(), 0, 0,
+                  datetime.datetime.fromtimestamp(new_end_time).isoformat()))
+
+            # Удаляем старые активные ставки
+            cursor.execute("DELETE FROM fortune_active_bets WHERE round_id = ?", (round_id,))
+
+    # ========== 4. ОТПРАВЛЯЕМ ОБНОВЛЕНИЯ КЛИЕНТАМ ==========
+    # Новый раунд
+    socketio.emit('fortune_new_round', {
+        'round_id': new_round_id,
+        'time_left': FORTUNE_ROUND_DURATION
+    })
+
+    # Обновление таймера
+    socketio.emit('fortune_timer_update', {'time_left': FORTUNE_ROUND_DURATION})
+
+    # Обновление пулов (обнуление)
+    socketio.emit('fortune_pools_update', {
+        'yellow_pool': 0,
+        'red_pool': 0,
+        'yellow_players': [],
+        'red_players': []
+    })
+
+    print(f"✅ [ФОРТУНА] Новый раунд {new_round_id} создан МГНОВЕННО")
+
+    # ========== 5. ФОНОВАЯ ОБРАБОТКА ПРИЗОВ (не блокирует новый раунд) ==========
     def process_prizes_async():
         try:
             with db.get_cursor() as cursor:
-                if winner_team == 'refund':
+                if old_round_data['winner_team'] == 'refund':
                     # Возврат ставок
-                    for bet in all_bets:
+                    for bet in old_round_data['all_bets']:
                         user = get_user(bet['user_id'])
                         safe_update_user(bet['user_id'], wg=user['wg'] + bet['amount'])
                         add_log(f"🎲 ФОРТУНА: Возврат {bet['amount']} WG", bet['user_id'], user['username'])
                         cursor.execute('''
                             INSERT INTO fortune_history (user_id, round_id, team, amount, result, win_amount)
                             VALUES (?, ?, ?, ?, ?, ?)
-                        ''', (bet['user_id'], round_id, bet['team'], bet['amount'], 'refund', bet['amount']))
-
-                    cursor.execute('''
-                        UPDATE fortune_rounds 
-                        SET winner_team = 'refund', end_time = ?
-                        WHERE round_id = ?
-                    ''', (datetime.datetime.now().isoformat(), round_id))
+                        ''', (bet['user_id'], old_round_data['round_id'], bet['team'], bet['amount'], 'refund',
+                              bet['amount']))
 
                 else:
                     # Выдаём призы победителям
-                    winner_bets = [b for b in all_bets if b['team'] == winner_team]
+                    winner_bets = [b for b in old_round_data['all_bets'] if b['team'] == old_round_data['winner_team']]
                     winner_total = sum(b['net_amount'] for b in winner_bets)
 
                     for bet in winner_bets:
                         share = bet['net_amount'] / winner_total if winner_total > 0 else 0
-                        win_amount = round(total_pool * share, 2)
+                        win_amount = round(old_round_data['total_pool'] * share, 2)
                         user = get_user(bet['user_id'])
                         safe_update_user(bet['user_id'], wg=user['wg'] + win_amount)
 
-                        # ========== ОБНОВЛЯЕМ ДОСТИЖЕНИЯ (ПОБЕДА) ==========
+                        # Обновляем достижения
                         update_fortune_achievements(bet['user_id'], is_win=True)
 
                         cursor.execute('''
                             INSERT INTO fortune_history (user_id, round_id, team, amount, result, win_amount)
                             VALUES (?, ?, ?, ?, ?, ?)
-                        ''', (bet['user_id'], round_id, winner_team, bet['amount'], 'win', win_amount))
+                        ''', (bet['user_id'], old_round_data['round_id'], old_round_data['winner_team'], bet['amount'],
+                              'win', win_amount))
                         add_log(f"🎲 ФОРТУНА: ПОБЕДА! +{win_amount} WG", bet['user_id'], user['username'])
 
                         # Отправляем уведомление в Telegram
-                        team_name = "Жёлтых 🟡" if winner_team == 'yellow' else "Красных 🔴"
+                        team_name = "Жёлтых 🟡" if old_round_data['winner_team'] == 'yellow' else "Красных 🔴"
                         send_telegram_message(bet['user_id'],
                                               f"🎉 **ПОБЕДА В КОМАНДНОЙ ФОРТУНЕ!**\n\n"
                                               f"Команда {team_name} победила!\n"
@@ -2989,36 +3138,17 @@ def end_fortune_round():
                                               f"Поздравляем! 🎊")
 
                     # Логируем проигравших
-                    for bet in all_bets:
-                        if bet['team'] != winner_team:
+                    for bet in old_round_data['all_bets']:
+                        if bet['team'] != old_round_data['winner_team']:
                             cursor.execute('''
                                 INSERT INTO fortune_history (user_id, round_id, team, amount, result, win_amount)
                                 VALUES (?, ?, ?, ?, ?, ?)
-                            ''', (bet['user_id'], round_id, bet['team'], bet['amount'], 'lose', 0))
+                            ''', (bet['user_id'], old_round_data['round_id'], bet['team'], bet['amount'], 'lose', 0))
 
-                    # Обновляем запись раунда в БД
-                    cursor.execute('''
-                        UPDATE fortune_rounds 
-                        SET winner_team = ?, end_time = ?, yellow_pool = ?, red_pool = ?
-                        WHERE round_id = ?
-                    ''', (winner_team, datetime.datetime.now().isoformat(), yellow_pool, red_pool, round_id))
-
-                # Удаляем активные ставки ТОЛЬКО ПОСЛЕ ОТПРАВКИ ВСЕХ ДАННЫХ
-                cursor.execute("DELETE FROM fortune_active_bets WHERE round_id = ?", (round_id,))
-
-            # Создаём новый раунд
-            create_new_fortune_round()
-            print(f"✅ [ФОРТУНА] Призы распределены, создан новый раунд")
+            print(f"✅ [ФОРТУНА] Призы распределены для раунда {old_round_data['round_id']}")
 
         except Exception as e:
             logger.error(f"Ошибка при выдаче призов Фортуны: {e}", exc_info=True)
-            # Если ошибка, всё равно создаём новый раунд
-            create_new_fortune_round()
-        finally:
-            # Сбрасываем флаг завершения
-            with fortune_lock:
-                if 'current_fortune_round' in globals() and current_fortune_round:
-                    current_fortune_round['is_ending'] = False
 
     # Запускаем обработку призов в фоне
     threading.Thread(target=process_prizes_async, daemon=True).start()
