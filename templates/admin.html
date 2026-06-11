@@ -2442,81 +2442,87 @@
         }
 
         async function startBroadcast(isTest = false) {
-            const message = document.getElementById('broadcastMessage').value;
-            const testUserId = document.getElementById('broadcastTestUserId')?.value;
-            const hasButton = document.getElementById('broadcastHasButton')?.checked || false;
-            const buttonText = document.getElementById('broadcastButtonText')?.value || '';
-            const buttonUrl = document.getElementById('broadcastButtonUrl')?.value || '';
+    const message = document.getElementById('broadcastMessage').value;
+    const testUserId = document.getElementById('broadcastTestUserId')?.value;
+    const hasButton = document.getElementById('broadcastHasButton')?.checked || false;
+    const buttonText = document.getElementById('broadcastButtonText')?.value || '';
+    const buttonUrl = document.getElementById('broadcastButtonUrl')?.value || '';
 
-            if (!message.trim()) {
-                alert('Введите сообщение для рассылки');
-                return;
-            }
+    if (!message.trim()) {
+        alert('Введите сообщение для рассылки');
+        return;
+    }
+
+    if (isTest) {
+        if (!testUserId) {
+            alert('Введите ID пользователя для теста');
+            return;
+        }
+        if (!confirm(`Отправить тестовое сообщение пользователю ${testUserId}?`)) return;
+    } else {
+        if (!confirm(`Отправить сообщение ВСЕМ ${document.getElementById('broadcastTotal')?.innerText || 'пользователям'}?`)) return;
+    }
+
+    const startBtn = document.getElementById('startBroadcastBtn');
+    const progressDiv = document.getElementById('broadcastStatus');
+    const progressBar = document.getElementById('broadcastProgressBar');
+    const progressText = document.getElementById('broadcastProgressText');
+    const sentSpan = document.getElementById('broadcastSent');
+    const failedSpan = document.getElementById('broadcastFailed');
+    const totalSpan = document.getElementById('broadcastTotal');
+
+    startBtn.disabled = true;
+    progressDiv.style.display = 'block';
+    sentSpan.innerText = '0';
+    failedSpan.innerText = '0';
+    if (progressBar) progressBar.style.width = '0%';
+    if (progressText) progressText.innerText = `0 / ${totalSpan?.innerText || '?'}`;
+
+    try {
+        let url = '/api/admin/send_broadcast';
+        let body = {
+            message: message,
+            has_button: hasButton,
+            button_text: buttonText,
+            button_url: buttonUrl,
+            is_test: isTest,
+            test_user_id: testUserId ? parseInt(testUserId) : null
+        };
+
+        console.log('📤 Отправка запроса на рассылку:', body);
+
+        const response = await fetch(`${url}?key=${adminKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+
+        const data = await response.json();
+        console.log('📥 Ответ сервера:', data);
+
+        if (data.success) {
+            if (progressBar) progressBar.style.width = '100%';
+            if (sentSpan) sentSpan.innerText = data.sent || 1;
+            if (progressText) progressText.innerText = `1 / 1`;
 
             if (isTest) {
-                if (!testUserId) {
-                    alert('Введите ID пользователя для теста');
-                    return;
-                }
-                if (!confirm(`Отправить тестовое сообщение пользователю ${testUserId}?`)) return;
+                alert('✅ Тестовое сообщение отправлено!');
             } else {
-                if (!confirm(`Отправить сообщение ВСЕМ пользователям?\n\nСообщение:\n${message.substring(0, 200)}${message.length > 200 ? '...' : ''}`)) return;
+                alert(`✅ Рассылка завершена!\nОтправлено: ${data.sent}\nОшибок: ${data.errors || 0}`);
             }
-
-            const startBtn = document.getElementById('startBroadcastBtn');
-            const progressDiv = document.getElementById('broadcastStatus');
-            const progressBar = document.getElementById('broadcastProgressBar');
-            const progressText = document.getElementById('broadcastProgressText');
-            const sentSpan = document.getElementById('broadcastSent');
-            const failedSpan = document.getElementById('broadcastFailed');
-            const totalSpan = document.getElementById('broadcastTotal');
-
-            startBtn.disabled = true;
-            progressDiv.style.display = 'block';
-            sentSpan.innerText = '0';
-            failedSpan.innerText = '0';
-            progressBar.style.width = '0%';
-
-            try {
-                const body = {
-                    message: message,
-                    has_button: hasButton,
-                    button_text: buttonText,
-                    button_url: buttonUrl,
-                    is_test: isTest,
-                    test_user_id: testUserId ? parseInt(testUserId) : null
-                };
-
-                const response = await fetch('/api/admin/send_broadcast?key=' + adminKey, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(body)
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    progressBar.style.width = '100%';
-                    sentSpan.innerText = data.sent || 1;
-                    progressText.innerText = `1 / 1`;
-                    if (isTest) {
-                        alert('✅ Тестовое сообщение отправлено!');
-                    } else {
-                        alert(`✅ Рассылка завершена!\nОтправлено: ${data.sent}\nОшибок: ${data.errors || 0}`);
-                    }
-                } else {
-                    alert(`❌ Ошибка: ${data.error}`);
-                }
-            } catch(e) {
-                console.error('Broadcast error:', e);
-                alert('❌ Ошибка при отправке рассылки');
-            } finally {
-                startBtn.disabled = false;
-                setTimeout(() => {
-                    progressDiv.style.display = 'none';
-                }, 3000);
-            }
+        } else {
+            alert(`❌ Ошибка: ${data.error}`);
         }
+    } catch(e) {
+        console.error('Broadcast error:', e);
+        alert('❌ Ошибка при отправке рассылки: ' + e.message);
+    } finally {
+        startBtn.disabled = false;
+        setTimeout(() => {
+            if (progressDiv) progressDiv.style.display = 'none';
+        }, 3000);
+    }
+}
 
         // ========== ИНИЦИАЛИЗАЦИЯ ==========
         document.addEventListener('DOMContentLoaded', function() {

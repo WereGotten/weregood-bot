@@ -1683,15 +1683,18 @@ def process_withdrawal_db(withdrawal_id, status, admin_id, admin_name):
         return True
 
 def send_telegram_message(chat_id, text, reply_markup=None):
+    """Отправляет сообщение с возможной кнопкой"""
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     try:
-        data = {"chat_id": chat_id, "text": text, "parse_mode": "Markdown"}
+        data = {"chat_id": chat_id, "text": text, "parse_mode": "HTML"}
         if reply_markup:
             data["reply_markup"] = reply_markup
         verify_ssl = not DEBUG_MODE
-        requests.post(url, json=data, timeout=5, verify=verify_ssl)
+        response = requests.post(url, json=data, timeout=10, verify=verify_ssl)
+        return response.status_code == 200
     except Exception as e:
-        logger.error(f"Ошибка отправки сообщения: {e}")
+        logger.error(f"Ошибка отправки сообщения {chat_id}: {e}")
+        return False
 
 def calculate_energy(user_data):
     now = time.time()
@@ -4604,27 +4607,21 @@ def api_admin_reset_ad_limits():
 @app.route('/api/admin/users_list', methods=['GET'])
 @require_admin
 def api_admin_users_list():
-    """Получить список всех пользователей для рассылки"""
+    """Получить количество пользователей"""
     try:
         with db.get_cursor() as cursor:
-            cursor.execute("SELECT user_id, username, first_name FROM users ORDER BY user_id")
-            rows = cursor.fetchall()
-            users = []
-            for row in rows:
-                users.append({
-                    "user_id": row['user_id'],
-                    "name": row['username'] or row['first_name'] or str(row['user_id'])
-                })
-            return jsonify({"success": True, "users": users, "total": len(users)})
+            cursor.execute("SELECT COUNT(*) as total FROM users")
+            total = cursor.fetchone()['total']
+            return jsonify({"success": True, "total": total})
     except Exception as e:
-        logger.error(f"Error getting users list: {e}")
+        logger.error(f"Error getting users count: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
 
 @app.route('/api/admin/send_broadcast', methods=['POST'])
 @require_admin
 def api_admin_send_broadcast():
-    """Отправить рассылку всем пользователям с поддержкой кнопок"""
+    """Отправить рассылку всем пользователям"""
     data = request.json
     message = data.get('message')
     has_button = data.get('has_button', False)
@@ -4636,7 +4633,7 @@ def api_admin_send_broadcast():
     if not message:
         return jsonify({"success": False, "error": "Нет сообщения"}), 400
 
-    # Создаём кнопку если нужно
+    # Создаём клавиатуру с кнопкой если нужно
     reply_markup = None
     if has_button and button_text and button_url:
         reply_markup = {
@@ -4648,7 +4645,6 @@ def api_admin_send_broadcast():
 
     try:
         with db.get_cursor() as cursor:
-            # Если тестовый режим - отправляем только одному пользователю
             if is_test and test_user_id:
                 users = [{'user_id': test_user_id}]
             else:
@@ -4660,19 +4656,19 @@ def api_admin_send_broadcast():
 
             for user in users:
                 try:
-                    send_telegram_message_with_button(user['user_id'], message, reply_markup)
+                    send_telegram_message(user['user_id'], message, reply_markup)
                     success_count += 1
                 except Exception as e:
                     error_count += 1
                     logger.error(f"Error sending to {user['user_id']}: {e}")
 
-                # Небольшая задержка чтобы не заблокировали
-                time.sleep(0.05)
+                time.sleep(0.05)  # Защита от лимитов Telegram
 
             add_admin_log(
                 f"📢 {'ТЕСТОВАЯ ' if is_test else ''}РАССЫЛКА: Отправлено {success_count}, Ошибок {error_count}" +
                 (f" (с кнопкой: {button_text})" if has_button else ""),
-                request.args.get('user_id', 'Admin'), "Admin")
+                request.args.get('user_id', 'Admin'), "Admin"
+            )
 
             return jsonify({"success": True, "sent": success_count, "errors": error_count})
     except Exception as e:
