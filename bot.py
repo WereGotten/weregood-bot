@@ -4607,10 +4607,27 @@ def api_admin_reset_ad_limits():
 @app.route('/api/admin/users_list', methods=['GET'])
 @require_admin
 def api_admin_users_list():
-    """Получить количество пользователей"""
+    """Получить количество активных пользователей (кто писал боту)"""
     try:
         with db.get_cursor() as cursor:
-            cursor.execute("SELECT COUNT(*) as total FROM users")
+            cursor.execute("""
+                SELECT COUNT(DISTINCT user_id) as total FROM users 
+                WHERE user_id IN (
+                    SELECT user_id FROM successful_payments
+                    UNION
+                    SELECT user_id FROM lottery_tickets_history
+                    UNION
+                    SELECT user_id FROM ad_watch_history
+                    UNION
+                    SELECT user_id FROM votes
+                    UNION
+                    SELECT user_id FROM withdrawal_requests
+                    UNION
+                    SELECT user_id FROM daily_rewards
+                    UNION
+                    SELECT user_id FROM promo_activations
+                )
+            """)
             total = cursor.fetchone()['total']
             return jsonify({"success": True, "total": total})
     except Exception as e:
@@ -4621,7 +4638,7 @@ def api_admin_users_list():
 @app.route('/api/admin/send_broadcast', methods=['POST'])
 @require_admin
 def api_admin_send_broadcast():
-    """Отправить рассылку всем пользователям"""
+    """Отправить рассылку только пользователям, которые писали боту"""
     data = request.json
     message = data.get('message')
     has_button = data.get('has_button', False)
@@ -4633,7 +4650,7 @@ def api_admin_send_broadcast():
     if not message:
         return jsonify({"success": False, "error": "Нет сообщения"}), 400
 
-    # Создаём клавиатуру с кнопкой если нужно
+    # Создаём клавиатуру с кнопкой
     reply_markup = None
     if has_button and button_text and button_url:
         reply_markup = {
@@ -4648,29 +4665,68 @@ def api_admin_send_broadcast():
             if is_test and test_user_id:
                 users = [{'user_id': test_user_id}]
             else:
-                cursor.execute("SELECT user_id FROM users")
+                # Получаем ТОЛЬКО пользователей, которые когда-либо взаимодействовали с ботом
+                cursor.execute("""
+                    SELECT DISTINCT user_id FROM users 
+                    WHERE user_id IN (
+                        SELECT user_id FROM successful_payments
+                        UNION
+                        SELECT user_id FROM lottery_tickets_history
+                        UNION
+                        SELECT user_id FROM ad_watch_history
+                        UNION
+                        SELECT user_id FROM votes
+                        UNION
+                        SELECT user_id FROM withdrawal_requests
+                        UNION
+                        SELECT user_id FROM daily_rewards
+                        UNION
+                        SELECT user_id FROM promo_activations
+                    )
+                """)
                 users = cursor.fetchall()
 
             success_count = 0
             error_count = 0
+            skipped_count = 0
 
             for user in users:
                 try:
-                    send_telegram_message(user['user_id'], message, reply_markup)
-                    success_count += 1
+                    # Пробуем отправить "печатает..." чтобы проверить, может ли бот писать
+                    check_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendChatAction"
+                    check_response = requests.post(check_url, json={"chat_id": user['user_id'], "action": "typing"},
+                                                   timeout=3)
+
+                    if check_response.status_code == 403:
+                        skipped_count += 1
+                        continue
+                except:
+                    pass
+
+                try:
+                    result = send_telegram_message(user['user_id'], message, reply_markup)
+                    if result:
+                        success_count += 1
+                    else:
+                        error_count += 1
                 except Exception as e:
                     error_count += 1
                     logger.error(f"Error sending to {user['user_id']}: {e}")
 
-                time.sleep(0.05)  # Защита от лимитов Telegram
+                time.sleep(0.05)
 
             add_admin_log(
-                f"📢 {'ТЕСТОВАЯ ' if is_test else ''}РАССЫЛКА: Отправлено {success_count}, Ошибок {error_count}" +
+                f"📢 РАССЫЛКА: Отправлено {success_count}, Ошибок {error_count}, Пропущено {skipped_count}" +
                 (f" (с кнопкой: {button_text})" if has_button else ""),
                 request.args.get('user_id', 'Admin'), "Admin"
             )
 
-            return jsonify({"success": True, "sent": success_count, "errors": error_count})
+            return jsonify({
+                "success": True,
+                "sent": success_count,
+                "errors": error_count,
+                "skipped": skipped_count
+            })
     except Exception as e:
         logger.error(f"Broadcast error: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
