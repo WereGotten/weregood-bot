@@ -7675,228 +7675,177 @@ function updateRecentPlayersFast(players) {
         }
     });
 
-    // ========== МГНОВЕННЫЙ ОБРАБОТЧИК ЗАВЕРШЕНИЯ РАУНДА (ГОРЯЧИЙ ПУТЬ) ==========
-// Этот обработчик приходит ПЕРВЫМ, до обработки призов
-socket.on('fortune_round_ending_immediate', (data) => {
-    console.log('⚡ МГНОВЕННЫЙ ЗАПУСК КОЛЕСА!', data);
+    // Обработчик завершения раунда
+    socket.on('fortune_round_ended', async (data) => {
+    console.log('🎲 Раунд Фортуны завершён:', data);
 
-    if (!data || !data.winner) return;
-
-    // Возврат ставок — колесо не крутим
-    if (data.winner === 'refund') {
-        if (data.message) showToast(data.message, 'info');
-        if (typeof loadFortuneData === 'function') loadFortuneData();
-        return;
-    }
-
-    // Получаем ставку пользователя МАКСИМАЛЬНО БЫСТРО (из кэша)
+    // ========== ИСПОЛЬЗУЕМ ПЕРЕДАННЫЕ СТАВКИ ВМЕСТО API ==========
     let userBetTeam = null;
     let userBetAmount = 0;
 
-    if (typeof fortuneData !== 'undefined') {
-        userBetTeam = fortuneData.userBetTeam;
-        userBetAmount = fortuneData.userBetAmount;
-    }
-
-    // Запускаем колесо МГНОВЕННО
-    if (typeof startWheelAnimation === 'function') {
-        const yellowPool = data.yellow_pool || (typeof fortuneData !== 'undefined' ? fortuneData.yellowPool : 0);
-        const redPool = data.red_pool || (typeof fortuneData !== 'undefined' ? fortuneData.redPool : 0);
-
-        startWheelAnimation(
-            data.winner,
-            yellowPool,
-            redPool,
-            data.sector_factor || 0.5,
-            userBetTeam,
-            userBetAmount
-        );
-    }
-});
-
-// ========== ОСНОВНОЙ ОБРАБОТЧИК ЗАВЕРШЕНИЯ (ПРИЗЫ И ОЧИСТКА) ==========
-socket.on('fortune_round_ended', (data) => {
-    console.log('🎲 Фортуна: получение призов и очистка', data);
-
-    // 1. Если колесо НЕ было запущено через immediate (fallback)
-    if (data && data.winner && data.winner !== 'refund') {
-        // Проверяем, не запущено ли уже колесо
-        const overlay = document.getElementById('wheelOverlay');
-        if (!overlay || !overlay.classList.contains('active')) {
-            // Запускаем с минимальной задержкой
-            setTimeout(() => {
-                let userBetTeam = null;
-                let userBetAmount = 0;
-
-                if (data.all_bets) {
-                    const myBet = data.all_bets.find(bet => bet.user_id == userId);
-                    if (myBet) {
-                        userBetTeam = myBet.team;
-                        userBetAmount = myBet.amount;
-                    }
-                }
-
-                const yellowPool = data.yellow_pool || (typeof fortuneData !== 'undefined' ? fortuneData.yellowPool : 0);
-                const redPool = data.red_pool || (typeof fortuneData !== 'undefined' ? fortuneData.redPool : 0);
-
-                if (typeof startWheelAnimation === 'function') {
-                    startWheelAnimation(data.winner, yellowPool, redPool, data.sector_factor || 0.5, userBetTeam, userBetAmount);
-                }
-            }, 100);
+    // Ищем свою ставку в переданных данных
+    if (data.all_bets) {
+        const myBet = data.all_bets.find(bet => bet.user_id == userId);
+        if (myBet) {
+            userBetTeam = myBet.team;
+            userBetAmount = myBet.amount;
+            console.log('✅ Найдена ставка пользователя в данных раунда:', userBetTeam, userBetAmount);
         }
     }
 
-    // 2. Показываем сообщение о возврате
-    if (data && data.winner === 'refund') {
+    // Если не нашли в данных раунда, пробуем API (как запасной вариант)
+    if (!userBetTeam) {
+        try {
+            const response = await fetch('/api/fortune/user_total_bet', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: userId })
+            });
+            const betData = await response.json();
+            if (betData.success) {
+                userBetTeam = betData.team;
+                userBetAmount = betData.amount || 0;
+                console.log('✅ Загружена ставка пользователя из API:', userBetTeam, userBetAmount);
+            }
+        } catch(e) {
+            console.error('Ошибка загрузки ставки:', e);
+        }
+    }
+
+    // 1. Если был возврат средств (refund) — колесо крутить не нужно
+if (data && data.winner === 'refund') {
+    if (data.message) showToast(data.message, 'info');
+    if (typeof loadFortuneData === 'function') loadFortuneData();
+    return;
+}
+
+    // 2. Если определился реальный победитель
+if (data && data.winner) {
+    const yellowPool = (typeof fortuneData !== 'undefined' && fortuneData.yellowPool) ? fortuneData.yellowPool : 50;
+    const redPool = (typeof fortuneData !== 'undefined' && fortuneData.redPool) ? fortuneData.redPool : 50;
+    const sectorFactor = (data && data.sector_factor !== undefined) ? data.sector_factor : 0.5;
+
+    if (typeof startWheelAnimation === 'function') {
+        console.log(`🎡 Запуск анимации колеса. Команда: ${data.winner}, Смещение: ${sectorFactor}`);
+        startWheelAnimation(data.winner, yellowPool, redPool, sectorFactor, userBetTeam, userBetAmount);
+        showToast('🎡 Колесо Фортуны запущено!', 'info');
+    } else {
         if (data.message) showToast(data.message, 'info');
         if (typeof loadFortuneData === 'function') loadFortuneData();
-        return;
     }
+}
 
-    // 3. ОЧИСТКА ДАННЫХ (после того как колесо запущено)
+    // ПРИНУДИТЕЛЬНАЯ ОЧИСТКА И ПЕРЕЗАГРУЗКА ДАННЫХ
     if (typeof fortuneData !== 'undefined') {
-        // НЕ ОБНУЛЯЕМ СРАЗУ, даём колесу время на анимацию
-        setTimeout(() => {
-            fortuneData.yellowPool = 0;
-            fortuneData.redPool = 0;
-            fortuneData.yellowPlayers = [];
-            fortuneData.redPlayers = [];
-            fortuneData.userBetTeam = null;
-            fortuneData.userBetAmount = 0;
-
-            const yellowPlayersDiv = document.getElementById('yellowPlayers');
-            const redPlayersDiv = document.getElementById('redPlayers');
-            if (yellowPlayersDiv) yellowPlayersDiv.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
-            if (redPlayersDiv) redPlayersDiv.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
-
-            if (typeof updateFortuneUI === 'function') updateFortuneUI();
-        }, 500);
+        fortuneData.yellowPool = 0;
+        fortuneData.redPool = 0;
+        fortuneData.yellowPlayers = [];
+        fortuneData.redPlayers = [];
+        fortuneData.timeLeft = 300;
+        fortuneData.userBetTeam = null;
+        fortuneData.userBetAmount = 0;
     }
 
-    // 4. Загружаем свежие данные для нового раунда (с задержкой)
+    const yellowPlayersDiv = document.getElementById('yellowPlayers');
+    const redPlayersDiv = document.getElementById('redPlayers');
+    if (yellowPlayersDiv) yellowPlayersDiv.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
+    if (redPlayersDiv) redPlayersDiv.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
+
+    if (typeof updateFortuneUI === 'function') updateFortuneUI();
     if (typeof loadFortuneData === 'function') {
+        setTimeout(() => loadFortuneData(), 500);
         setTimeout(() => loadFortuneData(), 2000);
-        setTimeout(() => loadFortuneData(), 4000);
     }
-
-    // 5. Обновляем глобальные данные игрока
-    if (typeof syncData === 'function') {
-        setTimeout(() => syncData(true), 3000);
-    }
+    if (typeof syncData === 'function') syncData(true);
 });
 
-// ========== ОБНОВЛЕНИЕ ПУЛОВ ПОСЛЕ СТАВКИ (ОПТИМИЗИРОВАННО) ==========
+// ========== НОВЫЙ ОБРАБОТЧИК: ОБНОВЛЕНИЕ ПУЛОВ ПОСЛЕ СТАВКИ ==========
 socket.on('fortune_pools_update', (data) => {
-    if (typeof fortuneData === 'undefined') return;
+    console.log('🔄 Обновление пулов Фортуны в реальном времени:', data);
 
-    // Быстрое обновление данных
-    fortuneData.yellowPool = data.yellow_pool || 0;
-    fortuneData.redPool = data.red_pool || 0;
-    fortuneData.yellowPlayers = data.yellow_players || [];
-    fortuneData.redPlayers = data.red_players || [];
+    if (typeof fortuneData !== 'undefined') {
+        fortuneData.yellowPool = data.yellow_pool || 0;
+        fortuneData.redPool = data.red_pool || 0;
+        fortuneData.yellowPlayers = data.yellow_players || [];
+        fortuneData.redPlayers = data.red_players || [];
 
-    // Обновляем UI только если изменились значения
-    const yellowPoolEl = document.getElementById('yellowPool');
-    const redPoolEl = document.getElementById('redPool');
-
-    if (yellowPoolEl && yellowPoolEl.innerText !== (data.yellow_pool || 0).toFixed(2) + ' WG') {
-        yellowPoolEl.innerText = (data.yellow_pool || 0).toFixed(2) + ' WG';
-    }
-    if (redPoolEl && redPoolEl.innerText !== (data.red_pool || 0).toFixed(2) + ' WG') {
-        redPoolEl.innerText = (data.red_pool || 0).toFixed(2) + ' WG';
-    }
-
-    // Обновляем шансы (только если total > 0)
-    const total = (data.yellow_pool || 0) + (data.red_pool || 0);
-    const yellowChanceEl = document.getElementById('yellowChance');
-    const redChanceEl = document.getElementById('redChance');
-
-    if (total > 0) {
-        const yellowPercent = Math.round((data.yellow_pool / total) * 100);
-        const redPercent = Math.round((data.red_pool / total) * 100);
-        if (yellowChanceEl && yellowChanceEl.innerText !== yellowPercent + '%') {
-            yellowChanceEl.innerText = yellowPercent + '%';
-        }
-        if (redChanceEl && redChanceEl.innerText !== redPercent + '%') {
-            redChanceEl.innerText = redPercent + '%';
-        }
-    } else {
-        if (yellowChanceEl) yellowChanceEl.innerText = '0%';
-        if (redChanceEl) redChanceEl.innerText = '0%';
-    }
-
-    // Обновляем списки игроков (только если изменились)
-    const yellowContainer = document.getElementById('yellowPlayers');
-    const redContainer = document.getElementById('redPlayers');
-
-    if (yellowContainer) {
-        const players = data.yellow_players || [];
-        if (players.length === 0) {
-            if (yellowContainer.innerHTML !== '<div class="empty-players-premium">🤝 Пока никто не поставил</div>') {
-                yellowContainer.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
-            }
+        if (typeof updateFortuneUI === 'function') {
+            updateFortuneUI();
         } else {
-            const newHtml = players.map(p => `
-                <div class="player-card-premium" data-userid="${p.userId}">
-                    <div class="player-avatar-premium">${p.avatarUrl ? `<img src="${p.avatarUrl}" loading="lazy">` : '🟡'}</div>
-                    <div class="player-bet-premium">${(p.netAmount || p.amount || 0).toFixed(0)} WG</div>
-                </div>
-            `).join('');
-            if (yellowContainer.innerHTML !== newHtml) {
-                yellowContainer.innerHTML = newHtml;
+            // Ручное обновление, если updateFortuneUI не определена
+            const yellowPoolEl = document.getElementById('yellowPool');
+            const redPoolEl = document.getElementById('redPool');
+            const yellowChanceEl = document.getElementById('yellowChance');
+            const redChanceEl = document.getElementById('redChance');
+
+            if (yellowPoolEl) yellowPoolEl.innerText = (data.yellow_pool || 0).toFixed(2) + ' WG';
+            if (redPoolEl) redPoolEl.innerText = (data.red_pool || 0).toFixed(2) + ' WG';
+
+            const total = (data.yellow_pool || 0) + (data.red_pool || 0);
+            if (total > 0) {
+                const yellowPercent = Math.round((data.yellow_pool / total) * 100);
+                const redPercent = Math.round((data.red_pool / total) * 100);
+                if (yellowChanceEl) yellowChanceEl.innerText = yellowPercent + '%';
+                if (redChanceEl) redChanceEl.innerText = redPercent + '%';
+            } else {
+                if (yellowChanceEl) yellowChanceEl.innerText = '0%';
+                if (redChanceEl) redChanceEl.innerText = '0%';
+            }
+
+            // Обновляем списки игроков
+            const yellowContainer = document.getElementById('yellowPlayers');
+            const redContainer = document.getElementById('redPlayers');
+
+            if (yellowContainer && data.yellow_players) {
+                if (data.yellow_players.length === 0) {
+                    yellowContainer.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
+                } else {
+                    yellowContainer.innerHTML = data.yellow_players.map(p => `
+                        <div class="player-card-premium" data-userid="${p.userId}">
+                            <div class="player-avatar-premium">${p.avatarUrl ? `<img src="${p.avatarUrl}" loading="lazy">` : '🟡'}</div>
+                            <div class="player-bet-premium">${(p.netAmount || p.amount || 0).toFixed(0)} WG</div>
+                        </div>
+                    `).join('');
+                }
+            }
+
+            if (redContainer && data.red_players) {
+                if (data.red_players.length === 0) {
+                    redContainer.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
+                } else {
+                    redContainer.innerHTML = data.red_players.map(p => `
+                        <div class="player-card-premium" data-userid="${p.userId}">
+                            <div class="player-avatar-premium">${p.avatarUrl ? `<img src="${p.avatarUrl}" loading="lazy">` : '🔴'}</div>
+                            <div class="player-bet-premium">${(p.netAmount || p.amount || 0).toFixed(0)} WG</div>
+                        </div>
+                    `).join('');
+                }
             }
         }
     }
 
-    if (redContainer) {
-        const players = data.red_players || [];
-        if (players.length === 0) {
-            if (redContainer.innerHTML !== '<div class="empty-players-premium">🤝 Пока никто не поставил</div>') {
-                redContainer.innerHTML = '<div class="empty-players-premium">🤝 Пока никто не поставил</div>';
-            }
-        } else {
-            const newHtml = players.map(p => `
-                <div class="player-card-premium" data-userid="${p.userId}">
-                    <div class="player-avatar-premium">${p.avatarUrl ? `<img src="${p.avatarUrl}" loading="lazy">` : '🔴'}</div>
-                    <div class="player-bet-premium">${(p.netAmount || p.amount || 0).toFixed(0)} WG</div>
-                </div>
-            `).join('');
-            if (redContainer.innerHTML !== newHtml) {
-                redContainer.innerHTML = newHtml;
-            }
-        }
-    }
-
-    // Обновляем баланс в фоне
+    // Обновляем баланс пользователя (WG) после ставки
     if (typeof syncData === 'function') {
         syncData(true);
     }
 });
 
-// ========== СБРОС ТАЙМЕРА ==========
+// Обработчик сброса таймера
 socket.on('fortune_timer_reset', (data) => {
-    if (data && data.time_left) {
+    if (data.time_left) {
         if (typeof fortuneData !== 'undefined') {
             fortuneData.timeLeft = data.time_left;
         }
-
-        const timerElement = document.getElementById('fortuneTimer');
-        if (timerElement) {
-            const minutes = Math.floor(data.time_left / 60);
-            const seconds = data.time_left % 60;
-            timerElement.innerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        if (typeof updateTimerDisplay === 'function') {
+            updateTimerDisplay();
         }
-
-        const timerBarFill = document.getElementById('timerBarFill');
-        if (timerBarFill) {
-            const percent = (data.time_left / 300) * 100;
-            timerBarFill.style.width = percent + '%';
+        if (typeof startFortuneTimer === 'function' && (!fortuneUI || !fortuneUI.timerInterval)) {
+            startFortuneTimer();
         }
-
-        if (data.message) showToast(data.message, 'info');
+        showToast(data.message || '⏰ Таймер перезапущен!', 'info');
     }
 });
-
+}
 
         // ==================== РЕКЛАМА ====================
         let adController = null;
