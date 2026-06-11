@@ -2807,50 +2807,49 @@ def instant_end_fortune_round():
     """МГНОВЕННОЕ завершение раунда - сначала отправляем данные для анимации, потом сохраняем в БД"""
     global current_fortune_round
 
+    # Копируем данные ДО блокировки БД
     with fortune_lock:
         if not current_fortune_round:
             return
-
-        if current_fortune_round.get('is_ending', False):
-            return
-
-        current_fortune_round['is_ending'] = True
 
         round_id = current_fortune_round['round_id']
         yellow_pool = current_fortune_round['yellow_pool']
         red_pool = current_fortune_round['red_pool']
         total_pool = yellow_pool + red_pool
 
+        # Получаем ставки
         with db.get_cursor() as cursor:
             cursor.execute('SELECT * FROM fortune_active_bets WHERE round_id = ?', (round_id,))
             all_bets = cursor.fetchall()
 
+    # Если нет ставок - просто создаём новый раунд
     if not all_bets or total_pool == 0:
         with fortune_lock:
             create_new_fortune_round()
             if 'is_ending' in current_fortune_round:
                 del current_fortune_round['is_ending']
-            # Отправляем событие сброса таймера на клиент
-            socketio.emit('fortune_timer_reset', {
-                'time_left': 300,
-                'message': '⏰ Новый раунд начался! Делайте ставки!'
-            })
         return
 
     has_yellow = any(b['team'] == 'yellow' for b in all_bets)
     has_red = any(b['team'] == 'red' for b in all_bets)
 
+    # Определяем победителя ДО БД (быстро)
     winner_team = None
     sector_factor = None
 
     if not (has_yellow and has_red):
         winner_team = 'refund'
     else:
+        # Определяем победителя по весу пулов
         yellow_weight = yellow_pool / total_pool if total_pool > 0 else 0.5
         winner_team = 'yellow' if random.random() < yellow_weight else 'red'
         sector_factor = round(random.uniform(0.15, 0.85), 4)
 
-    # МГНОВЕННАЯ ОТПРАВКА АНИМАЦИИ
+    # ========== МГНОВЕННАЯ ОТПРАВКА АНИМАЦИИ ВСЕМ ИГРОКАМ ==========
+    # Это происходит до любых операций с БД!
+    winner_name = "Жёлтых 🟡" if winner_team == 'yellow' else "Красных 🔴" if winner_team == 'red' else "refund"
+
+    # Формируем данные для анимации
     animation_data = {
         'winner': winner_team,
         'yellow_pool': yellow_pool,
@@ -2865,32 +2864,28 @@ def instant_end_fortune_round():
         'timestamp': time.time()
     }
 
+    # ОТПРАВЛЯЕМ ВСЕМ (запускает колесо на клиентах МГНОВЕННО)
     socketio.emit('fortune_round_ended_instant', animation_data)
     print(f"🎡 [ФОРТУНА] Мгновенная отправка анимации для раунда {round_id}")
 
-    # Фоновое сохранение
+    # Теперь в фоне делаем тяжёлые операции с БД
     threading.Thread(target=complete_fortune_round_background, args=(
         round_id, winner_team, sector_factor, yellow_pool, red_pool, all_bets
     ), daemon=True).start()
 
-    # СОЗДАЁМ НОВЫЙ РАУНД
+    # Создаём новый раунд
     with fortune_lock:
         create_new_fortune_round()
-        # Отправляем событие сброса таймера на клиент ДЛЯ НОВОГО РАУНДА
-        if current_fortune_round:
-            socketio.emit('fortune_timer_reset', {
-                'time_left': int(current_fortune_round.get('end_time', time.time() + 300) - time.time()),
-                'message': '🎲 Новый раунд Фортуны начался! Делайте ставки!'
-            })
         if 'is_ending' in current_fortune_round:
             del current_fortune_round['is_ending']
 
 
 def complete_fortune_round_background(round_id, winner_team, sector_factor, yellow_pool, red_pool, all_bets):
-    """Фоновое сохранение результатов раунда в БД"""
+    """Фоновое сохранение результатов раунда в БД (не блокирует анимацию)"""
     try:
         with db.get_cursor() as cursor:
             if winner_team == 'refund':
+                # Возврат ставок
                 for bet in all_bets:
                     user = get_user(bet['user_id'])
                     safe_update_user(bet['user_id'], wg=user['wg'] + bet['amount'])
@@ -2907,6 +2902,7 @@ def complete_fortune_round_background(round_id, winner_team, sector_factor, yell
                 ''', (datetime.datetime.now().isoformat(), round_id))
 
             else:
+                # Выдаём призы победителям
                 total_pool = yellow_pool + red_pool
                 winner_bets = [b for b in all_bets if b['team'] == winner_team]
                 winner_total = sum(b['net_amount'] for b in winner_bets)
@@ -2922,12 +2918,14 @@ def complete_fortune_round_background(round_id, winner_team, sector_factor, yell
                         VALUES (?, ?, ?, ?, ?, ?)
                     ''', (bet['user_id'], round_id, winner_team, bet['amount'], 'win', win_amount))
 
+                    # Telegram уведомления в фоне
                     team_name = "Жёлтых 🟡" if winner_team == 'yellow' else "Красных 🔴"
                     threading.Thread(target=send_telegram_message, args=(
                         bet['user_id'],
                         f"🎉 **ПОБЕДА В КОМАНДНОЙ ФОРТУНЕ!**\n\nКоманда {team_name} победила!\n💰 Вы выиграли {win_amount} WG!\n\nПоздравляем! 🎊"
                     ), daemon=True).start()
 
+                # Логируем проигравших
                 for bet in all_bets:
                     if bet['team'] != winner_team:
                         cursor.execute('''
@@ -2935,12 +2933,14 @@ def complete_fortune_round_background(round_id, winner_team, sector_factor, yell
                             VALUES (?, ?, ?, ?, ?, ?)
                         ''', (bet['user_id'], round_id, bet['team'], bet['amount'], 'lose', 0))
 
+                # Обновляем запись раунда
                 cursor.execute('''
                     UPDATE fortune_rounds 
                     SET winner_team = ?, end_time = ?, yellow_pool = ?, red_pool = ?
                     WHERE round_id = ?
                 ''', (winner_team, datetime.datetime.now().isoformat(), yellow_pool, red_pool, round_id))
 
+            # Удаляем активные ставки
             cursor.execute("DELETE FROM fortune_active_bets WHERE round_id = ?", (round_id,))
 
         print(f"✅ [ФОРТУНА] Раунд {round_id} сохранён в БД")
