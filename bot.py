@@ -5474,8 +5474,8 @@ def handle_telegram_updates():
             logger.error(f"Ошибка в polling: {e}")
             time.sleep(5)
 
-restore_fortune_from_db()
-start_fortune_timer_thread()
+# restore_fortune_from_db()  # ← ЗАКОММЕНТИРОВАНО
+# start_fortune_timer_thread()  # ← ЗАКОММЕНТИРОВАНО
 
 if __name__ == '__main__':
     threading.Thread(target=handle_telegram_updates, daemon=True).start()
