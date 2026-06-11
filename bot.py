@@ -671,7 +671,7 @@ ALLOWED_UPDATE_FIELDS = {
     'avatar_url', 'usdt', 'wins', 'role', 'stars', 'max_energy',
     'energy_upgrades', 'energy_limit_upgrades', 'unlocked_prefixes',
     'tutorial_completed', 'ton_wallet', 'banned_until', 'ban_reason', 'banned_by',
-    'completed_achievements', 'daily_clicks'
+    'completed_achievements', 'daily_clicks',
     'fortune_bets_count', 'fortune_wins_count', 'fortune_total_bet_amount'
 }
 
@@ -4599,6 +4599,63 @@ def api_admin_reset_ad_limits():
         })
     except Exception as e:
         logger.error(f"Ошибка сброса лимитов рекламы: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/admin/users_list', methods=['GET'])
+@require_admin
+def api_admin_users_list():
+    """Получить список всех пользователей для рассылки"""
+    try:
+        with db.get_cursor() as cursor:
+            cursor.execute("SELECT user_id, username, first_name FROM users ORDER BY user_id")
+            rows = cursor.fetchall()
+            users = []
+            for row in rows:
+                users.append({
+                    "user_id": row['user_id'],
+                    "name": row['username'] or row['first_name'] or str(row['user_id'])
+                })
+            return jsonify({"success": True, "users": users, "total": len(users)})
+    except Exception as e:
+        logger.error(f"Error getting users list: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/admin/send_broadcast', methods=['POST'])
+@require_admin
+def api_admin_send_broadcast():
+    """Отправить рассылку всем пользователям"""
+    data = request.json
+    message = data.get('message')
+
+    if not message:
+        return jsonify({"success": False, "error": "Нет сообщения"}), 400
+
+    try:
+        with db.get_cursor() as cursor:
+            cursor.execute("SELECT user_id FROM users")
+            users = cursor.fetchall()
+
+            success_count = 0
+            error_count = 0
+
+            for user in users:
+                try:
+                    send_telegram_message(user['user_id'], message)
+                    success_count += 1
+                except Exception as e:
+                    error_count += 1
+                    logger.error(f"Error sending to {user['user_id']}: {e}")
+
+                # Небольшая задержка чтобы не заблокировали
+                time.sleep(0.05)
+
+            add_admin_log(f"📢 СДЕЛАЛ РАССЫЛКУ: Отправлено {success_count}, Ошибок {error_count}",
+                          request.args.get('user_id', 'Admin'), "Admin")
+
+            return jsonify({"success": True, "sent": success_count, "errors": error_count})
+    except Exception as e:
+        logger.error(f"Broadcast error: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/api/admin/reset_ad_limits_user', methods=['POST'])
