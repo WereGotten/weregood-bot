@@ -4624,24 +4624,43 @@ def api_admin_users_list():
 @app.route('/api/admin/send_broadcast', methods=['POST'])
 @require_admin
 def api_admin_send_broadcast():
-    """Отправить рассылку всем пользователям"""
+    """Отправить рассылку всем пользователям с поддержкой кнопок"""
     data = request.json
     message = data.get('message')
+    has_button = data.get('has_button', False)
+    button_text = data.get('button_text', '')
+    button_url = data.get('button_url', '')
+    is_test = data.get('is_test', False)
+    test_user_id = data.get('test_user_id')
 
     if not message:
         return jsonify({"success": False, "error": "Нет сообщения"}), 400
 
+    # Создаём кнопку если нужно
+    reply_markup = None
+    if has_button and button_text and button_url:
+        reply_markup = {
+            "inline_keyboard": [[{
+                "text": button_text,
+                "url": button_url
+            }]]
+        }
+
     try:
         with db.get_cursor() as cursor:
-            cursor.execute("SELECT user_id FROM users")
-            users = cursor.fetchall()
+            # Если тестовый режим - отправляем только одному пользователю
+            if is_test and test_user_id:
+                users = [{'user_id': test_user_id}]
+            else:
+                cursor.execute("SELECT user_id FROM users")
+                users = cursor.fetchall()
 
             success_count = 0
             error_count = 0
 
             for user in users:
                 try:
-                    send_telegram_message(user['user_id'], message)
+                    send_telegram_message_with_button(user['user_id'], message, reply_markup)
                     success_count += 1
                 except Exception as e:
                     error_count += 1
@@ -4650,13 +4669,27 @@ def api_admin_send_broadcast():
                 # Небольшая задержка чтобы не заблокировали
                 time.sleep(0.05)
 
-            add_admin_log(f"📢 СДЕЛАЛ РАССЫЛКУ: Отправлено {success_count}, Ошибок {error_count}",
-                          request.args.get('user_id', 'Admin'), "Admin")
+            add_admin_log(
+                f"📢 {'ТЕСТОВАЯ ' if is_test else ''}РАССЫЛКА: Отправлено {success_count}, Ошибок {error_count}" +
+                (f" (с кнопкой: {button_text})" if has_button else ""),
+                request.args.get('user_id', 'Admin'), "Admin")
 
             return jsonify({"success": True, "sent": success_count, "errors": error_count})
     except Exception as e:
         logger.error(f"Broadcast error: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
+
+def send_telegram_message_with_button(chat_id, text, reply_markup=None):
+    """Отправляет сообщение с возможной кнопкой"""
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    try:
+        data = {"chat_id": chat_id, "text": text, "parse_mode": "HTML"}
+        if reply_markup:
+            data["reply_markup"] = reply_markup
+        verify_ssl = not DEBUG_MODE
+        requests.post(url, json=data, timeout=10, verify=verify_ssl)
+    except Exception as e:
+        logger.error(f"Ошибка отправки сообщения {chat_id}: {e}")
 
 @app.route('/api/admin/reset_ad_limits_user', methods=['POST'])
 @require_admin
