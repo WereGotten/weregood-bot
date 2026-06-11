@@ -7873,17 +7873,13 @@ socket.on('fortune_pools_update', (data) => {
     }
 });
 
-// ========== СБРОС ТАЙМЕРА (МГНОВЕННЫЙ) ==========
+// ========== СБРОС ТАЙМЕРА ==========
 socket.on('fortune_timer_reset', (data) => {
-    console.log('⏰ МГНОВЕННЫЙ СБРОС ТАЙМЕРА!', data);
-
-    if (data && data.time_left !== undefined) {
-        // Обновляем данные
+    if (data && data.time_left) {
         if (typeof fortuneData !== 'undefined') {
             fortuneData.timeLeft = data.time_left;
         }
 
-        // Обновляем отображение таймера мгновенно
         const timerElement = document.getElementById('fortuneTimer');
         if (timerElement) {
             const minutes = Math.floor(data.time_left / 60);
@@ -7891,37 +7887,16 @@ socket.on('fortune_timer_reset', (data) => {
             timerElement.innerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         }
 
-        // Обновляем прогресс-бар
         const timerBarFill = document.getElementById('timerBarFill');
         if (timerBarFill) {
             const percent = (data.time_left / 300) * 100;
             timerBarFill.style.width = percent + '%';
-            // Сбрасываем цвет на золотой
-            timerBarFill.style.background = 'linear-gradient(90deg, #FFD700, #FFA500)';
         }
 
-        // Убираем предупреждение о скором окончании
-        const timerContainer = document.getElementById('fortuneTimerContainer');
-        if (timerContainer) {
-            timerContainer.classList.remove('timer-warning');
-            timerContainer.classList.remove('timer-critical');
-        }
-
-        // Разблокируем кнопки ставок (если они были заблокированы)
-        const yellowBetBtn = document.getElementById('yellowBetBtn');
-        const redBetBtn = document.getElementById('redBetBtn');
-        const betAmount = document.getElementById('fortuneBetAmount');
-        const betSlider = document.getElementById('fortuneBetSlider');
-
-        if (yellowBetBtn) yellowBetBtn.disabled = false;
-        if (redBetBtn) redBetBtn.disabled = false;
-        if (betAmount) betAmount.disabled = false;
-        if (betSlider) betSlider.disabled = false;
-
-        // Показываем сообщение если есть
         if (data.message) showToast(data.message, 'info');
     }
 });
+}
 
         // ==================== РЕКЛАМА ====================
         let adController = null;
