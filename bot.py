@@ -558,6 +558,7 @@ ALLOWED_UPDATE_FIELDS = {
     'energy_upgrades', 'energy_limit_upgrades', 'unlocked_prefixes',
     'tutorial_completed', 'ton_wallet', 'banned_until', 'ban_reason', 'banned_by',
     'completed_achievements', 'daily_clicks'
+    'fortune_bets_count', 'fortune_wins_count', 'fortune_total_bet_amount'
 }
 
 MAX_USER_CACHE = 5000
@@ -797,7 +798,12 @@ def get_achievement_display_name(achievement_name):
         'hater': 'Хейтер',
         'ad_lover': 'Любитель TV',
         'spender': 'Транжира',
-        'task_master': 'Выполнитель'
+        'task_master': 'Выполнитель',
+        # ========== НОВЫЕ ==========
+        'brave': 'Бесстрашный',
+        'lucky_fortune': 'Везучий',
+        'gambler_fortune': 'Лудоман',
+        'crazy': 'Сумасшедший'
     }
     return names.get(achievement_name, achievement_name)
 
@@ -867,6 +873,72 @@ def get_user_referrals_count(user_id):
     with db.get_cursor() as cursor:
         cursor.execute("SELECT COUNT(*) FROM referrals WHERE referrer_id = ?", (user_id,))
         return cursor.fetchone()[0]
+
+def update_fortune_achievements(user_id, bet_amount=None, is_win=False):
+        """Обновляет достижения, связанные с Фортуной"""
+        try:
+            with db.get_cursor() as cursor:
+                # Получаем текущие значения
+                cursor.execute("""
+                    SELECT fortune_bets_count, fortune_wins_count, fortune_total_bet_amount 
+                    FROM users WHERE user_id = ?
+                """, (user_id,))
+                row = cursor.fetchone()
+
+                if not row:
+                    return
+
+                current_bets = row['fortune_bets_count'] or 0
+                current_wins = row['fortune_wins_count'] or 0
+                current_total_bet = row['fortune_total_bet_amount'] or 0
+
+                updated = False
+
+                # Обновляем количество ставок (если передан bet_amount, значит это новая ставка)
+                if bet_amount is not None and bet_amount > 0:
+                    new_bets = current_bets + 1
+                    new_total_bet = current_total_bet + bet_amount
+                    cursor.execute("""
+                        UPDATE users 
+                        SET fortune_bets_count = ?, fortune_total_bet_amount = ? 
+                        WHERE user_id = ?
+                    """, (new_bets, new_total_bet, user_id))
+                    updated = True
+
+                    # Проверяем достижение "Бесстрашный" (100 ставок)
+                    update_achievement_progress(user_id, 'brave', 1)
+
+                    # Проверяем достижение "Сумасшедший" (1000 ставок)
+                    if new_bets >= 1000:
+                        update_achievement_progress(user_id, 'crazy', set_value=1000)
+                    else:
+                        update_achievement_progress(user_id, 'crazy', 1)
+
+                    # Проверяем достижение "Лудоман" (200 000 WG суммарно)
+                    if new_total_bet >= 200000:
+                        update_achievement_progress(user_id, 'gambler_fortune', set_value=200000)
+                    else:
+                        update_achievement_progress(user_id, 'gambler_fortune', int(bet_amount))
+
+                # Обновляем количество побед
+                if is_win:
+                    new_wins = current_wins + 1
+                    cursor.execute("""
+                        UPDATE users SET fortune_wins_count = ? WHERE user_id = ?
+                    """, (new_wins, user_id))
+                    updated = True
+
+                    # Проверяем достижение "Везучий" (100 побед)
+                    if new_wins >= 100:
+                        update_achievement_progress(user_id, 'lucky_fortune', set_value=100)
+                    else:
+                        update_achievement_progress(user_id, 'lucky_fortune', 1)
+
+                if updated:
+                    invalidate_cache(user_id)
+
+        except Exception as e:
+            logger.error(f"Ошибка обновления достижений Фортуны: {e}")
 
 # ========== ИНИЦИАЛИЗАЦИЯ БД ==========
 def init_db():
@@ -1168,6 +1240,24 @@ def init_db():
                 cursor.execute(f"ALTER TABLE lottery ADD COLUMN {col} DEFAULT 0")
             except:
                 pass
+            # ========== МИГРАЦИЯ ДЛЯ НОВЫХ ДОСТИЖЕНИЙ ФОРТУНЫ ==========
+            try:
+                cursor.execute("ALTER TABLE users ADD COLUMN fortune_bets_count INTEGER DEFAULT 0")
+                print("✅ Добавлена колонка fortune_bets_count")
+            except:
+                pass
+
+            try:
+                cursor.execute("ALTER TABLE users ADD COLUMN fortune_wins_count INTEGER DEFAULT 0")
+                print("✅ Добавлена колонка fortune_wins_count")
+            except:
+                pass
+
+            try:
+                cursor.execute("ALTER TABLE users ADD COLUMN fortune_total_bet_amount REAL DEFAULT 0")
+                print("✅ Добавлена колонка fortune_total_bet_amount")
+            except:
+                pass
         try:
             cursor.execute("SELECT end_time FROM fortune_rounds LIMIT 1")
         except sqlite3.OperationalError:
@@ -1194,6 +1284,7 @@ def init_db():
             cursor.execute("ALTER TABLE fortune_active_bets ADD COLUMN net_amount REAL DEFAULT 0")
             print("✅ Добавлена колонка net_amount в fortune_active_bets")
         # ========== ЗАПОЛНЕНИЕ ДОСТИЖЕНИЙ ==========
+        # ========== ЗАПОЛНЕНИЕ ДОСТИЖЕНИЙ ==========
         achievements_list = [
             ('autoclicker', '🏆 Автокликер', 'Сделать 50 000 кликов по монете', '🖱️', 50000),
             ('investor', '💰 Инвестор', 'Купить 30 улучшений в магазине', '📈', 30),
@@ -1204,7 +1295,12 @@ def init_db():
             ('hater', '👎 Хейтер', 'Поставить 200 дизлайков', '💔', 200),
             ('ad_lover', '📺 Любитель TV', 'Просмотреть 100 реклам', '🎬', 100),
             ('spender', '💸 Транжира', 'Потратить 50 000 WG Coin', '💎', 50000),
-            ('task_master', '📋 Выполнитель', 'Выполнить 10 заданий', '✅', 10)
+            ('task_master', '📋 Выполнитель', 'Выполнить 10 заданий', '✅', 10),
+            # ========== НОВЫЕ ДОСТИЖЕНИЯ ФОРТУНЫ ==========
+            ('brave', '⚔️ Бесстрашный', 'Сделать 100 ставок в Командной Фортуне', '🎲', 100),
+            ('lucky_fortune', '🍀 Везучий', 'Выиграть 100 раз в Командной Фортуне', '🏆', 100),
+            ('gambler_fortune', '🎰 Лудоман', 'Поставить 200 000 WG в Командной Фортуне', '💰', 200000),
+            ('crazy', '🤪 Сумасшедший', 'Сделать 1000 ставок в Командной Фортуне', '🔥', 1000)
         ]
         for ach in achievements_list:
             cursor.execute('''
@@ -2743,6 +2839,10 @@ def end_fortune_round():
                         win_amount = round(total_pool * share, 2)
                         user = get_user(bet['user_id'])
                         safe_update_user(bet['user_id'], wg=user['wg'] + win_amount)
+
+                        # ========== ОБНОВЛЯЕМ ДОСТИЖЕНИЯ (ПОБЕДА) ==========
+                        update_fortune_achievements(bet['user_id'], is_win=True)
+
                         cursor.execute('''
                             INSERT INTO fortune_history (user_id, round_id, team, amount, result, win_amount)
                             VALUES (?, ?, ?, ?, ?, ?)
@@ -2902,6 +3002,10 @@ def api_fortune_bet():
                 f"🎲 ФОРТУНА: ДОБАВИЛ к ставке {amount} WG (всего {new_total} WG) на команду {'Жёлтые' if team == 'yellow' else 'Красные'}",
                 user_id, user['username'], old_value=user['wg'], new_value=user['wg'] - amount, currency="wg")
             result_amount = new_total
+
+            # ========== ОБНОВЛЯЕМ ДОСТИЖЕНИЯ (добавление к существующей ставке) ==========
+            update_fortune_achievements(user_id, bet_amount=amount, is_win=False)
+
         else:
             bet_data = {
                 "user_id": user_id,
@@ -2920,6 +3024,9 @@ def api_fortune_bet():
                 f"🎲 ФОРТУНА: Новая ставка {amount} WG на команду {'Жёлтые' if team == 'yellow' else 'Красные'}",
                 user_id, user['username'], old_value=user['wg'], new_value=user['wg'] - amount, currency="wg")
             result_amount = amount
+
+            # ========== ОБНОВЛЯЕМ ДОСТИЖЕНИЯ (новая ставка) ==========
+            update_fortune_achievements(user_id, bet_amount=amount, is_win=False)
 
         if team == 'yellow':
             current_fortune_round['yellow_pool'] += net_amount
@@ -3106,6 +3213,35 @@ def api_fortune_history_all():
                 "created_at": row['created_at']
             })
         return jsonify({"success": True, "history": history})
+
+
+@app.route('/api/fortune/stats', methods=['POST'])
+def api_fortune_stats():
+    """Возвращает статистику игрока по Фортуне для достижений"""
+    data = request.json
+    if not data:
+        return jsonify({"success": False, "error": "No data"}), 400
+
+    user_id = data.get('user_id')
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"success": False, "error": "Invalid user_id"}), 400
+
+    with db.get_cursor() as cursor:
+        cursor.execute("""
+            SELECT fortune_bets_count, fortune_wins_count, fortune_total_bet_amount 
+            FROM users WHERE user_id = ?
+        """, (user_id,))
+        row = cursor.fetchone()
+
+        return jsonify({
+            "success": True,
+            "stats": {
+                "bets_count": row['fortune_bets_count'] or 0,
+                "wins_count": row['fortune_wins_count'] or 0,
+                "total_bet_amount": row['fortune_total_bet_amount'] or 0
+            }
+        })
 
 # ========== ОСНОВНЫЕ API (СОКРАЩЕННО ДЛЯ ЭКОНОМИИ МЕСТА, НО РАБОТАЮТ) ==========
 @app.route('/api/log_game_entry', methods=['POST'])
