@@ -7675,53 +7675,6 @@ function updateRecentPlayersFast(players) {
         }
     });
 
-    // ========== НОВЫЙ МГНОВЕННЫЙ ОБРАБОТЧИК (ДОБАВЬ ЭТОТ БЛОК) ==========
-    socket.on('fortune_round_ended_instant', (data) => {
-        console.log('⚡ МГНОВЕННОЕ завершение раунда Фортуны:', data);
-
-        // Защита от повторного запуска
-        if (window.isFortuneRoundEnding) {
-            console.log('Колесо уже крутится, пропускаем');
-            return;
-        }
-
-        // Возврат ставок (без анимации)
-        if (data.winner === 'refund') {
-            if (data.message) showToast(data.message, 'info');
-            if (typeof loadFortuneData === 'function') loadFortuneData();
-            return;
-        }
-
-        // Получаем данные для анимации
-        const yellowPool = data.yellow_pool || 0;
-        const redPool = data.red_pool || 0;
-        const sectorFactor = data.sector_factor || 0.5;
-
-        // Находим ставку пользователя
-        let userBetTeam = null;
-        let userBetAmount = 0;
-
-        if (data.all_bets) {
-            const myBet = data.all_bets.find(bet => bet.user_id == userId);
-            if (myBet) {
-                userBetTeam = myBet.team;
-                userBetAmount = myBet.amount;
-            }
-        }
-
-        // МГНОВЕННЫЙ ЗАПУСК АНИМАЦИИ КОЛЕСА
-        if (typeof startWheelAnimation === 'function') {
-            console.log(`🎡 Мгновенный запуск анимации! Команда: ${data.winner}`);
-            startWheelAnimation(data.winner, yellowPool, redPool, sectorFactor, userBetTeam, userBetAmount);
-        }
-
-        // Обновляем данные в фоне (не блокируем анимацию)
-        setTimeout(() => {
-            if (typeof loadFortuneData === 'function') loadFortuneData();
-            if (typeof syncData === 'function') syncData(true);
-        }, 500);
-    });
-
     // Обработчик завершения раунда
     socket.on('fortune_round_ended', async (data) => {
     console.log('🎲 Раунд Фортуны завершён:', data);
