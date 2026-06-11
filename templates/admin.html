@@ -775,6 +775,28 @@
             background: #FFD700;
             border-radius: 3px;
         }
+
+        /* Стили для страницы рассылки */
+        .broadcast-status-card {
+            background: rgba(255,215,0,0.1);
+            border-radius: 16px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .progress-bar-container {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            height: 20px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #FFD700, #FFA500);
+            transition: width 0.3s;
+        }
     </style>
 </head>
 <body>
@@ -812,6 +834,10 @@
                 <span class="nav-icon">📋</span>
                 <span class="nav-label">Логи</span>
             </div>
+            <div class="nav-item" data-page="broadcast">
+                <span class="nav-icon">📢</span>
+                <span class="nav-label">Рассылка</span>
+            </div>
             <div class="nav-item" data-page="players">
                 <span class="nav-icon">👥</span>
                 <span class="nav-label">Игроки</span>
@@ -827,12 +853,14 @@
                 </div>
             </div>
 
+            <!-- Страница статистики -->
             <div id="page-dashboard" class="page-content">
                 <div id="statsGrid" class="stats-grid">
                     <div class="loading">Загрузка...</div>
                 </div>
             </div>
 
+            <!-- Страница графиков -->
             <div id="page-charts" class="page-content" style="display: none;">
                 <div class="chart-card">
                     <h3 id="chartTitle">📈 Количество кликов по монете</h3>
@@ -854,6 +882,7 @@
                 </div>
             </div>
 
+            <!-- Страница лотереи -->
             <div id="page-lottery" class="page-content" style="display: none;">
                 <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
                     <div class="stat-card">
@@ -874,18 +903,17 @@
                     </div>
                 </div>
                 <div class="search-box">
-    <button class="btn" onclick="forceDraw()">🎲 Принудительный розыгрыш</button>
-    <button class="btn btn-secondary" onclick="resetLottery()">🔄 Сбросить лотерею</button>
-    <button class="btn btn-secondary" id="setPoolBtn">💰 Изменить фонд</button>
-    <button class="btn btn-danger" onclick="clearAllWallets()">🗑️ Очистить все кошельки</button>
-    <button class="btn btn-danger" onclick="resetDailyClicks()" style="background: rgba(244,67,54,0.2); color: #f44336; border: 1px solid #f44336;">
-        🔄 Сбросить ТОП ДНЯ
-    </button>
-    <!-- 👇 НОВАЯ КНОПКА ТУТ -->
-    <button class="btn btn-danger" onclick="resetAllAdLimits()" style="background: rgba(255,165,0,0.2); color: #FFA500; border: 1px solid #FFA500;">
-        🎬 Сбросить лимиты рекламы ВСЕМ
-    </button>
-</div>
+                    <button class="btn" onclick="forceDraw()">🎲 Принудительный розыгрыш</button>
+                    <button class="btn btn-secondary" onclick="resetLottery()">🔄 Сбросить лотерею</button>
+                    <button class="btn btn-secondary" id="setPoolBtn">💰 Изменить фонд</button>
+                    <button class="btn btn-danger" onclick="clearAllWallets()">🗑️ Очистить все кошельки</button>
+                    <button class="btn btn-danger" onclick="resetDailyClicks()" style="background: rgba(244,67,54,0.2); color: #f44336; border: 1px solid #f44336;">
+                        🔄 Сбросить ТОП ДНЯ
+                    </button>
+                    <button class="btn btn-danger" onclick="resetAllAdLimits()" style="background: rgba(255,165,0,0.2); color: #FFA500; border: 1px solid #FFA500;">
+                        🎬 Сбросить лимиты рекламы ВСЕМ
+                    </button>
+                </div>
                 <div class="chart-card">
                     <h3>📋 Участники лотереи</h3>
                     <div style="overflow-x: auto;">
@@ -899,6 +927,7 @@
                 </div>
             </div>
 
+            <!-- Страница заданий -->
             <div id="page-tasks" class="page-content" style="display: none;">
                 <div class="search-box">
                     <button class="btn" id="createTaskBtn">➕ Создать задание</button>
@@ -910,6 +939,7 @@
                 </div>
             </div>
 
+            <!-- Страница промокодов -->
             <div id="page-promocodes" class="page-content" style="display: none;">
                 <div class="search-box">
                     <button class="btn" id="createPromoBtn">➕ Создать промокод</button>
@@ -920,16 +950,7 @@
                     <div style="overflow-x: auto;">
                         <table class="data-table">
                             <thead>
-                                <tr>
-                                    <th>Код</th>
-                                    <th>Награда</th>
-                                    <th>Использовано</th>
-                                    <th>Макс.</th>
-                                    <th>Пароль</th>
-                                    <th>Статус</th>
-                                    <th>Активации</th>
-                                    <th>Действия</th>
-                                </tr>
+                                <tr><th>Код</th><th>Награда</th><th>Использовано</th><th>Макс.</th><th>Пароль</th><th>Статус</th><th>Активации</th><th>Действия</th></tr>
                             </thead>
                             <tbody id="promoCodesList"></tbody>
                         </table>
@@ -937,6 +958,7 @@
                 </div>
             </div>
 
+            <!-- Страница выводов средств -->
             <div id="page-withdrawals" class="page-content" style="display: none;">
                 <div class="chart-card">
                     <h3>💸 Заявки на вывод USDT</h3>
@@ -944,6 +966,7 @@
                 </div>
             </div>
 
+            <!-- Страница логов -->
             <div id="page-logs" class="page-content" style="display: none;">
                 <div class="search-box">
                     <input type="text" class="search-input" id="logSearch" placeholder="Поиск по действию...">
@@ -963,6 +986,86 @@
                 </div>
             </div>
 
+            <!-- Страница рассылки -->
+            <div id="page-broadcast" class="page-content" style="display: none;">
+                <div class="chart-card">
+                    <h3>📢 Массовая рассылка</h3>
+
+                    <div id="broadcastStatus" class="broadcast-status-card" style="display: none;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                            <span>📊 Прогресс:</span>
+                            <span id="broadcastProgressText">0 / 0</span>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div id="broadcastProgressBar" class="progress-bar-fill"></div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 10px;">
+                            <span>✅ Отправлено: <span id="broadcastSent">0</span></span>
+                            <span>❌ Ошибок: <span id="broadcastFailed">0</span></span>
+                            <span>👥 Всего: <span id="broadcastTotal">0</span></span>
+                        </div>
+                        <div style="margin-top: 15px;">
+                            <button class="btn btn-danger" id="cancelBroadcastBtn" style="width: 100%; background: rgba(244,67,54,0.2); border-color: #f44336; color: #f44336;">🛑 Остановить рассылку</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>📝 Текст сообщения *</label>
+                        <textarea id="broadcastMessage" class="form-textarea" rows="6" placeholder="Введите текст сообщения...&#10;&#10;Поддерживается HTML: &lt;b&gt;жирный&lt;/b&gt;, &lt;i&gt;курсив&lt;/i&gt;, &lt;a href=&quot;https://...&quot;&gt;ссылка&lt;/a&gt;"></textarea>
+                        <small style="opacity: 0.5;">Поддерживает HTML-разметку. Ссылки открываются прямо в Telegram.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="broadcastHasButton">
+                            <span>➕ Добавить кнопку</span>
+                        </label>
+                    </div>
+
+                    <div id="broadcastButtonSettings" style="display: none;">
+                        <div class="form-group">
+                            <label>🔘 Текст кнопки</label>
+                            <input type="text" id="broadcastButtonText" class="form-input" placeholder="Например: Перейти в игру">
+                        </div>
+                        <div class="form-group">
+                            <label>🔗 Ссылка кнопки</label>
+                            <input type="text" id="broadcastButtonUrl" class="form-input" placeholder="https://t.me/WereGooodbot/WereGood">
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="border-top: 1px solid rgba(255,215,0,0.2); padding-top: 15px; margin-top: 15px;">
+                        <label style="display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="broadcastTestMode">
+                            <span>🧪 Тестовый режим (отправить только одному пользователю)</span>
+                        </label>
+                    </div>
+
+                    <div id="broadcastTestSettings" style="display: none;">
+                        <div class="form-group">
+                            <label>👤 ID пользователя для теста</label>
+                            <input type="number" id="broadcastTestUserId" class="form-input" placeholder="Например: 5264622363">
+                            <small style="opacity: 0.5;">Внимание! Перед массовой рассылкой ОБЯЗАТЕЛЬНО протестируйте!</small>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>⚠️ Предупреждение</label>
+                        <div style="background: rgba(244,67,54,0.1); border-radius: 12px; padding: 12px; font-size: 0.7rem; color: #f44336;">
+                            • Рассылка будет отправлена ВСЕМ пользователям<br>
+                            • Рекомендуется сначала сделать тестовую рассылку на себя<br>
+                            • Не используйте рассылку слишком часто, чтобы не получить блокировку от Telegram<br>
+                            • Между сообщениями есть задержка 0.1 сек для защиты от лимитов
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 12px; margin-top: 20px;">
+                        <button class="btn" id="startBroadcastBtn" style="flex: 2;">📢 Запустить рассылку</button>
+                        <button class="btn btn-secondary" id="testBroadcastBtn" style="flex: 1;">🧪 Тест</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Страница игроков -->
             <div id="page-players" class="page-content" style="display: none;">
                 <div class="search-box">
                     <input type="text" class="search-input" id="playerSearch" placeholder="Поиск по ID или имени...">
@@ -983,6 +1086,7 @@
         </div>
     </div>
 
+    <!-- Модальные окна -->
     <div id="playerModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -1181,6 +1285,9 @@
         let currentLogTotal = 0;
         const LOGS_PER_PAGE = 100;
 
+        // ========== РАССЫЛКА ==========
+        let broadcastStatusInterval = null;
+
         function formatNumber(num) {
             if (num === undefined || num === null) return '0';
             return parseFloat(num).toFixed(2);
@@ -1232,7 +1339,7 @@
                 { title: "🎲 Билетов сейчас", value: data.total_current_tickets },
                 { title: "⭐ Улучшений", value: data.upgrade_1 + data.upgrade_2 + data.upgrade_3 },
                 { title: "⚡ Улучшений энергии", value: data.total_energy_upgrades },
-                { title: "⭐ Задоначено Stars", value: data.total_donated_stars, unit: "Stars" },
+                { title: "⭐ Задоначено Stars", value: data.total_stars, unit: "Stars" },
                 { title: "🎰 Призовой фонд", value: formatNumber(data.lottery_pool), unit: "USDT" }
             ];
             statsGrid.innerHTML = stats.map(s => `
@@ -1247,105 +1354,78 @@
 
         // ========== ГРАФИКИ ==========
         async function loadChart() {
-    const canvas = document.getElementById('activityChart');
-    if (!canvas) return;
+            const canvas = document.getElementById('activityChart');
+            if (!canvas) return;
 
-    const data = await apiRequest(`chart_data?period=${currentPeriod}&metric=${currentMetric}`);
-    if (!data.success) {
-        console.error('Chart data error:', data);
-        return;
-    }
+            const data = await apiRequest(`chart_data?period=${currentPeriod}&metric=${currentMetric}`);
+            if (!data.success) {
+                console.error('Chart data error:', data);
+                return;
+            }
 
-    const titles = {
-        clicks: '📈 Количество кликов по монете',
-        tickets: '🎫 Купленные билеты',
-        users: '👥 Новые игроки',
-        ad_views: '🎬 Просмотры рекламы',
-        stars: '⭐ Донат Telegram Stars',
-        online: '🟢 Онлайн пользователей'
-    };
+            const titles = {
+                clicks: '📈 Количество кликов по монете',
+                tickets: '🎫 Купленные билеты',
+                users: '👥 Новые игроки',
+                ad_views: '🎬 Просмотры рекламы',
+                stars: '⭐ Донат Telegram Stars',
+                online: '🟢 Онлайн пользователей'
+            };
 
-    const chartTitle = document.getElementById('chartTitle');
-    if (chartTitle) chartTitle.innerHTML = titles[currentMetric] || '📈 График';
+            const chartTitle = document.getElementById('chartTitle');
+            if (chartTitle) chartTitle.innerHTML = titles[currentMetric] || '📈 График';
 
-    // Проверяем, что данные есть
-    if (!data.labels || data.labels.length === 0) {
-        console.warn('No labels for chart');
-        return;
-    }
+            if (!data.labels || data.labels.length === 0) {
+                console.warn('No labels for chart');
+                return;
+            }
 
-    if (currentChart) currentChart.destroy();
+            if (currentChart) currentChart.destroy();
 
-    const ctx = canvas.getContext('2d');
-    currentChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: data.labels,
-            datasets: [{
-                label: titles[currentMetric] || currentMetric,
-                data: data.data,
-                borderColor: '#FFD700',
-                backgroundColor: 'rgba(255,215,0,0.1)',
-                borderWidth: 2,
-                fill: true,
-                tension: 0.3,
-                pointBackgroundColor: '#FFD700',
-                pointBorderColor: '#fff',
-                pointRadius: 4,
-                pointHoverRadius: 6
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: {
-                legend: { labels: { color: '#fff' } },
-                tooltip: {
-                    backgroundColor: '#1a1a2e',
-                    titleColor: '#FFD700',
-                    bodyColor: '#fff',
-                    callbacks: {
-                        label: function(context) {
-                            let label = context.dataset.label || '';
-                            let value = context.raw;
-                            if (currentMetric === 'clicks') return `${label}: ${value.toLocaleString()} кликов`;
-                            if (currentMetric === 'tickets') return `${label}: ${value} билетов`;
-                            if (currentMetric === 'users') return `${label}: ${value} игроков`;
-                            if (currentMetric === 'ad_views') return `${label}: ${value} просмотров`;
-                            if (currentMetric === 'stars') return `${label}: ${value} Stars`;
-                            if (currentMetric === 'online') return `${label}: ${value} чел`;
-                            return `${label}: ${value}`;
+            const ctx = canvas.getContext('2d');
+            currentChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: titles[currentMetric] || currentMetric,
+                        data: data.data,
+                        borderColor: '#FFD700',
+                        backgroundColor: 'rgba(255,215,0,0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.3,
+                        pointBackgroundColor: '#FFD700',
+                        pointBorderColor: '#fff',
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { labels: { color: '#fff' } },
+                        tooltip: {
+                            backgroundColor: '#1a1a2e',
+                            titleColor: '#FFD700',
+                            bodyColor: '#fff'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { color: '#fff' },
+                            grid: { color: 'rgba(255,255,255,0.1)' }
+                        },
+                        x: {
+                            ticks: { color: '#fff', maxRotation: 45 },
+                            grid: { color: 'rgba(255,255,255,0.1)' }
                         }
                     }
                 }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: { color: '#fff' },
-                    grid: { color: 'rgba(255,255,255,0.1)' },
-                    title: { display: true, text: getYAxisLabel(), color: '#fff' }
-                },
-                x: {
-                    ticks: { color: '#fff', maxRotation: 45 },
-                    grid: { color: 'rgba(255,255,255,0.1)' }
-                }
-            }
+            });
         }
-    });
-}
-
-function getYAxisLabel() {
-    const labels = {
-        clicks: 'Количество кликов',
-        tickets: 'Количество билетов',
-        users: 'Количество игроков',
-        ad_views: 'Количество просмотров',
-        stars: 'Количество Stars',
-        online: 'Онлайн пользователей'
-    };
-    return labels[currentMetric] || 'Значение';
-}
 
         // ========== ЛОТЕРЕЯ ==========
         async function loadLotteryStats() {
@@ -1386,82 +1466,24 @@ function getYAxisLabel() {
         }
 
         async function resetDailyClicks() {
-    if (!confirm('⚠️ ВНИМАНИЕ! Это действие обнулит daily_clicks (клики за сегодня) у ВСЕХ игроков!\n\nТоп дня начнётся с нуля.\n\nВы уверены?')) {
-        return;
-    }
-
-    try {
-        const response = await fetch('/api/admin/reset_daily_clicks?key=' + adminKey, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-        });
-        const result = await response.json();
-
-        if (result.success) {
-            alert(`✅ ${result.message}`);
-            // Обновляем статистику, если нужно
-            if (typeof loadStats === 'function') loadStats();
-        } else {
-            alert(`❌ Ошибка: ${result.error}`);
+            if (!confirm('⚠️ ВНИМАНИЕ! Это действие обнулит daily_clicks у ВСЕХ игроков! Вы уверены?')) return;
+            try {
+                const response = await fetch('/api/admin/reset_daily_clicks?key=' + adminKey, { method: 'POST' });
+                const result = await response.json();
+                if (result.success) alert(`✅ ${result.message}`);
+                else alert(`❌ Ошибка: ${result.error}`);
+            } catch(e) { alert('❌ Ошибка'); }
         }
-    } catch(e) {
-        console.error('Reset daily clicks error:', e);
-        alert('❌ Ошибка при сбросе топа дня');
-    }
-}
 
-// Сброс лимитов рекламы для всех игроков
-async function resetAllAdLimits() {
-    if (!confirm('⚠️ ВНИМАНИЕ! Это действие сбросит ДНЕВНЫЕ ЛИМИТЫ ПРОСМОТРА РЕКЛАМЫ для ВСЕХ игроков!\n\nОни смогут снова смотреть рекламу сегодня.\n\nВы уверены?')) {
-        return;
-    }
-
-    try {
-        const response = await fetch('/api/admin/reset_ad_limits?key=' + adminKey, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-        });
-        const result = await response.json();
-
-        if (result.success) {
-            alert(`✅ ${result.message}`);
-            if (typeof loadStats === 'function') loadStats();
-        } else {
-            alert(`❌ Ошибка: ${result.error}`);
+        async function resetAllAdLimits() {
+            if (!confirm('⚠️ Сбросить лимиты рекламы для ВСЕХ игроков?')) return;
+            try {
+                const response = await fetch('/api/admin/reset_ad_limits?key=' + adminKey, { method: 'POST' });
+                const result = await response.json();
+                if (result.success) alert(`✅ ${result.message}`);
+                else alert(`❌ Ошибка: ${result.error}`);
+            } catch(e) { alert('❌ Ошибка'); }
         }
-    } catch(e) {
-        console.error('Reset ad limits error:', e);
-        alert('❌ Ошибка при сбросе лимитов рекламы');
-    }
-}
-
-// Сброс лимитов рекламы для конкретного игрока
-async function resetUserAdLimits(userId) {
-    if (!confirm(`Сбросить дневные лимиты рекламы для игрока ID: ${userId}?\n\nОн сможет снова смотреть рекламу сегодня.`)) {
-        return;
-    }
-
-    try {
-        const response = await fetch('/api/admin/reset_ad_limits_user?key=' + adminKey, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId })
-        });
-        const result = await response.json();
-
-        if (result.success) {
-            alert(`✅ ${result.message}`);
-            if (typeof openPlayerProfile === 'function') {
-                openPlayerProfile(userId);
-            }
-        } else {
-            alert(`❌ Ошибка: ${result.error}`);
-        }
-    } catch(e) {
-        console.error('Reset user ad limits error:', e);
-        alert('❌ Ошибка при сбросе лимитов рекламы');
-    }
-}
 
         function openPoolModal() {
             document.getElementById('poolModal').classList.add('active');
@@ -1473,10 +1495,7 @@ async function resetUserAdLimits(userId) {
 
         async function setLotteryPool() {
             const amount = parseFloat(document.getElementById('newPoolAmount')?.value || '0');
-            if (isNaN(amount)) {
-                alert('Введите сумму');
-                return;
-            }
+            if (isNaN(amount)) { alert('Введите сумму'); return; }
             await apiRequest('lottery_action', { method: 'POST', body: JSON.stringify({ action: 'set_pool', amount: amount }) });
             alert(`Фонд изменён на ${amount} USDT`);
             closePoolModal();
@@ -1484,14 +1503,17 @@ async function resetUserAdLimits(userId) {
             loadLotteryStats();
         }
 
+        async function clearAllWallets() {
+            if (!confirm('⚠️ Удалить ВСЕ TON кошельки?')) return;
+            const result = await apiRequest('clear_wallets', { method: 'POST' });
+            if (result.success) alert(`✅ Удалено ${result.count} кошельков`);
+            else alert('❌ Ошибка');
+        }
+
         // ========== ВЫВОД СРЕДСТВ ==========
         async function loadWithdrawals() {
             const data = await apiRequest('withdrawals');
-            if (!data.success) {
-                const withdrawalsList = document.getElementById('withdrawalsList');
-                if (withdrawalsList) withdrawalsList.innerHTML = '<div class="error-message">❌ Ошибка загрузки заявок</div>';
-                return;
-            }
+            if (!data.success) return;
             const container = document.getElementById('withdrawalsList');
             if (!container) return;
             if (data.withdrawals.length === 0) {
@@ -1501,27 +1523,11 @@ async function resetUserAdLimits(userId) {
             container.innerHTML = data.withdrawals.map(w => `
                 <div class="withdrawal-card" onclick='showWithdrawalDetail(${JSON.stringify(w)})'>
                     <div class="withdrawal-card-header">
-                        <div>
-                            <span class="withdrawal-amount">💰 ${w.amount} USDT</span>
-                            <span class="withdrawal-user">| 👤 ${w.username} (ID: ${w.user_id})</span>
-                        </div>
-                        <div>
-                            ${w.status === 'pending' ? '<span class="status-pending">⏳ Ожидание</span>' :
-                              w.status === 'completed' ? '<span class="status-completed">✅ Выполнено</span>' :
-                              '<span class="status-rejected">❌ Отклонено</span>'}
-                        </div>
+                        <div><span class="withdrawal-amount">💰 ${w.amount} USDT</span><span class="withdrawal-user"> | 👤 ${w.username} (ID: ${w.user_id})</span></div>
+                        <div>${w.status === 'pending' ? '<span class="status-pending">⏳ Ожидание</span>' : w.status === 'completed' ? '<span class="status-completed">✅ Выполнено</span>' : '<span class="status-rejected">❌ Отклонено</span>'}</div>
                     </div>
-                    <div class="withdrawal-details">
-                        <div>🌐 Сеть: ${w.network}</div>
-                        <div>📅 Создана: ${w.created_at}</div>
-                        ${w.processed_at ? `<div>✅ Обработана: ${w.processed_at}</div>` : ''}
-                    </div>
-                    <div class="withdrawal-actions" onclick="event.stopPropagation()">
-                        ${w.status === 'pending' ? `
-                            <button class="accept-btn" onclick="processWithdrawal(${w.id}, 'completed')">✅ Принять</button>
-                            <button class="reject-btn" onclick="processWithdrawal(${w.id}, 'rejected')">❌ Отклонить</button>
-                        ` : ''}
-                    </div>
+                    <div class="withdrawal-details"><div>🌐 Сеть: ${w.network}</div><div>📅 Создана: ${w.created_at}</div>${w.processed_at ? `<div>✅ Обработана: ${w.processed_at}</div>` : ''}</div>
+                    <div class="withdrawal-actions" onclick="event.stopPropagation()">${w.status === 'pending' ? `<button class="accept-btn" onclick="processWithdrawal(${w.id}, 'completed')">✅ Принять</button><button class="reject-btn" onclick="processWithdrawal(${w.id}, 'rejected')">❌ Отклонить</button>` : ''}</div>
                 </div>
             `).join('');
         }
@@ -1533,67 +1539,40 @@ async function resetUserAdLimits(userId) {
             content.innerHTML = `
                 <div style="margin-bottom: 20px;">
                     <div style="background: rgba(255,215,0,0.1); border-radius: 16px; padding: 16px; margin-bottom: 16px;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
-                            <span style="font-size: 1.2rem; font-weight: 700; color: #FFD700;">${withdrawal.amount} USDT</span>
-                            ${withdrawal.status === 'pending' ? '<span class="status-pending">⏳ Ожидание</span>' :
-                              withdrawal.status === 'completed' ? '<span class="status-completed">✅ Выполнено</span>' :
-                              '<span class="status-rejected">❌ Отклонено</span>'}
-                        </div>
-                        <div style="margin-bottom: 8px;">👤 Игрок: <strong>${withdrawal.username}</strong> (ID: ${withdrawal.user_id})</div>
-                        <div style="margin-bottom: 8px;">🌐 Сеть: <strong>${withdrawal.network}</strong></div>
-                        <div style="margin-bottom: 8px;">📅 Создана: ${withdrawal.created_at}</div>
+                        <div style="display: flex; justify-content: space-between;"><span style="font-size: 1.2rem; font-weight: 700; color: #FFD700;">${withdrawal.amount} USDT</span>${withdrawal.status === 'pending' ? '<span class="status-pending">⏳ Ожидание</span>' : withdrawal.status === 'completed' ? '<span class="status-completed">✅ Выполнено</span>' : '<span class="status-rejected">❌ Отклонено</span>'}</div>
+                        <div>👤 Игрок: <strong>${withdrawal.username}</strong> (ID: ${withdrawal.user_id})</div>
+                        <div>🌐 Сеть: <strong>${withdrawal.network}</strong></div>
+                        <div>📅 Создана: ${withdrawal.created_at}</div>
                         ${withdrawal.processed_at ? `<div>✅ Обработана: ${withdrawal.processed_at}</div>` : ''}
                     </div>
-                    <div style="background: rgba(0,0,0,0.3); border-radius: 16px; padding: 16px; margin-bottom: 16px;">
-                        <div style="margin-bottom: 8px; font-weight: 600;">🏦 Адрес кошелька:</div>
-                        <div style="font-family: monospace; word-break: break-all; background: rgba(0,0,0,0.3); padding: 12px; border-radius: 12px; font-size: 0.75rem;">
-                            ${withdrawal.address}
-                        </div>
-                        <button class="copy-address-btn" onclick="copyToClipboard('${withdrawal.address}')" style="margin-top: 8px;">📋 Копировать адрес</button>
+                    <div style="background: rgba(0,0,0,0.3); border-radius: 16px; padding: 16px;">
+                        <div style="font-weight: 600;">🏦 Адрес кошелька:</div>
+                        <div style="font-family: monospace; word-break: break-all; background: rgba(0,0,0,0.3); padding: 12px; border-radius: 12px; font-size: 0.75rem;">${withdrawal.address}</div>
+                        <button class="copy-address-btn" onclick="copyToClipboard('${withdrawal.address}')">📋 Копировать адрес</button>
                     </div>
-                    ${withdrawal.status === 'pending' ? `
-                        <div style="display: flex; gap: 12px; justify-content: center;">
-                            <button class="accept-btn" onclick="processWithdrawalAndClose(${withdrawal.id}, 'completed')" style="padding: 10px 24px;">✅ Принять вывод</button>
-                            <button class="reject-btn" onclick="processWithdrawalAndClose(${withdrawal.id}, 'rejected')" style="padding: 10px 24px;">❌ Отклонить вывод</button>
-                        </div>
-                    ` : ''}
+                    ${withdrawal.status === 'pending' ? `<div style="display: flex; gap: 12px; margin-top: 16px;"><button class="accept-btn" onclick="processWithdrawalAndClose(${withdrawal.id}, 'completed')" style="flex:1;">✅ Принять вывод</button><button class="reject-btn" onclick="processWithdrawalAndClose(${withdrawal.id}, 'rejected')" style="flex:1;">❌ Отклонить вывод</button></div>` : ''}
                 </div>
             `;
             modal.classList.add('active');
         }
 
         function closeWithdrawalDetailModal() {
-            const modal = document.getElementById('withdrawalDetailModal');
-            if (modal) modal.classList.remove('active');
+            document.getElementById('withdrawalDetailModal').classList.remove('active');
         }
 
         function copyToClipboard(text) {
-            navigator.clipboard.writeText(text).then(() => {
-                alert('✅ Адрес скопирован в буфер обмена');
-            }).catch(() => {
-                alert('❌ Не удалось скопировать');
-            });
+            navigator.clipboard.writeText(text).then(() => alert('✅ Адрес скопирован'));
         }
 
         async function processWithdrawal(withdrawalId, status) {
             if (!confirm(`Подтвердите ${status === 'completed' ? 'принятие' : 'отклонение'} заявки #${withdrawalId}`)) return;
-            const result = await apiRequest('update_user', {
-                method: 'POST',
-                body: JSON.stringify({
-                    user_id: 1,
-                    action_type: 'process_withdrawal',
-                    withdrawal_id: withdrawalId,
-                    status: status
-                })
-            });
+            const result = await apiRequest('update_user', { method: 'POST', body: JSON.stringify({ user_id: 1, action_type: 'process_withdrawal', withdrawal_id: withdrawalId, status: status }) });
             if (result.success) {
                 alert(`✅ Заявка #${withdrawalId} ${status === 'completed' ? 'принята' : 'отклонена'}!`);
                 loadWithdrawals();
                 loadStats();
                 closeWithdrawalDetailModal();
-            } else {
-                alert('❌ Ошибка: ' + (result.error || result.msg));
-            }
+            } else alert('❌ Ошибка');
         }
 
         async function processWithdrawalAndClose(withdrawalId, status) {
@@ -1606,32 +1585,15 @@ async function resetUserAdLimits(userId) {
 
         async function loadTasks() {
             const data = await apiRequest('tasks');
-            if (!data.success) {
-                document.getElementById('tasksList').innerHTML = '<div class="error-message">❌ Ошибка загрузки заданий</div>';
-                return;
-            }
+            if (!data.success) return;
             const container = document.getElementById('tasksList');
             if (!container) return;
-            if (data.tasks.length === 0) {
-                container.innerHTML = '<div class="loading">📭 Нет заданий</div>';
-                return;
-            }
+            if (data.tasks.length === 0) { container.innerHTML = '<div class="loading">📭 Нет заданий</div>'; return; }
             container.innerHTML = data.tasks.map(task => `
                 <div class="task-card-inline">
-                    <div class="task-header">
-                        <div class="task-title">📋 ${escapeHtml(task.title)}</div>
-                        <div class="task-status ${task.is_active ? 'active' : 'inactive'}">${task.is_active ? '✅ Активно' : '❌ Неактивно'}</div>
-                    </div>
-                    <div class="task-details">
-                        <div class="task-detail-item">🔗 Канал: ${escapeHtml(task.channel_username)}</div>
-                        <div class="task-detail-item">🎁 Награда: ${task.reward_amount} ${task.reward_type.toUpperCase()}</div>
-                        <div class="task-detail-item">📊 Выполнено: ${task.completed_count}/${task.total_limit}</div>
-                        <div class="task-detail-item">⏱️ Дней: ${task.days_remaining}</div>
-                    </div>
-                    <div class="task-actions">
-                        <button class="btn-sm" onclick="editTask(${JSON.stringify(task).replace(/"/g, '&quot;')})">✏️ Редактировать</button>
-                        <button class="btn-sm btn-danger" onclick="deleteTask(${task.id})">🗑️ Удалить</button>
-                    </div>
+                    <div class="task-header"><div class="task-title">📋 ${escapeHtml(task.title)}</div><div class="task-status ${task.is_active ? 'active' : 'inactive'}">${task.is_active ? '✅ Активно' : '❌ Неактивно'}</div></div>
+                    <div class="task-details"><div class="task-detail-item">🔗 Канал: ${escapeHtml(task.channel_username)}</div><div class="task-detail-item">🎁 Награда: ${task.reward_amount} ${task.reward_type.toUpperCase()}</div><div class="task-detail-item">📊 Выполнено: ${task.completed_count}/${task.total_limit}</div><div class="task-detail-item">⏱️ Дней: ${task.days_remaining}</div></div>
+                    <div class="task-actions"><button class="btn-sm" onclick='editTask(${JSON.stringify(task).replace(/"/g, '&quot;')})'>✏️ Редактировать</button><button class="btn-sm btn-danger" onclick="deleteTask(${task.id})">🗑️ Удалить</button></div>
                 </div>
             `).join('');
         }
@@ -1670,9 +1632,7 @@ async function resetUserAdLimits(userId) {
             document.getElementById('taskModal').classList.add('active');
         }
 
-        function closeTaskModal() {
-            document.getElementById('taskModal').classList.remove('active');
-        }
+        function closeTaskModal() { document.getElementById('taskModal').classList.remove('active'); }
 
         async function saveTask() {
             const title = document.getElementById('taskTitle').value.trim();
@@ -1686,54 +1646,24 @@ async function resetUserAdLimits(userId) {
             const days_remaining = parseInt(document.getElementById('taskDaysRemaining').value);
             const is_active = document.getElementById('taskIsActive').value === 'true';
 
-            if (!title || !channel_link || !channel_username) {
-                alert('Заполните обязательные поля (Название, Ссылка на канал, Username канала)');
-                return;
-            }
+            if (!title || !channel_link || !channel_username) { alert('Заполните обязательные поля'); return; }
 
             const taskId = document.getElementById('taskEditId').value;
             let result;
-
             if (taskId) {
-                result = await apiRequest('update_task', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        task_id: parseInt(taskId),
-                        title, channel_link, channel_username, channel_avatar,
-                        reward_amount, reward_type, daily_limit, total_limit, days_remaining, is_active
-                    })
-                });
+                result = await apiRequest('update_task', { method: 'POST', body: JSON.stringify({ task_id: parseInt(taskId), title, channel_link, channel_username, channel_avatar, reward_amount, reward_type, daily_limit, total_limit, days_remaining, is_active }) });
             } else {
-                result = await apiRequest('create_task', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        title, channel_link, channel_username, channel_avatar,
-                        reward_amount, reward_type, daily_limit, total_limit, days_remaining
-                    })
-                });
+                result = await apiRequest('create_task', { method: 'POST', body: JSON.stringify({ title, channel_link, channel_username, channel_avatar, reward_amount, reward_type, daily_limit, total_limit, days_remaining }) });
             }
-
-            if (result.success) {
-                alert(taskId ? '✅ Задание обновлено!' : '✅ Задание создано!');
-                closeTaskModal();
-                loadTasks();
-            } else {
-                alert('❌ Ошибка: ' + (result.error || result.msg));
-            }
+            if (result.success) { alert(taskId ? '✅ Задание обновлено!' : '✅ Задание создано!'); closeTaskModal(); loadTasks(); }
+            else alert('❌ Ошибка');
         }
 
         async function deleteTask(taskId) {
-            if (!confirm('Удалить это задание?')) return;
-            const result = await apiRequest('delete_task', {
-                method: 'POST',
-                body: JSON.stringify({ task_id: taskId })
-            });
-            if (result.success) {
-                alert('✅ Задание удалено');
-                loadTasks();
-            } else {
-                alert('❌ Ошибка: ' + (result.error || result.msg));
-            }
+            if (!confirm('Удалить задание?')) return;
+            const result = await apiRequest('delete_task', { method: 'POST', body: JSON.stringify({ task_id: taskId }) });
+            if (result.success) { alert('✅ Задание удалено'); loadTasks(); }
+            else alert('❌ Ошибка');
         }
 
         // ========== ПРОМОКОДЫ ==========
@@ -1741,36 +1671,13 @@ async function resetUserAdLimits(userId) {
             const data = await apiRequest('promo_codes');
             const tbody = document.getElementById('promoCodesList');
             if (!tbody) return;
-            if (!data.success || data.promo_codes.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="loading">Нет промокодов</td></tr>';
-                return;
-            }
+            if (!data.success || data.promo_codes.length === 0) { tbody.innerHTML = '<tr><td colspan="8" class="loading">Нет промокодов</td></tr>'; return; }
             tbody.innerHTML = data.promo_codes.map(p => {
                 const statusClass = p.is_active ? 'status-completed' : 'status-rejected';
                 const statusText = p.is_active ? '✅ Активен' : '❌ Неактивен';
-                let rewardClass = '';
-                let rewardIcon = '';
-                if (p.reward_type === 'wg') { rewardClass = 'reward-wg'; rewardIcon = '💰'; }
-                else if (p.reward_type === 'lp') { rewardClass = 'reward-lp'; rewardIcon = '💎'; }
-                else { rewardClass = 'reward-energy'; rewardIcon = '⚡'; }
-                const usedPercent = (p.used_count / p.max_uses * 100).toFixed(0);
+                let rewardIcon = p.reward_type === 'wg' ? '💰' : (p.reward_type === 'lp' ? '💎' : '⚡');
                 const promoUrl = `https://t.me/WereGooodbot/WereGood?startapp=claim_${p.code}`;
-                return `
-                    <tr>
-                        <td><code class="promo-code">${p.code}</code><span class="password-badge">${p.has_password ? '🔒 Пароль' : '🔓 Без пароля'}</span></td>
-                        <td class="${rewardClass}">${rewardIcon} ${p.reward_amount} ${p.reward_type.toUpperCase()}</td>
-                        <td>${p.used_count}/${p.max_uses} (${usedPercent}%)</td>
-                        <td>${p.max_uses}</td>
-                        <td>${p.has_password ? '✅ Установлен' : '❌ Нет'}</td>
-                        <td><span class="${statusClass}">${statusText}</span></td>
-                        <td>
-                            <span class="clickable-value" onclick='showPromoDetail(${JSON.stringify(p).replace(/'/g, "&#39;")})'>📋 ${p.activations.length} активаций</span>
-                            <br>
-                            <span class="promo-link" onclick="copyToClipboard('${promoUrl}')">🔗 Скопировать ссылку</span>
-                        </td>
-                        <td><button class="btn-sm" onclick="deletePromoCode(${p.id}, '${p.code}')">🗑️ Удалить</button></td>
-                    </tr>
-                `;
+                return `<tr><td><code class="promo-code">${p.code}</code><span class="password-badge">${p.has_password ? '🔒 Пароль' : '🔓 Без пароля'}</span></td><td>${rewardIcon} ${p.reward_amount} ${p.reward_type.toUpperCase()}</td><td>${p.used_count}/${p.max_uses}</td><td>${p.max_uses}</td><td>${p.has_password ? '✅ Установлен' : '❌ Нет'}</td><td><span class="${statusClass}">${statusText}</span></td><td><span class="clickable-value" onclick='showPromoDetail(${JSON.stringify(p).replace(/'/g, "&#39;")})'>📋 ${p.activations.length} активаций</span><br><span class="promo-link" onclick="copyToClipboard('${promoUrl}')">🔗 Скопировать ссылку</span></td><td><button class="btn-sm" onclick="deletePromoCode(${p.id}, '${p.code}')">🗑️ Удалить</button></td></tr>`;
             }).join('');
         }
 
@@ -1778,57 +1685,16 @@ async function resetUserAdLimits(userId) {
             const modal = document.getElementById('promoDetailModal');
             const content = document.getElementById('promoDetailContent');
             if (!modal || !content) return;
-            let rewardText = '';
-            if (promo.reward_type === 'wg') rewardText = `💰 ${promo.reward_amount} WG Coin`;
-            else if (promo.reward_type === 'lp') rewardText = `💎 ${promo.reward_amount} LP Coin`;
-            else rewardText = `⚡ +${promo.reward_amount} к лимиту энергии`;
+            let rewardText = promo.reward_type === 'wg' ? `💰 ${promo.reward_amount} WG Coin` : (promo.reward_type === 'lp' ? `💎 ${promo.reward_amount} LP Coin` : `⚡ +${promo.reward_amount} к лимиту энергии`);
             const promoUrl = `https://t.me/WereGooodbot/WereGood?startapp=claim_${promo.code}`;
-            let activationsHtml = '<div class="loading">Нет активаций</div>';
-            if (promo.activations && promo.activations.length > 0) {
-                activationsHtml = promo.activations.map(a => `
-                    <div class="activation-item">
-                        <span class="activation-user">👤 ID: ${a.user_id}</span>
-                        <span class="activation-time">📅 ${a.activated_at}</span>
-                    </div>
-                `).join('');
-            }
-            content.innerHTML = `
-                <div style="margin-bottom: 20px;">
-                    <div style="background: rgba(255,215,0,0.1); border-radius: 16px; padding: 16px; margin-bottom: 16px;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
-                            <span style="font-size: 1.2rem; font-weight: 700; color: #FFD700;">🎫 ${promo.code}</span>
-                            ${promo.is_active ? '<span class="status-completed">✅ Активен</span>' : '<span class="status-rejected">❌ Неактивен</span>'}
-                        </div>
-                        <div style="margin-bottom: 8px;">🎁 Награда: <strong class="reward-${promo.reward_type}">${rewardText}</strong></div>
-                        <div style="margin-bottom: 8px;">📊 Использовано: ${promo.used_count}/${promo.max_uses} (${((promo.used_count / promo.max_uses) * 100).toFixed(0)}%)</div>
-                        <div style="margin-bottom: 8px;">🔒 Пароль: ${promo.has_password ? '✅ Установлен' : '❌ Не требуется'}</div>
-                        <div style="margin-bottom: 8px;">🔗 Ссылка: <span class="promo-link" onclick="copyToClipboard('${promoUrl}')">${promoUrl}</span></div>
-                    </div>
-                    <div style="background: rgba(0,0,0,0.3); border-radius: 16px; padding: 16px;">
-                        <div style="margin-bottom: 8px; font-weight: 600;">📋 История активаций (${promo.activations.length}):</div>
-                        ${activationsHtml}
-                    </div>
-                </div>
-            `;
+            let activationsHtml = promo.activations && promo.activations.length > 0 ? promo.activations.map(a => `<div class="activation-item"><span class="activation-user">👤 ID: ${a.user_id}</span><span class="activation-time">📅 ${a.activated_at}</span></div>`).join('') : '<div class="loading">Нет активаций</div>';
+            content.innerHTML = `<div><div style="background: rgba(255,215,0,0.1); border-radius: 16px; padding: 16px;"><div style="display: flex; justify-content: space-between;"><span style="font-size: 1.2rem; font-weight: 700; color: #FFD700;">🎫 ${promo.code}</span>${promo.is_active ? '<span class="status-completed">✅ Активен</span>' : '<span class="status-rejected">❌ Неактивен</span>'}</div><div>🎁 Награда: <strong>${rewardText}</strong></div><div>📊 Использовано: ${promo.used_count}/${promo.max_uses}</div><div>🔒 Пароль: ${promo.has_password ? '✅ Установлен' : '❌ Не требуется'}</div><div>🔗 Ссылка: <span class="promo-link" onclick="copyToClipboard('${promoUrl}')">${promoUrl}</span></div></div><div style="background: rgba(0,0,0,0.3); border-radius: 16px; padding: 16px; margin-top: 16px;"><div style="font-weight: 600;">📋 История активаций (${promo.activations.length}):</div>${activationsHtml}</div></div>`;
             modal.classList.add('active');
         }
 
-        function closePromoDetailModal() {
-            const modal = document.getElementById('promoDetailModal');
-            if (modal) modal.classList.remove('active');
-        }
-
-        function openPromoModal() {
-            document.getElementById('promoModal').classList.add('active');
-        }
-
-        function closePromoModal() {
-            document.getElementById('promoModal').classList.remove('active');
-            document.getElementById('promoCode').value = '';
-            document.getElementById('promoAmount').value = '100';
-            document.getElementById('promoMaxUses').value = '1';
-            document.getElementById('promoPassword').value = '';
-        }
+        function closePromoDetailModal() { document.getElementById('promoDetailModal').classList.remove('active'); }
+        function openPromoModal() { document.getElementById('promoModal').classList.add('active'); }
+        function closePromoModal() { document.getElementById('promoModal').classList.remove('active'); document.getElementById('promoCode').value = ''; document.getElementById('promoAmount').value = '100'; document.getElementById('promoMaxUses').value = '1'; document.getElementById('promoPassword').value = ''; }
 
         async function createPromoCode() {
             const code = document.getElementById('promoCode').value.toUpperCase().trim();
@@ -1836,46 +1702,22 @@ async function resetUserAdLimits(userId) {
             const reward_amount = parseInt(document.getElementById('promoAmount').value);
             const max_uses = parseInt(document.getElementById('promoMaxUses').value);
             const password = document.getElementById('promoPassword').value.trim();
-
-            if (!code) { alert('Введите код промокода'); return; }
-            if (reward_amount <= 0) { alert('Количество должно быть больше 0'); return; }
-            if (max_uses <= 0) { alert('Максимум активаций должен быть больше 0'); return; }
-
+            if (!code || reward_amount <= 0 || max_uses <= 0) { alert('Заполните все поля'); return; }
             const body = { code, reward_type, reward_amount, max_uses };
             if (password) body.password = password;
-
             try {
-                const response = await fetch(`/api/admin/create_promo?key=${adminKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(body)
-                });
+                const response = await fetch(`/api/admin/create_promo?key=${adminKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
                 const result = await response.json();
-
-                if (result.success) {
-                    alert(`✅ Промокод ${result.code} создан!\nСсылка: ${result.promo_url}`);
-                    closePromoModal();
-                    loadPromoCodes();
-                } else {
-                    alert('❌ Ошибка: ' + (result.error || result.msg));
-                }
-            } catch(e) {
-                alert('❌ Ошибка: ' + e.message);
-            }
+                if (result.success) { alert(`✅ Промокод ${result.code} создан!\nСсылка: ${result.promo_url}`); closePromoModal(); loadPromoCodes(); }
+                else alert('❌ Ошибка');
+            } catch(e) { alert('❌ Ошибка'); }
         }
 
         async function deletePromoCode(id, code) {
             if (!confirm(`Удалить промокод ${code}?`)) return;
-            const result = await apiRequest('delete_promo', {
-                method: 'POST',
-                body: JSON.stringify({ promo_id: id })
-            });
-            if (result.success) {
-                alert('✅ Промокод удалён');
-                loadPromoCodes();
-            } else {
-                alert('❌ Ошибка');
-            }
+            const result = await apiRequest('delete_promo', { method: 'POST', body: JSON.stringify({ promo_id: id }) });
+            if (result.success) { alert('✅ Промокод удалён'); loadPromoCodes(); }
+            else alert('❌ Ошибка');
         }
 
         // ========== ЛОГИ ==========
@@ -1885,213 +1727,91 @@ async function resetUserAdLimits(userId) {
             const userId = document.getElementById('logUserFilter')?.value || '';
             const date = document.getElementById('logDateFilter')?.value || '';
             const offset = (page - 1) * LOGS_PER_PAGE;
-
             let url = `logs?type=${currentLogType}&limit=${LOGS_PER_PAGE}&offset=${offset}`;
             if (search) url += `&action=${encodeURIComponent(search)}`;
             if (userId) url += `&user_id=${userId}`;
             if (date) url += `&date=${date}`;
-
             const data = await apiRequest(url);
             const logsList = document.getElementById('logsList');
             const paginationDiv = document.getElementById('logsPagination');
-
             if (!logsList) return;
-            if (!data.success) {
-                logsList.innerHTML = '<div class="error-message">❌ Ошибка загрузки логов</div>';
-                return;
-            }
-
+            if (!data.success) { logsList.innerHTML = '<div class="error-message">❌ Ошибка загрузки логов</div>'; return; }
             currentLogTotal = data.total;
             currentLogTotalPages = Math.ceil(data.total / LOGS_PER_PAGE);
-
-            if (data.logs.length === 0) {
-                logsList.innerHTML = '<div class="loading">📭 Нет логов</div>';
-                if (paginationDiv) paginationDiv.style.display = 'none';
-                return;
-            }
-
-            logsList.innerHTML = data.logs.map(log => `
-                <div class="log-entry">
-                    <span class="log-time">[${log.timestamp}]</span>
-                    <span style="color:#FFD700;">${log.action}</span>
-                    <span style="opacity:0.5;"> - ${log.username || 'System'} (ID: ${log.user_id || 0})</span>
-                    ${log.details ? `<span style="opacity:0.3;"> ${log.details}</span>` : ''}
-                </div>
-            `).join('');
-
+            if (data.logs.length === 0) { logsList.innerHTML = '<div class="loading">📭 Нет логов</div>'; if (paginationDiv) paginationDiv.style.display = 'none'; return; }
+            logsList.innerHTML = data.logs.map(log => `<div class="log-entry"><span class="log-time">[${log.timestamp}]</span><span style="color:#FFD700;">${log.action}</span><span style="opacity:0.5;"> - ${log.username || 'System'} (ID: ${log.user_id || 0})</span>${log.details ? `<span style="opacity:0.3;"> ${log.details}</span>` : ''}</div>`).join('');
             if (paginationDiv && currentLogTotalPages > 1) {
                 paginationDiv.style.display = 'flex';
-                let paginationHtml = '';
-
-                paginationHtml += `<button class="pagination-btn" onclick="loadLogs(1)" ${page === 1 ? 'disabled' : ''}>⏮ Первая</button>`;
-                paginationHtml += `<button class="pagination-btn" onclick="loadLogs(${page - 1})" ${page <= 1 ? 'disabled' : ''}>◀ Назад</button>`;
-
+                let html = `<button class="pagination-btn" onclick="loadLogs(1)" ${page === 1 ? 'disabled' : ''}>⏮ Первая</button><button class="pagination-btn" onclick="loadLogs(${page - 1})" ${page <= 1 ? 'disabled' : ''}>◀ Назад</button>`;
                 let startPage = Math.max(1, page - 2);
                 let endPage = Math.min(currentLogTotalPages, page + 2);
-                for (let i = startPage; i <= endPage; i++) {
-                    paginationHtml += `<button class="pagination-btn ${i === page ? 'active' : ''}" onclick="loadLogs(${i})">${i}</button>`;
-                }
-
-                paginationHtml += `<button class="pagination-btn" onclick="loadLogs(${page + 1})" ${page >= currentLogTotalPages ? 'disabled' : ''}>Вперед ▶</button>`;
-                paginationHtml += `<button class="pagination-btn" onclick="loadLogs(${currentLogTotalPages})" ${page === currentLogTotalPages ? 'disabled' : ''}>Последняя ⏩</button>`;
-                paginationHtml += `<span class="pagination-info">Всего: ${currentLogTotal} записей</span>`;
-
-                paginationDiv.innerHTML = paginationHtml;
-            } else if (paginationDiv) {
-                paginationDiv.style.display = 'none';
-            }
+                for (let i = startPage; i <= endPage; i++) html += `<button class="pagination-btn ${i === page ? 'active' : ''}" onclick="loadLogs(${i})">${i}</button>`;
+                html += `<button class="pagination-btn" onclick="loadLogs(${page + 1})" ${page >= currentLogTotalPages ? 'disabled' : ''}>Вперед ▶</button><button class="pagination-btn" onclick="loadLogs(${currentLogTotalPages})" ${page === currentLogTotalPages ? 'disabled' : ''}>Последняя ⏩</button><span class="pagination-info">Всего: ${currentLogTotal} записей</span>`;
+                paginationDiv.innerHTML = html;
+            } else if (paginationDiv) paginationDiv.style.display = 'none';
         }
 
-        function refreshLogs() {
-            loadLogs(1);
-        }
-
-        function setLogType(type) {
-            currentLogType = type;
-            loadLogs(1);
-        }
+        function refreshLogs() { loadLogs(1); }
+        function setLogType(type) { currentLogType = type; loadLogs(1); }
 
         // ========== ПОИСК ИГРОКОВ ==========
         async function searchPlayers() {
             const query = document.getElementById('playerSearch')?.value || '';
-            if (!query.trim()) {
-                alert('Введите ID или имя');
-                return;
-            }
-            const data = await apiRequest('search_users', {
-                method: 'POST',
-                body: JSON.stringify({ query: query })
-            });
+            if (!query.trim()) { alert('Введите ID или имя'); return; }
+            const data = await apiRequest('search_users', { method: 'POST', body: JSON.stringify({ query: query }) });
             const playersList = document.getElementById('playersList');
             if (!playersList) return;
-            if (!data.success) {
-                playersList.innerHTML = '<tr><td colspan="8" class="error-message">Ошибка поиска</td></tr>';
-                return;
-            }
-            playersList.innerHTML = data.users.map(u => `
-                <tr>
-                    <td>${u.user_id}</td>
-                    <td>${u.username}</td>
-                    <td><span style="color:#FFD700;">${u.role}</span></td>
-                    <td><span class="clickable-value" onclick="openEditModal(${u.user_id}, 'wg', ${u.wg})">${formatNumber(u.wg)}</span></td>
-                    <td><span class="clickable-value" onclick="openEditModal(${u.user_id}, 'lp', ${u.lp})">${u.lp}</span></td>
-                    <td><span class="clickable-value" onclick="openEditModal(${u.user_id}, 'usdt', ${u.usdt})">${formatNumber(u.usdt)}</span></td>
-                    <td>${u.is_banned ? '<span class="banned-badge">🔨 Забанен</span>' : '<span style="color:#22c55e;">✅ Активен</span>'}</td>
-                    <td><button class="btn-sm" onclick="openPlayerProfile(${u.user_id})">✏️ Редактировать</button></td>
-                </tr>
-            `).join('') || '<tr><td colspan="8" class="loading">Ничего не найдено</td></tr>';
+            if (!data.success) { playersList.innerHTML = '<tr><td colspan="8" class="error-message">Ошибка поиска</td></tr>'; return; }
+            playersList.innerHTML = data.users.map(u => `<tr><td>${u.user_id}</td><td>${u.username}</td><td><span style="color:#FFD700;">${u.role}</span></td><td><span class="clickable-value" onclick="openEditModal(${u.user_id}, 'wg', ${u.wg})">${formatNumber(u.wg)}</span></td><td><span class="clickable-value" onclick="openEditModal(${u.user_id}, 'lp', ${u.lp})">${u.lp}</span></td><td><span class="clickable-value" onclick="openEditModal(${u.user_id}, 'usdt', ${u.usdt})">${formatNumber(u.usdt)}</span></td><td>${u.is_banned ? '<span class="banned-badge">🔨 Забанен</span>' : '<span style="color:#22c55e;">✅ Активен</span>'}</td><td><button class="btn-sm" onclick="openPlayerProfile(${u.user_id})">✏️ Редактировать</button></td></tr>`).join('') || '<tr><td colspan="8" class="loading">Ничего не найдено</td></tr>';
         }
 
         // ========== РЕДАКТИРОВАНИЕ ИГРОКА ==========
         function openEditModal(userId, field, currentValue) {
             currentEditField = { userId, field, currentValue };
             const titles = { wg: '💰 Изменить WG', lp: '🎯 Изменить LP', usdt: '💎 Изменить USDT', stars: '⭐ Изменить Stars', energy: '⚡ Изменить энергию', max_energy: '⚡ Изменить макс. энергию' };
-            const editTitle = document.getElementById('editTitle');
-            const editLabel = document.getElementById('editLabel');
-            const editValue = document.getElementById('editValue');
-            const editModal = document.getElementById('editModal');
-            if (editTitle) editTitle.innerText = titles[field] || '✏️ Изменить значение';
-            if (editLabel) editLabel.innerText = `Текущее: ${formatNumber(currentValue)}`;
-            if (editValue) editValue.value = currentValue;
-            if (editModal) editModal.classList.add('active');
+            document.getElementById('editTitle').innerText = titles[field] || '✏️ Изменить значение';
+            document.getElementById('editLabel').innerText = `Текущее: ${formatNumber(currentValue)}`;
+            document.getElementById('editValue').value = currentValue;
+            document.getElementById('editModal').classList.add('active');
         }
 
         async function saveEdit() {
             const newValue = parseFloat(document.getElementById('editValue')?.value || '0');
-            if (isNaN(newValue)) {
-                alert('Введите число');
-                return;
-            }
+            if (isNaN(newValue)) { alert('Введите число'); return; }
             const { userId, field, currentValue } = currentEditField;
-            let actionType = '';
-            let amount = 0;
-            if (newValue > currentValue) {
-                actionType = `add_${field}`;
-                amount = newValue - currentValue;
-            } else if (newValue < currentValue) {
-                actionType = `remove_${field}`;
-                amount = currentValue - newValue;
-            } else {
-                closeEditModal();
-                return;
-            }
-            const result = await apiRequest('update_user', {
-                method: 'POST',
-                body: JSON.stringify({ user_id: userId, action_type: actionType, amount: amount })
-            });
-            if (result.success) {
-                closeEditModal();
-                searchPlayers();
-                loadStats();
-                alert('✅ Обновлено!');
-            } else {
-                alert('❌ Ошибка: ' + (result.error || result.msg));
-            }
+            let actionType = '', amount = 0;
+            if (newValue > currentValue) { actionType = `add_${field}`; amount = newValue - currentValue; }
+            else if (newValue < currentValue) { actionType = `remove_${field}`; amount = currentValue - newValue; }
+            else { closeEditModal(); return; }
+            const result = await apiRequest('update_user', { method: 'POST', body: JSON.stringify({ user_id: userId, action_type: actionType, amount: amount }) });
+            if (result.success) { closeEditModal(); searchPlayers(); loadStats(); alert('✅ Обновлено!'); }
+            else alert('❌ Ошибка');
         }
 
-        function closeEditModal() {
-            const editModal = document.getElementById('editModal');
-            if (editModal) editModal.classList.remove('active');
-            currentEditField = null;
-        }
+        function closeEditModal() { document.getElementById('editModal').classList.remove('active'); currentEditField = null; }
 
         function openBanModal(userId) {
             currentBanUserId = userId;
-            const banDays = document.getElementById('banDays');
-            const banReason = document.getElementById('banReason');
-            const banModal = document.getElementById('banModal');
-            if (banDays) banDays.value = 7;
-            if (banReason) banReason.value = '';
-            if (banModal) banModal.classList.add('active');
+            document.getElementById('banDays').value = 7;
+            document.getElementById('banReason').value = '';
+            document.getElementById('banModal').classList.add('active');
         }
 
-        function closeBanModal() {
-            const banModal = document.getElementById('banModal');
-            if (banModal) banModal.classList.remove('active');
-            currentBanUserId = null;
-        }
+        function closeBanModal() { document.getElementById('banModal').classList.remove('active'); currentBanUserId = null; }
 
         async function confirmBan() {
             const days = parseInt(document.getElementById('banDays')?.value || '7');
             const reason = document.getElementById('banReason')?.value || 'Нарушение правил';
-            const result = await apiRequest('update_user', {
-                method: 'POST',
-                body: JSON.stringify({ user_id: currentBanUserId, action_type: 'ban', days: days, reason: reason })
-            });
-            if (result.success) {
-                closeBanModal();
-                searchPlayers();
-                loadStats();
-                alert('✅ Игрок заблокирован!');
-            } else {
-                alert('❌ Ошибка: ' + (result.error || result.msg));
-            }
+            const result = await apiRequest('update_user', { method: 'POST', body: JSON.stringify({ user_id: currentBanUserId, action_type: 'ban', days: days, reason: reason }) });
+            if (result.success) { closeBanModal(); searchPlayers(); loadStats(); alert('✅ Игрок заблокирован!'); }
+            else alert('❌ Ошибка');
         }
 
         async function clearUserWallet(userId) {
-            if (!confirm('🗑️ Отвязать TON кошелёк у этого игрока?')) return;
-            const result = await apiRequest('clear_user_wallet', {
-                method: 'POST',
-                body: JSON.stringify({ user_id: userId })
-            });
-            if (result.success) {
-                alert('✅ Кошелёк отвязан');
-                openPlayerProfile(userId);
-                loadStats();
-            } else {
-                alert('❌ Ошибка: ' + (result.error || 'Неизвестная ошибка'));
-            }
-        }
-
-        async function clearAllWallets() {
-            if (!confirm('⚠️ ВНИМАНИЕ! Это удалит ВСЕ привязанные TON кошельки у всех игроков. Продолжить?')) return;
-            const result = await apiRequest('clear_wallets', { method: 'POST' });
-            if (result.success) {
-                alert(`✅ Удалено ${result.count} кошельков`);
-                loadStats();
-            } else {
-                alert('❌ Ошибка: ' + (result.error || 'Неизвестная ошибка'));
-            }
+            if (!confirm('🗑️ Отвязать TON кошелёк?')) return;
+            const result = await apiRequest('clear_user_wallet', { method: 'POST', body: JSON.stringify({ user_id: userId }) });
+            if (result.success) { alert('✅ Кошелёк отвязан'); openPlayerProfile(userId); loadStats(); }
+            else alert('❌ Ошибка');
         }
 
         // ========== УДАЛЕНИЕ ИГРОКА ==========
@@ -2100,174 +1820,37 @@ async function resetUserAdLimits(userId) {
             const modal = document.getElementById('deleteUserModal');
             const content = document.getElementById('deleteUserContent');
             if (!modal || !content) return;
-
             const userName = currentUserData.username || currentUserData.first_name || `ID: ${currentUserData.user_id}`;
-
-            content.innerHTML = `
-                <div style="margin-bottom: 20px;">
-                    <div style="background: rgba(244,67,54,0.1); border-radius: 16px; padding: 16px; margin-bottom: 16px; border: 1px solid rgba(244,67,54,0.3);">
-                        <div style="color: #f44336; font-weight: 700; margin-bottom: 12px;">⚠️ ВНИМАНИЕ! Это действие необратимо!</div>
-                        <div style="margin-bottom: 8px;">👤 Игрок: <strong>${escapeHtml(userName)}</strong> (ID: ${currentUserData.user_id})</div>
-                        <div style="margin-bottom: 8px;">📊 Достижений: ${currentUserData.completed_achievements || 0}</div>
-                        <div style="margin-bottom: 8px;">💰 Баланс: ${formatNumber(currentUserData.wg)} WG, ${currentUserData.lp} LP, ${formatNumber(currentUserData.usdt)} USDT</div>
-                    </div>
-                    <div style="background: rgba(0,0,0,0.3); border-radius: 16px; padding: 16px; margin-bottom: 16px;">
-                        <div style="font-weight: 600; margin-bottom: 8px;">🗑️ Будут удалены:</div>
-                        <ul style="margin-left: 20px; font-size: 0.75rem; opacity: 0.8;">
-                            <li>Все ресурсы игрока (WG, LP, USDT, Stars, энергия)</li>
-                            <li>Достижения и прогресс</li>
-                            <li>Билеты в лотерее</li>
-                            <li>Рефералы и связи</li>
-                            <li>История выводов средств</li>
-                            <li>Активированные промокоды</li>
-                            <li>История просмотра рекламы</li>
-                            <li>Все логи активности</li>
-                        </ul>
-                    </div>
-                    <div class="form-group">
-                        <label>Для подтверждения введите <strong style="color: #f44336;">УДАЛИТЬ</strong></label>
-                        <input type="text" class="form-input" id="deleteConfirmText" placeholder="Введите УДАЛИТЬ" style="border-color: rgba(244,67,54,0.3);">
-                    </div>
-                    <div style="display: flex; gap: 12px; margin-top: 20px;">
-                        <button class="btn btn-secondary" onclick="closeDeleteUserModal()" style="flex:1;">Отмена</button>
-                        <button class="btn btn-danger" onclick="confirmDeleteUser()" style="flex:1;">🗑️ УДАЛИТЬ НАВСЕГДА</button>
-                    </div>
-                </div>
-            `;
+            content.innerHTML = `<div><div style="background: rgba(244,67,54,0.1); border-radius: 16px; padding: 16px;"><div style="color: #f44336; font-weight: 700;">⚠️ ВНИМАНИЕ! Это действие необратимо!</div><div>👤 Игрок: <strong>${escapeHtml(userName)}</strong> (ID: ${currentUserData.user_id})</div><div>📊 Достижений: ${currentUserData.completed_achievements || 0}</div><div>💰 Баланс: ${formatNumber(currentUserData.wg)} WG, ${currentUserData.lp} LP, ${formatNumber(currentUserData.usdt)} USDT</div></div><div style="background: rgba(0,0,0,0.3); border-radius: 16px; padding: 16px; margin-top: 16px;"><div style="font-weight: 600;">🗑️ Будут удалены:</div><ul><li>Все ресурсы игрока</li><li>Достижения и прогресс</li><li>Билеты в лотерее</li><li>Рефералы и связи</li><li>История выводов средств</li><li>Активированные промокоды</li><li>История просмотра рекламы</li><li>Все логи активности</li></ul></div><div class="form-group"><label>Для подтверждения введите <strong style="color: #f44336;">УДАЛИТЬ</strong></label><input type="text" class="form-input" id="deleteConfirmText" placeholder="Введите УДАЛИТЬ"></div><div style="display: flex; gap: 12px;"><button class="btn btn-secondary" onclick="closeDeleteUserModal()" style="flex:1;">Отмена</button><button class="btn btn-danger" onclick="confirmDeleteUser()" style="flex:1;">🗑️ УДАЛИТЬ НАВСЕГДА</button></div></div>`;
             modal.classList.add('active');
         }
 
-        function closeDeleteUserModal() {
-            const modal = document.getElementById('deleteUserModal');
-            if (modal) modal.classList.remove('active');
-            document.getElementById('deleteConfirmText').value = '';
-        }
+        function closeDeleteUserModal() { document.getElementById('deleteUserModal').classList.remove('active'); document.getElementById('deleteConfirmText').value = ''; }
 
         async function confirmDeleteUser() {
             const confirmText = document.getElementById('deleteConfirmText')?.value.trim();
-            if (confirmText !== "УДАЛИТЬ") {
-                alert('❌ Для подтверждения удаления введите "УДАЛИТЬ"');
-                return;
-            }
-
+            if (confirmText !== "УДАЛИТЬ") { alert('❌ Введите "УДАЛИТЬ" для подтверждения'); return; }
             if (!currentUserData) return;
-
-            try {
-                const result = await apiRequest('delete_user', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        user_id: currentUserData.user_id,
-                        confirm: true
-                    })
-                });
-
-                if (result.success) {
-                    alert(`✅ ${result.message}`);
-                    closeDeleteUserModal();
-                    closePlayerModal();
-                    searchPlayers();
-                    loadStats();
-                } else {
-                    alert(`❌ Ошибка: ${result.error}`);
-                }
-            } catch(e) {
-                alert('❌ Ошибка при удалении');
-            }
+            const result = await apiRequest('delete_user', { method: 'POST', body: JSON.stringify({ user_id: currentUserData.user_id, confirm: true }) });
+            if (result.success) { alert(`✅ ${result.message}`); closeDeleteUserModal(); closePlayerModal(); searchPlayers(); loadStats(); }
+            else alert(`❌ Ошибка: ${result.error}`);
         }
 
         async function openPlayerProfile(userId) {
-            const data = await apiRequest('get_user', {
-                method: 'POST',
-                body: JSON.stringify({ user_id: userId })
-            });
-            if (!data.success) {
-                alert('Ошибка загрузки профиля');
-                return;
-            }
+            const data = await apiRequest('get_user', { method: 'POST', body: JSON.stringify({ user_id: userId }) });
+            if (!data.success) { alert('Ошибка загрузки профиля'); return; }
             currentUserData = data.user;
             const modalContent = document.getElementById('playerModalContent');
             if (!modalContent) return;
-            modalContent.innerHTML = `
-                <div style="text-align:center; margin-bottom:20px;">
-                    <div style="font-size:3rem;">👤</div>
-                    <h3>${escapeHtml(currentUserData.username || 'Игрок')}</h3>
-                    <p style="opacity:0.5;">ID: ${currentUserData.user_id} | Роль: <span style="color:#FFD700;">${currentUserData.role}</span></p>
-                    ${currentUserData.is_banned ? `<p style="color:#f44336;">🔨 ЗАБЛОКИРОВАН до: ${currentUserData.ban_info?.until_date}<br>Причина: ${currentUserData.ban_info?.reason}</p>` : ''}
-                </div>
-                <div class="profile-tabs">
-                    <button class="profile-tab active" data-tab="info">📊 Информация</button>
-                    <button class="profile-tab" data-tab="actions">⚡ Действия</button>
-                    <button class="profile-tab" data-tab="referrals">👥 Рефералы</button>
-                    <button class="profile-tab" data-tab="logs">📋 Логи</button>
-                </div>
-                <div id="profileTabInfo" class="profile-tab-content active">
-                    <div class="stats-grid" style="grid-template-columns: repeat(2,1fr);">
-                        <div class="stat-card"><div class="stat-card-title">💰 WG</div><div class="stat-card-value"><span class="clickable-value" onclick="openEditModal(${currentUserData.user_id}, 'wg', ${currentUserData.wg})">${formatNumber(currentUserData.wg)}</span></div></div>
-                        <div class="stat-card"><div class="stat-card-title">🎯 LP</div><div class="stat-card-value"><span class="clickable-value" onclick="openEditModal(${currentUserData.user_id}, 'lp', ${currentUserData.lp})">${currentUserData.lp}</span></div></div>
-                        <div class="stat-card"><div class="stat-card-title">💎 USDT</div><div class="stat-card-value"><span class="clickable-value" onclick="openEditModal(${currentUserData.user_id}, 'usdt', ${currentUserData.usdt})">${formatNumber(currentUserData.usdt)}</span></div></div>
-                        <div class="stat-card"><div class="stat-card-title">⭐ Stars</div><div class="stat-card-value"><span class="clickable-value" onclick="openEditModal(${currentUserData.user_id}, 'stars', ${currentUserData.stars})">${currentUserData.stars}</span></div></div>
-                        <div class="stat-card"><div class="stat-card-title">🏆 Побед</div><div class="stat-card-value">${currentUserData.wins}</div></div>
-                        <div class="stat-card"><div class="stat-card-title">👆 Кликов</div><div class="stat-card-value">${currentUserData.total_clicks}</div></div>
-                        <div class="stat-card"><div class="stat-card-title">⚡ Энергия</div><div class="stat-card-value"><span class="clickable-value" onclick="openEditModal(${currentUserData.user_id}, 'energy', ${currentUserData.energy})">${currentUserData.energy}</span>/${currentUserData.max_energy}</div></div>
-                        <div class="stat-card"><div class="stat-card-title">⚡ Макс. энергия</div><div class="stat-card-value"><span class="clickable-value" onclick="openEditModal(${currentUserData.user_id}, 'max_energy', ${currentUserData.max_energy})">${currentUserData.max_energy}</span></div></div>
-                        <div class="stat-card"><div class="stat-card-title">🔓 Префиксы</div><div class="stat-card-value">${(currentUserData.unlocked_prefixes || ['player']).join(', ')}</div></div>
-                    </div>
-                </div>
-                <div id="profileTabActions" class="profile-tab-content">
-    <div class="form-group"><label>➕ Добавить WG</label><div class="form-row"><input type="number" class="form-input" id="actionAmount" placeholder="Количество"><button class="btn" onclick="adminAction('add_wg')">Добавить</button></div></div>
-    <div class="form-group"><label>📉 Отнять WG</label><div class="form-row"><input type="number" class="form-input" id="actionAmountRemove" placeholder="Количество"><button class="btn btn-danger" onclick="adminAction('remove_wg')">Отнять</button></div></div>
-    <div class="form-group"><label>➕ Добавить LP</label><div class="form-row"><input type="number" class="form-input" id="actionAmountLP" placeholder="Количество"><button class="btn" onclick="adminAction('add_lp')">Добавить</button></div></div>
-    <div class="form-group"><label>📉 Отнять LP</label><div class="form-row"><input type="number" class="form-input" id="actionAmountRemoveLP" placeholder="Количество"><button class="btn btn-danger" onclick="adminAction('remove_lp')">Отнять</button></div></div>
-    <div class="form-group"><label>➕ Добавить USDT</label><div class="form-row"><input type="number" class="form-input" id="actionAmountUSDT" step="0.01" placeholder="Количество"><button class="btn" onclick="adminAction('add_usdt')">Добавить</button></div></div>
-    <div class="form-group"><label>📉 Отнять USDT</label><div class="form-row"><input type="number" class="form-input" id="actionAmountRemoveUSDT" step="0.01" placeholder="Количество"><button class="btn btn-danger" onclick="adminAction('remove_usdt')">Отнять</button></div></div>
-    <div class="form-group"><label>⭐ Добавить Stars</label><div class="form-row"><input type="number" class="form-input" id="actionAmountStars" placeholder="Количество"><button class="btn" onclick="adminAction('add_stars')">Добавить</button></div></div>
-    <div class="form-group"><label>⭐ Отнять Stars</label><div class="form-row"><input type="number" class="form-input" id="actionAmountRemoveStars" placeholder="Количество"><button class="btn btn-danger" onclick="adminAction('remove_stars')">Отнять</button></div></div>
-    <div class="form-group"><label>⚡ Добавить энергию</label><div class="form-row"><input type="number" class="form-input" id="actionAmountEnergy" placeholder="Количество"><button class="btn" onclick="adminAction('add_energy')">Добавить</button></div></div>
-    <div class="form-group"><label>⚡ Отнять энергию</label><div class="form-row"><input type="number" class="form-input" id="actionAmountRemoveEnergy" placeholder="Количество"><button class="btn btn-danger" onclick="adminAction('remove_energy')">Отнять</button></div></div>
-    <div class="form-group"><label>⚡ Увеличить макс. энергию</label><div class="form-row"><input type="number" class="form-input" id="actionAmountMaxEnergy" placeholder="+50"><button class="btn" onclick="adminAction('add_max_energy')">Увеличить</button></div></div>
-    <div class="form-group"><label>👆 Добавить кликов</label><div class="form-row"><input type="number" class="form-input" id="actionAmountClicks" placeholder="Количество"><button class="btn" onclick="adminAction('add_clicks')">Добавить</button></div></div>
-    <div class="form-group"><label>⚡ Сбросить энергию</label><button class="btn btn-secondary" onclick="adminAction('reset_energy')">Сбросить до максимума</button></div>
-    <div class="form-group"><label>👑 Выдать префикс</label><div class="form-row"><select class="form-select" id="actionPrefix"><option value="pioneer">⭐ Первооткрыватель</option><option value="founder">👑 Основатель</option></select><button class="btn" onclick="adminAction('unlock_prefix')">Выдать</button></div></div>
-    <div class="form-group"><label>🎭 Сменить роль</label><div class="form-row"><select class="form-select" id="actionRole"><option value="player">Игрок</option><option value="pioneer">Первооткрыватель</option><option value="founder">Основатель</option></select><button class="btn" onclick="adminAction('set_role')">Сменить</button></div></div>
+            modalContent.innerHTML = `<div style="text-align:center; margin-bottom:20px;"><div style="font-size:3rem;">👤</div><h3>${escapeHtml(currentUserData.username || 'Игрок')}</h3><p style="opacity:0.5;">ID: ${currentUserData.user_id} | Роль: <span style="color:#FFD700;">${currentUserData.role}</span></p>${currentUserData.is_banned ? `<p style="color:#f44336;">🔨 ЗАБЛОКИРОВАН до: ${currentUserData.ban_info?.until_date}<br>Причина: ${currentUserData.ban_info?.reason}</p>` : ''}</div>
+            <div class="profile-tabs"><button class="profile-tab active" data-tab="info">📊 Информация</button><button class="profile-tab" data-tab="actions">⚡ Действия</button><button class="profile-tab" data-tab="referrals">👥 Рефералы</button><button class="profile-tab" data-tab="logs">📋 Логи</button></div>
+            <div id="profileTabInfo" class="profile-tab-content active"><div class="stats-grid" style="grid-template-columns: repeat(2,1fr);"><div class="stat-card"><div class="stat-card-title">💰 WG</div><div class="stat-card-value"><span class="clickable-value" onclick="openEditModal(${currentUserData.user_id}, 'wg', ${currentUserData.wg})">${formatNumber(currentUserData.wg)}</span></div></div><div class="stat-card"><div class="stat-card-title">🎯 LP</div><div class="stat-card-value"><span class="clickable-value" onclick="openEditModal(${currentUserData.user_id}, 'lp', ${currentUserData.lp})">${currentUserData.lp}</span></div></div><div class="stat-card"><div class="stat-card-title">💎 USDT</div><div class="stat-card-value"><span class="clickable-value" onclick="openEditModal(${currentUserData.user_id}, 'usdt', ${currentUserData.usdt})">${formatNumber(currentUserData.usdt)}</span></div></div><div class="stat-card"><div class="stat-card-title">⭐ Stars</div><div class="stat-card-value"><span class="clickable-value" onclick="openEditModal(${currentUserData.user_id}, 'stars', ${currentUserData.stars})">${currentUserData.stars}</span></div></div><div class="stat-card"><div class="stat-card-title">🏆 Побед</div><div class="stat-card-value">${currentUserData.wins}</div></div><div class="stat-card"><div class="stat-card-title">👆 Кликов</div><div class="stat-card-value">${currentUserData.total_clicks}</div></div><div class="stat-card"><div class="stat-card-title">⚡ Энергия</div><div class="stat-card-value"><span class="clickable-value" onclick="openEditModal(${currentUserData.user_id}, 'energy', ${currentUserData.energy})">${currentUserData.energy}</span>/${currentUserData.max_energy}</div></div><div class="stat-card"><div class="stat-card-title">⚡ Макс. энергия</div><div class="stat-card-value"><span class="clickable-value" onclick="openEditModal(${currentUserData.user_id}, 'max_energy', ${currentUserData.max_energy})">${currentUserData.max_energy}</span></div></div><div class="stat-card"><div class="stat-card-title">🔓 Префиксы</div><div class="stat-card-value">${(currentUserData.unlocked_prefixes || ['player']).join(', ')}</div></div></div></div>
+            <div id="profileTabActions" class="profile-tab-content"><div class="form-group"><label>➕ Добавить WG</label><div class="form-row"><input type="number" class="form-input" id="actionAmount" placeholder="Количество"><button class="btn" onclick="adminAction('add_wg')">Добавить</button></div></div><div class="form-group"><label>📉 Отнять WG</label><div class="form-row"><input type="number" class="form-input" id="actionAmountRemove" placeholder="Количество"><button class="btn btn-danger" onclick="adminAction('remove_wg')">Отнять</button></div></div><div class="form-group"><label>➕ Добавить LP</label><div class="form-row"><input type="number" class="form-input" id="actionAmountLP" placeholder="Количество"><button class="btn" onclick="adminAction('add_lp')">Добавить</button></div></div><div class="form-group"><label>📉 Отнять LP</label><div class="form-row"><input type="number" class="form-input" id="actionAmountRemoveLP" placeholder="Количество"><button class="btn btn-danger" onclick="adminAction('remove_lp')">Отнять</button></div></div><div class="form-group"><label>➕ Добавить USDT</label><div class="form-row"><input type="number" class="form-input" id="actionAmountUSDT" step="0.01" placeholder="Количество"><button class="btn" onclick="adminAction('add_usdt')">Добавить</button></div></div><div class="form-group"><label>📉 Отнять USDT</label><div class="form-row"><input type="number" class="form-input" id="actionAmountRemoveUSDT" step="0.01" placeholder="Количество"><button class="btn btn-danger" onclick="adminAction('remove_usdt')">Отнять</button></div></div><div class="form-group"><label>⭐ Добавить Stars</label><div class="form-row"><input type="number" class="form-input" id="actionAmountStars" placeholder="Количество"><button class="btn" onclick="adminAction('add_stars')">Добавить</button></div></div><div class="form-group"><label>⭐ Отнять Stars</label><div class="form-row"><input type="number" class="form-input" id="actionAmountRemoveStars" placeholder="Количество"><button class="btn btn-danger" onclick="adminAction('remove_stars')">Отнять</button></div></div><div class="form-group"><label>⚡ Добавить энергию</label><div class="form-row"><input type="number" class="form-input" id="actionAmountEnergy" placeholder="Количество"><button class="btn" onclick="adminAction('add_energy')">Добавить</button></div></div><div class="form-group"><label>⚡ Отнять энергию</label><div class="form-row"><input type="number" class="form-input" id="actionAmountRemoveEnergy" placeholder="Количество"><button class="btn btn-danger" onclick="adminAction('remove_energy')">Отнять</button></div></div><div class="form-group"><label>⚡ Увеличить макс. энергию</label><div class="form-row"><input type="number" class="form-input" id="actionAmountMaxEnergy" placeholder="+50"><button class="btn" onclick="adminAction('add_max_energy')">Увеличить</button></div></div><div class="form-group"><label>👆 Добавить кликов</label><div class="form-row"><input type="number" class="form-input" id="actionAmountClicks" placeholder="Количество"><button class="btn" onclick="adminAction('add_clicks')">Добавить</button></div></div><div class="form-group"><label>⚡ Сбросить энергию</label><button class="btn btn-secondary" onclick="adminAction('reset_energy')">Сбросить до максимума</button></div><div class="form-group"><label>👑 Выдать префикс</label><div class="form-row"><select class="form-select" id="actionPrefix"><option value="pioneer">⭐ Первооткрыватель</option><option value="founder">👑 Основатель</option></select><button class="btn" onclick="adminAction('unlock_prefix')">Выдать</button></div></div><div class="form-group"><label>🎭 Сменить роль</label><div class="form-row"><select class="form-select" id="actionRole"><option value="player">Игрок</option><option value="pioneer">Первооткрыватель</option><option value="founder">Основатель</option></select><button class="btn" onclick="adminAction('set_role')">Сменить</button></div></div>
+            <div class="form-group" style="border-top: 1px solid rgba(255,215,0,0.2); padding-top: 15px;"><label style="color: #FFD700;">⚡ Управление энергетическим усилителем</label><div style="display: flex; gap: 10px; flex-wrap: wrap;"><button class="btn-sm" onclick="manageEnergyUpgrades('add', 1, true)" style="background: rgba(34,197,94,0.2); color: #22c55e;">+1 (с наградой)</button><button class="btn-sm" onclick="manageEnergyUpgrades('add', 1, false)" style="background: rgba(255,215,0,0.2); color: #FFD700;">+1 (без награды)</button><button class="btn-sm" onclick="manageEnergyUpgrades('remove', 1, false)" style="background: rgba(244,67,54,0.2); color: #f44336;">-1</button><input type="number" id="energyUpgradeAmount" value="1" min="1" max="15" style="width: 60px; background: rgba(255,255,255,0.1); border-radius: 8px; padding: 4px 8px; color: white;"><button class="btn-sm" onclick="manageEnergyUpgrades('add', parseInt(document.getElementById('energyUpgradeAmount').value), true)" style="background: rgba(34,197,94,0.2); color: #22c55e;">➕ Добавить (с наградой)</button><button class="btn-sm" onclick="manageEnergyUpgrades('add', parseInt(document.getElementById('energyUpgradeAmount').value), false)" style="background: rgba(255,215,0,0.2); color: #FFD700;">➕ Добавить (без награды)</button><button class="btn-sm" onclick="manageEnergyUpgrades('remove', parseInt(document.getElementById('energyUpgradeAmount').value), false)" style="background: rgba(244,67,54,0.2); color: #f44336;">➖ Убавить</button></div><div style="font-size: 0.65rem; margin-top: 8px;">📊 Текущий прогресс: <span id="currentEnergyUpgrades">${currentUserData.energy_upgrades || 0}</span>/15</div></div>
+            <div class="form-group"><label>🔨 Блокировка</label><button class="btn btn-danger" onclick="openBanModal(${currentUserData.user_id})">🔨 Заблокировать</button></div>${currentUserData.is_banned ? `<div class="form-group"><label>🔓 Разблокировка</label><button class="btn btn-secondary" onclick="adminAction('unban')">🔓 Разблокировать</button></div>` : ''}<div class="form-group"><label>🗑️ TON кошелёк</label><button class="btn btn-danger" onclick="clearUserWallet(${currentUserData.user_id})">🗑️ Отвязать кошелёк</button></div><div class="form-group"><label style="color: #f44336;">⚠️ ОПАСНАЯ ЗОНА</label><button class="btn btn-danger" onclick="openDeleteUserModal()" style="background: rgba(244,67,54,0.2); border: 1px solid #f44336; color: #f44336;">🗑️ ПОЛНОСТЬЮ УДАЛИТЬ ИГРОКА</button><p style="font-size:0.6rem; opacity:0.5;">ВНИМАНИЕ! Это действие нельзя отменить.</p></div></div>
+            <div id="profileTabReferrals" class="profile-tab-content">${currentUserData.referrals && currentUserData.referrals.length ? currentUserData.referrals.map(r => `<div class="log-entry">👥 ${escapeHtml(r.username)} | Потрачено LP: ${r.spent_lp} | Заработано: ${r.earned} LP | ${r.date}</div>`).join('') : '<div class="loading">📭 Нет рефералов</div>'}</div>
+            <div id="profileTabLogs" class="profile-tab-content" style="max-height:300px; overflow-y:auto;">${currentUserData.personal_logs && currentUserData.personal_logs.length ? currentUserData.personal_logs.map(l => `<div class="log-entry"><span class="log-time">[${l.timestamp}]</span> ${escapeHtml(l.action)}</div>`).join('') : '<div class="loading">📭 Нет логов</div>'}</div>`;
 
-    <!-- ========== НОВЫЙ БЛОК: УПРАВЛЕНИЕ ЭНЕРГЕТИЧЕСКИМ УСИЛИТЕЛЕМ ========== -->
-    <div class="form-group" style="border-top: 1px solid rgba(255,215,0,0.2); padding-top: 15px; margin-top: 15px;">
-        <label style="color: #FFD700;">⚡ Управление энергетическим усилителем</label>
-        <div style="display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap;">
-            <div style="display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 30px;">
-                <button class="btn-sm" onclick="manageEnergyUpgrades('add', 1, true)" style="background: rgba(34,197,94,0.2); color: #22c55e;">+1 (с наградой)</button>
-                <button class="btn-sm" onclick="manageEnergyUpgrades('add', 1, false)" style="background: rgba(255,215,0,0.2); color: #FFD700;">+1 (без награды)</button>
-                <button class="btn-sm" onclick="manageEnergyUpgrades('remove', 1, false)" style="background: rgba(244,67,54,0.2); color: #f44336;">-1</button>
-            </div>
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <input type="number" id="energyUpgradeAmount" value="1" min="1" max="15" style="width: 60px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,215,0,0.3); border-radius: 8px; padding: 4px 8px; color: white;">
-                <button class="btn-sm" onclick="manageEnergyUpgrades('add', parseInt(document.getElementById('energyUpgradeAmount').value), true)" style="background: rgba(34,197,94,0.2); color: #22c55e;">➕ Добавить (с наградой)</button>
-                <button class="btn-sm" onclick="manageEnergyUpgrades('add', parseInt(document.getElementById('energyUpgradeAmount').value), false)" style="background: rgba(255,215,0,0.2); color: #FFD700;">➕ Добавить (без награды)</button>
-                <button class="btn-sm" onclick="manageEnergyUpgrades('remove', parseInt(document.getElementById('energyUpgradeAmount').value), false)" style="background: rgba(244,67,54,0.2); color: #f44336;">➖ Убавить</button>
-            </div>
-        </div>
-        <div style="font-size: 0.65rem; color: rgba(255,255,255,0.5); margin-top: 8px;">
-            📊 Текущий прогресс: <span id="currentEnergyUpgrades">0</span>/15
-        </div>
-    </div>
-    <!-- ========== КОНЕЦ БЛОКА ========== -->
-
-    <div class="form-group"><label>🔨 Блокировка</label><button class="btn btn-danger" onclick="openBanModal(${currentUserData.user_id})">🔨 Заблокировать</button></div>
-    ${currentUserData.is_banned ? `<div class="form-group"><label>🔓 Разблокировка</label><button class="btn btn-secondary" onclick="adminAction('unban')">🔓 Разблокировать</button></div>` : ''}
-    <div class="form-group"><label>🗑️ TON кошелёк</label><button class="btn btn-danger" onclick="clearUserWallet(${currentUserData.user_id})" style="width:100%;">🗑️ Отвязать кошелёк</button></div>
-    <div class="form-group"><label style="color: #f44336;">⚠️ ОПАСНАЯ ЗОНА</label><button class="btn btn-danger" onclick="openDeleteUserModal()" style="width:100%; background: rgba(244,67,54,0.2); border: 1px solid #f44336; color: #f44336;">🗑️ ПОЛНОСТЬЮ УДАЛИТЬ ИГРОКА</button><p style="font-size:0.6rem; opacity:0.5; margin-top:5px;">ВНИМАНИЕ! Это действие нельзя отменить. Будут удалены: прогресс, достижения, билеты, рефералы, заявки на вывод и вся история.</p></div>
-</div>
-                <div id="profileTabReferrals" class="profile-tab-content">
-                    ${currentUserData.referrals && currentUserData.referrals.length ?
-                        currentUserData.referrals.map(r => `<div class="log-entry">👥 ${escapeHtml(r.username)} | Потрачено LP: ${r.spent_lp} | Заработано: ${r.earned} LP | ${r.date}</div>`).join('') :
-                        '<div class="loading">📭 Нет рефералов</div>'}
-                </div>
-                <div id="profileTabLogs" class="profile-tab-content" style="max-height:300px; overflow-y:auto;">
-                    ${currentUserData.personal_logs && currentUserData.personal_logs.length ?
-                        currentUserData.personal_logs.map(l => `<div class="log-entry"><span class="log-time">[${l.timestamp}]</span> ${escapeHtml(l.action)}</div>`).join('') :
-                        '<div class="loading">📭 Нет логов</div>'}
-                </div>
-            `;
             document.querySelectorAll('.profile-tab').forEach(tab => {
                 tab.onclick = () => {
                     document.querySelectorAll('.profile-tab').forEach(t => t.classList.remove('active'));
@@ -2276,64 +1859,25 @@ async function resetUserAdLimits(userId) {
                     document.getElementById(`profileTab${tab.dataset.tab.charAt(0).toUpperCase() + tab.dataset.tab.slice(1)}`).classList.add('active');
                 };
             });
-            const playerModal = document.getElementById('playerModal');
-            if (playerModal) playerModal.classList.add('active');
+            document.getElementById('playerModal').classList.add('active');
         }
 
-async function manageEnergyUpgrades(action, amount, giveReward) {
-    if (!currentUserData) {
-        alert('Сначала выберите игрока');
-        return;
-    }
-
-    if (amount <= 0 || isNaN(amount)) {
-        alert('Введите корректное количество');
-        return;
-    }
-
-    let confirmMsg = '';
-    if (action === 'add' && giveReward) {
-        confirmMsg = `Добавить ${amount} покупок с выдачей награды (${amount * 50} LP + ${amount * 40} к макс. энергии)?`;
-    } else if (action === 'add' && !giveReward) {
-        confirmMsg = `Добавить ${amount} покупок БЕЗ выдачи награды?`;
-    } else {
-        confirmMsg = `Убавить ${amount} покупок?`;
-    }
-
-    if (!confirm(confirmMsg)) return;
-
-    try {
-        const response = await fetch('/api/admin/manage_energy_upgrades?key=' + adminKey, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                user_id: currentUserData.user_id,
-                action: action,
-                amount: amount,
-                give_reward: giveReward
-            })
-        });
-        const result = await response.json();
-
-        if (result.success) {
-            alert(`✅ ${result.message}`);
-            // Обновляем данные игрока
-            await openPlayerProfile(currentUserData.user_id);
-            if (typeof loadStats === 'function') loadStats();
-        } else {
-            alert(`❌ Ошибка: ${result.error}`);
+        async function manageEnergyUpgrades(action, amount, giveReward) {
+            if (!currentUserData) { alert('Сначала выберите игрока'); return; }
+            if (amount <= 0 || isNaN(amount)) { alert('Введите корректное количество'); return; }
+            let confirmMsg = action === 'add' && giveReward ? `Добавить ${amount} покупок с выдачей награды (${amount * 50} LP + ${amount * 40} к макс. энергии)?` : (action === 'add' && !giveReward ? `Добавить ${amount} покупок БЕЗ выдачи награды?` : `Убавить ${amount} покупок?`);
+            if (!confirm(confirmMsg)) return;
+            try {
+                const response = await fetch('/api/admin/manage_energy_upgrades?key=' + adminKey, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: currentUserData.user_id, action: action, amount: amount, give_reward: giveReward }) });
+                const result = await response.json();
+                if (result.success) { alert(`✅ ${result.message}`); await openPlayerProfile(currentUserData.user_id); if (typeof loadStats === 'function') loadStats(); }
+                else alert(`❌ Ошибка: ${result.error}`);
+            } catch(e) { alert('❌ Ошибка'); }
         }
-    } catch(e) {
-        console.error('Error managing energy upgrades:', e);
-        alert('❌ Ошибка при управлении покупками');
-    }
-}
 
         async function adminAction(actionType) {
             const userId = currentUserData.user_id;
-            let amount = 0;
-            let prefixId = null;
-            let role = null;
+            let amount = 0, prefixId = null, role = null;
             switch(actionType) {
                 case 'add_wg': amount = parseFloat(document.getElementById('actionAmount')?.value) || 0; break;
                 case 'remove_wg': amount = parseFloat(document.getElementById('actionAmountRemove')?.value) || 0; break;
@@ -2351,52 +1895,115 @@ async function manageEnergyUpgrades(action, amount, giveReward) {
                 case 'set_role': role = document.getElementById('actionRole')?.value; break;
                 case 'unban': actionType = 'unban'; break;
             }
-            if ((actionType === 'add_wg' || actionType === 'remove_wg' || actionType === 'add_lp' || actionType === 'remove_lp' ||
-                 actionType === 'add_usdt' || actionType === 'remove_usdt' || actionType === 'add_stars' || actionType === 'remove_stars' ||
-                 actionType === 'add_energy' || actionType === 'remove_energy' || actionType === 'add_max_energy' || actionType === 'add_clicks') && amount <= 0 && actionType !== 'unban') {
-                alert('Введите корректное количество');
-                return;
-            }
+            if ((actionType === 'add_wg' || actionType === 'remove_wg' || actionType === 'add_lp' || actionType === 'remove_lp' || actionType === 'add_usdt' || actionType === 'remove_usdt' || actionType === 'add_stars' || actionType === 'remove_stars' || actionType === 'add_energy' || actionType === 'remove_energy' || actionType === 'add_max_energy' || actionType === 'add_clicks') && amount <= 0 && actionType !== 'unban') { alert('Введите корректное количество'); return; }
             const body = { user_id: userId, action_type: actionType, amount: amount };
             if (prefixId) body.prefix_id = prefixId;
             if (role) body.role = role;
             const result = await apiRequest('update_user', { method: 'POST', body: JSON.stringify(body) });
-            if (result.success) {
-                alert('✅ Готово!');
-                openPlayerProfile(userId);
-                loadStats();
-                searchPlayers();
-            } else {
-                alert('❌ Ошибка: ' + (result.error || result.msg));
-            }
+            if (result.success) { alert('✅ Готово!'); openPlayerProfile(userId); loadStats(); searchPlayers(); }
+            else alert('❌ Ошибка');
         }
 
-        function closePlayerModal() {
-            const playerModal = document.getElementById('playerModal');
-            if (playerModal) playerModal.classList.remove('active');
-            currentUserData = null;
-        }
+        function closePlayerModal() { document.getElementById('playerModal').classList.remove('active'); currentUserData = null; }
 
         function escapeHtml(text) {
             if (!text) return '';
-            return text.replace(/[&<>]/g, function(m) {
-                if (m === '&') return '&amp;';
-                if (m === '<') return '&lt;';
-                if (m === '>') return '&gt;';
-                return m;
-            });
+            return text.replace(/[&<>]/g, m => m === '&' ? '&amp;' : (m === '<' ? '&lt;' : '&gt;'));
         }
 
+        // ========== РАССЫЛКА ==========
+        function updateBroadcastStatus() {
+            fetch(`/api/admin/broadcast/status?key=${adminKey}`).then(res => res.json()).then(data => {
+                if (data.success) {
+                    const statusDiv = document.getElementById('broadcastStatus');
+                    const progressBar = document.getElementById('broadcastProgressBar');
+                    const progressText = document.getElementById('broadcastProgressText');
+                    const sentSpan = document.getElementById('broadcastSent');
+                    const failedSpan = document.getElementById('broadcastFailed');
+                    const totalSpan = document.getElementById('broadcastTotal');
+                    if (data.in_progress) {
+                        statusDiv.style.display = 'block';
+                        const percent = data.total > 0 ? (data.sent / data.total) * 100 : 0;
+                        if (progressBar) progressBar.style.width = percent + '%';
+                        if (progressText) progressText.innerText = `${data.sent} / ${data.total}`;
+                        if (sentSpan) sentSpan.innerText = data.sent;
+                        if (failedSpan) failedSpan.innerText = data.failed;
+                        if (totalSpan) totalSpan.innerText = data.total;
+                    } else if (statusDiv.style.display === 'block') {
+                        setTimeout(() => { statusDiv.style.display = 'none'; }, 3000);
+                    }
+                }
+            }).catch(e => console.error('Status error:', e));
+        }
+
+        setInterval(updateBroadcastStatus, 2000);
+
+        // Показ/скрытие настроек
+        document.getElementById('broadcastHasButton')?.addEventListener('change', (e) => {
+            document.getElementById('broadcastButtonSettings').style.display = e.target.checked ? 'block' : 'none';
+        });
+        document.getElementById('broadcastTestMode')?.addEventListener('change', (e) => {
+            document.getElementById('broadcastTestSettings').style.display = e.target.checked ? 'block' : 'none';
+        });
+
+        async function startBroadcast(isTest = false) {
+            const message = document.getElementById('broadcastMessage').value.trim();
+            if (!message) { alert('Введите текст сообщения'); return; }
+            const hasButton = document.getElementById('broadcastHasButton').checked;
+            const buttonText = document.getElementById('broadcastButtonText').value.trim();
+            const buttonUrl = document.getElementById('broadcastButtonUrl').value.trim();
+            const testMode = isTest || document.getElementById('broadcastTestMode').checked;
+            const testUserId = document.getElementById('broadcastTestUserId').value;
+            if (hasButton && (!buttonText || !buttonUrl)) { alert('Заполните текст и ссылку для кнопки'); return; }
+            if (testMode && !testUserId && !isTest) { alert('Введите ID пользователя для теста'); return; }
+            const totalUsersSpan = document.getElementById('broadcastTotal');
+            const totalUsers = totalUsersSpan ? totalUsersSpan.innerText : '?';
+            if (!confirm(testMode ? `🧪 Отправить ТЕСТОВОЕ сообщение пользователю ${testUserId || 'себе'}?` : `⚠️ ВНИМАНИЕ! Сообщение получит ВСЕ ${totalUsers} пользователей! Продолжить?`)) return;
+            const btn = document.getElementById('startBroadcastBtn');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '⏳ Запуск...';
+            try {
+                const response = await fetch(`/api/admin/broadcast?key=${adminKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: message, parse_mode: 'HTML', has_button: hasButton, button_text: buttonText, button_url: buttonUrl, is_test: testMode, test_user_id: testMode ? (testUserId || null) : null })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    alert('✅ ' + data.message);
+                    if (!testMode) {
+                        document.getElementById('broadcastMessage').value = '';
+                        document.getElementById('broadcastHasButton').checked = false;
+                        document.getElementById('broadcastButtonSettings').style.display = 'none';
+                        document.getElementById('broadcastTestMode').checked = false;
+                        document.getElementById('broadcastTestSettings').style.display = 'none';
+                    }
+                } else alert('❌ Ошибка: ' + data.error);
+            } catch(e) { alert('❌ Ошибка: ' + e.message); }
+            finally { btn.disabled = false; btn.textContent = originalText; }
+        }
+
+        document.getElementById('startBroadcastBtn')?.addEventListener('click', () => startBroadcast(false));
+        document.getElementById('testBroadcastBtn')?.addEventListener('click', () => startBroadcast(true));
+        document.getElementById('cancelBroadcastBtn')?.addEventListener('click', async () => {
+            if (!confirm('Остановить рассылку?')) return;
+            try {
+                const response = await fetch(`/api/admin/broadcast/cancel?key=${adminKey}`, { method: 'POST' });
+                const data = await response.json();
+                if (data.success) alert('✅ Рассылка остановлена');
+                else alert('❌ Ошибка: ' + data.error);
+            } catch(e) { alert('❌ Ошибка'); }
+        });
+
+        // ========== ИНИЦИАЛИЗАЦИЯ ==========
         document.addEventListener('DOMContentLoaded', function() {
-            const setPoolBtn = document.getElementById('setPoolBtn');
-            if (setPoolBtn) setPoolBtn.onclick = openPoolModal;
-            const createPromoBtn = document.getElementById('createPromoBtn');
-            if (createPromoBtn) createPromoBtn.onclick = openPromoModal;
-            const createTaskBtn = document.getElementById('createTaskBtn');
-            if (createTaskBtn) createTaskBtn.onclick = openCreateTaskModal;
+            document.getElementById('setPoolBtn')?.addEventListener('click', openPoolModal);
+            document.getElementById('createPromoBtn')?.addEventListener('click', openPromoModal);
+            document.getElementById('createTaskBtn')?.addEventListener('click', openCreateTaskModal);
 
             document.querySelectorAll('.period-btn').forEach(btn => {
-                btn.onclick = () => {
+                btn.addEventListener('click', () => {
                     if (btn.dataset.period) {
                         document.querySelectorAll('[data-period]').forEach(b => b.classList.remove('active'));
                         currentPeriod = btn.dataset.period;
@@ -2409,36 +2016,27 @@ async function manageEnergyUpgrades(action, amount, giveReward) {
                         btn.classList.add('active');
                         loadChart();
                     }
-                };
+                });
             });
 
             document.querySelectorAll('.nav-item').forEach(item => {
-                item.onclick = () => {
+                item.addEventListener('click', () => {
                     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
                     item.classList.add('active');
                     const page = item.dataset.page;
                     document.querySelectorAll('.page-content').forEach(p => p.style.display = 'none');
                     const pageContent = document.getElementById(`page-${page}`);
                     if (pageContent) pageContent.style.display = 'block';
-                    const titles = {
-                        dashboard: '📊 Статистика сервера',
-                        charts: '📈 Графики и аналитика',
-                        lottery: '🎲 Управление лотереей',
-                        tasks: '📋 Управление заданиями',
-                        promocodes: '🎫 Управление промокодами',
-                        withdrawals: '💸 Заявки на вывод USDT',
-                        logs: '📋 Системные логи',
-                        players: '👥 Управление игроками'
-                    };
-                    const pageTitle = document.getElementById('pageTitle');
-                    if (pageTitle) pageTitle.innerText = titles[page];
+                    const titles = { dashboard: '📊 Статистика сервера', charts: '📈 Графики и аналитика', lottery: '🎲 Управление лотереей', tasks: '📋 Управление заданиями', promocodes: '🎫 Управление промокодами', withdrawals: '💸 Заявки на вывод USDT', logs: '📋 Системные логи', broadcast: '📢 Массовая рассылка', players: '👥 Управление игроками' };
+                    document.getElementById('pageTitle').innerText = titles[page];
                     if (page === 'lottery') loadLotteryStats();
                     if (page === 'tasks') loadTasks();
                     if (page === 'logs') loadLogs(1);
                     if (page === 'charts') loadChart();
                     if (page === 'withdrawals') loadWithdrawals();
                     if (page === 'promocodes') loadPromoCodes();
-                };
+                    if (page === 'broadcast') updateBroadcastStatus();
+                });
             });
 
             loadStats();
@@ -2446,14 +2044,10 @@ async function manageEnergyUpgrades(action, amount, giveReward) {
             loadTasks();
             setInterval(loadStats, 30000);
             setInterval(() => {
-                const pageLogs = document.getElementById('page-logs');
-                const pageWithdrawals = document.getElementById('page-withdrawals');
-                const pagePromocodes = document.getElementById('page-promocodes');
-                const pageTasks = document.getElementById('page-tasks');
-                if (pageLogs && pageLogs.style.display !== 'none') loadLogs(currentLogPage);
-                if (pageWithdrawals && pageWithdrawals.style.display !== 'none') loadWithdrawals();
-                if (pagePromocodes && pagePromocodes.style.display !== 'none') loadPromoCodes();
-                if (pageTasks && pageTasks.style.display !== 'none') loadTasks();
+                if (document.getElementById('page-logs')?.style.display !== 'none') loadLogs(currentLogPage);
+                if (document.getElementById('page-withdrawals')?.style.display !== 'none') loadWithdrawals();
+                if (document.getElementById('page-promocodes')?.style.display !== 'none') loadPromoCodes();
+                if (document.getElementById('page-tasks')?.style.display !== 'none') loadTasks();
             }, 10000);
         });
     </script>
