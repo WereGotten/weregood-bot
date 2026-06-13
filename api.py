@@ -1540,15 +1540,25 @@ def register_routes(app, socketio):
         if not data:
             return jsonify({"success": True, "prefixes": [
                 {"id": "player", "name": "Игрок", "icon": "🎮", "desc": "Выдаётся абсолютно всем игрокам",
-                 "color": "player"}], "current": "player"}), 400
+                 "color": "player"}
+            ], "current": "player"}), 400
+
         user_id = data.get('user_id')
         is_valid, user_id = validate_user_id(user_id)
         if not is_valid:
             return jsonify({"success": True, "prefixes": [
                 {"id": "player", "name": "Игрок", "icon": "🎮", "desc": "Выдаётся абсолютно всем игрокам",
-                 "color": "player"}], "current": "player"}), 400
+                 "color": "player"}
+            ], "current": "player"}), 400
+
         user = get_user(user_id)
         unlocked = user.get('unlocked_prefixes', ['player'])
+
+        # Убедись, что legend есть в unlocked если роль legend
+        if user.get('role') == 'legend' and 'legend' not in unlocked:
+            unlocked.append('legend')
+            safe_update_user(user_id, unlocked_prefixes=unlocked)
+
         all_prefixes = {
             "player": {"name": "Игрок", "icon": "🎮", "desc": "Выдаётся абсолютно всем игрокам", "color": "player"},
             "pioneer": {"name": "Первооткрыватель", "icon": "⭐", "desc": "За регистрацию в первый день",
@@ -1556,7 +1566,9 @@ def register_routes(app, socketio):
             "founder": {"name": "Основатель", "icon": "👑", "desc": "Основатель проекта", "color": "founder"},
             "legend": {"name": "Легенда", "icon": "👑", "desc": "Топ-5 по достижениям", "color": "legend"}
         }
+
         prefixes = [{"id": pid, **all_prefixes[pid]} for pid in unlocked if pid in all_prefixes]
+
         return jsonify({"success": True, "prefixes": prefixes, "current": user['role']})
 
     @app.route('/api/change_prefix', methods=['POST'])

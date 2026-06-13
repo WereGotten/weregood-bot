@@ -2061,33 +2061,48 @@
     };
 
     async function loadAvailablePrefixes() {
-        try {
-            let res = await fetch('/api/get_available_prefixes', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: userId })
-            });
-            let data = await res.json();
-            if (data.success) {
-                availablePrefixes = data.prefixes;
-            } else {
-                throw new Error('API error');
+    try {
+        let res = await fetch('/api/get_available_prefixes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId })
+        });
+        let data = await res.json();
+        if (data.success && data.prefixes && data.prefixes.length > 0) {
+            availablePrefixes = data.prefixes;
+            renderPrefixList();
+            return;
+        }
+        throw new Error('No prefixes from server');
+    } catch(e) {
+        console.error('Error loading prefixes from server:', e);
+        // Фолбэк — показываем префиксы на основе локальной роли
+        const allPrefixes = [
+            { id: 'player', name: 'Игрок', icon: '🎮', desc: 'Выдаётся абсолютно всем игрокам', color: 'player' },
+            { id: 'pioneer', name: 'Первооткрыватель', icon: '⭐', desc: 'Выдавался игрокам которые зарегистрировались в первые 24ч', color: 'pioneer' },
+            { id: 'founder', name: 'Основатель', icon: '👑', desc: 'Основатель проекта', color: 'founder' },
+            { id: 'legend', name: 'Легенда', icon: '👑', desc: 'Топ-5 по достижениям', color: 'legend' }
+        ];
+
+        availablePrefixes = [];
+        for (const prefix of allPrefixes) {
+            if (prefix.id === 'player') {
+                availablePrefixes.push(prefix);
+            } else if (prefix.id === 'pioneer' && (localRole === 'pioneer' || localRole === 'founder' || localRole === 'legend')) {
+                availablePrefixes.push(prefix);
+            } else if (prefix.id === 'founder' && localRole === 'founder') {
+                availablePrefixes.push(prefix);
+            } else if (prefix.id === 'legend' && localRole === 'legend') {
+                availablePrefixes.push(prefix);
             }
-        } catch(e) {
-            availablePrefixes = [
-                { id: 'player', name: 'Игрок', icon: '🎮', desc: 'Выдаётся абсолютно всем игрокам', color: 'player' },
-                { id: 'pioneer', name: 'Первооткрыватель', icon: '⭐', desc: 'Выдавался игрокам которые зарегистрировались в первые 24ч', color: 'pioneer' },
-                { id: 'founder', name: 'Основатель', icon: '👑', desc: 'Основатель проекта', color: 'founder' }
-            ];
-            availablePrefixes = availablePrefixes.filter(p => {
-                if (p.id === 'player') return true;
-                if (p.id === 'pioneer') return localRole === 'pioneer' || localRole === 'founder';
-                if (p.id === 'founder') return localRole === 'founder';
-                return false;
-            });
+        }
+
+        if (availablePrefixes.length === 0) {
+            availablePrefixes = [allPrefixes[0]]; // хотя бы "Игрок"
         }
         renderPrefixList();
     }
+}
 
     function renderPrefixList() {
         const container = document.getElementById('prefixList');
