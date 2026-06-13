@@ -656,11 +656,9 @@ def register_routes(app, socketio):
             return jsonify({"success": False, "msg": f"Вы забанены! {ban_info['reason']}"}), 403
 
         # ✅ 1. ОБНОВЛЯЕМ ДАННЫЕ ЛОТЕРЕИ ИЗ БД ПЕРЕД ПРОВЕРКОЙ
-        from lottery import refresh_lottery_data, lottery_pool, lottery_tickets, is_drawn
         refresh_lottery_data()
 
-        print(
-            f"🎫 Покупка билета: user_id={user_id}, is_drawn={is_drawn}, pool={lottery_pool}, tickets_count={len(lottery_tickets)}")
+        print(f"🎫 Покупка билета: user_id={user_id}, is_drawn={is_drawn}, pool={lottery_pool}, tickets_count={len(lottery_tickets)}")
 
         if is_drawn:
             response = jsonify({
@@ -701,7 +699,6 @@ def register_routes(app, socketio):
             return response, 400
 
         # ✅ 2. ПОКУПАЕМ БИЛЕТ
-        from lottery import buy_ticket
         success, msg = buy_ticket(user_id, user)
 
         print(f"🎫 Результат покупки: success={success}, msg={msg}")
@@ -711,16 +708,13 @@ def register_routes(app, socketio):
             refresh_lottery_data()
 
             # Небольшая задержка для гарантии синхронизации
-            import time
             time.sleep(0.1)
             refresh_lottery_data()
 
             # ✅ 4. ПОЛУЧАЕМ АКТУАЛЬНЫЕ ДАННЫЕ ИЗ ГЛОБАЛЬНЫХ ПЕРЕМЕННЫХ
-            from lottery import lottery_pool, lottery_tickets
             user_tickets_count = len([t for t in lottery_tickets if t.get("user_id") == user_id])
 
-            print(
-                f"🎫 После покупки: pool={lottery_pool}, user_tickets={user_tickets_count}, total_tickets={len(lottery_tickets)}")
+            print(f"🎫 После покупки: pool={lottery_pool}, user_tickets={user_tickets_count}, total_tickets={len(lottery_tickets)}")
 
             # ✅ 5. ВОЗВРАЩАЕМ ПОЛНЫЙ ОТВЕТ С АНТИКЭШ ЗАГОЛОВКАМИ
             result = {
@@ -747,7 +741,8 @@ def register_routes(app, socketio):
 
     @app.route('/api/lottery_status', methods=['POST'])
     def api_lottery_status():
-        from lottery import get_lottery_status
+        # ✅ Обновляем данные перед отправкой
+        refresh_lottery_data()
 
         data = request.json
         if not data:
@@ -760,7 +755,9 @@ def register_routes(app, socketio):
 
         result = get_lottery_status(user_id)
 
-        # ✅ ОТКЛЮЧАЕМ КЭШИРОВАНИЕ
+        # Добавляем версию для отслеживания изменений
+        result['_version'] = int(time.time())
+
         response = jsonify(result)
         response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
         response.headers['Pragma'] = 'no-cache'
@@ -815,8 +812,6 @@ def register_routes(app, socketio):
 
     @app.route('/api/reveal_ticket_cells', methods=['POST'])
     def api_reveal_ticket_cells():
-        from lottery import refresh_lottery_data, is_drawn, reveal_cell, lottery_tickets, save_lottery
-
         data = request.json
         if not data:
             return jsonify({"success": False, "message": "No data"}), 400
@@ -825,7 +820,6 @@ def register_routes(app, socketio):
         ticket_number = data.get('ticket_number')
         cell_index = data.get('cell_index')
 
-        # Добавляем подробное логирование
         print(f"🔍 [reveal_ticket_cells] Запрос: user={user_id}, ticket={ticket_number}, cell_index={cell_index}")
 
         if not user_id or ticket_number is None:
@@ -843,7 +837,6 @@ def register_routes(app, socketio):
         if cell_index is not None and 0 <= cell_index < 12:
             print(f"🔍 [reveal_ticket_cells] Открываем клетку {cell_index} билета {ticket_number}")
 
-            # Ищем билет
             for ticket in lottery_tickets:
                 if ticket.get("number") == ticket_number and ticket.get("user_id") == user_id:
                     if ticket["revealed"][cell_index]:
@@ -1044,7 +1037,7 @@ def register_routes(app, socketio):
                     avatar = '👤'
                 else:
                     display_name = f"@{row['username']}" if row['username'] else (
-                                row['first_name'] or f"Player_{row['user_id']}")
+                            row['first_name'] or f"Player_{row['user_id']}")
                     avatar = row['avatar_url'] or '👤'
                 result.append({
                     "rank": i,
@@ -1752,6 +1745,7 @@ def register_routes(app, socketio):
             return jsonify({"success": False, "msg": "Недостаточно USDT на балансе"})
         try:
             safe_update_user(user_id, usdt=user['usdt'] - amount)
+            # create_withdrawal_request_db
             created_at = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             with db.get_cursor() as cursor:
                 cursor.execute(
@@ -2364,6 +2358,9 @@ def register_routes(app, socketio):
 
     @app.route('/api/sync', methods=['POST'])
     def api_sync():
+        from lottery import refresh_lottery_data, lottery_pool, lottery_tickets, is_drawn, winning_numbers, lottery_phase
+
+        # ✅ ПРИНУДИТЕЛЬНО ОБНОВЛЯЕМ ДАННЫЕ ЛОТЕРЕИ ПЕРЕД ОТВЕТОМ
         refresh_lottery_data()
 
         data = request.json
@@ -2419,6 +2416,7 @@ def register_routes(app, socketio):
             "regen_text": regen_text
         }
 
+        # ✅ ФОРМИРУЕМ ДАННЫЕ ЛОТЕРЕИ ИЗ СВЕЖИХ ГЛОБАЛЬНЫХ ПЕРЕМЕННЫХ
         user_tickets = [t for t in lottery_tickets if t.get("user_id") == user_id]
         update_lottery_phase()
 
@@ -2435,6 +2433,7 @@ def register_routes(app, socketio):
         leaderboard_data = get_daily_leaderboard_top_fast(limit=5)
         recent_players = get_recent_players_fast(limit=5)
 
+        # ✅ АНТИКЭШ ЗАГОЛОВКИ
         response = jsonify({
             "success": True,
             "status": status_data,
@@ -2444,9 +2443,7 @@ def register_routes(app, socketio):
             "online_count": len(online_users),
             "server_time": time.time()
         })
-
         response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
         response.headers['Pragma'] = 'no-cache'
         response.headers['Expires'] = '0'
-
         return response
