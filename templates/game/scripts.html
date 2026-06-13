@@ -1090,66 +1090,131 @@
     };
 
     async function loadUserTickets() {
-        try {
-            let res = await fetch('/api/lottery_status', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: userId })
-            });
-            let data = await res.json();
-            if (data.tickets && data.tickets.length > 0) {
-                currentTickets = data.tickets;
-                updateCarousel();
-                updateTopPlayers();
-            } else {
-                currentTickets = [];
-                updateCarousel();
-            }
-            document.getElementById('totalTickets').innerText = currentTickets.length;
-            document.getElementById('totalTicketsMini').innerText = currentTickets.length;
-        } catch(e) {
-            console.error('Error loading tickets:', e);
+    console.log('🔄 loadUserTickets вызвана');
+    try {
+        let res = await fetch('/api/lottery_status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId })
+        });
+        let data = await res.json();
+
+        console.log('📊 loadUserTickets получила данные:', {
+            prize_pool: data.prize_pool,
+            user_tickets: data.user_tickets,
+            is_drawn: data.is_drawn,
+            tickets_count: data.tickets?.length
+        });
+
+        // Обновляем глобальный статус розыгрыша
+        if (data.is_drawn !== undefined) {
+            isDrawn = data.is_drawn;
+            winningNumbers = data.winning_numbers || [];
+            updateDrawUI();
         }
+
+        // Обновляем отображение фонда
+        const prizePoolEl = document.getElementById('prizePool');
+        if (prizePoolEl && data.prize_pool !== undefined) {
+            prizePoolEl.innerText = data.prize_pool.toFixed(2);
+        }
+
+        // Обновляем количество билетов
+        const ticketsCount = data.user_tickets || 0;
+        const ticketsCountEl = document.getElementById('ticketsCount');
+        if (ticketsCountEl) ticketsCountEl.innerText = ticketsCount;
+
+        const totalTicketsEl = document.getElementById('totalTickets');
+        if (totalTicketsEl) totalTicketsEl.innerText = ticketsCount;
+
+        const totalTicketsMiniEl = document.getElementById('totalTicketsMini');
+        if (totalTicketsMiniEl) totalTicketsMiniEl.innerText = ticketsCount;
+
+        // Обновляем LP в лотерейном блоке
+        const lotteryLPEl = document.getElementById('lotteryLPBalance');
+        if (lotteryLPEl && data.user_lp !== undefined) {
+            lotteryLPEl.innerText = data.user_lp;
+        }
+
+        // КРИТИЧЕСКИ ВАЖНО: обновляем массив билетов и карусель
+        if (data.tickets && data.tickets.length > 0) {
+            currentTickets = data.tickets;
+            console.log('📋 Обновляем карусель, билетов:', currentTickets.length);
+            if (typeof updateCarousel === 'function') {
+                updateCarousel();
+            } else {
+                console.warn('updateCarousel не определена');
+            }
+        } else {
+            currentTickets = [];
+            const container = document.getElementById('ticketsContainer');
+            if (container) {
+                container.innerHTML = '<div class="empty-state">😢 У вас пока нет билетов</div>';
+            }
+        }
+
+        // Обновляем топ игроков если розыгрыш идёт
+        if (isDrawn && typeof updateTopPlayers === 'function') {
+            updateTopPlayers();
+        }
+
+    } catch(e) {
+        console.error('Error loading tickets:', e);
     }
+}
 
     function updateCarousel() {
-        const container = document.getElementById('ticketsContainer');
-        if (!container) return;
-        if (currentTickets.length === 0) {
-            container.innerHTML = '<div class="empty-state">😢 У вас пока нет билетов</div>';
-            return;
-        }
-        let slidesHtml = '';
-        currentTickets.forEach((ticket, idx) => {
-            slidesHtml += `<div class="ticket-slide" data-index="${idx}">${renderTicketForCarousel(ticket)}</div>`;
-        });
-        container.innerHTML = slidesHtml;
-        let dotsHtml = '';
-        currentTickets.forEach((_, idx) => {
-            dotsHtml += `<div class="carousel-dot ${idx === currentTicketIndex ? 'active' : ''}" onclick="goToTicket(${idx})"></div>`;
-        });
-        document.getElementById('carouselDots').innerHTML = dotsHtml;
-        const allSlides = document.querySelectorAll('.ticket-slide');
-        allSlides.forEach((slide, idx) => {
-            if (currentTickets[idx]) initSlideCanvases(slide, currentTickets[idx]);
-        });
-        let scrollTimeout, lastScrollTime = 0;
-        container.onscroll = () => {
-            const now = Date.now();
-            if (now - lastScrollTime < 150) return;
-            lastScrollTime = now;
-            if (scrollTimeout) clearTimeout(scrollTimeout);
-            scrollTimeout = setTimeout(() => {
-                const scrollLeft = container.scrollLeft;
-                const slideWidth = container.clientWidth;
-                const newIndex = Math.round(scrollLeft / slideWidth);
-                if (newIndex !== currentTicketIndex && newIndex >= 0 && newIndex < currentTickets.length) {
-                    currentTicketIndex = newIndex;
-                    document.querySelectorAll('.carousel-dot').forEach((dot, i) => dot.classList.toggle('active', i === currentTicketIndex));
-                }
-            }, 200);
-        };
+    const container = document.getElementById('ticketsContainer');
+    if (!container) {
+        console.warn('ticketsContainer не найден');
+        return;
     }
+
+    console.log('🎨 updateCarousel, билетов:', currentTickets.length);
+
+    if (currentTickets.length === 0) {
+        container.innerHTML = '<div class="empty-state">😢 У вас пока нет билетов</div>';
+        document.getElementById('carouselDots').innerHTML = '';
+        return;
+    }
+
+    let slidesHtml = '';
+    currentTickets.forEach((ticket, idx) => {
+        slidesHtml += `<div class="ticket-slide" data-index="${idx}">${renderTicketForCarousel(ticket)}</div>`;
+    });
+    container.innerHTML = slidesHtml;
+
+    let dotsHtml = '';
+    currentTickets.forEach((_, idx) => {
+        dotsHtml += `<div class="carousel-dot ${idx === currentTicketIndex ? 'active' : ''}" onclick="goToTicket(${idx})"></div>`;
+    });
+    document.getElementById('carouselDots').innerHTML = dotsHtml;
+
+    // Инициализируем canvas для каждого билета
+    const allSlides = document.querySelectorAll('.ticket-slide');
+    allSlides.forEach((slide, idx) => {
+        if (currentTickets[idx]) {
+            initSlideCanvases(slide, currentTickets[idx]);
+        }
+    });
+
+    // Настраиваем скролл
+    let scrollTimeout;
+    container.onscroll = () => {
+        if (scrollTimeout) clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(() => {
+            const scrollLeft = container.scrollLeft;
+            const slideWidth = container.clientWidth;
+            const newIndex = Math.round(scrollLeft / slideWidth);
+            if (newIndex !== currentTicketIndex && newIndex >= 0 && newIndex < currentTickets.length) {
+                currentTicketIndex = newIndex;
+                document.querySelectorAll('.carousel-dot').forEach((dot, i) => {
+                    dot.classList.toggle('active', i === currentTicketIndex);
+                });
+            }
+        }, 100);
+    };
+}
 
     window.goToTicket = (index) => {
         const container = document.getElementById('ticketsContainer');
