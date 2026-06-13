@@ -1442,12 +1442,11 @@
         let data = await res.json();
         console.log('📡 Ответ сервера (открыть всё):', data);
 
-        // ✅ ИСПРАВЛЕНИЕ: проверяем и message, и msg
         if (data.success) {
             const msg = data.message || data.msg;
             showToast(msg || 'Все клетки открыты!', 'success');
 
-            // ✅ Обновляем локальный массив сразу
+            // ✅ ОБНОВЛЯЕМ ЛОКАЛЬНЫЙ МАССИВ СРАЗУ
             for (let ticket of currentTickets) {
                 if (ticket.number === ticketNumber) {
                     for (let i = 0; i < 12; i++) {
@@ -1457,14 +1456,8 @@
                 }
             }
             updateCarousel();
-            updateTopPlayers();
 
-            // ✅ Принудительно сохраняем в БД через сервер (уже сохранено)
-            // Просто обновляем данные через секунду
-            setTimeout(() => {
-                syncData(true);
-                loadUserTickets();
-            }, 500);
+            // ❌ НЕ ВЫЗЫВАЕМ syncData И loadUserTickets!
 
         } else {
             const errorMsg = data.message || data.msg || 'Ошибка при открытии клеток';
@@ -1618,7 +1611,6 @@
 
     console.log(`💥 Стёрто ${targetCanvas.erasedPercent.toFixed(1)}% клетки ${cIdx} билета ${tNum}`);
 
-    // ⚠️ ВАЖНО: порог открытия — 50% (было 60)
     if (targetCanvas.erasedPercent >= 50 && !targetCanvas.isRevealed) {
         console.log(`✅🔓 ПОРОГ ДОСТИГНУТ! Отправляем запрос на открытие клетки ${cIdx} билета ${tNum}`);
 
@@ -1650,17 +1642,17 @@
 
                 if (navigator.vibrate) navigator.vibrate(30);
                 showToast(`Клетка ${cellNumber} открыта! 🎉`, 'success');
-                updateTopPlayers();
 
-                // Обновляем локальный массив билетов
-                if (currentTickets && currentTickets.length > 0) {
-                    for (let ticket of currentTickets) {
-                        if (ticket.number === tNum) {
-                            ticket.revealed[cIdx] = true;
-                            break;
-                        }
+                // ✅ ОБНОВЛЯЕМ ЛОКАЛЬНЫЙ МАССИВ СРАЗУ, БЕЗ ЗАПРОСА К СЕРВЕРУ
+                for (let ticket of currentTickets) {
+                    if (ticket.number === tNum) {
+                        ticket.revealed[cIdx] = true;
+                        break;
                     }
                 }
+
+                // ❌ НЕ ВЫЗЫВАЕМ loadUserTickets() И syncData() ЗДЕСЬ!
+                // updateTopPlayers(); // можно вызвать, но осторожно
             } else {
                 console.log('❌ Сервер не подтвердил открытие:', data.message);
             }
