@@ -288,63 +288,96 @@
     const SYNC_DELAY = 5000;
 
     async function syncData(force = false) {
-        if (isSyncing) return;
-        const now = Date.now();
-        if (!force && now - lastSyncTime < SYNC_DELAY) return;
-        isSyncing = true;
-        lastSyncTime = now;
-        try {
-            const response = await fetch('/api/sync', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: userId }),
-                signal: AbortSignal.timeout(5000)
-            });
-            if (!response.ok) throw new Error('Sync failed');
-            const data = await response.json();
-            if (!data.success || !data.status) {
-                console.error('Sync error: invalid response');
-                return;
-            }
-            const status = data.status;
-            localWG = status.wg || 0;
-            localLP = status.lp || 0;
-            localEnergy = status.energy || 0;
-            localClicks = status.total_clicks || 0;
-            localEarning = status.earning_per_click || 0.01;
-            localUSDT = status.usdt || 0;
-            localWins = status.wins || 0;
-            localRole = status.role || 'player';
-            localStars = status.stars || 0;
-            localMaxEnergy = status.max_energy || 500;
-            localEnergyUpgrades = status.energy_upgrades || 0;
-            if (status.upgrade_counts) {
-                upgradeCounts = status.upgrade_counts;
-                for (let i = 1; i <= 3; i++) {
-                    upgradeCosts[i] = getUpgradeCost(i, upgradeCounts[i] || 0);
-                }
-            }
-            if (data.lottery) {
-                if (data.lottery.is_drawn !== undefined) {
-                    isDrawn = data.lottery.is_drawn;
-                    winningNumbers = data.lottery.winning_numbers || [];
-                    updateDrawUI();
-                }
-            }
-            if (data.leaderboard && data.leaderboard.length > 0) {
-                updateLeaderboardMiniFast(data.leaderboard);
-            }
-            if (data.recent_players && data.recent_players.length > 0) {
-                updateRecentPlayersFast(data.recent_players);
-            }
-            updateUI();
-        } catch(e) {
-            console.error('Sync error:', e);
-            setTimeout(() => syncData(true), 5000);
-        } finally {
-            isSyncing = false;
+    if (isSyncing) return;
+    const now = Date.now();
+    if (!force && now - lastSyncTime < SYNC_DELAY) return;
+    isSyncing = true;
+    lastSyncTime = now;
+    try {
+        const response = await fetch('/api/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId }),
+            signal: AbortSignal.timeout(5000)
+        });
+        if (!response.ok) throw new Error('Sync failed');
+        const data = await response.json();
+        if (!data.success || !data.status) {
+            console.error('Sync error: invalid response');
+            return;
         }
+        const status = data.status;
+        localWG = status.wg || 0;
+        localLP = status.lp || 0;
+        localEnergy = status.energy || 0;
+        localClicks = status.total_clicks || 0;
+        localEarning = status.earning_per_click || 0.01;
+        localUSDT = status.usdt || 0;
+        localWins = status.wins || 0;
+        localRole = status.role || 'player';
+        localStars = status.stars || 0;
+        localMaxEnergy = status.max_energy || 500;
+        localEnergyUpgrades = status.energy_upgrades || 0;
+        if (status.upgrade_counts) {
+            upgradeCounts = status.upgrade_counts;
+            for (let i = 1; i <= 3; i++) {
+                upgradeCosts[i] = getUpgradeCost(i, upgradeCounts[i] || 0);
+            }
+        }
+
+        // ========== ПОЛНОЕ ОБНОВЛЕНИЕ ЛОТЕРЕИ ==========
+        if (data.lottery) {
+            // Обновляем статус розыгрыша
+            if (data.lottery.is_drawn !== undefined) {
+                isDrawn = data.lottery.is_drawn;
+                winningNumbers = data.lottery.winning_numbers || [];
+                updateDrawUI();
+            }
+
+            // Обновляем призовой фонд
+            const prizePoolEl = document.getElementById('prizePool');
+            if (prizePoolEl && data.lottery.prize_pool !== undefined) {
+                prizePoolEl.innerText = data.lottery.prize_pool.toFixed(2);
+                window.lotteryPool = data.lottery.prize_pool;
+            }
+
+            // Обновляем количество билетов у пользователя
+            if (data.lottery.user_tickets !== undefined) {
+                const ticketsCountEl = document.getElementById('ticketsCount');
+                if (ticketsCountEl) ticketsCountEl.innerText = data.lottery.user_tickets;
+                const totalTicketsEl = document.getElementById('totalTickets');
+                if (totalTicketsEl) totalTicketsEl.innerText = data.lottery.user_tickets;
+                const totalTicketsMiniEl = document.getElementById('totalTicketsMini');
+                if (totalTicketsMiniEl) totalTicketsMiniEl.innerText = data.lottery.user_tickets;
+            }
+
+            // Обновляем список билетов пользователя
+            if (data.lottery.tickets) {
+                currentTickets = data.lottery.tickets;
+                if (typeof updateCarousel === 'function') {
+                    updateCarousel();
+                }
+                if (typeof updateTopPlayers === 'function') {
+                    updateTopPlayers();
+                }
+            }
+        }
+        // ==============================================
+
+        if (data.leaderboard && data.leaderboard.length > 0) {
+            updateLeaderboardMiniFast(data.leaderboard);
+        }
+        if (data.recent_players && data.recent_players.length > 0) {
+            updateRecentPlayersFast(data.recent_players);
+        }
+        updateUI();
+    } catch(e) {
+        console.error('Sync error:', e);
+        setTimeout(() => syncData(true), 5000);
+    } finally {
+        isSyncing = false;
     }
+}
 
     function updateLeaderboardMiniFast(leaderboardData) {
         const container = document.getElementById('leaderboardMini');
