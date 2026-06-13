@@ -128,8 +128,18 @@ def refresh_lottery_data():
 
 
 def save_lottery():
-    """Сохранение лотереи в БД"""
+    global lottery_pool, lottery_tickets, global_ticket_counter, winning_numbers, is_drawn, draw_time, lottery_phase
+
     try:
+        # ✅ КОНВЕРТИРУЕМ revealed В СПИСОК БУЛЕВЫХ ЗНАЧЕНИЙ ПЕРЕД СОХРАНЕНИЕМ
+        tickets_to_save = []
+        for ticket in lottery_tickets:
+            ticket_copy = ticket.copy()
+            # Убеждаемся что revealed - список булевых значений
+            if 'revealed' in ticket_copy:
+                ticket_copy['revealed'] = [bool(r) for r in ticket_copy['revealed']]
+            tickets_to_save.append(ticket_copy)
+
         with db.get_cursor() as cursor:
             cursor.execute("""
                 UPDATE lottery 
@@ -137,18 +147,22 @@ def save_lottery():
                     winning_numbers=?, is_drawn=?, draw_time=?, lottery_phase=?
                 WHERE id=1
             """, (
-                lottery_pool,
-                json.dumps(lottery_tickets),
-                global_ticket_counter,
+                float(lottery_pool),
+                json.dumps(tickets_to_save),
+                int(global_ticket_counter),
                 json.dumps(winning_numbers),
                 1 if is_drawn else 0,
                 draw_time.isoformat() if draw_time else None,
                 lottery_phase
             ))
-        print(f"💾 Лотерея сохранена: билетов={len(lottery_tickets)}, фонд={lottery_pool} USDT")
+
+        print(f"💾 Лотерея сохранена: билетов={len(lottery_tickets)}, фонд={lottery_pool}")
+        print(f"💾 revealed первого билета: {lottery_tickets[0]['revealed'] if lottery_tickets else 'нет'}")
         return True
     except Exception as e:
         print(f"❌ Ошибка сохранения лотереи: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 
@@ -267,50 +281,42 @@ def buy_ticket(user_id, user_data):
 
 def reveal_cell(user_id, ticket_number, cell_index):
     """Открытие конкретной клетки билета"""
-    global lottery_tickets, lottery_pool, global_ticket_counter, winning_numbers, is_drawn, draw_time, lottery_phase
+    global lottery_tickets, lottery_pool
 
     print(f"🔍 [reveal_cell] НАЧАЛО: user={user_id}, ticket={ticket_number}, cell={cell_index}")
 
-    # Принудительно обновляем данные из БД перед проверкой
+    # Принудительно обновляем данные из БД
     refresh_lottery_data()
-
-    print(f"🔍 [reveal_cell] is_drawn={is_drawn}")
 
     if not is_drawn:
         return False, "Розыгрыш ещё не начался!"
 
     # Ищем билет
-    ticket_index = -1
-    for idx, ticket in enumerate(lottery_tickets):
+    ticket_found = None
+    for ticket in lottery_tickets:
         if ticket.get("user_id") == user_id and ticket.get("number") == ticket_number:
-            ticket_index = idx
+            ticket_found = ticket
             break
 
-    if ticket_index == -1:
+    if not ticket_found:
         return False, "Билет не найден"
-
-    ticket = lottery_tickets[ticket_index]
 
     if cell_index < 0 or cell_index >= 12:
         return False, "Неверный индекс клетки"
 
-    if ticket["revealed"][cell_index]:
+    if ticket_found["revealed"][cell_index]:
         return False, "Клетка уже открыта"
 
     # Открываем клетку
-    ticket["revealed"][cell_index] = True
+    ticket_found["revealed"][cell_index] = True
 
-    # Сохраняем в БД
+    # ✅ КРИТИЧЕСКИ ВАЖНО: сохраняем в БД
     save_lottery()
 
-    # Обновляем глобальные переменные
+    # ✅ ЕЩЁ РАЗ обновляем глобальные переменные
     refresh_lottery_data()
 
-    revealed_count = sum(ticket["revealed"])
-    if revealed_count == 12:
-        update_achievement_progress(user_id, 'brave', 1)
-
-    print(f"✅ [reveal_cell] Клетка {cell_index} открыта, всего открыто: {revealed_count}/12")
+    print(f"✅ [reveal_cell] Клетка {cell_index} открыта!")
 
     return True, f"Клетка {cell_index + 1} открыта!"
 

@@ -743,7 +743,7 @@ def register_routes(app, socketio):
 
     @app.route('/api/lottery_status', methods=['POST'])
     def api_lottery_status():
-        # ✅ Обновляем данные перед отправкой
+        # ✅ ПРИНУДИТЕЛЬНО ОБНОВЛЯЕМ
         refresh_lottery_data()
 
         data = request.json
@@ -756,9 +756,6 @@ def register_routes(app, socketio):
             return jsonify({"error": "Invalid user_id"}), 400
 
         result = get_lottery_status(user_id)
-
-        # Добавляем версию для отслеживания изменений
-        result['_version'] = int(time.time())
 
         response = jsonify(result)
         response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
