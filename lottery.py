@@ -267,34 +267,52 @@ def buy_ticket(user_id, user_data):
 
 def reveal_cell(user_id, ticket_number, cell_index):
     """Открытие конкретной клетки билета"""
-    global lottery_tickets
+    global lottery_tickets, lottery_pool, global_ticket_counter, winning_numbers, is_drawn, draw_time, lottery_phase
 
-    with lottery_lock:
-        print(f"🔍 [reveal_cell] user={user_id}, ticket={ticket_number}, cell={cell_index}, is_drawn={is_drawn}")
+    print(f"🔍 [reveal_cell] НАЧАЛО: user={user_id}, ticket={ticket_number}, cell={cell_index}")
 
-        if not is_drawn:
-            return False, "Розыгрыш ещё не начался!"
+    # Принудительно обновляем данные из БД перед проверкой
+    refresh_lottery_data()
 
-        for ticket in lottery_tickets:
-            if ticket.get("user_id") == user_id and ticket.get("number") == ticket_number:
-                print(f"🔍 [reveal_cell] Найден билет, revealed={ticket['revealed']}")
+    print(f"🔍 [reveal_cell] is_drawn={is_drawn}")
 
-                if cell_index < 0 or cell_index >= 12:
-                    return False, "Неверный индекс клетки"
-                if ticket["revealed"][cell_index]:
-                    return False, "Клетка уже открыта"
+    if not is_drawn:
+        return False, "Розыгрыш ещё не начался!"
 
-                ticket["revealed"][cell_index] = True
-                save_lottery()
+    # Ищем билет
+    ticket_index = -1
+    for idx, ticket in enumerate(lottery_tickets):
+        if ticket.get("user_id") == user_id and ticket.get("number") == ticket_number:
+            ticket_index = idx
+            break
 
-                revealed_count = sum(ticket["revealed"])
-                if revealed_count == 12:
-                    update_achievement_progress(user_id, 'brave', 1)
-
-                print(f"✅ [reveal_cell] Клетка {cell_index} открыта, всего открыто: {revealed_count}/12")
-                return True, f"Клетка {cell_index + 1} открыта!"
-
+    if ticket_index == -1:
         return False, "Билет не найден"
+
+    ticket = lottery_tickets[ticket_index]
+
+    if cell_index < 0 or cell_index >= 12:
+        return False, "Неверный индекс клетки"
+
+    if ticket["revealed"][cell_index]:
+        return False, "Клетка уже открыта"
+
+    # Открываем клетку
+    ticket["revealed"][cell_index] = True
+
+    # Сохраняем в БД
+    save_lottery()
+
+    # Обновляем глобальные переменные
+    refresh_lottery_data()
+
+    revealed_count = sum(ticket["revealed"])
+    if revealed_count == 12:
+        update_achievement_progress(user_id, 'brave', 1)
+
+    print(f"✅ [reveal_cell] Клетка {cell_index} открыта, всего открыто: {revealed_count}/12")
+
+    return True, f"Клетка {cell_index + 1} открыта!"
 
 
 def reveal_all_tickets(user_id):

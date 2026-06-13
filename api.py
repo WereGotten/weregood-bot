@@ -25,7 +25,7 @@ from lottery import (
     lottery_pool, lottery_tickets, is_drawn, winning_numbers, lottery_phase,
     buy_ticket, reveal_all_tickets, save_lottery, update_lottery_phase,
     load_lottery, generate_ticket_numbers, lottery_lock, refresh_lottery_data,
-    get_lottery_status, reveal_cell
+    get_lottery_status  # ← reveal_cell УБРАН
 )
 from fortune import current_fortune_round, fortune_lock, restore_fortune_from_db, end_fortune_round
 from utils import (
@@ -814,6 +814,8 @@ def register_routes(app, socketio):
 
     @app.route('/api/reveal_ticket_cells', methods=['POST'])
     def api_reveal_ticket_cells():
+        from lottery import refresh_lottery_data, lottery_tickets, save_lottery, is_drawn
+
         data = request.json
         if not data:
             return jsonify({"success": False, "message": "No data"}), 400
@@ -834,28 +836,26 @@ def register_routes(app, socketio):
             return jsonify({"success": False, "message": "Розыгрыш ещё не начался!"}), 400
 
         # Ищем билет
-        ticket_index = -1
-        for idx, ticket in enumerate(lottery_tickets):
+        ticket_found = None
+        for ticket in lottery_tickets:
             if ticket.get("number") == ticket_number and ticket.get("user_id") == user_id:
-                ticket_index = idx
+                ticket_found = ticket
                 break
 
-        if ticket_index == -1:
+        if not ticket_found:
             return jsonify({"success": False, "message": "Билет не найден"}), 404
 
-        ticket = lottery_tickets[ticket_index]
-
-        # Открываем все клетки
-        if cell_index is None or cell_index == -1:
+        # Если cell_index == -1 — открываем все клетки
+        if cell_index == -1:
             revealed_count = 0
             for i in range(12):
-                if not ticket["revealed"][i]:
-                    ticket["revealed"][i] = True
+                if not ticket_found["revealed"][i]:
+                    ticket_found["revealed"][i] = True
                     revealed_count += 1
             if revealed_count > 0:
                 save_lottery()
                 refresh_lottery_data()
-                print(f"✅ Открыто {revealed_count} клеток билета {ticket_number}")
+                print(f"✅ Открыто {revealed_count} клеток")
                 return jsonify(
                     {"success": True, "message": f"Открыто {revealed_count} клеток", "revealed_count": revealed_count})
             return jsonify({"success": False, "message": "Все клетки уже открыты"}), 400
@@ -864,15 +864,14 @@ def register_routes(app, socketio):
         if cell_index < 0 or cell_index >= 12:
             return jsonify({"success": False, "message": f"Неверный индекс: {cell_index}"}), 400
 
-        if ticket["revealed"][cell_index]:
+        if ticket_found["revealed"][cell_index]:
             return jsonify({"success": False, "message": "Клетка уже открыта"}), 400
 
-        # Открываем клетку
-        ticket["revealed"][cell_index] = True
+        ticket_found["revealed"][cell_index] = True
         save_lottery()
         refresh_lottery_data()
 
-        print(f"✅ Клетка {cell_index} билета {ticket_number} ОТКРЫТА!")
+        print(f"✅ Клетка {cell_index} открыта!")
 
         return jsonify({
             "success": True,
