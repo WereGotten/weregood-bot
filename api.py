@@ -22,10 +22,9 @@ from models import (
     ALLOWED_UPDATE_FIELDS, user_cache, user_cache_time, CACHE_TTL
 )
 from lottery import (
-    lottery_pool, lottery_tickets, is_drawn, winning_numbers, lottery_phase,
+    lottery_pool, lottery_tickets, is_drawn,
     buy_ticket, reveal_all_tickets, save_lottery, update_lottery_phase,
-    load_lottery, generate_ticket_numbers, lottery_lock, refresh_lottery_data,
-    get_lottery_status  # ← reveal_cell УБРАН
+    lottery_lock, refresh_lottery_data, get_lottery_status
 )
 from fortune import current_fortune_round, fortune_lock, restore_fortune_from_db, end_fortune_round
 from utils import (
@@ -826,7 +825,7 @@ def register_routes(app, socketio):
         if not user_id or ticket_number is None:
             return jsonify({"success": False, "message": "Missing parameters"}), 400
 
-        # Обновляем данные
+        # Обновляем данные из БД
         refresh_lottery_data()
 
         if not is_drawn:
@@ -850,9 +849,10 @@ def register_routes(app, socketio):
                     ticket_found["revealed"][i] = True
                     revealed_count += 1
             if revealed_count > 0:
+                # ✅ КРИТИЧЕСКИ ВАЖНО: сохраняем в БД
                 save_lottery()
                 refresh_lottery_data()
-                print(f"✅ Открыто {revealed_count} клеток")
+                print(f"✅ Открыто {revealed_count} клеток, сохранено в БД")
                 return jsonify(
                     {"success": True, "message": f"Открыто {revealed_count} клеток", "revealed_count": revealed_count})
             return jsonify({"success": False, "message": "Все клетки уже открыты"}), 400
@@ -864,11 +864,16 @@ def register_routes(app, socketio):
         if ticket_found["revealed"][cell_index]:
             return jsonify({"success": False, "message": "Клетка уже открыта"}), 400
 
+        # ✅ ОТКРЫВАЕМ КЛЕТКУ
         ticket_found["revealed"][cell_index] = True
+
+        # ✅ КРИТИЧЕСКИ ВАЖНО: СОХРАНЯЕМ В БД
         save_lottery()
+
+        # ✅ ОБНОВЛЯЕМ ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
         refresh_lottery_data()
 
-        print(f"✅ Клетка {cell_index} открыта!")
+        print(f"✅ Клетка {cell_index} открыта и сохранена в БД!")
 
         return jsonify({
             "success": True,
