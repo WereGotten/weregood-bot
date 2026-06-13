@@ -1212,27 +1212,32 @@
 
     // ========== ОСНОВНАЯ ФУНКЦИЯ ЗАГРУЗКИ БИЛЕТОВ С ЗАЩИТОЙ ОТ СТИРАНИЯ ==========
     async function loadUserTickets() {
-        // НЕ перезагружаем билеты если идет активное стирание!
-        if (isScratchingActive) {
-            console.log('⏳ Стирание активно, пропускаем перезагрузку билетов');
-            return;
-        }
+    if (isScratchingActive) {
+        console.log('⏳ Стирание активно, пропускаем перезагрузку билетов');
+        return;
+    }
 
-        console.log('🔄 loadUserTickets вызвана');
-        try {
-            let res = await fetch('/api/lottery_status', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: userId })
-            });
-            let data = await res.json();
+    console.log('🔄 loadUserTickets вызвана');
+    try {
+        // ✅ ДОБАВЛЯЕМ anti-cache параметр
+        const timestamp = Date.now();
+        let res = await fetch('/api/lottery_status', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache'
+            },
+            body: JSON.stringify({ user_id: userId, _t: timestamp })
+        });
+        let data = await res.json();
 
-            console.log('📊 loadUserTickets получила данные:', {
-                prize_pool: data.prize_pool,
-                user_tickets: data.user_tickets,
-                is_drawn: data.is_drawn,
-                tickets_count: data.tickets?.length
-            });
+        console.log('📊 loadUserTickets получила данные:', {
+            prize_pool: data.prize_pool,
+            user_tickets: data.user_tickets,
+            is_drawn: data.is_drawn,
+            tickets_count: data.tickets?.length
+        });
 
             // Обновляем глобальный статус розыгрыша
             if (data.is_drawn !== undefined) {

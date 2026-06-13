@@ -259,13 +259,19 @@ def buy_ticket(user_id, user_data):
 
 
 def reveal_cell(user_id, ticket_number, cell_index):
-    """Открытие конкретной клетки билета (вызывается из API)"""
+    """Открытие конкретной клетки билета"""
+    global lottery_tickets
+
     with lottery_lock:
+        print(f"🔍 [reveal_cell] user={user_id}, ticket={ticket_number}, cell={cell_index}, is_drawn={is_drawn}")
+
         if not is_drawn:
             return False, "Розыгрыш ещё не начался!"
 
         for ticket in lottery_tickets:
             if ticket.get("user_id") == user_id and ticket.get("number") == ticket_number:
+                print(f"🔍 [reveal_cell] Найден билет, revealed={ticket['revealed']}")
+
                 if cell_index < 0 or cell_index >= 12:
                     return False, "Неверный индекс клетки"
                 if ticket["revealed"][cell_index]:
@@ -278,6 +284,7 @@ def reveal_cell(user_id, ticket_number, cell_index):
                 if revealed_count == 12:
                     update_achievement_progress(user_id, 'brave', 1)
 
+                print(f"✅ [reveal_cell] Клетка {cell_index} открыта, всего открыто: {revealed_count}/12")
                 return True, f"Клетка {cell_index + 1} открыта!"
 
         return False, "Билет не найден"

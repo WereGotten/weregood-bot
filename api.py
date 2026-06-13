@@ -653,40 +653,52 @@ def register_routes(app, socketio):
 
         banned, ban_info = is_banned(user_id)
         if banned:
-            return jsonify({"success": False, "msg": f"Вы забанены! {ban_info['reason']}"})
+            return jsonify({"success": False, "msg": f"Вы забанены! {ban_info['reason']}"}), 403
 
         # ✅ 1. ОБНОВЛЯЕМ ДАННЫЕ ЛОТЕРЕИ ИЗ БД ПЕРЕД ПРОВЕРКОЙ
         from lottery import refresh_lottery_data, lottery_pool, lottery_tickets, is_drawn
         refresh_lottery_data()
 
-        print(f"🎫 Покупка билета: user_id={user_id}, is_drawn={is_drawn}, pool={lottery_pool}")
+        print(
+            f"🎫 Покупка билета: user_id={user_id}, is_drawn={is_drawn}, pool={lottery_pool}, tickets_count={len(lottery_tickets)}")
 
         if is_drawn:
-            return jsonify({
+            response = jsonify({
                 "success": False,
                 "msg": "❌ Розыгрыш уже начался! Новые билеты появятся в 00:00",
                 "is_drawn": True
-            }), 400
+            })
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+            return response, 400
 
         user = get_user(user_id)
 
         # Проверяем достаточно ли LP
         if user["lp"] < 100:
-            return jsonify({
+            response = jsonify({
                 "success": False,
                 "msg": f"❌ Не хватает LP! Нужно 100, у вас {user['lp']}",
                 "lp": user["lp"]
-            }), 400
+            })
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+            return response, 400
 
         # Проверяем лимит билетов (не больше 10)
-        from lottery import lottery_tickets
         user_tickets_before = len([t for t in lottery_tickets if t.get("user_id") == user_id])
         if user_tickets_before >= 10:
-            return jsonify({
+            response = jsonify({
                 "success": False,
                 "msg": "❌ У вас уже 10 билетов! Нельзя купить больше.",
                 "lp": user["lp"]
-            }), 400
+            })
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+            return response, 400
 
         # ✅ 2. ПОКУПАЕМ БИЛЕТ
         from lottery import buy_ticket
@@ -698,25 +710,45 @@ def register_routes(app, socketio):
             # ✅ 3. ПРИНУДИТЕЛЬНО ОБНОВЛЯЕМ ДАННЫЕ ПОСЛЕ ПОКУПКИ
             refresh_lottery_data()
 
+            # Небольшая задержка для гарантии синхронизации
+            import time
+            time.sleep(0.1)
+            refresh_lottery_data()
+
             # ✅ 4. ПОЛУЧАЕМ АКТУАЛЬНЫЕ ДАННЫЕ ИЗ ГЛОБАЛЬНЫХ ПЕРЕМЕННЫХ
             from lottery import lottery_pool, lottery_tickets
             user_tickets_count = len([t for t in lottery_tickets if t.get("user_id") == user_id])
 
-            print(f"🎫 После покупки: pool={lottery_pool}, user_tickets={user_tickets_count}")
+            print(
+                f"🎫 После покупки: pool={lottery_pool}, user_tickets={user_tickets_count}, total_tickets={len(lottery_tickets)}")
 
-            # ✅ 5. ВОЗВРАЩАЕМ ПОЛНЫЙ ОТВЕТ
-            return jsonify({
+            # ✅ 5. ВОЗВРАЩАЕМ ПОЛНЫЙ ОТВЕТ С АНТИКЭШ ЗАГОЛОВКАМИ
+            result = {
                 "success": True,
                 "msg": msg,
                 "lp": user["lp"],
                 "user_tickets": user_tickets_count,
-                "prize_pool": lottery_pool
-            })
+                "prize_pool": lottery_pool,
+                "total_tickets": len(lottery_tickets)
+            }
 
-        return jsonify({"success": False, "msg": msg, "lp": user["lp"]})
+            response = jsonify(result)
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+            response.headers['Content-Type'] = 'application/json; charset=utf-8'
+            return response
+
+        response = jsonify({"success": False, "msg": msg, "lp": user["lp"]})
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        return response
 
     @app.route('/api/lottery_status', methods=['POST'])
     def api_lottery_status():
+        from lottery import get_lottery_status
+
         data = request.json
         if not data:
             return jsonify({"error": "No data"}), 400
@@ -727,7 +759,13 @@ def register_routes(app, socketio):
             return jsonify({"error": "Invalid user_id"}), 400
 
         result = get_lottery_status(user_id)
-        return jsonify(result)
+
+        # ✅ ОТКЛЮЧАЕМ КЭШИРОВАНИЕ
+        response = jsonify(result)
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        return response
 
     @app.route('/api/lottery_all_tickets', methods=['GET'])
     def api_lottery_all_tickets():
@@ -777,6 +815,8 @@ def register_routes(app, socketio):
 
     @app.route('/api/reveal_ticket_cells', methods=['POST'])
     def api_reveal_ticket_cells():
+        from lottery import refresh_lottery_data, is_drawn, reveal_cell, lottery_tickets, save_lottery
+
         data = request.json
         if not data:
             return jsonify({"success": False, "message": "No data"}), 400
@@ -785,36 +825,71 @@ def register_routes(app, socketio):
         ticket_number = data.get('ticket_number')
         cell_index = data.get('cell_index')
 
+        # Добавляем подробное логирование
+        print(f"🔍 [reveal_ticket_cells] Запрос: user={user_id}, ticket={ticket_number}, cell_index={cell_index}")
+
         if not user_id or ticket_number is None:
+            print(f"❌ [reveal_ticket_cells] Missing parameters")
             return jsonify({"success": False, "message": "Missing parameters"}), 400
 
+        # Обновляем данные из БД
         refresh_lottery_data()
+        print(f"🔍 [reveal_ticket_cells] is_drawn={is_drawn}")
 
         if not is_drawn:
             return jsonify({"success": False, "message": "Розыгрыш ещё не начался!"}), 400
 
-        # Если указан конкретный индекс клетки
+        # Если указан конкретный индекс клетки (стирание одной клетки)
         if cell_index is not None and 0 <= cell_index < 12:
-            success, message = reveal_cell(user_id, ticket_number, cell_index)
-            return jsonify({"success": success, "message": message, "cell_index": cell_index})
+            print(f"🔍 [reveal_ticket_cells] Открываем клетку {cell_index} билета {ticket_number}")
 
-        # Иначе открываем все клетки билета
-        for ticket in lottery_tickets:
-            if ticket.get("number") == ticket_number and ticket.get("user_id") == user_id:
-                revealed_count = 0
-                for i in range(12):
-                    if not ticket["revealed"][i]:
-                        ticket["revealed"][i] = True
-                        revealed_count += 1
+            # Ищем билет
+            for ticket in lottery_tickets:
+                if ticket.get("number") == ticket_number and ticket.get("user_id") == user_id:
+                    if ticket["revealed"][cell_index]:
+                        return jsonify({"success": False, "message": "Клетка уже открыта"}), 400
 
-                if revealed_count > 0:
+                    ticket["revealed"][cell_index] = True
                     save_lottery()
-                    return jsonify({"success": True, "message": f"Открыто {revealed_count} клеток",
-                                    "revealed_count": revealed_count})
-                else:
-                    return jsonify({"success": False, "message": "Все клетки уже открыты"})
+                    refresh_lottery_data()
 
-        return jsonify({"success": False, "message": "Ticket not found"})
+                    print(f"✅ [reveal_ticket_cells] Клетка {cell_index} открыта")
+                    return jsonify({
+                        "success": True,
+                        "message": f"Клетка {cell_index + 1} открыта!",
+                        "cell_index": cell_index
+                    })
+
+            return jsonify({"success": False, "message": "Билет не найден"}), 404
+
+        # Если cell_index не указан — открываем все клетки билета
+        elif cell_index is None:
+            print(f"🔍 [reveal_ticket_cells] Открываем ВСЕ клетки билета {ticket_number}")
+
+            for ticket in lottery_tickets:
+                if ticket.get("number") == ticket_number and ticket.get("user_id") == user_id:
+                    revealed_count = 0
+                    for i in range(12):
+                        if not ticket["revealed"][i]:
+                            ticket["revealed"][i] = True
+                            revealed_count += 1
+
+                    if revealed_count > 0:
+                        save_lottery()
+                        refresh_lottery_data()
+                        print(f"✅ [reveal_ticket_cells] Открыто {revealed_count} клеток")
+                        return jsonify({
+                            "success": True,
+                            "message": f"Открыто {revealed_count} клеток",
+                            "revealed_count": revealed_count
+                        })
+                    else:
+                        return jsonify({"success": False, "message": "Все клетки уже открыты"}), 400
+
+            return jsonify({"success": False, "message": "Билет не найден"}), 404
+
+        else:
+            return jsonify({"success": False, "message": f"Неверный индекс клетки: {cell_index}"}), 400
 
     @app.route('/api/reveal_all_tickets_fast', methods=['POST'])
     def api_reveal_all_tickets_fast():
