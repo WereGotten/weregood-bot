@@ -86,18 +86,24 @@ def refresh_lottery_data():
             """)
             row = cursor.fetchone()
             if row:
-                lottery_pool = row['prize_pool'] if row['prize_pool'] is not None else 0
+                lottery_pool = float(row['prize_pool']) if row['prize_pool'] is not None else 0
 
                 tickets_data = row['tickets']
                 if tickets_data and tickets_data != '[]':
                     try:
                         lottery_tickets = json.loads(tickets_data)
-                    except:
+                        # ✅ КОНВЕРТИРУЕМ revealed в булевы значения
+                        for ticket in lottery_tickets:
+                            if 'revealed' in ticket:
+                                ticket['revealed'] = [bool(r) for r in ticket['revealed']]
+                    except Exception as e:
+                        print(f"Ошибка парсинга tickets: {e}")
                         lottery_tickets = []
                 else:
                     lottery_tickets = []
 
-                global_ticket_counter = row['global_ticket_counter'] if row['global_ticket_counter'] is not None else 0
+                global_ticket_counter = int(row['global_ticket_counter']) if row[
+                                                                                 'global_ticket_counter'] is not None else 0
 
                 winning_data = row['winning_numbers']
                 if winning_data and winning_data != '[]':
@@ -108,15 +114,16 @@ def refresh_lottery_data():
                 else:
                     winning_numbers = []
 
-                is_drawn = row['is_drawn'] == 1 if row['is_drawn'] is not None else False
+                is_drawn = bool(row['is_drawn']) if row['is_drawn'] is not None else False
                 lottery_phase = row['lottery_phase'] if row['lottery_phase'] else 'buy'
 
-                print(
-                    f"🔄 Синхронизация лотереи: {len(lottery_tickets)} билетов, фонд {lottery_pool} USDT, is_drawn={is_drawn}")
+                print(f"🔄 [REFRESH] is_drawn={is_drawn}, pool={lottery_pool}, tickets={len(lottery_tickets)}")
                 return True
         return False
     except Exception as e:
-        print(f"❌ Ошибка синхронизации лотереи: {e}")
+        print(f"❌ Ошибка синхронизации: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 
