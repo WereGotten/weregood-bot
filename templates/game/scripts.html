@@ -1310,59 +1310,59 @@
     }
 
     function updateCarousel() {
-        const container = document.getElementById('ticketsContainer');
-        if (!container) {
-            console.warn('ticketsContainer не найден');
-            return;
-        }
-
-        console.log('🎨 updateCarousel, билетов:', currentTickets.length);
-
-        if (currentTickets.length === 0) {
-            container.innerHTML = '<div class="empty-state">😢 У вас пока нет билетов</div>';
-            const dotsContainer = document.getElementById('carouselDots');
-            if (dotsContainer) dotsContainer.innerHTML = '';
-            return;
-        }
-
-        let slidesHtml = '';
-        currentTickets.forEach((ticket, idx) => {
-            slidesHtml += `<div class="ticket-slide" data-index="${idx}">${renderTicketForCarousel(ticket)}</div>`;
-        });
-        container.innerHTML = slidesHtml;
-
-        let dotsHtml = '';
-        currentTickets.forEach((_, idx) => {
-            dotsHtml += `<div class="carousel-dot ${idx === currentTicketIndex ? 'active' : ''}" onclick="goToTicket(${idx})"></div>`;
-        });
-        const dotsContainer = document.getElementById('carouselDots');
-        if (dotsContainer) dotsContainer.innerHTML = dotsHtml;
-
-        // Инициализируем canvas для каждого билета
-        const allSlides = document.querySelectorAll('.ticket-slide');
-        allSlides.forEach((slide, idx) => {
-            if (currentTickets[idx]) {
-                initSlideCanvases(slide, currentTickets[idx]);
-            }
-        });
-
-        // Настраиваем скролл
-        let scrollTimeout;
-        container.onscroll = () => {
-            if (scrollTimeout) clearTimeout(scrollTimeout);
-            scrollTimeout = setTimeout(() => {
-                const scrollLeft = container.scrollLeft;
-                const slideWidth = container.clientWidth;
-                const newIndex = Math.round(scrollLeft / slideWidth);
-                if (newIndex !== currentTicketIndex && newIndex >= 0 && newIndex < currentTickets.length) {
-                    currentTicketIndex = newIndex;
-                    document.querySelectorAll('.carousel-dot').forEach((dot, i) => {
-                        dot.classList.toggle('active', i === currentTicketIndex);
-                    });
-                }
-            }, 100);
-        };
+    const container = document.getElementById('ticketsContainer');
+    if (!container) {
+        console.warn('ticketsContainer не найден');
+        return;
     }
+
+    console.log('🎨 updateCarousel, билетов:', currentTickets.length);
+
+    if (currentTickets.length === 0) {
+        container.innerHTML = '<div class="empty-state">😢 У вас пока нет билетов</div>';
+        const dotsContainer = document.getElementById('carouselDots');
+        if (dotsContainer) dotsContainer.innerHTML = '';
+        return;
+    }
+
+    let slidesHtml = '';
+    currentTickets.forEach((ticket, idx) => {
+        slidesHtml += `<div class="ticket-slide" data-index="${idx}">${renderTicketForCarousel(ticket)}</div>`;
+    });
+    container.innerHTML = slidesHtml;
+
+    let dotsHtml = '';
+    currentTickets.forEach((_, idx) => {
+        dotsHtml += `<div class="carousel-dot ${idx === currentTicketIndex ? 'active' : ''}" onclick="goToTicket(${idx})"></div>`;
+    });
+    const dotsContainer = document.getElementById('carouselDots');
+    if (dotsContainer) dotsContainer.innerHTML = dotsHtml;
+
+    // ✅ ВАЖНО: инициализируем canvas для каждого билета
+    const allSlides = document.querySelectorAll('.ticket-slide');
+    allSlides.forEach((slide, idx) => {
+        if (currentTickets[idx]) {
+            initSlideCanvases(slide, currentTickets[idx]);
+        }
+    });
+
+    // Настраиваем скролл
+    let scrollTimeout;
+    container.onscroll = () => {
+        if (scrollTimeout) clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(() => {
+            const scrollLeft = container.scrollLeft;
+            const slideWidth = container.clientWidth;
+            const newIndex = Math.round(scrollLeft / slideWidth);
+            if (newIndex !== currentTicketIndex && newIndex >= 0 && newIndex < currentTickets.length) {
+                currentTicketIndex = newIndex;
+                document.querySelectorAll('.carousel-dot').forEach((dot, i) => {
+                    dot.classList.toggle('active', i === currentTicketIndex);
+                });
+            }
+        }, 100);
+    };
+}
 
     window.goToTicket = (index) => {
         const container = document.getElementById('ticketsContainer');
@@ -1414,28 +1414,53 @@
     }
 
     window.revealAllCellsForTicket = async function(ticketNumber) {
-        if (!isDrawn) {
-            showToast('Розыгрыш ещё не начался!', 'error');
-            return;
-        }
-        try {
-            let res = await fetch('/api/reveal_ticket_cells', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: userId, ticket_number: ticketNumber })
-            });
-            let data = await res.json();
-            if (data.success) {
-                showToast(data.msg, 'success');
-                await loadUserTickets();
-                updateTopPlayers();
-            } else {
-                showToast(data.msg, 'error');
+    console.log(`🔓 revealAllCellsForTicket: билет ${ticketNumber}, isDrawn=${isDrawn}`);
+
+    if (!isDrawn) {
+        showToast('Розыгрыш ещё не начался!', 'error');
+        return;
+    }
+
+    // Отправляем cell_index = -1 чтобы открыть все клетки
+    try {
+        let res = await fetch('/api/reveal_ticket_cells', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Cache-Control': 'no-cache'
+            },
+            body: JSON.stringify({
+                user_id: userId,
+                ticket_number: ticketNumber,
+                cell_index: -1  // ← -1 означает "открыть все клетки"
+            })
+        });
+        let data = await res.json();
+        console.log('📡 Ответ сервера (открыть всё):', data);
+
+        if (data.success) {
+            showToast(data.msg, 'success');
+            // Обновляем локальный массив билетов
+            for (let ticket of currentTickets) {
+                if (ticket.number === ticketNumber) {
+                    for (let i = 0; i < 12; i++) {
+                        ticket.revealed[i] = true;
+                    }
+                    break;
+                }
             }
-        } catch(e) {
-            showToast('Ошибка при открытии клеток', 'error');
+            // Перерисовываем карусель
+            updateCarousel();
+            updateTopPlayers();
+            // Сохраняем в БД через отдельный запрос (сервер уже сохранил)
+        } else {
+            showToast(data.message || 'Ошибка при открытии клеток', 'error');
         }
-    };
+    } catch(e) {
+        console.error('Error revealing all cells:', e);
+        showToast('Ошибка при открытии клеток', 'error');
+    }
+};
 
     function initSlideCanvases(slideElement, ticket) {
         if (!slideElement) return;
@@ -1579,12 +1604,16 @@
 
     console.log(`💥 Стёрто ${targetCanvas.erasedPercent.toFixed(1)}% клетки ${cIdx} билета ${tNum}`);
 
-    if (targetCanvas.erasedPercent >= 60 && !targetCanvas.isRevealed) {
-        console.log(`✅ ОТПРАВЛЯЕМ ЗАПРОС на открытие клетки`);
+    // ⚠️ ВАЖНО: порог открытия — 50% (было 60)
+    if (targetCanvas.erasedPercent >= 50 && !targetCanvas.isRevealed) {
+        console.log(`✅🔓 ПОРОГ ДОСТИГНУТ! Отправляем запрос на открытие клетки ${cIdx} билета ${tNum}`);
 
         fetch('/api/reveal_ticket_cells', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'Cache-Control': 'no-cache'
+            },
             body: JSON.stringify({
                 user_id: userId,
                 ticket_number: tNum,
@@ -1607,12 +1636,24 @@
 
                 if (navigator.vibrate) navigator.vibrate(30);
                 showToast(`Клетка ${cellNumber} открыта! 🎉`, 'success');
+                updateTopPlayers();
+
+                // Обновляем локальный массив билетов
+                if (currentTickets && currentTickets.length > 0) {
+                    for (let ticket of currentTickets) {
+                        if (ticket.number === tNum) {
+                            ticket.revealed[cIdx] = true;
+                            break;
+                        }
+                    }
+                }
             } else {
                 console.log('❌ Сервер не подтвердил открытие:', data.message);
             }
         })
         .catch(error => {
             console.error('❌ Ошибка запроса:', error);
+            showToast('Ошибка связи с сервером', 'error');
         });
     }
 };
