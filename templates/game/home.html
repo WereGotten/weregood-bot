@@ -1,0 +1,57 @@
+<div id="tabHome" class="tab-pane active">
+    <div class="greeting">Привет, <span id="userGreeting">Игрок</span>!</div>
+
+    <div class="balance-card">
+        <div class="balance-info">
+            <div class="balance-label">
+                <img src="/static/wallet.png" alt="WG" style="width: 28px; height: 28px;">
+                <span>WG Coin</span>
+            </div>
+            <div class="balance-value"><span id="wgBalance">0</span> WG</div>
+        </div>
+        <div class="balance-info secondary">
+            <div class="balance-label">
+                <img src="/static/diamond.png" alt="LP" style="width: 32px; height: 32px;">
+                <span>LP</span>
+            </div>
+            <div class="balance-value"><span id="lpBalance">0</span> LP</div>
+        </div>
+    </div>
+
+    <div class="game-container">
+        <div class="coin-wrapper">
+            <div class="coin" id="coin">
+                <div class="coin-inner"></div>
+                <div class="click-plus" id="clickPlus">+<span id="clickAmount">0.01</span></div>
+            </div>
+        </div>
+        <div class="joystick-corner" onclick="openGamepad()">
+            <div class="joystick-small">🎮</div>
+        </div>
+    </div>
+
+    <div class="earnings-info">
+        <span><img src="/static/wallet.png" alt="WG" style="width: 20px; height: 20px;"> Заработок: <strong id="earningPerClick">0.01</strong> WG</span>
+        <span><img src="/static/dice.png" alt="Шанс" style="width: 26px; height: 26px;"> Шанс на LP: 0.25%</span>
+    </div>
+
+    <div class="energy-card">
+        <div class="energy-header">
+            <span><img src="/static/lightning.png" alt="Энергия" style="width: 16px; height: 16px;"> <span>Энергия</span></span>
+            <span><span id="energyValue">500</span>/<span id="maxEnergyValue">500</span></span>
+        </div>
+        <div class="energy-bar-container"><div class="energy-bar" id="energyBar"></div></div>
+        <div class="energy-regen" id="regenInfo">🕐 Полное восстановление через 2 часа</div>
+    </div>
+
+    <div class="stats-mini">
+        <div class="stat-mini-item"><div class="stat-mini-icon"><img src="/static/wallet.png" style="width:30px"></div><div class="stat-mini-value" id="totalWGmini">0</div><div class="stat-mini-label">Всего WG</div></div>
+        <div class="stat-mini-item"><div class="stat-mini-icon"><img src="/static/ticket.png" style="width:30px"></div><div class="stat-mini-value" id="totalTicketsMini">0</div><div class="stat-mini-label">Билетов</div></div>
+        <div class="stat-mini-item"><div class="stat-mini-icon"><img src="/static/click.png" style="width:30px"></div><div class="stat-mini-value" id="totalClicksMini">0</div><div class="stat-mini-label">Кликов</div></div>
+    </div>
+
+    <div class="leaderboard-mini" onclick="openLeaderboard()">
+        <div class="leaderboard-mini-header"><span>🏆 Топ игроков</span><span>→</span></div>
+        <div class="leaderboard-mini-list" id="leaderboardMini">Загрузка...</div>
+    </div>
+</div>

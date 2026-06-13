@@ -1,0 +1,125 @@
+<!-- КОЛЕСО ФОРТУНЫ -->
+<div id="wheelOverlay" class="wheel-overlay">
+    <div class="wheel-container">
+        <div class="wheel-title">🎡 КОЛЕСО ФОРТУНЫ 🎡</div>
+        <div class="wheel-canvas">
+            <canvas id="wheelCanvas" width="500" height="500"></canvas>
+            <div class="wheel-arrow"></div>
+        </div>
+        <div id="wheelResult" class="wheel-result"></div>
+        <button id="wheelCloseBtn" class="wheel-close-btn">💰 Забрать награду →</button>
+    </div>
+</div>
+
+<!-- ГЕЙМПАД МЕНЮ -->
+<div id="gamepadModal" class="gamepad-modal">
+    <div class="gamepad-modal-content">
+        <div class="gamepad-header"><h2>🎮 Игровой центр</h2><button class="gamepad-close" onclick="closeGamepad()">✕</button></div>
+        <div class="gamepad-games">
+            <div class="game-card" onclick="openGame('fortune')"><div class="game-card-icon">🎲</div><div class="game-card-info"><h3>Командная Фортуна</h3><p>Играй с друзьями и выигрывай!</p></div><div class="game-card-arrow">→</div></div>
+            <div class="game-card coming-soon"><div class="game-card-icon">❓</div><div class="game-card-info"><h3>Скоро...</h3><p>Новая игра в разработке</p></div><div class="game-card-arrow">🔒</div></div>
+        </div>
+        <div class="gamepad-footer"><p>✨ Новые игры будут появляться здесь</p></div>
+    </div>
+</div>
+
+<!-- МОДАЛЬНОЕ ОКНО КОМАНДНОЙ ФОРТУНЫ -->
+<div id="fortuneModal" class="game-modal-full">
+    <div class="game-modal-full-content">
+        <div class="game-modal-full-header">
+            <h2>🎲 Командная Фортуна</h2>
+            <button class="game-modal-full-close" onclick="closeFortuneGame()">✕</button>
+        </div>
+
+        <div class="fortune-tabs">
+            <button class="fortune-tab active" data-fortune-tab="play">🎮 Играть</button>
+            <button class="fortune-tab" data-fortune-tab="history">📜 Моя история</button>
+        </div>
+
+        <div id="fortunePlayTab" class="fortune-tab-content active">
+            <div class="fortune-timer-card">
+                <div class="timer-label">⏱️ ДО КОНЦА РАУНДА</div>
+                <div class="timer-value-premium" id="fortuneTimer">05:00</div>
+                <div class="timer-bar-premium">
+                    <div class="timer-bar-fill-premium" id="timerBarFill"></div>
+                </div>
+            </div>
+
+            <div class="fortune-balance-card">
+                <span class="balance-label-premium">💰 Ваш баланс WG:</span>
+                <span class="balance-value-premium" id="fortuneUserBalance">0</span>
+            </div>
+
+            <div class="team-card-premium" id="teamYellowCard">
+                <div class="team-header-premium">
+                    <div class="team-icon-premium">🟡</div>
+                    <div class="team-name-premium">Команда Жёлтых</div>
+                    <div class="team-chance-premium" id="yellowChance">0%</div>
+                </div>
+                <div class="team-pool-premium">
+                    <span class="pool-label-premium">Общий счёт:</span>
+                    <span class="pool-value-premium" id="yellowPool">0</span>
+                    <span class="pool-currency">WG</span>
+                </div>
+                <div class="players-grid-premium" id="yellowPlayers">
+                    <div class="empty-players-premium">🤝 Пока никто не поставил</div>
+                </div>
+                <button class="bet-btn-premium bet-btn-yellow" id="betBtnYellow" data-team="yellow">💰 Сделать ставку на Жёлтых</button>
+            </div>
+
+            <div class="team-card-premium" id="teamRedCard">
+                <div class="team-header-premium">
+                    <div class="team-icon-premium">🔴</div>
+                    <div class="team-name-premium">Команда Красных</div>
+                    <div class="team-chance-premium" id="redChance">0%</div>
+                </div>
+                <div class="team-pool-premium">
+                    <span class="pool-label-premium">Общий счёт:</span>
+                    <span class="pool-value-premium" id="redPool">0</span>
+                    <span class="pool-currency">WG</span>
+                </div>
+                <div class="players-grid-premium" id="redPlayers">
+                    <div class="empty-players-premium">🤝 Пока никто не поставил</div>
+                </div>
+                <button class="bet-btn-premium bet-btn-red" id="betBtnRed" data-team="red">💰 Сделать ставку на Красных</button>
+            </div>
+        </div>
+
+        <div id="fortuneHistoryTab" class="fortune-tab-content">
+            <div class="history-list-premium" id="fortuneHistoryList">
+                <div class="empty-state-premium">📭 У вас пока нет истории игр</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- МОДАЛЬНОЕ ОКНО ДЛЯ СТАВКИ -->
+<div id="betModal" class="bet-modal">
+    <div class="bet-modal-content-premium">
+        <div class="bet-modal-header">
+            <h3>💰 Сделать ставку</h3>
+            <button class="bet-modal-close" onclick="closeBetModal()">✕</button>
+        </div>
+        <div class="bet-team-info" id="betTeamInfo">
+            <span class="bet-team-icon">🟡</span>
+            <span class="bet-team-name">Команда Жёлтых</span>
+        </div>
+        <div class="bet-balance">
+            <span>💰 Ваш баланс:</span>
+            <strong id="betUserBalance">0</strong>
+            <span>WG</span>
+        </div>
+        <div class="bet-input-group">
+            <label>Сумма ставки (мин. 10 WG)</label>
+            <input type="number" id="betAmount" class="bet-input" placeholder="100" min="10" step="10">
+            <div class="bet-amount-presets">
+                <div class="bet-preset-premium" data-multiplier="0.1">10%</div>
+                <div class="bet-preset-premium" data-multiplier="0.25">25%</div>
+                <div class="bet-preset-premium" data-multiplier="0.5">50%</div>
+                <div class="bet-preset-premium" data-multiplier="1">100%</div>
+            </div>
+        </div>
+        <div class="bet-info" style="display: none;"></div>
+        <button class="bet-submit-btn" id="submitBetBtn">🎲 Подтвердить ставку</button>
+    </div>
+</div>
