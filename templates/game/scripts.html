@@ -306,6 +306,8 @@
             console.error('Sync error: invalid response');
             return;
         }
+
+        // Обновляем статус игрока
         const status = data.status;
         localWG = status.wg || 0;
         localLP = status.lp || 0;
@@ -318,6 +320,7 @@
         localStars = status.stars || 0;
         localMaxEnergy = status.max_energy || 500;
         localEnergyUpgrades = status.energy_upgrades || 0;
+
         if (status.upgrade_counts) {
             upgradeCounts = status.upgrade_counts;
             for (let i = 1; i <= 3; i++) {
@@ -325,23 +328,16 @@
             }
         }
 
-        // ========== ПОЛНОЕ ОБНОВЛЕНИЕ ЛОТЕРЕИ ==========
+        // ✅ КРИТИЧЕСКИ ВАЖНО: обновляем данные лотереи
         if (data.lottery) {
-            // Обновляем статус розыгрыша
-            if (data.lottery.is_drawn !== undefined) {
-                isDrawn = data.lottery.is_drawn;
-                winningNumbers = data.lottery.winning_numbers || [];
-                updateDrawUI();
-            }
-
-            // Обновляем призовой фонд
+            // Обновляем призовой фонд в интерфейсе
             const prizePoolEl = document.getElementById('prizePool');
             if (prizePoolEl && data.lottery.prize_pool !== undefined) {
                 prizePoolEl.innerText = data.lottery.prize_pool.toFixed(2);
-                window.lotteryPool = data.lottery.prize_pool;
+                console.log('💰 Призовой фонд обновлён:', data.lottery.prize_pool);
             }
 
-            // Обновляем количество билетов у пользователя
+            // Обновляем количество билетов у игрока
             if (data.lottery.user_tickets !== undefined) {
                 const ticketsCountEl = document.getElementById('ticketsCount');
                 if (ticketsCountEl) ticketsCountEl.innerText = data.lottery.user_tickets;
@@ -349,20 +345,26 @@
                 if (totalTicketsEl) totalTicketsEl.innerText = data.lottery.user_tickets;
                 const totalTicketsMiniEl = document.getElementById('totalTicketsMini');
                 if (totalTicketsMiniEl) totalTicketsMiniEl.innerText = data.lottery.user_tickets;
+                console.log('🎫 Билетов у игрока:', data.lottery.user_tickets);
             }
 
             // Обновляем список билетов пользователя
             if (data.lottery.tickets) {
                 currentTickets = data.lottery.tickets;
+                // Перерисовываем карусель билетов
                 if (typeof updateCarousel === 'function') {
                     updateCarousel();
                 }
-                if (typeof updateTopPlayers === 'function') {
-                    updateTopPlayers();
-                }
+                console.log('📋 Билетов в массиве:', currentTickets.length);
+            }
+
+            // Обновляем статус розыгрыша
+            if (data.lottery.is_drawn !== undefined) {
+                isDrawn = data.lottery.is_drawn;
+                winningNumbers = data.lottery.winning_numbers || [];
+                updateDrawUI();
             }
         }
-        // ==============================================
 
         if (data.leaderboard && data.leaderboard.length > 0) {
             updateLeaderboardMiniFast(data.leaderboard);
@@ -370,7 +372,15 @@
         if (data.recent_players && data.recent_players.length > 0) {
             updateRecentPlayersFast(data.recent_players);
         }
+
         updateUI();
+
+        // ✅ Принудительно обновляем страницу лотереи, если она открыта
+        const activeTab = document.querySelector('.tab-pane.active')?.id;
+        if (activeTab === 'tabLottery') {
+            await loadUserTickets(); // Перезагружаем билеты
+        }
+
     } catch(e) {
         console.error('Sync error:', e);
         setTimeout(() => syncData(true), 5000);
@@ -994,34 +1004,34 @@
 
     // ==================== ЛОТЕРЕЯ ====================
     document.getElementById('ticketBtn').onclick = async () => {
-        if (localLP < 100) {
+    if (localLP < 100) {
+        playErrorSound();
+        showToast('Не хватает LP (нужно 100)', 'error');
+        return;
+    }
+    try {
+        let res = await fetch('/api/buy_ticket', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId })
+        });
+        let data = await res.json();
+        if (data.success) {
+            playPurchaseSound();
+            showToast(data.msg, 'success');
+            // ✅ КРИТИЧЕСКИ ВАЖНО: принудительно синхронизируем данные
+            await syncData(true);  // force=true
+            await loadUserTickets();  // перезагружаем билеты
+            setTimeout(() => syncData(true), 500); // повторная синхронизация
+        } else {
             playErrorSound();
-            showToast('Не хватает LP (нужно 100)', 'error');
-            return;
+            showToast(data.msg, 'error');
         }
-        try {
-            let res = await fetch('/api/buy_ticket', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: userId })
-            });
-            let data = await res.json();
-            if (data.success) {
-                playPurchaseSound();
-                showToast(data.msg, 'success');
-                await updateStatus();
-                await updateLottery();
-                await loadRecentPlayers();
-                await loadUserTickets();
-            } else {
-                playErrorSound();
-                showToast(data.msg, 'error');
-            }
-        } catch(e) {
-            playErrorSound();
-            showToast('Ошибка!', 'error');
-        }
-    };
+    } catch(e) {
+        playErrorSound();
+        showToast('Ошибка!', 'error');
+    }
+};
 
     document.getElementById('myTicketsBtn').onclick = async () => {
         await loadUserTickets();
