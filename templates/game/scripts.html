@@ -1219,7 +1219,6 @@
 
     console.log('🔄 loadUserTickets вызвана');
     try {
-        // ✅ ДОБАВЛЯЕМ anti-cache параметр
         const timestamp = Date.now();
         let res = await fetch('/api/lottery_status', {
             method: 'POST',
@@ -1239,62 +1238,68 @@
             tickets_count: data.tickets?.length
         });
 
-            // Обновляем глобальный статус розыгрыша
-            if (data.is_drawn !== undefined) {
-                isDrawn = data.is_drawn;
-                winningNumbers = data.winning_numbers || [];
-                updateDrawUI();
-            }
+        // ✅ ЗАЩИТА: если пришли старые данные (меньше билетов) — игнорируем
+        if (data.user_tickets !== undefined && data.user_tickets < currentTickets.length) {
+            console.log('⚠️ Получены устаревшие данные (билетов меньше), игнорируем');
+            return;
+        }
 
-            // Обновляем отображение фонда
-            const prizePoolEl = document.getElementById('prizePool');
-            if (prizePoolEl && data.prize_pool !== undefined) {
-                prizePoolEl.innerText = data.prize_pool.toFixed(2);
-            }
+        // Обновляем глобальный статус розыгрыша
+        if (data.is_drawn !== undefined) {
+            isDrawn = data.is_drawn;
+            winningNumbers = data.winning_numbers || [];
+            updateDrawUI();
+        }
 
-            // Обновляем количество билетов
-            const ticketsCount = data.user_tickets || 0;
-            const ticketsCountEl = document.getElementById('ticketsCount');
-            if (ticketsCountEl) ticketsCountEl.innerText = ticketsCount;
-            const totalTicketsEl = document.getElementById('totalTickets');
-            if (totalTicketsEl) totalTicketsEl.innerText = ticketsCount;
-            const totalTicketsMiniEl = document.getElementById('totalTicketsMini');
-            if (totalTicketsMiniEl) totalTicketsMiniEl.innerText = ticketsCount;
+        // Обновляем отображение фонда
+        const prizePoolEl = document.getElementById('prizePool');
+        if (prizePoolEl && data.prize_pool !== undefined) {
+            prizePoolEl.innerText = data.prize_pool.toFixed(2);
+        }
 
-            // Обновляем LP в лотерейном блоке
-            const lotteryLPEl = document.getElementById('lotteryLPBalance');
-            if (lotteryLPEl && data.user_lp !== undefined) {
-                lotteryLPEl.innerText = data.user_lp;
-            }
+        // Обновляем количество билетов
+        const ticketsCount = data.user_tickets || 0;
+        const ticketsCountEl = document.getElementById('ticketsCount');
+        if (ticketsCountEl) ticketsCountEl.innerText = ticketsCount;
+        const totalTicketsEl = document.getElementById('totalTickets');
+        if (totalTicketsEl) totalTicketsEl.innerText = ticketsCount;
+        const totalTicketsMiniEl = document.getElementById('totalTicketsMini');
+        if (totalTicketsMiniEl) totalTicketsMiniEl.innerText = ticketsCount;
 
-            // КРИТИЧЕСКИ ВАЖНО: обновляем массив билетов и карусель
-            if (data.tickets && data.tickets.length > 0) {
-                // Сохраняем текущий прогресс стирания перед обновлением
+        // Обновляем LP в лотерейном блоке
+        const lotteryLPEl = document.getElementById('lotteryLPBalance');
+        if (lotteryLPEl && data.user_lp !== undefined) {
+            lotteryLPEl.innerText = data.user_lp;
+        }
+
+        // КРИТИЧЕСКИ ВАЖНО: обновляем массив билетов и карусель
+        if (data.tickets && data.tickets.length > 0) {
+            // ✅ Сохраняем прогресс стирания ТОЛЬКО если данные не устарели
+            if (data.user_tickets >= currentTickets.length) {
                 const savedProgress = new Map(scratchProgress);
                 currentTickets = data.tickets;
                 console.log('📋 Обновляем карусель, билетов:', currentTickets.length);
-                if (typeof updateCarousel === 'function') {
-                    updateCarousel();
-                    // Восстанавливаем прогресс стирания
-                    setTimeout(() => restoreScratchProgress(savedProgress), 100);
-                }
+                updateCarousel();
+                setTimeout(() => restoreScratchProgress(savedProgress), 100);
             } else {
-                currentTickets = [];
-                const container = document.getElementById('ticketsContainer');
-                if (container) {
-                    container.innerHTML = '<div class="empty-state">😢 У вас пока нет билетов</div>';
-                }
+                console.log('⚠️ Пропускаем обновление, так как данные устарели');
             }
-
-            // Обновляем топ игроков если розыгрыш идёт
-            if (isDrawn && typeof updateTopPlayers === 'function') {
-                updateTopPlayers();
+        } else {
+            currentTickets = [];
+            const container = document.getElementById('ticketsContainer');
+            if (container) {
+                container.innerHTML = '<div class="empty-state">😢 У вас пока нет билетов</div>';
             }
-
-        } catch(e) {
-            console.error('Error loading tickets:', e);
         }
+
+        if (isDrawn && typeof updateTopPlayers === 'function') {
+            updateTopPlayers();
+        }
+
+    } catch(e) {
+        console.error('Error loading tickets:', e);
     }
+}
 
     // Функция восстановления прогресса после перезагрузки
     function restoreScratchProgress(savedProgress) {
@@ -1421,7 +1426,6 @@
         return;
     }
 
-    // Отправляем cell_index = -1 чтобы открыть все клетки
     try {
         let res = await fetch('/api/reveal_ticket_cells', {
             method: 'POST',
@@ -1432,15 +1436,18 @@
             body: JSON.stringify({
                 user_id: userId,
                 ticket_number: ticketNumber,
-                cell_index: -1  // ← -1 означает "открыть все клетки"
+                cell_index: -1
             })
         });
         let data = await res.json();
         console.log('📡 Ответ сервера (открыть всё):', data);
 
+        // ✅ ИСПРАВЛЕНИЕ: проверяем и message, и msg
         if (data.success) {
-            showToast(data.msg, 'success');
-            // Обновляем локальный массив билетов
+            const msg = data.message || data.msg;
+            showToast(msg || 'Все клетки открыты!', 'success');
+
+            // ✅ Обновляем локальный массив сразу
             for (let ticket of currentTickets) {
                 if (ticket.number === ticketNumber) {
                     for (let i = 0; i < 12; i++) {
@@ -1449,12 +1456,19 @@
                     break;
                 }
             }
-            // Перерисовываем карусель
             updateCarousel();
             updateTopPlayers();
-            // Сохраняем в БД через отдельный запрос (сервер уже сохранил)
+
+            // ✅ Принудительно сохраняем в БД через сервер (уже сохранено)
+            // Просто обновляем данные через секунду
+            setTimeout(() => {
+                syncData(true);
+                loadUserTickets();
+            }, 500);
+
         } else {
-            showToast(data.message || 'Ошибка при открытии клеток', 'error');
+            const errorMsg = data.message || data.msg || 'Ошибка при открытии клеток';
+            showToast(errorMsg, 'error');
         }
     } catch(e) {
         console.error('Error revealing all cells:', e);
