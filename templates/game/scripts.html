@@ -1,24 +1,57 @@
 <script>
-    // ==================== ИНИЦИАЛИЗАЦИЯ ====================
+    // ==================== ИНИЦИАЛИЗАЦИЯ С ПРАВИЛЬНОЙ ЛОГИКОЙ ====================
     let tg = window.Telegram?.WebApp;
     let user = tg?.initDataUnsafe?.user;
 
     let savedUserId = sessionStorage.getItem('weregood_user_id');
-    let userId;
+    let userId = null;
+    let isAuthError = false;
 
-    if (user && user.id && user.id !== 12345678) {
-        userId = user.id;
-        sessionStorage.setItem('weregood_user_id', userId);
-        console.log('✅ ID получен из Telegram:', userId);
-    } else if (savedUserId && savedUserId !== '12345678' && savedUserId !== 'null') {
+    // ПРАВИЛЬНАЯ ЛОГИКА ПОЛУЧЕНИЯ ID - БЕЗ ДЕФОЛТНОГО ЗНАЧЕНИЯ!
+    if (user && user.id && user.id > 0) {
+        // Реальный ID из Telegram (минимальный ID в Telegram начинается с 100000000)
+        if (user.id.toString().length >= 9) {
+            userId = user.id;
+            sessionStorage.setItem('weregood_user_id', userId);
+            console.log('✅ ID получен из Telegram:', userId);
+        } else {
+            console.warn('⚠️ Подозрительный ID из Telegram:', user.id);
+            userId = user.id;
+        }
+    } else if (savedUserId && savedUserId !== 'null' && parseInt(savedUserId) > 0) {
+        // Восстанавливаем из sessionStorage
         userId = parseInt(savedUserId);
         console.log('✅ ID восстановлен из sessionStorage:', userId);
-        if (user && user.id && user.id !== userId) {
-            console.log('⚠️ ID из Telegram отличается от сохранённого:', user.id, '→', userId);
-        }
-    } else {
-        userId = 12345678;
-        console.warn('⚠️ ВНИМАНИЕ! Используется дефолтный ID 12345678. Игрок может потерять прогресс!');
+    }
+
+    // ЕСЛИ ID НЕ ПОЛУЧЕН - ПОКАЗЫВАЕМ ОШИБКУ, А НЕ ИСПОЛЬЗУЕМ ДЕФОЛТ!
+    if (!userId || userId === 12345678) {
+        isAuthError = true;
+        console.error('❌ КРИТИЧЕСКАЯ ОШИБКА: Невозможно определить пользователя!');
+
+        // Создаём красивое сообщение об ошибке
+        const errorHtml = `
+            <div id="authErrorOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:20px;">
+                <div style="background:linear-gradient(145deg,#1a1a2e,#0f0f20);border-radius:32px;padding:32px;max-width:350px;border:2px solid #f44336;">
+                    <div style="font-size:48px;margin-bottom:16px;">❌</div>
+                    <h2 style="color:#f44336;margin-bottom:12px;">Ошибка авторизации</h2>
+                    <p style="color:rgba(255,255,255,0.7);margin-bottom:24px;font-size:14px;">
+                        Не удалось определить ваш аккаунт.<br>
+                        Пожалуйста, перезапустите игру или привяжите аккаунт вручную.
+                    </p>
+                    <button onclick="window.forceBindAccount()" style="background:linear-gradient(135deg,#FFD700,#FFA500);border:none;padding:12px 24px;border-radius:40px;font-weight:700;color:#0a0a1a;cursor:pointer;width:100%;margin-bottom:12px;">
+                        🔗 Привязать аккаунт
+                    </button>
+                    <button onclick="location.reload()" style="background:rgba(255,255,255,0.1);border:none;padding:12px 24px;border-radius:40px;font-weight:500;color:white;cursor:pointer;width:100%;">
+                        ⟳ Перезагрузить
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', errorHtml);
+
+        // Останавливаем выполнение остального кода
+        throw new Error('Authentication failed - no user ID');
     }
 
     let username = user ? (user.username || '') : '';
@@ -28,16 +61,25 @@
     let chatId = userId;
     let displayName = firstName || username || 'Игрок';
 
+    // ФЛАГИ ДЛЯ СТИРАНИЯ - ПРЕДОТВРАЩАЕМ ПЕРЕЗАГРУЗКУ БИЛЕТОВ
+    let isScratchingActive = false;
+    let scratchTimeout = null;
+    let pendingRefreshTimeout = null;
+
     window.forceBindAccount = async function() {
+        // Убираем оверлей ошибки, если он есть
+        const errorOverlay = document.getElementById('authErrorOverlay');
+        if (errorOverlay) errorOverlay.remove();
+
         if (!tg) {
             showToast('❌ Telegram WebApp не доступен', 'error');
             return;
         }
         tg.expand();
         const freshUser = tg.initDataUnsafe?.user;
-        if (freshUser && freshUser.id && freshUser.id !== 12345678) {
+        if (freshUser && freshUser.id && freshUser.id > 0) {
             const newUserId = freshUser.id;
-            if (confirm(`⚠️ Обнаружен ваш реальный аккаунт (ID: ${newUserId}).\n\nПривязать его к игре? Весь ваш прогресс сохранится.`)) {
+            if (confirm(`⚠️ Обнаружен ваш аккаунт (ID: ${newUserId}).\n\nПривязать его к игре? Весь ваш прогресс сохранится.`)) {
                 userId = newUserId;
                 sessionStorage.setItem('weregood_user_id', userId);
                 username = freshUser.username || '';
@@ -46,10 +88,8 @@
                 photoUrl = freshUser.photo_url || '';
                 displayName = firstName || username || 'Игрок';
                 await autoRegister();
-                await updateStatus();
-                await updateLottery();
-                await updateLeaderboard();
-                showToast('✅ Аккаунт привязан! Страница будет обновлена...', 'success');
+                await syncData(true);
+                showToast('✅ Аккаунт привязан!', 'success');
                 setTimeout(() => location.reload(), 1500);
             }
         } else {
@@ -111,6 +151,12 @@
 
     function showToast(msg, type = 'info') {
         let toast = document.getElementById('toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'toast';
+            toast.className = 'toast';
+            document.body.appendChild(toast);
+        }
         toast.textContent = msg;
         toast.className = `toast ${type} show`;
         setTimeout(() => toast.className = 'toast', 1500);
@@ -182,6 +228,16 @@
         }
     }
 
+    function escapeHtml(text) {
+        if (!text) return '';
+        return text.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
     function getUpgradeCost(upgradeId, currentCount) {
         const config = {
             1: { baseCost: 1.5, bonus: 0.01, name: "Новичок" },
@@ -198,39 +254,76 @@
         upgradeCosts[2] = getUpgradeCost(2, upgradeCounts[2] || 0);
         upgradeCosts[3] = getUpgradeCost(3, upgradeCounts[3] || 0);
 
-        document.getElementById('wgBalance').innerText = localWG.toFixed(2);
-        document.getElementById('lpBalance').innerText = localLP;
-        document.getElementById('energyValue').innerText = localEnergy;
-        document.getElementById('maxEnergyValue').innerText = localMaxEnergy;
-        document.getElementById('energyHeader').innerText = localEnergy;
+        const wgEl = document.getElementById('wgBalance');
+        if (wgEl) wgEl.innerText = localWG.toFixed(2);
+        const lpEl = document.getElementById('lpBalance');
+        if (lpEl) lpEl.innerText = localLP;
+        const energyEl = document.getElementById('energyValue');
+        if (energyEl) energyEl.innerText = localEnergy;
+        const maxEnergyEl = document.getElementById('maxEnergyValue');
+        if (maxEnergyEl) maxEnergyEl.innerText = localMaxEnergy;
+        const energyHeaderEl = document.getElementById('energyHeader');
+        if (energyHeaderEl) energyHeaderEl.innerText = localEnergy;
+
         let percent = (localEnergy / localMaxEnergy) * 100;
-        document.getElementById('energyBar').style.width = percent + '%';
-        document.getElementById('totalWG').innerText = localWG.toFixed(2);
-        document.getElementById('totalLP').innerText = localLP;
-        document.getElementById('totalWGmini').innerText = localWG.toFixed(2);
-        document.getElementById('lotteryLPBalance').innerText = localLP;
-        document.getElementById('totalClicksMini').innerText = localClicks;
-        document.getElementById('profileClicks').innerText = localClicks;
-        document.getElementById('profileUSDT').innerText = localUSDT.toFixed(2);
-        document.getElementById('profileWins').innerText = localWins;
-        document.getElementById('earningPerClick').innerText = localEarning.toFixed(2);
-        document.getElementById('clickAmount').innerText = localEarning.toFixed(2);
-        document.getElementById('totalTickets').innerText = currentTickets.length;
-        document.getElementById('totalTicketsMini').innerText = currentTickets.length;
-        document.getElementById('upgradeCount1').innerText = upgradeCounts[1];
-        document.getElementById('upgradeCount2').innerText = upgradeCounts[2];
-        document.getElementById('upgradeCount3').innerText = upgradeCounts[3];
-        document.getElementById('upgradeCost1').innerHTML = upgradeCosts[1].toFixed(2);
-        document.getElementById('upgradeCost2').innerHTML = upgradeCosts[2].toFixed(2);
-        document.getElementById('upgradeCost3').innerHTML = upgradeCosts[3].toFixed(2);
-        document.getElementById('starsBalance').innerText = localStars;
-        document.getElementById('currentMaxEnergy').innerText = localMaxEnergy;
-        document.getElementById('energyUpgradeCount').innerText = localEnergyUpgrades;
-        document.getElementById('energyUpgradeCountProgress').innerText = localEnergyUpgrades;
+        const energyBar = document.getElementById('energyBar');
+        if (energyBar) energyBar.style.width = percent + '%';
+
+        const totalWG = document.getElementById('totalWG');
+        if (totalWG) totalWG.innerText = localWG.toFixed(2);
+        const totalLP = document.getElementById('totalLP');
+        if (totalLP) totalLP.innerText = localLP;
+        const totalWGmini = document.getElementById('totalWGmini');
+        if (totalWGmini) totalWGmini.innerText = localWG.toFixed(2);
+        const lotteryLPBalance = document.getElementById('lotteryLPBalance');
+        if (lotteryLPBalance) lotteryLPBalance.innerText = localLP;
+        const totalClicksMini = document.getElementById('totalClicksMini');
+        if (totalClicksMini) totalClicksMini.innerText = localClicks;
+        const profileClicks = document.getElementById('profileClicks');
+        if (profileClicks) profileClicks.innerText = localClicks;
+        const profileUSDT = document.getElementById('profileUSDT');
+        if (profileUSDT) profileUSDT.innerText = localUSDT.toFixed(2);
+        const profileWins = document.getElementById('profileWins');
+        if (profileWins) profileWins.innerText = localWins;
+        const earningPerClick = document.getElementById('earningPerClick');
+        if (earningPerClick) earningPerClick.innerText = localEarning.toFixed(2);
+        const clickAmount = document.getElementById('clickAmount');
+        if (clickAmount) clickAmount.innerText = localEarning.toFixed(2);
+
+        const totalTickets = document.getElementById('totalTickets');
+        if (totalTickets) totalTickets.innerText = currentTickets.length;
+        const totalTicketsMini = document.getElementById('totalTicketsMini');
+        if (totalTicketsMini) totalTicketsMini.innerText = currentTickets.length;
+
+        const upgradeCount1 = document.getElementById('upgradeCount1');
+        if (upgradeCount1) upgradeCount1.innerText = upgradeCounts[1];
+        const upgradeCount2 = document.getElementById('upgradeCount2');
+        if (upgradeCount2) upgradeCount2.innerText = upgradeCounts[2];
+        const upgradeCount3 = document.getElementById('upgradeCount3');
+        if (upgradeCount3) upgradeCount3.innerText = upgradeCounts[3];
+        const upgradeCost1 = document.getElementById('upgradeCost1');
+        if (upgradeCost1) upgradeCost1.innerHTML = upgradeCosts[1].toFixed(2);
+        const upgradeCost2 = document.getElementById('upgradeCost2');
+        if (upgradeCost2) upgradeCost2.innerHTML = upgradeCosts[2].toFixed(2);
+        const upgradeCost3 = document.getElementById('upgradeCost3');
+        if (upgradeCost3) upgradeCost3.innerHTML = upgradeCosts[3].toFixed(2);
+
+        const starsBalance = document.getElementById('starsBalance');
+        if (starsBalance) starsBalance.innerText = localStars;
+        const currentMaxEnergy = document.getElementById('currentMaxEnergy');
+        if (currentMaxEnergy) currentMaxEnergy.innerText = localMaxEnergy;
+        const energyUpgradeCount = document.getElementById('energyUpgradeCount');
+        if (energyUpgradeCount) energyUpgradeCount.innerText = localEnergyUpgrades;
+        const energyUpgradeCountProgress = document.getElementById('energyUpgradeCountProgress');
+        if (energyUpgradeCountProgress) energyUpgradeCountProgress.innerText = localEnergyUpgrades;
+
         let upgradesLeft = Math.max(0, 15 - localEnergyUpgrades);
-        document.getElementById('energyUpgradesLeft').innerText = upgradesLeft;
+        const energyUpgradesLeft = document.getElementById('energyUpgradesLeft');
+        if (energyUpgradesLeft) energyUpgradesLeft.innerText = upgradesLeft;
+
         let progressPercent = (localEnergyUpgrades / 15) * 100;
-        document.getElementById('energyUpgradeProgressFill').style.width = progressPercent + '%';
+        const energyUpgradeProgressFill = document.getElementById('energyUpgradeProgressFill');
+        if (energyUpgradeProgressFill) energyUpgradeProgressFill.style.width = progressPercent + '%';
 
         let upgradeBtn = document.getElementById('energyUpgradeBtn');
         let upgradeCard = document.getElementById('energyUpgradeCard');
@@ -273,11 +366,11 @@
     function animateClick() {
         let coin = document.getElementById('coin');
         let plus = document.getElementById('clickPlus');
-        coin.classList.add('coin-click');
-        plus.classList.add('show');
+        if (coin) coin.classList.add('coin-click');
+        if (plus) plus.classList.add('show');
         setTimeout(() => {
-            coin.classList.remove('coin-click');
-            plus.classList.remove('show');
+            if (coin) coin.classList.remove('coin-click');
+            if (plus) plus.classList.remove('show');
         }, 80);
     }
 
@@ -288,111 +381,119 @@
     const SYNC_DELAY = 5000;
 
     async function syncData(force = false) {
-    if (isSyncing) return;
-    const now = Date.now();
-    if (!force && now - lastSyncTime < SYNC_DELAY) return;
-    isSyncing = true;
-    lastSyncTime = now;
-    try {
-        const response = await fetch('/api/sync', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId }),
-            signal: AbortSignal.timeout(5000)
-        });
-        if (!response.ok) throw new Error('Sync failed');
-        const data = await response.json();
-        if (!data.success || !data.status) {
-            console.error('Sync error: invalid response');
-            return;
-        }
-
-        // Обновляем статус игрока
-        const status = data.status;
-        localWG = status.wg || 0;
-        localLP = status.lp || 0;
-        localEnergy = status.energy || 0;
-        localClicks = status.total_clicks || 0;
-        localEarning = status.earning_per_click || 0.01;
-        localUSDT = status.usdt || 0;
-        localWins = status.wins || 0;
-        localRole = status.role || 'player';
-        localStars = status.stars || 0;
-        localMaxEnergy = status.max_energy || 500;
-        localEnergyUpgrades = status.energy_upgrades || 0;
-
-        if (status.upgrade_counts) {
-            upgradeCounts = status.upgrade_counts;
-            for (let i = 1; i <= 3; i++) {
-                upgradeCosts[i] = getUpgradeCost(i, upgradeCounts[i] || 0);
-            }
-        }
-
-        // ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: обновляем лотерею из data.lottery
-        if (data.lottery) {
-            console.log('📊 Получены данные лотереи:', data.lottery);
-
-            // Обновляем призовой фонд
-            const prizePoolEl = document.getElementById('prizePool');
-            if (prizePoolEl && data.lottery.prize_pool !== undefined) {
-                prizePoolEl.innerText = data.lottery.prize_pool.toFixed(2);
-                console.log('💰 Призовой фонд обновлён:', data.lottery.prize_pool);
-            } else {
-                console.log('⚠️ prizePoolEl не найден или нет данных');
+        if (isSyncing) return;
+        const now = Date.now();
+        if (!force && now - lastSyncTime < SYNC_DELAY) return;
+        isSyncing = true;
+        lastSyncTime = now;
+        try {
+            const response = await fetch('/api/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: userId }),
+                signal: AbortSignal.timeout(5000)
+            });
+            if (!response.ok) throw new Error('Sync failed');
+            const data = await response.json();
+            if (!data.success || !data.status) {
+                console.error('Sync error: invalid response');
+                return;
             }
 
-            // Обновляем количество билетов у игрока
-            if (data.lottery.user_tickets !== undefined) {
-                const ticketsCountEl = document.getElementById('ticketsCount');
-                if (ticketsCountEl) ticketsCountEl.innerText = data.lottery.user_tickets;
-                const totalTicketsEl = document.getElementById('totalTickets');
-                if (totalTicketsEl) totalTicketsEl.innerText = data.lottery.user_tickets;
-                const totalTicketsMiniEl = document.getElementById('totalTicketsMini');
-                if (totalTicketsMiniEl) totalTicketsMiniEl.innerText = data.lottery.user_tickets;
-                console.log('🎫 Билетов у игрока:', data.lottery.user_tickets);
-            }
+            // Обновляем статус игрока
+            const status = data.status;
+            localWG = status.wg || 0;
+            localLP = status.lp || 0;
+            localEnergy = status.energy || 0;
+            localClicks = status.total_clicks || 0;
+            localEarning = status.earning_per_click || 0.01;
+            localUSDT = status.usdt || 0;
+            localWins = status.wins || 0;
+            localRole = status.role || 'player';
+            localStars = status.stars || 0;
+            localMaxEnergy = status.max_energy || 500;
+            localEnergyUpgrades = status.energy_upgrades || 0;
 
-            // Обновляем LP в лотерейном блоке
-            const lotteryLPEl = document.getElementById('lotteryLPBalance');
-            if (lotteryLPEl && data.lottery.user_lp !== undefined) {
-                lotteryLPEl.innerText = data.lottery.user_lp;
-            }
-
-            // Обновляем список билетов пользователя
-            if (data.lottery.tickets) {
-                currentTickets = data.lottery.tickets;
-                if (typeof updateCarousel === 'function') {
-                    updateCarousel();
+            if (status.upgrade_counts) {
+                upgradeCounts = status.upgrade_counts;
+                for (let i = 1; i <= 3; i++) {
+                    upgradeCosts[i] = getUpgradeCost(i, upgradeCounts[i] || 0);
                 }
-                console.log('📋 Билетов в массиве:', currentTickets.length);
             }
 
-            // Обновляем статус розыгрыша
-            if (data.lottery.is_drawn !== undefined) {
-                isDrawn = data.lottery.is_drawn;
-                winningNumbers = data.lottery.winning_numbers || [];
-                updateDrawUI();
+            // ========== КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: обновляем лотерею из data.lottery ==========
+            if (data.lottery) {
+                console.log('📊 Получены данные лотереи:', data.lottery);
+
+                // Обновляем призовой фонд
+                const prizePoolEl = document.getElementById('prizePool');
+                if (prizePoolEl && data.lottery.prize_pool !== undefined) {
+                    prizePoolEl.innerText = data.lottery.prize_pool.toFixed(2);
+                }
+
+                // Обновляем количество билетов у игрока
+                if (data.lottery.user_tickets !== undefined) {
+                    const ticketsCountEl = document.getElementById('ticketsCount');
+                    if (ticketsCountEl) ticketsCountEl.innerText = data.lottery.user_tickets;
+                    const totalTicketsEl = document.getElementById('totalTickets');
+                    if (totalTicketsEl) totalTicketsEl.innerText = data.lottery.user_tickets;
+                    const totalTicketsMiniEl = document.getElementById('totalTicketsMini');
+                    if (totalTicketsMiniEl) totalTicketsMiniEl.innerText = data.lottery.user_tickets;
+                }
+
+                // Обновляем LP в лотерейном блоке
+                const lotteryLPEl = document.getElementById('lotteryLPBalance');
+                if (lotteryLPEl && data.lottery.user_lp !== undefined) {
+                    lotteryLPEl.innerText = data.lottery.user_lp;
+                }
+
+                // Обновляем статус розыгрыша
+                if (data.lottery.is_drawn !== undefined) {
+                    isDrawn = data.lottery.is_drawn;
+                    winningNumbers = data.lottery.winning_numbers || [];
+                    updateDrawUI();
+                }
+
+                // Обновляем билеты ТОЛЬКО если НЕ ИДЁТ АКТИВНОЕ СТИРАНИЕ
+                if (data.lottery.tickets && !isScratchingActive) {
+                    currentTickets = data.lottery.tickets;
+                    if (typeof updateCarousel === 'function') {
+                        updateCarousel();
+                    }
+                    if (isDrawn && typeof updateTopPlayers === 'function') {
+                        updateTopPlayers();
+                    }
+                } else if (data.lottery.tickets && isScratchingActive) {
+                    console.log('⏳ Стирание активно, отложили обновление билетов');
+                    // Откладываем обновление на 1 секунду
+                    if (pendingRefreshTimeout) clearTimeout(pendingRefreshTimeout);
+                    pendingRefreshTimeout = setTimeout(() => {
+                        if (!isScratchingActive) {
+                            currentTickets = data.lottery.tickets;
+                            if (typeof updateCarousel === 'function') updateCarousel();
+                            if (isDrawn && typeof updateTopPlayers === 'function') updateTopPlayers();
+                        }
+                        pendingRefreshTimeout = null;
+                    }, 1000);
+                }
             }
-        } else {
-            console.log('⚠️ data.lottery отсутствует в ответе сервера');
-        }
 
-        if (data.leaderboard && data.leaderboard.length > 0) {
-            updateLeaderboardMiniFast(data.leaderboard);
-        }
-        if (data.recent_players && data.recent_players.length > 0) {
-            updateRecentPlayersFast(data.recent_players);
-        }
+            if (data.leaderboard && data.leaderboard.length > 0) {
+                updateLeaderboardMiniFast(data.leaderboard);
+            }
+            if (data.recent_players && data.recent_players.length > 0) {
+                updateRecentPlayersFast(data.recent_players);
+            }
 
-        updateUI();
+            updateUI();
 
-    } catch(e) {
-        console.error('Sync error:', e);
-        setTimeout(() => syncData(true), 5000);
-    } finally {
-        isSyncing = false;
+        } catch(e) {
+            console.error('Sync error:', e);
+            setTimeout(() => syncData(true), 5000);
+        } finally {
+            isSyncing = false;
+        }
     }
-}
 
     function updateLeaderboardMiniFast(leaderboardData) {
         const container = document.getElementById('leaderboardMini');
@@ -480,6 +581,7 @@
     }
 
     async function autoRegister() {
+        if (!userId) return;
         try {
             let urlParams = new URLSearchParams(window.location.search);
             let refCode = urlParams.get('startapp') || '';
@@ -498,7 +600,8 @@
             const data = await response.json();
             if (data.success) {
                 console.log('✅ Регистрация успешна');
-                document.getElementById('userGreeting').innerText = firstName || username || 'Игрок';
+                const greetingEl = document.getElementById('userGreeting');
+                if (greetingEl) greetingEl.innerText = firstName || username || 'Игрок';
             }
         } catch(e) {
             console.error('AutoRegister error:', e);
@@ -513,14 +616,19 @@
                 body: JSON.stringify({ user_id: userId })
             });
             let settings = await res.json();
-            document.getElementById('notificationsToggle').checked = settings.notifications || false;
-            document.getElementById('soundsToggle').checked = settings.sounds || false;
-            document.getElementById('vibrationToggle').checked = settings.vibration || false;
-            document.getElementById('hideFromTopToggle').checked = settings.hideFromTop || false;
+            const notificationsToggle = document.getElementById('notificationsToggle');
+            if (notificationsToggle) notificationsToggle.checked = settings.notifications || false;
+            const soundsToggle = document.getElementById('soundsToggle');
+            if (soundsToggle) soundsToggle.checked = settings.sounds || false;
+            const vibrationToggle = document.getElementById('vibrationToggle');
+            if (vibrationToggle) vibrationToggle.checked = settings.vibration || false;
+            const hideFromTopToggle = document.getElementById('hideFromTopToggle');
+            if (hideFromTopToggle) hideFromTopToggle.checked = settings.hideFromTop || false;
             localHideFromTop = settings.hideFromTop || false;
             if (settings.theme === 'light') document.body.classList.add('light-theme');
             else document.body.classList.remove('light-theme');
-            document.getElementById('themeToggle').checked = settings.theme === 'dark';
+            const themeToggle = document.getElementById('themeToggle');
+            if (themeToggle) themeToggle.checked = settings.theme === 'dark';
         } catch(e) {}
     }
 
@@ -549,11 +657,16 @@
         } catch(e) {}
     }
 
-    document.getElementById('themeToggle').onchange = (e) => saveSetting('theme', e.target.checked);
-    document.getElementById('notificationsToggle').onchange = (e) => saveSetting('notifications', e.target.checked);
-    document.getElementById('soundsToggle').onchange = (e) => saveSetting('sounds', e.target.checked);
-    document.getElementById('vibrationToggle').onchange = (e) => saveSetting('vibration', e.target.checked);
-    document.getElementById('hideFromTopToggle').onchange = (e) => saveSetting('hideFromTop', e.target.checked);
+    const themeToggle = document.getElementById('themeToggle');
+    if (themeToggle) themeToggle.onchange = (e) => saveSetting('theme', e.target.checked);
+    const notificationsToggle = document.getElementById('notificationsToggle');
+    if (notificationsToggle) notificationsToggle.onchange = (e) => saveSetting('notifications', e.target.checked);
+    const soundsToggle = document.getElementById('soundsToggle');
+    if (soundsToggle) soundsToggle.onchange = (e) => saveSetting('sounds', e.target.checked);
+    const vibrationToggle = document.getElementById('vibrationToggle');
+    if (vibrationToggle) vibrationToggle.onchange = (e) => saveSetting('vibration', e.target.checked);
+    const hideFromTopToggle = document.getElementById('hideFromTopToggle');
+    if (hideFromTopToggle) hideFromTopToggle.onchange = (e) => saveSetting('hideFromTop', e.target.checked);
 
     async function loadReferralLink() {
         try {
@@ -563,9 +676,11 @@
                 body: JSON.stringify({ user_id: userId })
             });
             let data = await res.json();
-            document.getElementById('referralLinkInput').value = data.link;
+            const referralInput = document.getElementById('referralLinkInput');
+            if (referralInput) referralInput.value = data.link;
         } catch(e) {
-            document.getElementById('referralLinkInput').value = 'Ошибка';
+            const referralInput = document.getElementById('referralLinkInput');
+            if (referralInput) referralInput.value = 'Ошибка';
         }
     }
 
@@ -577,10 +692,14 @@
                 body: JSON.stringify({ user_id: userId })
             });
             let data = await res.json();
-            document.getElementById('referralsCount').innerText = `(${data.referrals.length})`;
-            document.getElementById('totalEarnedLP').innerText = data.total_earned_lp.toFixed(2);
-            document.getElementById('totalEarnedWG').innerText = data.total_earned_wg.toFixed(2);
+            const referralsCount = document.getElementById('referralsCount');
+            if (referralsCount) referralsCount.innerText = `(${data.referrals.length})`;
+            const totalEarnedLP = document.getElementById('totalEarnedLP');
+            if (totalEarnedLP) totalEarnedLP.innerText = data.total_earned_lp.toFixed(2);
+            const totalEarnedWG = document.getElementById('totalEarnedWG');
+            if (totalEarnedWG) totalEarnedWG.innerText = data.total_earned_wg.toFixed(2);
             let container = document.getElementById('referralsList');
+            if (!container) return;
             if (data.referrals.length === 0) {
                 container.innerHTML = '<div class="empty-referrals">😢 Пока нет друзей</div>';
                 return;
@@ -641,7 +760,8 @@
                     <div class="withdrawal-details">${w.created_at}</div>
                 </div>`;
             }
-            document.getElementById('withdrawalHistoryList').innerHTML = historyHtml || '<div class="empty-state">История пуста</div>';
+            const historyList = document.getElementById('withdrawalHistoryList');
+            if (historyList) historyList.innerHTML = historyHtml || '<div class="empty-state">История пуста</div>';
         } catch(e) {}
     }
 
@@ -649,47 +769,50 @@
     let lastClickTime = 0;
     const CLICK_DEBOUNCE = 40;
 
-    document.getElementById('coin').onclick = async () => {
-        const now = Date.now();
-        if (now - lastClickTime < CLICK_DEBOUNCE) return;
-        lastClickTime = now;
-        if (localEnergy <= 0) {
-            playErrorSound();
-            showToast('Нет энергии!', 'error');
-            return;
-        }
-        playClickFeedback();
-        animateClick();
-        try {
-            let res = await fetch('/api/click', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: userId }),
-                signal: AbortSignal.timeout(3000)
-            });
-            let data = await res.json();
-            if (data.error) {
-                localEnergy = data.energy;
-            } else {
-                localEnergy = data.energy;
-                localWG = data.wg;
-                localLP = data.lp;
-                localClicks = data.total_clicks;
-                localEarning = data.earning_per_click;
-                if (data.lp_reward) {
-                    if (navigator.vibrate) navigator.vibrate([15, 30, 15]);
-                    playLpDropSound();
-                    showToast(`+${data.earned.toFixed(2)} WG и +0.5 LP! 🎲`, 'success');
-                } else {
-                    showToast(`+${data.earned.toFixed(2)} WG!`, 'success');
-                }
+    const coin = document.getElementById('coin');
+    if (coin) {
+        coin.onclick = async () => {
+            const now = Date.now();
+            if (now - lastClickTime < CLICK_DEBOUNCE) return;
+            lastClickTime = now;
+            if (localEnergy <= 0) {
+                playErrorSound();
+                showToast('Нет энергии!', 'error');
+                return;
             }
-            updateUI();
-            updateLeaderboard();
-        } catch(e) {
-            console.error('Click error:', e);
-        }
-    };
+            playClickFeedback();
+            animateClick();
+            try {
+                let res = await fetch('/api/click', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId }),
+                    signal: AbortSignal.timeout(3000)
+                });
+                let data = await res.json();
+                if (data.error) {
+                    localEnergy = data.energy;
+                } else {
+                    localEnergy = data.energy;
+                    localWG = data.wg;
+                    localLP = data.lp;
+                    localClicks = data.total_clicks;
+                    localEarning = data.earning_per_click;
+                    if (data.lp_reward) {
+                        if (navigator.vibrate) navigator.vibrate([15, 30, 15]);
+                        playLpDropSound();
+                        showToast(`+${data.earned.toFixed(2)} WG и +0.5 LP! 🎲`, 'success');
+                    } else {
+                        showToast(`+${data.earned.toFixed(2)} WG!`, 'success');
+                    }
+                }
+                updateUI();
+                updateLeaderboard();
+            } catch(e) {
+                console.error('Click error:', e);
+            }
+        };
+    }
 
     setTimeout(() => {
         const settingsToggles = ['notificationsToggle', 'themeToggle', 'soundsToggle', 'vibrationToggle', 'hideFromTopToggle'];
@@ -720,9 +843,12 @@
                 upgradeCounts[id] = data.new_count;
                 upgradeCosts[id] = data.next_cost;
                 localWG -= cost;
-                document.getElementById(`upgradeCount${id}`).innerText = data.new_count;
-                document.getElementById(`upgradeCost${id}`).innerHTML = data.next_cost.toFixed(2);
-                document.getElementById('wgBalance').innerText = localWG.toFixed(2);
+                const upgradeCountEl = document.getElementById(`upgradeCount${id}`);
+                if (upgradeCountEl) upgradeCountEl.innerText = data.new_count;
+                const upgradeCostEl = document.getElementById(`upgradeCost${id}`);
+                if (upgradeCostEl) upgradeCostEl.innerHTML = data.next_cost.toFixed(2);
+                const wgBalance = document.getElementById('wgBalance');
+                if (wgBalance) wgBalance.innerText = localWG.toFixed(2);
                 await syncData(true);
                 updateUI();
             } else {
@@ -942,16 +1068,19 @@
         }, 5000);
     }
 
-    document.querySelectorAll('.shop-tab').forEach(tab => {
+    const shopTabs = document.querySelectorAll('.shop-tab');
+    shopTabs.forEach(tab => {
         tab.onclick = () => {
             let target = tab.dataset.shopTab;
             document.querySelectorAll('.shop-tab').forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
             document.querySelectorAll('.shop-pane').forEach(pane => pane.classList.remove('active'));
             if (target === 'normal') {
-                document.getElementById('shopNormal').classList.add('active');
+                const shopNormal = document.getElementById('shopNormal');
+                if (shopNormal) shopNormal.classList.add('active');
             } else {
-                document.getElementById('shopStars').classList.add('active');
+                const shopStars = document.getElementById('shopStars');
+                if (shopStars) shopStars.classList.add('active');
                 updateStatus();
             }
         };
@@ -987,7 +1116,8 @@
         setTimeout(() => updateDonateCarousel(), 100);
     }
 
-    document.querySelectorAll('.nav-item').forEach(item => {
+    const navItems = document.querySelectorAll('.nav-item');
+    navItems.forEach(item => {
         const oldOnClick = item.onclick;
         item.onclick = (e) => {
             playNavSound();
@@ -995,8 +1125,10 @@
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             item.classList.add('active');
             document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-            document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`).classList.add('active');
-            document.querySelector('.main-content').scrollTop = 0;
+            const tabPane = document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
+            if (tabPane) tabPane.classList.add('active');
+            const mainContent = document.querySelector('.main-content');
+            if (mainContent) mainContent.scrollTop = 0;
             if (tab === 'lottery') {
                 updateLottery();
                 loadRecentPlayers();
@@ -1008,192 +1140,224 @@
     });
 
     // ==================== ЛОТЕРЕЯ ====================
-    document.getElementById('ticketBtn').onclick = async () => {
-    // Сначала проверяем статус розыгрыша
-    const statusRes = await fetch('/api/lottery_status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: userId })
-    });
-    const statusData = await statusRes.json();
+    const ticketBtn = document.getElementById('ticketBtn');
+    if (ticketBtn) {
+        ticketBtn.onclick = async () => {
+            // Сначала проверяем статус розыгрыша
+            const statusRes = await fetch('/api/lottery_status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: userId })
+            });
+            const statusData = await statusRes.json();
 
-    if (statusData.is_drawn) {
-        playErrorSound();
-        showToast('❌ Розыгрыш уже начался! Новые билеты появятся в 00:00', 'error');
-        return;
+            if (statusData.is_drawn) {
+                playErrorSound();
+                showToast('❌ Розыгрыш уже начался! Новые билеты появятся в 00:00', 'error');
+                return;
+            }
+
+            if (localLP < 100) {
+                playErrorSound();
+                showToast('Не хватает LP (нужно 100)', 'error');
+                return;
+            }
+
+            try {
+                let res = await fetch('/api/buy_ticket', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId })
+                });
+                let data = await res.json();
+                if (data.success) {
+                    playPurchaseSound();
+                    showToast(data.msg, 'success');
+                    await syncData(true);
+                    setTimeout(async () => {
+                        await loadUserTickets();
+                        await updateStatus();
+                    }, 500);
+                } else {
+                    playErrorSound();
+                    showToast(data.msg, 'error');
+                }
+            } catch(e) {
+                playErrorSound();
+                showToast('Ошибка!', 'error');
+            }
+        };
     }
 
-    if (localLP < 100) {
-        playErrorSound();
-        showToast('Не хватает LP (нужно 100)', 'error');
-        return;
+    const myTicketsBtn = document.getElementById('myTicketsBtn');
+    if (myTicketsBtn) {
+        myTicketsBtn.onclick = async () => {
+            await loadUserTickets();
+            const ticketsPage = document.getElementById('ticketsPage');
+            const bottomNav = document.getElementById('bottomNav');
+            if (ticketsPage) ticketsPage.classList.add('active');
+            if (bottomNav) bottomNav.style.display = 'none';
+            document.body.style.overflow = 'hidden';
+        };
     }
-
-    try {
-        let res = await fetch('/api/buy_ticket', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId })
-        });
-        let data = await res.json();
-        if (data.success) {
-            playPurchaseSound();
-            showToast(data.msg, 'success');
-            await syncData(true);
-            setTimeout(async () => {
-                await loadUserTickets();
-                await updateStatus();
-            }, 500);
-        } else {
-            playErrorSound();
-            showToast(data.msg, 'error');
-        }
-    } catch(e) {
-        playErrorSound();
-        showToast('Ошибка!', 'error');
-    }
-};
-
-    document.getElementById('myTicketsBtn').onclick = async () => {
-        await loadUserTickets();
-        document.getElementById('ticketsPage').classList.add('active');
-        document.getElementById('bottomNav').style.display = 'none';
-        document.body.style.overflow = 'hidden';
-    };
 
     window.closeTicketsPage = function() {
-        document.getElementById('ticketsPage').classList.remove('active');
-        document.getElementById('bottomNav').style.display = 'flex';
+        const ticketsPage = document.getElementById('ticketsPage');
+        const bottomNav = document.getElementById('bottomNav');
+        if (ticketsPage) ticketsPage.classList.remove('active');
+        if (bottomNav) bottomNav.style.display = 'flex';
         document.body.style.overflow = '';
         scratchProgress.clear();
     };
 
+    // ========== ОСНОВНАЯ ФУНКЦИЯ ЗАГРУЗКИ БИЛЕТОВ С ЗАЩИТОЙ ОТ СТИРАНИЯ ==========
     async function loadUserTickets() {
-    console.log('🔄 loadUserTickets вызвана');
-    try {
-        let res = await fetch('/api/lottery_status', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId })
-        });
-        let data = await res.json();
-
-        console.log('📊 loadUserTickets получила данные:', {
-            prize_pool: data.prize_pool,
-            user_tickets: data.user_tickets,
-            is_drawn: data.is_drawn,
-            tickets_count: data.tickets?.length
-        });
-
-        // Обновляем глобальный статус розыгрыша
-        if (data.is_drawn !== undefined) {
-            isDrawn = data.is_drawn;
-            winningNumbers = data.winning_numbers || [];
-            updateDrawUI();
+        // НЕ перезагружаем билеты если идет активное стирание!
+        if (isScratchingActive) {
+            console.log('⏳ Стирание активно, пропускаем перезагрузку билетов');
+            return;
         }
 
-        // Обновляем отображение фонда
-        const prizePoolEl = document.getElementById('prizePool');
-        if (prizePoolEl && data.prize_pool !== undefined) {
-            prizePoolEl.innerText = data.prize_pool.toFixed(2);
-        }
+        console.log('🔄 loadUserTickets вызвана');
+        try {
+            let res = await fetch('/api/lottery_status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: userId })
+            });
+            let data = await res.json();
 
-        // Обновляем количество билетов
-        const ticketsCount = data.user_tickets || 0;
-        const ticketsCountEl = document.getElementById('ticketsCount');
-        if (ticketsCountEl) ticketsCountEl.innerText = ticketsCount;
+            console.log('📊 loadUserTickets получила данные:', {
+                prize_pool: data.prize_pool,
+                user_tickets: data.user_tickets,
+                is_drawn: data.is_drawn,
+                tickets_count: data.tickets?.length
+            });
 
-        const totalTicketsEl = document.getElementById('totalTickets');
-        if (totalTicketsEl) totalTicketsEl.innerText = ticketsCount;
+            // Обновляем глобальный статус розыгрыша
+            if (data.is_drawn !== undefined) {
+                isDrawn = data.is_drawn;
+                winningNumbers = data.winning_numbers || [];
+                updateDrawUI();
+            }
 
-        const totalTicketsMiniEl = document.getElementById('totalTicketsMini');
-        if (totalTicketsMiniEl) totalTicketsMiniEl.innerText = ticketsCount;
+            // Обновляем отображение фонда
+            const prizePoolEl = document.getElementById('prizePool');
+            if (prizePoolEl && data.prize_pool !== undefined) {
+                prizePoolEl.innerText = data.prize_pool.toFixed(2);
+            }
 
-        // Обновляем LP в лотерейном блоке
-        const lotteryLPEl = document.getElementById('lotteryLPBalance');
-        if (lotteryLPEl && data.user_lp !== undefined) {
-            lotteryLPEl.innerText = data.user_lp;
-        }
+            // Обновляем количество билетов
+            const ticketsCount = data.user_tickets || 0;
+            const ticketsCountEl = document.getElementById('ticketsCount');
+            if (ticketsCountEl) ticketsCountEl.innerText = ticketsCount;
+            const totalTicketsEl = document.getElementById('totalTickets');
+            if (totalTicketsEl) totalTicketsEl.innerText = ticketsCount;
+            const totalTicketsMiniEl = document.getElementById('totalTicketsMini');
+            if (totalTicketsMiniEl) totalTicketsMiniEl.innerText = ticketsCount;
 
-        // КРИТИЧЕСКИ ВАЖНО: обновляем массив билетов и карусель
-        if (data.tickets && data.tickets.length > 0) {
-            currentTickets = data.tickets;
-            console.log('📋 Обновляем карусель, билетов:', currentTickets.length);
-            if (typeof updateCarousel === 'function') {
-                updateCarousel();
+            // Обновляем LP в лотерейном блоке
+            const lotteryLPEl = document.getElementById('lotteryLPBalance');
+            if (lotteryLPEl && data.user_lp !== undefined) {
+                lotteryLPEl.innerText = data.user_lp;
+            }
+
+            // КРИТИЧЕСКИ ВАЖНО: обновляем массив билетов и карусель
+            if (data.tickets && data.tickets.length > 0) {
+                // Сохраняем текущий прогресс стирания перед обновлением
+                const savedProgress = new Map(scratchProgress);
+                currentTickets = data.tickets;
+                console.log('📋 Обновляем карусель, билетов:', currentTickets.length);
+                if (typeof updateCarousel === 'function') {
+                    updateCarousel();
+                    // Восстанавливаем прогресс стирания
+                    setTimeout(() => restoreScratchProgress(savedProgress), 100);
+                }
             } else {
-                console.warn('updateCarousel не определена');
+                currentTickets = [];
+                const container = document.getElementById('ticketsContainer');
+                if (container) {
+                    container.innerHTML = '<div class="empty-state">😢 У вас пока нет билетов</div>';
+                }
             }
-        } else {
-            currentTickets = [];
-            const container = document.getElementById('ticketsContainer');
-            if (container) {
-                container.innerHTML = '<div class="empty-state">😢 У вас пока нет билетов</div>';
+
+            // Обновляем топ игроков если розыгрыш идёт
+            if (isDrawn && typeof updateTopPlayers === 'function') {
+                updateTopPlayers();
             }
-        }
 
-        // Обновляем топ игроков если розыгрыш идёт
-        if (isDrawn && typeof updateTopPlayers === 'function') {
-            updateTopPlayers();
+        } catch(e) {
+            console.error('Error loading tickets:', e);
         }
-
-    } catch(e) {
-        console.error('Error loading tickets:', e);
     }
-}
+
+    // Функция восстановления прогресса после перезагрузки
+    function restoreScratchProgress(savedProgress) {
+        for (let [key, imageData] of savedProgress) {
+            const canvas = document.getElementById(key.replace('_progress', ''));
+            if (canvas && !canvas.isRevealed) {
+                const ctx = canvas.getContext('2d');
+                ctx.putImageData(imageData, 0, 0);
+                scratchProgress.set(key, imageData);
+                console.log('🔄 Восстановлен прогресс стирания для', key);
+            }
+        }
+    }
 
     function updateCarousel() {
-    const container = document.getElementById('ticketsContainer');
-    if (!container) {
-        console.warn('ticketsContainer не найден');
-        return;
-    }
-
-    console.log('🎨 updateCarousel, билетов:', currentTickets.length);
-
-    if (currentTickets.length === 0) {
-        container.innerHTML = '<div class="empty-state">😢 У вас пока нет билетов</div>';
-        document.getElementById('carouselDots').innerHTML = '';
-        return;
-    }
-
-    let slidesHtml = '';
-    currentTickets.forEach((ticket, idx) => {
-        slidesHtml += `<div class="ticket-slide" data-index="${idx}">${renderTicketForCarousel(ticket)}</div>`;
-    });
-    container.innerHTML = slidesHtml;
-
-    let dotsHtml = '';
-    currentTickets.forEach((_, idx) => {
-        dotsHtml += `<div class="carousel-dot ${idx === currentTicketIndex ? 'active' : ''}" onclick="goToTicket(${idx})"></div>`;
-    });
-    document.getElementById('carouselDots').innerHTML = dotsHtml;
-
-    // Инициализируем canvas для каждого билета
-    const allSlides = document.querySelectorAll('.ticket-slide');
-    allSlides.forEach((slide, idx) => {
-        if (currentTickets[idx]) {
-            initSlideCanvases(slide, currentTickets[idx]);
+        const container = document.getElementById('ticketsContainer');
+        if (!container) {
+            console.warn('ticketsContainer не найден');
+            return;
         }
-    });
 
-    // Настраиваем скролл
-    let scrollTimeout;
-    container.onscroll = () => {
-        if (scrollTimeout) clearTimeout(scrollTimeout);
-        scrollTimeout = setTimeout(() => {
-            const scrollLeft = container.scrollLeft;
-            const slideWidth = container.clientWidth;
-            const newIndex = Math.round(scrollLeft / slideWidth);
-            if (newIndex !== currentTicketIndex && newIndex >= 0 && newIndex < currentTickets.length) {
-                currentTicketIndex = newIndex;
-                document.querySelectorAll('.carousel-dot').forEach((dot, i) => {
-                    dot.classList.toggle('active', i === currentTicketIndex);
-                });
+        console.log('🎨 updateCarousel, билетов:', currentTickets.length);
+
+        if (currentTickets.length === 0) {
+            container.innerHTML = '<div class="empty-state">😢 У вас пока нет билетов</div>';
+            const dotsContainer = document.getElementById('carouselDots');
+            if (dotsContainer) dotsContainer.innerHTML = '';
+            return;
+        }
+
+        let slidesHtml = '';
+        currentTickets.forEach((ticket, idx) => {
+            slidesHtml += `<div class="ticket-slide" data-index="${idx}">${renderTicketForCarousel(ticket)}</div>`;
+        });
+        container.innerHTML = slidesHtml;
+
+        let dotsHtml = '';
+        currentTickets.forEach((_, idx) => {
+            dotsHtml += `<div class="carousel-dot ${idx === currentTicketIndex ? 'active' : ''}" onclick="goToTicket(${idx})"></div>`;
+        });
+        const dotsContainer = document.getElementById('carouselDots');
+        if (dotsContainer) dotsContainer.innerHTML = dotsHtml;
+
+        // Инициализируем canvas для каждого билета
+        const allSlides = document.querySelectorAll('.ticket-slide');
+        allSlides.forEach((slide, idx) => {
+            if (currentTickets[idx]) {
+                initSlideCanvases(slide, currentTickets[idx]);
             }
-        }, 100);
-    };
-}
+        });
+
+        // Настраиваем скролл
+        let scrollTimeout;
+        container.onscroll = () => {
+            if (scrollTimeout) clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                const scrollLeft = container.scrollLeft;
+                const slideWidth = container.clientWidth;
+                const newIndex = Math.round(scrollLeft / slideWidth);
+                if (newIndex !== currentTicketIndex && newIndex >= 0 && newIndex < currentTickets.length) {
+                    currentTicketIndex = newIndex;
+                    document.querySelectorAll('.carousel-dot').forEach((dot, i) => {
+                        dot.classList.toggle('active', i === currentTicketIndex);
+                    });
+                }
+            }, 100);
+        };
+    }
 
     window.goToTicket = (index) => {
         const container = document.getElementById('ticketsContainer');
@@ -1355,15 +1519,18 @@
         }
     }
 
+    // ========== ОСНОВНАЯ ФУНКЦИЯ СТИРАНИЯ С HTTP ЗАПРОСОМ ==========
     function setupScratchHandlers(canvasId, ticketNumber, cellIndex, size, isWin, number) {
         const canvas = document.getElementById(canvasId);
         if (!canvas) return;
+
         const cell = canvas.parentElement;
         const numberDiv = cell.querySelector('.scratch-number-layer');
         numberDiv.style.display = 'flex';
         numberDiv.innerHTML = number;
         numberDiv.classList.add('normal');
         numberDiv.classList.remove('win');
+
         const getCoords = (clientX, clientY, targetCanvas) => {
             const rect = targetCanvas.getBoundingClientRect();
             const scaleX = targetCanvas.width / rect.width;
@@ -1374,80 +1541,93 @@
             y = Math.max(0, Math.min(targetCanvas.height, y));
             return { x, y };
         };
+
+        // ========== ИСПРАВЛЕННАЯ ФУНКЦИЯ СТИРАНИЯ ==========
         const eraseAt = (targetCanvas, x, y, tNum, cIdx, isWinCell, cellNumber) => {
-    if (targetCanvas.isRevealed) return;
+            if (targetCanvas.isRevealed) return;
 
-    const ctx = targetCanvas.getContext('2d');
-    ctx.save();
-    ctx.globalCompositeOperation = 'destination-out';
-    ctx.beginPath();
-    ctx.arc(x, y, 14, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
+            // Устанавливаем флаг активности стирания
+            isScratchingActive = true;
+            if (scratchTimeout) clearTimeout(scratchTimeout);
 
-    const progressKey = `${targetCanvas.id}_progress`;
-    const imageData = ctx.getImageData(0, 0, targetCanvas.width, targetCanvas.height);
-    scratchProgress.set(progressKey, imageData);
+            // Сбрасываем флаг через 1.5 секунды после последнего стирания
+            scratchTimeout = setTimeout(() => {
+                isScratchingActive = false;
+                console.log('✅ Стирание завершено, флаг сброшен');
+            }, 1500);
 
-    let transparent = 0;
-    for (let j = 3; j < imageData.data.length; j += 4) {
-        if (imageData.data[j] === 0) transparent++;
-    }
-    targetCanvas.erasedPercent = (transparent / (targetCanvas.width * targetCanvas.height)) * 100;
+            const ctx = targetCanvas.getContext('2d');
+            ctx.save();
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.beginPath();
+            ctx.arc(x, y, 14, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
 
-    console.log(`💥 Стёрто ${targetCanvas.erasedPercent}% клетки ${cIdx} билета ${tNum}`);
+            const progressKey = `${targetCanvas.id}_progress`;
+            const imageData = ctx.getImageData(0, 0, targetCanvas.width, targetCanvas.height);
+            scratchProgress.set(progressKey, imageData);
 
-    if (targetCanvas.erasedPercent >= 60 && !targetCanvas.isRevealed) {
-        console.log(`✅ ОТПРАВЛЯЕМ ЗАПРОС на открытие клетки ${cIdx} билета ${tNum}`);
-
-        // Отправляем HTTP-запрос на сервер
-        fetch('/api/reveal_ticket_cells', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                user_id: userId,
-                ticket_number: tNum,
-                cell_index: cIdx
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('📡 Ответ сервера:', data);
-            if (data.success) {
-                const cellDiv = targetCanvas.parentElement;
-                const numDiv = cellDiv.querySelector('.scratch-number-layer');
-                if (isWinCell) {
-                    numDiv.classList.add('win');
-                    numDiv.classList.remove('normal');
-                }
-                targetCanvas.style.display = 'none';
-                targetCanvas.isRevealed = true;
-                scratchProgress.delete(progressKey);
-
-                if (navigator.vibrate) navigator.vibrate(30);
-                showToast(`Клетка ${cellNumber} открыта! 🎉`, 'success');
-                updateTopPlayers();
-
-                // Обновляем локальный массив билетов
-                if (currentTickets && currentTickets.length > 0) {
-                    for (let ticket of currentTickets) {
-                        if (ticket.number === tNum) {
-                            ticket.revealed[cIdx] = true;
-                            break;
-                        }
-                    }
-                }
-            } else {
-                console.log('❌ Сервер не подтвердил открытие:', data.message);
-                // Если сервер вернул ошибку — возвращаем клетку в исходное состояние?
+            let transparent = 0;
+            for (let j = 3; j < imageData.data.length; j += 4) {
+                if (imageData.data[j] === 0) transparent++;
             }
-        })
-        .catch(error => {
-            console.error('❌ Ошибка запроса:', error);
-        });
-    }
-};
+            targetCanvas.erasedPercent = (transparent / (targetCanvas.width * targetCanvas.height)) * 100;
+
+            console.log(`💥 Стёрто ${targetCanvas.erasedPercent.toFixed(1)}% клетки ${cIdx} билета ${tNum}`);
+
+            if (targetCanvas.erasedPercent >= 60 && !targetCanvas.isRevealed) {
+                console.log(`✅ ОТПРАВЛЯЕМ ЗАПРОС на открытие клетки ${cIdx} билета ${tNum}`);
+
+                // Отправляем HTTP-запрос на сервер
+                fetch('/api/reveal_ticket_cells', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        ticket_number: tNum,
+                        cell_index: cIdx
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('📡 Ответ сервера:', data);
+                    if (data.success) {
+                        const cellDiv = targetCanvas.parentElement;
+                        const numDiv = cellDiv.querySelector('.scratch-number-layer');
+                        if (isWinCell) {
+                            numDiv.classList.add('win');
+                            numDiv.classList.remove('normal');
+                        }
+                        targetCanvas.style.display = 'none';
+                        targetCanvas.isRevealed = true;
+                        scratchProgress.delete(progressKey);
+
+                        if (navigator.vibrate) navigator.vibrate(30);
+                        showToast(`Клетка ${cellNumber} открыта! 🎉`, 'success');
+                        updateTopPlayers();
+
+                        // Обновляем локальный массив билетов
+                        if (currentTickets && currentTickets.length > 0) {
+                            for (let ticket of currentTickets) {
+                                if (ticket.number === tNum) {
+                                    ticket.revealed[cIdx] = true;
+                                    break;
+                                }
+                            }
+                        }
+                    } else {
+                        console.log('❌ Сервер не подтвердил открытие:', data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ Ошибка запроса:', error);
+                });
+            }
+        };
+
         let mouseErasing = false;
+
         const onMouseMove = (e) => {
             if (!mouseErasing || !isDrawn) return;
             e.preventDefault();
@@ -1467,11 +1647,13 @@
                 }
             }
         };
+
         const onMouseUp = () => {
             mouseErasing = false;
             document.removeEventListener('mousemove', onMouseMove);
             document.removeEventListener('mouseup', onMouseUp);
         };
+
         const onMouseDown = (e) => {
             if (!isDrawn) {
                 showToast('Розыгрыш ещё не начался! ⏳', 'error');
@@ -1494,7 +1676,9 @@
             document.addEventListener('mousemove', onMouseMove);
             document.addEventListener('mouseup', onMouseUp);
         };
+
         let activeTouches = new Map();
+
         const onTouchStart = (e) => {
             if (!isDrawn) {
                 showToast('Розыгрыш ещё не начался! ⏳', 'error');
@@ -1521,6 +1705,7 @@
                 }
             }
         };
+
         const onTouchMove = (e) => {
             if (!isDrawn) return;
             e.preventDefault();
@@ -1544,10 +1729,12 @@
                 }
             }
         };
+
         const onTouchEnd = (e) => {
             e.preventDefault();
             for (let i = 0; i < e.changedTouches.length; i++) activeTouches.delete(e.changedTouches[i].identifier);
         };
+
         canvas.addEventListener('mousedown', onMouseDown);
         canvas.addEventListener('touchstart', onTouchStart, { passive: false });
         canvas.addEventListener('touchmove', onTouchMove, { passive: false });
@@ -1622,7 +1809,7 @@
                 <div class="top-player-rank">${idx + 1}</div>
                 <div class="top-player-avatar">👤</div>
                 <div class="top-player-info">
-                    <div class="top-player-name">${playerName}</div>
+                    <div class="top-player-name">${escapeHtml(playerName)}</div>
                     <div class="top-player-matches">Открыто: ${player.revealed}/12</div>
                 </div>
                 <div class="top-player-score">${player.matches}/12</div>
@@ -1639,14 +1826,20 @@
             const remaining = Math.max(0, Math.floor((endTime - now) / 1000));
             if (remaining <= 0) {
                 clearInterval(timerInterval);
-                document.getElementById('drawTimer').innerHTML = '⏰ Время вышло!';
-                document.getElementById('drawTimer').style.display = 'block';
+                const drawTimer = document.getElementById('drawTimer');
+                if (drawTimer) {
+                    drawTimer.innerHTML = '⏰ Время вышло!';
+                    drawTimer.style.display = 'block';
+                }
                 return;
             }
             const minutes = Math.floor(remaining / 60);
             const seconds = remaining % 60;
-            document.getElementById('drawTimer').innerHTML = `⏳ Осталось: ${minutes}:${seconds.toString().padStart(2, '0')}`;
-            document.getElementById('drawTimer').style.display = 'block';
+            const drawTimer = document.getElementById('drawTimer');
+            if (drawTimer) {
+                drawTimer.innerHTML = `⏳ Осталось: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+                drawTimer.style.display = 'block';
+            }
         }
         updateTimer();
         timerInterval = setInterval(updateTimer, 1000);
@@ -1657,7 +1850,8 @@
             clearInterval(timerInterval);
             timerInterval = null;
         }
-        document.getElementById('drawTimer').style.display = 'none';
+        const drawTimer = document.getElementById('drawTimer');
+        if (drawTimer) drawTimer.style.display = 'none';
     }
 
     function updateDrawUI() {
@@ -1666,22 +1860,30 @@
         const topPlayersBlock = document.getElementById('topPlayersBlock');
         const recentSection = document.getElementById('recentPlayersSection');
         if (isDrawn && winningNumbers.length > 0) {
-            statusDiv.innerHTML = '🎉 РОЗЫГРЫШ СОСТОЯЛСЯ! 🎉<br>⏳ Водите пальцем по клеткам, чтобы стереть защитный слой! У вас 3 часа!';
-            statusDiv.classList.add('active');
-            ticketBtn.disabled = true;
-            ticketBtn.classList.add('disabled');
-            ticketBtn.textContent = '⏳ Идёт розыгрыш...';
-            topPlayersBlock.style.display = 'block';
-            recentSection.style.display = 'none';
+            if (statusDiv) {
+                statusDiv.innerHTML = '🎉 РОЗЫГРЫШ СОСТОЯЛСЯ! 🎉<br>⏳ Водите пальцем по клеткам, чтобы стереть защитный слой! У вас 3 часа!';
+                statusDiv.classList.add('active');
+            }
+            if (ticketBtn) {
+                ticketBtn.disabled = true;
+                ticketBtn.classList.add('disabled');
+                ticketBtn.textContent = '⏳ Идёт розыгрыш...';
+            }
+            if (topPlayersBlock) topPlayersBlock.style.display = 'block';
+            if (recentSection) recentSection.style.display = 'none';
             updateTopPlayers();
         } else {
-            statusDiv.innerHTML = '⏳ Ожидание розыгрыша в 21:00';
-            statusDiv.classList.remove('active');
-            ticketBtn.disabled = false;
-            ticketBtn.classList.remove('disabled');
-            ticketBtn.innerHTML = '<img src="/static/fire.png" alt="Принять участие" style="width: 20px; height: 20px;"> Принять участие за 100 LP';
-            topPlayersBlock.style.display = 'none';
-            recentSection.style.display = 'block';
+            if (statusDiv) {
+                statusDiv.innerHTML = '⏳ Ожидание розыгрыша в 21:00';
+                statusDiv.classList.remove('active');
+            }
+            if (ticketBtn) {
+                ticketBtn.disabled = false;
+                ticketBtn.classList.remove('disabled');
+                ticketBtn.innerHTML = '<img src="/static/fire.png" alt="Принять участие" style="width: 20px; height: 20px;"> Принять участие за 100 LP';
+            }
+            if (topPlayersBlock) topPlayersBlock.style.display = 'none';
+            if (recentSection) recentSection.style.display = 'block';
             stopTimer();
         }
     }
@@ -1745,8 +1947,13 @@
             stopTimer();
         });
         socket.on('cell_revealed', (data) => {
-            loadUserTickets();
-            updateTopPlayers();
+            // Не перезагружаем билеты при каждом открытии клетки - только если не активное стирание
+            if (!isScratchingActive) {
+                loadUserTickets();
+                updateTopPlayers();
+            } else {
+                console.log('⏳ Пропускаем обновление из-за активного стирания');
+            }
         });
 
         // ========== ОБРАБОТЧИКИ ДЛЯ ФОРТУНЫ ==========
@@ -2105,11 +2312,7 @@
         const modalAvatar = document.getElementById('playerModalAvatar');
         const modalBadges = document.getElementById('playerModalBadges');
         const voteMessage = document.getElementById('voteMessage');
-        if (!modalUsername || !modalClicks || !modalWG || !modalLP || !modalUSDT || !modalWins || !modalLikes || !modalDislikes) {
-            console.error('Profile modal elements not found');
-            showToast('Ошибка открытия профиля', 'error');
-            return;
-        }
+
         try {
             let res = await fetch('/api/get_user_stats', {
                 method: 'POST',
@@ -2129,14 +2332,14 @@
                 avatar = '👤';
                 userName = 'Аноним';
             }
-            modalUsername.innerText = userName;
-            modalClicks.innerText = data.total_clicks || 0;
-            modalWG.innerText = (data.wg || 0).toFixed(2);
-            modalLP.innerText = data.lp || 0;
-            modalUSDT.innerHTML = `💰 ${(data.usdt || 0).toFixed(2)}`;
-            modalWins.innerText = data.wins || 0;
-            modalLikes.innerText = data.likes || 0;
-            modalDislikes.innerText = data.dislikes || 0;
+            if (modalUsername) modalUsername.innerText = userName;
+            if (modalClicks) modalClicks.innerText = data.total_clicks || 0;
+            if (modalWG) modalWG.innerText = (data.wg || 0).toFixed(2);
+            if (modalLP) modalLP.innerText = data.lp || 0;
+            if (modalUSDT) modalUSDT.innerHTML = `💰 ${(data.usdt || 0).toFixed(2)}`;
+            if (modalWins) modalWins.innerText = data.wins || 0;
+            if (modalLikes) modalLikes.innerText = data.likes || 0;
+            if (modalDislikes) modalDislikes.innerText = data.dislikes || 0;
             if (modalAvatar) modalAvatar.innerHTML = avatar;
             if (modalBadges) {
                 let role = data.role || 'player';
@@ -2173,15 +2376,18 @@
                 showToast(data.msg, 'success');
                 if (type === 'like') {
                     let span = document.getElementById('playerModalLikes');
-                    span.innerText = parseInt(span.innerText) + 1;
+                    if (span) span.innerText = parseInt(span.innerText) + 1;
                 } else {
                     let span = document.getElementById('playerModalDislikes');
-                    span.innerText = parseInt(span.innerText) + 1;
+                    if (span) span.innerText = parseInt(span.innerText) + 1;
                 }
             } else {
-                document.getElementById('voteMessage').innerHTML = data.msg;
-                document.getElementById('voteMessage').style.display = 'block';
-                setTimeout(() => document.getElementById('voteMessage').style.display = 'none', 3000);
+                const voteMsg = document.getElementById('voteMessage');
+                if (voteMsg) {
+                    voteMsg.innerHTML = data.msg;
+                    voteMsg.style.display = 'block';
+                    setTimeout(() => voteMsg.style.display = 'none', 3000);
+                }
             }
         } catch(e) {
             showToast('Ошибка', 'error');
@@ -2191,56 +2397,58 @@
     // ==================== ПРЕФИКСЫ ====================
     window.openPrefixModal = function() {
         loadAvailablePrefixes();
-        document.getElementById('prefixModal').classList.add('active');
+        const prefixModal = document.getElementById('prefixModal');
+        if (prefixModal) prefixModal.classList.add('active');
     };
 
     window.closePrefixModal = function() {
-        document.getElementById('prefixModal').classList.remove('active');
+        const prefixModal = document.getElementById('prefixModal');
+        if (prefixModal) prefixModal.classList.remove('active');
     };
 
     async function loadAvailablePrefixes() {
-    try {
-        let res = await fetch('/api/get_available_prefixes', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId })
-        });
-        let data = await res.json();
-        if (data.success && data.prefixes && data.prefixes.length > 0) {
-            availablePrefixes = data.prefixes;
-            renderPrefixList();
-            return;
-        }
-        throw new Error('No prefixes from server');
-    } catch(e) {
-        console.error('Error loading prefixes from server:', e);
-        // Фолбэк — показываем префиксы на основе локальной роли
-        const allPrefixes = [
-            { id: 'player', name: 'Игрок', icon: '🎮', desc: 'Выдаётся абсолютно всем игрокам', color: 'player' },
-            { id: 'pioneer', name: 'Первооткрыватель', icon: '⭐', desc: 'Выдавался игрокам которые зарегистрировались в первые 24ч', color: 'pioneer' },
-            { id: 'founder', name: 'Основатель', icon: '👑', desc: 'Основатель проекта', color: 'founder' },
-            { id: 'legend', name: 'Легенда', icon: '👑', desc: 'Топ-5 по достижениям', color: 'legend' }
-        ];
-
-        availablePrefixes = [];
-        for (const prefix of allPrefixes) {
-            if (prefix.id === 'player') {
-                availablePrefixes.push(prefix);
-            } else if (prefix.id === 'pioneer' && (localRole === 'pioneer' || localRole === 'founder' || localRole === 'legend')) {
-                availablePrefixes.push(prefix);
-            } else if (prefix.id === 'founder' && localRole === 'founder') {
-                availablePrefixes.push(prefix);
-            } else if (prefix.id === 'legend' && localRole === 'legend') {
-                availablePrefixes.push(prefix);
+        try {
+            let res = await fetch('/api/get_available_prefixes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: userId })
+            });
+            let data = await res.json();
+            if (data.success && data.prefixes && data.prefixes.length > 0) {
+                availablePrefixes = data.prefixes;
+                renderPrefixList();
+                return;
             }
-        }
+            throw new Error('No prefixes from server');
+        } catch(e) {
+            console.error('Error loading prefixes from server:', e);
+            // Фолбэк — показываем префиксы на основе локальной роли
+            const allPrefixes = [
+                { id: 'player', name: 'Игрок', icon: '🎮', desc: 'Выдаётся абсолютно всем игрокам', color: 'player' },
+                { id: 'pioneer', name: 'Первооткрыватель', icon: '⭐', desc: 'Выдавался игрокам которые зарегистрировались в первые 24ч', color: 'pioneer' },
+                { id: 'founder', name: 'Основатель', icon: '👑', desc: 'Основатель проекта', color: 'founder' },
+                { id: 'legend', name: 'Легенда', icon: '👑', desc: 'Топ-5 по достижениям', color: 'legend' }
+            ];
 
-        if (availablePrefixes.length === 0) {
-            availablePrefixes = [allPrefixes[0]]; // хотя бы "Игрок"
+            availablePrefixes = [];
+            for (const prefix of allPrefixes) {
+                if (prefix.id === 'player') {
+                    availablePrefixes.push(prefix);
+                } else if (prefix.id === 'pioneer' && (localRole === 'pioneer' || localRole === 'founder' || localRole === 'legend')) {
+                    availablePrefixes.push(prefix);
+                } else if (prefix.id === 'founder' && localRole === 'founder') {
+                    availablePrefixes.push(prefix);
+                } else if (prefix.id === 'legend' && localRole === 'legend') {
+                    availablePrefixes.push(prefix);
+                }
+            }
+
+            if (availablePrefixes.length === 0) {
+                availablePrefixes = [allPrefixes[0]];
+            }
+            renderPrefixList();
         }
-        renderPrefixList();
     }
-}
 
     function renderPrefixList() {
         const container = document.getElementById('prefixList');
@@ -2291,14 +2499,18 @@
 
     // ==================== ЛИДЕРБОРД ====================
     window.openLeaderboard = async function() {
-        document.getElementById('leaderboardPage').classList.add('active');
-        document.getElementById('bottomNav').style.display = 'none';
+        const leaderboardPage = document.getElementById('leaderboardPage');
+        const bottomNav = document.getElementById('bottomNav');
+        if (leaderboardPage) leaderboardPage.classList.add('active');
+        if (bottomNav) bottomNav.style.display = 'none';
         await loadLeaderboardData('day', true);
     };
 
     window.closeLeaderboard = function() {
-        document.getElementById('leaderboardPage').classList.remove('active');
-        document.getElementById('bottomNav').style.display = 'flex';
+        const leaderboardPage = document.getElementById('leaderboardPage');
+        const bottomNav = document.getElementById('bottomNav');
+        if (leaderboardPage) leaderboardPage.classList.remove('active');
+        if (bottomNav) bottomNav.style.display = 'flex';
     };
 
     async function loadLeaderboardData(period, forceRefresh = false) {
@@ -2358,7 +2570,8 @@
         }
     }
 
-    document.querySelectorAll('.leaderboard-tab').forEach(tab => {
+    const leaderboardTabs = document.querySelectorAll('.leaderboard-tab');
+    leaderboardTabs.forEach(tab => {
         tab.onclick = () => {
             const period = tab.dataset.period;
             document.querySelectorAll('.leaderboard-tab').forEach(t => t.classList.remove('active'));
@@ -2384,13 +2597,15 @@
     // ==================== РЕФЕРАЛЫ ====================
     window.copyReferralLink = function() {
         let input = document.getElementById('referralLinkInput');
-        input.select();
-        document.execCommand('copy');
-        showToast('Ссылка скопирована!', 'success');
+        if (input) {
+            input.select();
+            document.execCommand('copy');
+            showToast('Ссылка скопирована!', 'success');
+        }
     };
 
     window.shareReferral = function() {
-        let link = document.getElementById('referralLinkInput').value;
+        let link = document.getElementById('referralLinkInput')?.value || '';
         let message = `🎮 WereGood — кликай по монете, участвуй в лотерее и зарабатывай USDT!\n\n${link}`;
         let tgShareUrl = `https://t.me/share/url?text=${encodeURIComponent(message)}`;
         if (navigator.share) {
@@ -2402,19 +2617,22 @@
 
     // ==================== ВЫВОД USDT ====================
     window.openWithdrawalModal = function() {
-        document.getElementById('withdrawalModal').classList.add('active');
-        document.getElementById('withdrawalBalance').innerText = localUSDT.toFixed(2);
+        const withdrawalModal = document.getElementById('withdrawalModal');
+        if (withdrawalModal) withdrawalModal.classList.add('active');
+        const withdrawalBalance = document.getElementById('withdrawalBalance');
+        if (withdrawalBalance) withdrawalBalance.innerText = localUSDT.toFixed(2);
         loadWithdrawals();
     };
 
     function closeWithdrawalModal() {
-        document.getElementById('withdrawalModal').classList.remove('active');
+        const withdrawalModal = document.getElementById('withdrawalModal');
+        if (withdrawalModal) withdrawalModal.classList.remove('active');
     }
 
     async function createWithdrawal() {
-        let amount = parseFloat(document.getElementById('withdrawalAmount').value);
-        let address = document.getElementById('withdrawalAddress').value;
-        let network = document.getElementById('withdrawalNetwork').value;
+        let amount = parseFloat(document.getElementById('withdrawalAmount')?.value || '0');
+        let address = document.getElementById('withdrawalAddress')?.value || '';
+        let network = document.getElementById('withdrawalNetwork')?.value || 'TRC20';
         if (isNaN(amount) || amount < 2) {
             showToast('Минимальная сумма вывода: 2 USDT', 'error');
             return;
@@ -2436,8 +2654,10 @@
             let data = await res.json();
             if (data.success) {
                 showToast(data.msg, 'success');
-                document.getElementById('withdrawalAmount').value = '';
-                document.getElementById('withdrawalAddress').value = '';
+                const withdrawalAmount = document.getElementById('withdrawalAmount');
+                const withdrawalAddress = document.getElementById('withdrawalAddress');
+                if (withdrawalAmount) withdrawalAmount.value = '';
+                if (withdrawalAddress) withdrawalAddress.value = '';
                 updateStatus();
                 loadWithdrawals();
                 closeWithdrawalModal();
@@ -2449,16 +2669,19 @@
         }
     }
 
-    document.querySelectorAll('.withdrawal-tab').forEach(tab => {
+    const withdrawalTabs = document.querySelectorAll('.withdrawal-tab');
+    withdrawalTabs.forEach(tab => {
         tab.onclick = () => {
             let target = tab.dataset.withdrawalTab;
             document.querySelectorAll('.withdrawal-tab').forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
             document.querySelectorAll('.withdrawal-tab-content').forEach(c => c.style.display = 'none');
             if (target === 'new') {
-                document.getElementById('withdrawalNew').style.display = 'block';
+                const withdrawalNew = document.getElementById('withdrawalNew');
+                if (withdrawalNew) withdrawalNew.style.display = 'block';
             } else {
-                document.getElementById('withdrawalHistory').style.display = 'block';
+                const withdrawalHistory = document.getElementById('withdrawalHistory');
+                if (withdrawalHistory) withdrawalHistory.style.display = 'block';
                 loadWithdrawals();
             }
         };
@@ -2530,7 +2753,8 @@
         if (dailyTimerInterval) clearInterval(dailyTimerInterval);
         const claimBtn = document.getElementById('dailyClaimBtn');
         if (dailyData?.can_claim) {
-            document.getElementById('dailyTimerValue').innerText = 'Доступно!';
+            const dailyTimerValue = document.getElementById('dailyTimerValue');
+            if (dailyTimerValue) dailyTimerValue.innerText = 'Доступно!';
             if (claimBtn) {
                 claimBtn.classList.remove('disabled');
                 claimBtn.style.background = 'linear-gradient(135deg, #FFD700, #FFA500)';
@@ -2539,7 +2763,8 @@
             return;
         }
         if (!dailyData?.next_claim_time) {
-            document.getElementById('dailyTimerValue').innerText = 'Доступно!';
+            const dailyTimerValue = document.getElementById('dailyTimerValue');
+            if (dailyTimerValue) dailyTimerValue.innerText = 'Доступно!';
             if (claimBtn) {
                 claimBtn.classList.remove('disabled');
                 claimBtn.style.background = 'linear-gradient(135deg, #FFD700, #FFA500)';
@@ -2553,7 +2778,8 @@
             const diff = Math.max(0, Math.floor((nextTime - now) / 1000));
             if (diff <= 0) {
                 clearInterval(dailyTimerInterval);
-                document.getElementById('dailyTimerValue').innerText = 'Доступно!';
+                const dailyTimerValue = document.getElementById('dailyTimerValue');
+                if (dailyTimerValue) dailyTimerValue.innerText = 'Доступно!';
                 if (claimBtn) {
                     claimBtn.classList.remove('disabled');
                     claimBtn.style.background = 'linear-gradient(135deg, #FFD700, #FFA500)';
@@ -2565,7 +2791,8 @@
             const hours = Math.floor(diff / 3600);
             const minutes = Math.floor((diff % 3600) / 60);
             const seconds = diff % 60;
-            document.getElementById('dailyTimerValue').innerText = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            const dailyTimerValue = document.getElementById('dailyTimerValue');
+            if (dailyTimerValue) dailyTimerValue.innerText = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
             if (claimBtn) {
                 claimBtn.classList.add('disabled');
                 claimBtn.style.background = '#555';
@@ -2625,12 +2852,14 @@
     };
 
     function openDailyModal() {
-        document.getElementById('dailyModal').classList.add('active');
+        const dailyModal = document.getElementById('dailyModal');
+        if (dailyModal) dailyModal.classList.add('active');
         loadDailyStatus();
     }
 
     function closeDailyModal() {
-        document.getElementById('dailyModal').classList.remove('active');
+        const dailyModal = document.getElementById('dailyModal');
+        if (dailyModal) dailyModal.classList.remove('active');
         if (dailyTimerInterval) clearInterval(dailyTimerInterval);
     }
 
@@ -2657,16 +2886,6 @@
             return `<img src="${avatar}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML='📢';">`;
         }
         return '📢';
-    }
-
-    function escapeHtml(text) {
-        if (!text) return '';
-        return text.replace(/[&<>]/g, function(m) {
-            if (m === '&') return '&amp;';
-            if (m === '<') return '&lt;';
-            if (m === '>') return '&gt;';
-            return m;
-        });
     }
 
     function renderTasksList() {
@@ -2698,12 +2917,14 @@
 
     function openTasksModal() {
         loadTasks();
-        document.getElementById('tasksModal').classList.add('active');
+        const tasksModal = document.getElementById('tasksModal');
+        if (tasksModal) tasksModal.classList.add('active');
         document.body.style.overflow = 'hidden';
     }
 
     function closeTasksModal() {
-        document.getElementById('tasksModal').classList.remove('active');
+        const tasksModal = document.getElementById('tasksModal');
+        if (tasksModal) tasksModal.classList.remove('active');
         document.body.style.overflow = '';
     }
 
@@ -2715,21 +2936,29 @@
         else if (selectedTask.reward_type === 'lp') rewardIcon = '💎';
         else if (selectedTask.reward_type === 'usdt') rewardIcon = '💵';
         else rewardIcon = '⚡';
-        document.getElementById('taskDetailTitle').innerText = selectedTask.title;
-        document.getElementById('taskDetailReward').innerHTML = `${rewardIcon} ${selectedTask.reward_amount} ${selectedTask.reward_type.toUpperCase()}`;
-        document.getElementById('taskDetailRemaining').innerHTML = `${selectedTask.completed_count}/${selectedTask.total_limit}`;
-        document.getElementById('taskDetailAvatar').innerHTML = getAvatarUrl(selectedTask.channel_avatar);
+        const taskDetailTitle = document.getElementById('taskDetailTitle');
+        const taskDetailReward = document.getElementById('taskDetailReward');
+        const taskDetailRemaining = document.getElementById('taskDetailRemaining');
+        const taskDetailAvatar = document.getElementById('taskDetailAvatar');
+        if (taskDetailTitle) taskDetailTitle.innerText = selectedTask.title;
+        if (taskDetailReward) taskDetailReward.innerHTML = `${rewardIcon} ${selectedTask.reward_amount} ${selectedTask.reward_type.toUpperCase()}`;
+        if (taskDetailRemaining) taskDetailRemaining.innerHTML = `${selectedTask.completed_count}/${selectedTask.total_limit}`;
+        if (taskDetailAvatar) taskDetailAvatar.innerHTML = getAvatarUrl(selectedTask.channel_avatar);
         const buttonsContainer = document.querySelector('#taskDetailModal .task-detail-buttons');
-        if (selectedTask.is_completed) {
-            buttonsContainer.innerHTML = `<div style="text-align: center; padding: 12px; background: rgba(34,197,94,0.15); border-radius: 40px; width: 100%;">✅ Задание выполнено! Награда получена.</div>`;
-        } else {
-            buttonsContainer.innerHTML = `<button class="task-detail-btn task-link-btn" onclick="openTaskChannel()">🔗 Перейти по ссылке</button><button class="task-detail-btn task-check-btn" id="taskCheckBtn" onclick="checkTaskCompletion()">✅ Проверить выполнение</button>`;
+        if (buttonsContainer) {
+            if (selectedTask.is_completed) {
+                buttonsContainer.innerHTML = `<div style="text-align: center; padding: 12px; background: rgba(34,197,94,0.15); border-radius: 40px; width: 100%;">✅ Задание выполнено! Награда получена.</div>`;
+            } else {
+                buttonsContainer.innerHTML = `<button class="task-detail-btn task-link-btn" onclick="openTaskChannel()">🔗 Перейти по ссылке</button><button class="task-detail-btn task-check-btn" id="taskCheckBtn" onclick="checkTaskCompletion()">✅ Проверить выполнение</button>`;
+            }
         }
-        document.getElementById('taskDetailModal').classList.add('active');
+        const taskDetailModal = document.getElementById('taskDetailModal');
+        if (taskDetailModal) taskDetailModal.classList.add('active');
     }
 
     function closeTaskDetailModal() {
-        document.getElementById('taskDetailModal').classList.remove('active');
+        const taskDetailModal = document.getElementById('taskDetailModal');
+        if (taskDetailModal) taskDetailModal.classList.remove('active');
         selectedTask = null;
     }
 
@@ -2789,8 +3018,10 @@
             const data = await res.json();
             if (data.success) {
                 renderAchievementsList(data.achievements);
-                document.getElementById('completedAchievementsCount').innerText = data.completed_count;
-                document.getElementById('totalAchievementsCount').innerText = data.total_count;
+                const completedAchievementsCount = document.getElementById('completedAchievementsCount');
+                const totalAchievementsCount = document.getElementById('totalAchievementsCount');
+                if (completedAchievementsCount) completedAchievementsCount.innerText = data.completed_count;
+                if (totalAchievementsCount) totalAchievementsCount.innerText = data.total_count;
             }
         } catch(e) {
             console.error('Error loading achievements:', e);
@@ -2872,27 +3103,32 @@
     }
 
     function openAchievementsModal() {
-        document.getElementById('achievementsModal').classList.add('active');
+        const achievementsModal = document.getElementById('achievementsModal');
+        if (achievementsModal) achievementsModal.classList.add('active');
         document.body.classList.add('achievements-open');
         loadAchievements();
         loadAchievementsTop();
     }
 
     function closeAchievementsModal() {
-        document.getElementById('achievementsModal').classList.remove('active');
+        const achievementsModal = document.getElementById('achievementsModal');
+        if (achievementsModal) achievementsModal.classList.remove('active');
         document.body.classList.remove('achievements-open');
     }
 
-    document.querySelectorAll('.achievements-tab').forEach(tab => {
+    const achievementsTabs = document.querySelectorAll('.achievements-tab');
+    achievementsTabs.forEach(tab => {
         tab.addEventListener('click', () => {
             const target = tab.dataset.achievementsTab;
             document.querySelectorAll('.achievements-tab').forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
             document.querySelectorAll('.achievements-tab-content').forEach(c => c.style.display = 'none');
             if (target === 'list') {
-                document.getElementById('achievementsListTab').style.display = 'block';
+                const achievementsListTab = document.getElementById('achievementsListTab');
+                if (achievementsListTab) achievementsListTab.style.display = 'block';
             } else {
-                document.getElementById('achievementsTopTab').style.display = 'block';
+                const achievementsTopTab = document.getElementById('achievementsTopTab');
+                if (achievementsTopTab) achievementsTopTab.style.display = 'block';
                 loadAchievementsTop();
             }
         });
@@ -2936,28 +3172,37 @@
         if (promoCode && input) {
             input.value = promoCode.toUpperCase();
         }
-        modal.classList.add('active');
+        if (modal) modal.classList.add('active');
     }
 
     function closePromoModal() {
-        document.getElementById('promoModal').classList.remove('active');
-        document.getElementById('promoCodeInput').value = '';
-        document.getElementById('promoMessage').innerHTML = '';
+        const modal = document.getElementById('promoModal');
+        const input = document.getElementById('promoCodeInput');
+        const message = document.getElementById('promoMessage');
+        if (modal) modal.classList.remove('active');
+        if (input) input.value = '';
+        if (message) message.innerHTML = '';
     }
 
     async function activatePromoCode() {
-        const code = document.getElementById('promoCodeInput').value.toUpperCase().trim();
+        const code = document.getElementById('promoCodeInput')?.value.toUpperCase().trim() || '';
         const messageDiv = document.getElementById('promoMessage');
         const btn = document.getElementById('activatePromoBtn');
         if (!code) {
-            messageDiv.innerHTML = '❌ Введите промокод';
-            messageDiv.classList.remove('success');
+            if (messageDiv) {
+                messageDiv.innerHTML = '❌ Введите промокод';
+                messageDiv.classList.remove('success');
+            }
             return;
         }
-        btn.disabled = true;
-        btn.textContent = '⏳ Проверка...';
-        messageDiv.innerHTML = '';
-        messageDiv.classList.remove('success');
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = '⏳ Проверка...';
+        }
+        if (messageDiv) {
+            messageDiv.innerHTML = '';
+            messageDiv.classList.remove('success');
+        }
         try {
             const res = await fetch('/api/activate_promo', {
                 method: 'POST',
@@ -2968,29 +3213,38 @@
             const isSuccess = data.success === true || data.ok === true;
             if (isSuccess) {
                 const successMessage = data.message || data.msg || 'Промокод успешно активирован!';
-                messageDiv.innerHTML = `✅ ${successMessage}`;
-                messageDiv.classList.add('success');
+                if (messageDiv) {
+                    messageDiv.innerHTML = `✅ ${successMessage}`;
+                    messageDiv.classList.add('success');
+                }
                 showToast(`🎉 ${successMessage}`, 'success');
                 await syncData(true);
                 setTimeout(() => closePromoModal(), 2000);
             } else {
                 const errorMessage = data.error || data.msg || 'Неизвестная ошибка';
-                messageDiv.innerHTML = `❌ ${errorMessage}`;
-                messageDiv.classList.remove('success');
+                if (messageDiv) {
+                    messageDiv.innerHTML = `❌ ${errorMessage}`;
+                    messageDiv.classList.remove('success');
+                }
                 showToast(errorMessage, 'error');
             }
         } catch (e) {
             console.error('Activate promo error:', e);
-            messageDiv.innerHTML = '❌ Ошибка соединения с сервером';
-            messageDiv.classList.remove('success');
+            if (messageDiv) {
+                messageDiv.innerHTML = '❌ Ошибка соединения с сервером';
+                messageDiv.classList.remove('success');
+            }
             showToast('Ошибка соединения, попробуйте позже', 'error');
         } finally {
-            btn.disabled = false;
-            btn.textContent = '🎁 Активировать';
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = '🎁 Активировать';
+            }
         }
     }
 
-    document.getElementById('activatePromoBtn').onclick = activatePromoCode;
+    const activatePromoBtn = document.getElementById('activatePromoBtn');
+    if (activatePromoBtn) activatePromoBtn.onclick = activatePromoCode;
 
     // ==================== TON CONNECT ====================
     let tonConnectUI = null;
@@ -3298,14 +3552,16 @@
         const highlight = document.getElementById('tutorialHighlight');
         const tooltip = document.getElementById('tutorialTooltip');
         const tooltipText = document.getElementById('tutorialText');
-        overlay.style.backgroundColor = 'rgba(0,0,0,0.85)';
-        overlay.classList.add('active');
-        highlight.style.display = 'block';
-        highlight.style.top = (rect.top - 8) + 'px';
-        highlight.style.left = (rect.left - 8) + 'px';
-        highlight.style.width = (rect.width + 16) + 'px';
-        highlight.style.height = (rect.height + 16) + 'px';
-        tooltipText.innerHTML = text;
+        if (overlay) overlay.style.backgroundColor = 'rgba(0,0,0,0.85)';
+        if (overlay) overlay.classList.add('active');
+        if (highlight) highlight.style.display = 'block';
+        if (highlight) {
+            highlight.style.top = (rect.top - 8) + 'px';
+            highlight.style.left = (rect.left - 8) + 'px';
+            highlight.style.width = (rect.width + 16) + 'px';
+            highlight.style.height = (rect.height + 16) + 'px';
+        }
+        if (tooltipText) tooltipText.innerHTML = text;
         const tooltipHeight = 180;
         let tooltipTop, tooltipLeft;
         if (position === 'top' || rect.top < 100) {
@@ -3314,9 +3570,11 @@
             tooltipTop = rect.top - tooltipHeight - 15;
         }
         tooltipLeft = Math.max(10, Math.min(rect.left + (rect.width / 2) - 150, window.innerWidth - 310));
-        tooltip.style.top = tooltipTop + 'px';
-        tooltip.style.left = tooltipLeft + 'px';
-        tooltip.style.display = 'block';
+        if (tooltip) {
+            tooltip.style.top = tooltipTop + 'px';
+            tooltip.style.left = tooltipLeft + 'px';
+            tooltip.style.display = 'block';
+        }
     }
 
     function nextTutorialStep() {
@@ -3360,8 +3618,10 @@
         showToast('🎓 Обучение завершено! Добро пожаловать в игру!', 'success');
     }
 
-    document.getElementById('tutorialNextBtn').onclick = () => nextTutorialStep();
-    document.getElementById('tutorialSkipBtn').onclick = () => skipTutorial();
+    const tutorialNextBtn = document.getElementById('tutorialNextBtn');
+    const tutorialSkipBtn = document.getElementById('tutorialSkipBtn');
+    if (tutorialNextBtn) tutorialNextBtn.onclick = () => nextTutorialStep();
+    if (tutorialSkipBtn) tutorialSkipBtn.onclick = () => skipTutorial();
 
     // ========== ГЕЙМПАД МЕНЮ ==========
     function openGamepad() {
@@ -3925,14 +4185,16 @@
         }
         const betAmount = document.getElementById('betAmount');
         if (betAmount) betAmount.value = '';
-        document.getElementById('betModal').classList.add('active');
+        const betModal = document.getElementById('betModal');
+        if (betModal) betModal.classList.add('active');
         document.body.style.overflow = 'hidden';
     }
 
     function closeBetModal() {
         betModalState.isOpen = false;
         betModalState.team = null;
-        document.getElementById('betModal').classList.remove('active');
+        const betModal = document.getElementById('betModal');
+        if (betModal) betModal.classList.remove('active');
         document.body.style.overflow = '';
     }
 
@@ -4415,13 +4677,16 @@
         }
     }
 
-    document.getElementById('wheelCloseBtn')?.addEventListener('click', () => {
-        const overlay = document.getElementById('wheelOverlay');
-        if (overlay) overlay.classList.remove('active');
-        if (typeof window.isFortuneRoundEnding !== 'undefined') {
-            window.isFortuneRoundEnding = false;
-        }
-    });
+    const wheelCloseBtn = document.getElementById('wheelCloseBtn');
+    if (wheelCloseBtn) {
+        wheelCloseBtn.addEventListener('click', () => {
+            const overlay = document.getElementById('wheelOverlay');
+            if (overlay) overlay.classList.remove('active');
+            if (typeof window.isFortuneRoundEnding !== 'undefined') {
+                window.isFortuneRoundEnding = false;
+            }
+        });
+    }
 
     const originalEndFortuneRound = endFortuneRound;
     window.endFortuneRound = async function() {
@@ -4474,7 +4739,8 @@
             });
             let data = await res.json();
             if (data.success) {
-                document.getElementById('lpBoostPurchaseCount').innerText = data.count;
+                const lpBoostPurchaseCount = document.getElementById('lpBoostPurchaseCount');
+                if (lpBoostPurchaseCount) lpBoostPurchaseCount.innerText = data.count;
             }
         } catch(e) {
             console.error('Error loading LP boost count:', e);
@@ -4494,7 +4760,16 @@
         loadSettings();
         loadDailyStatus();
         setTimeout(checkAndStartTutorial, 2000);
-        setInterval(() => syncData(), 5000);
+
+        // УМНЫЙ ИНТЕРВАЛ — НЕ СИНХРОНИЗИРУЕМ ВО ВРЕМЯ СТИРАНИЯ!
+        setInterval(() => {
+            if (!isScratchingActive) {
+                syncData();
+            } else {
+                console.log('⏸️ Синхронизация отложена (идет стирание)');
+            }
+        }, 5000);
+
         setInterval(() => loadReferrals(), 30000);
         startDailyLeaderboardTimer();
         updateLPBoostCount();
@@ -4544,7 +4819,8 @@
         if (betAmountInput) {
             betAmountInput.addEventListener('input', calculateBet);
         }
-        document.querySelectorAll('.bet-preset-premium').forEach(btn => {
+        const betPresets = document.querySelectorAll('.bet-preset-premium');
+        betPresets.forEach(btn => {
             btn.addEventListener('click', () => {
                 const multiplier = parseFloat(btn.getAttribute('data-multiplier'));
                 if (!isNaN(multiplier) && betAmountInput) {
