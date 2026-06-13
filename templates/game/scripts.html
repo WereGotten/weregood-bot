@@ -1549,87 +1549,73 @@
 
         // ========== ИСПРАВЛЕННАЯ ФУНКЦИЯ СТИРАНИЯ ==========
         const eraseAt = (targetCanvas, x, y, tNum, cIdx, isWinCell, cellNumber) => {
-            if (targetCanvas.isRevealed) return;
+    if (targetCanvas.isRevealed) return;
 
-            // Устанавливаем флаг активности стирания
-            isScratchingActive = true;
-            if (scratchTimeout) clearTimeout(scratchTimeout);
+    // Устанавливаем флаг активности стирания
+    isScratchingActive = true;
+    if (scratchTimeout) clearTimeout(scratchTimeout);
+    scratchTimeout = setTimeout(() => {
+        isScratchingActive = false;
+        console.log('✅ Стирание завершено, флаг сброшен');
+    }, 1500);
 
-            // Сбрасываем флаг через 1.5 секунды после последнего стирания
-            scratchTimeout = setTimeout(() => {
-                isScratchingActive = false;
-                console.log('✅ Стирание завершено, флаг сброшен');
-            }, 1500);
+    const ctx = targetCanvas.getContext('2d');
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.beginPath();
+    ctx.arc(x, y, 14, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
 
-            const ctx = targetCanvas.getContext('2d');
-            ctx.save();
-            ctx.globalCompositeOperation = 'destination-out';
-            ctx.beginPath();
-            ctx.arc(x, y, 14, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
+    const progressKey = `${targetCanvas.id}_progress`;
+    const imageData = ctx.getImageData(0, 0, targetCanvas.width, targetCanvas.height);
+    scratchProgress.set(progressKey, imageData);
 
-            const progressKey = `${targetCanvas.id}_progress`;
-            const imageData = ctx.getImageData(0, 0, targetCanvas.width, targetCanvas.height);
-            scratchProgress.set(progressKey, imageData);
+    let transparent = 0;
+    for (let j = 3; j < imageData.data.length; j += 4) {
+        if (imageData.data[j] === 0) transparent++;
+    }
+    targetCanvas.erasedPercent = (transparent / (targetCanvas.width * targetCanvas.height)) * 100;
 
-            let transparent = 0;
-            for (let j = 3; j < imageData.data.length; j += 4) {
-                if (imageData.data[j] === 0) transparent++;
+    console.log(`💥 Стёрто ${targetCanvas.erasedPercent.toFixed(1)}% клетки ${cIdx} билета ${tNum}`);
+
+    if (targetCanvas.erasedPercent >= 60 && !targetCanvas.isRevealed) {
+        console.log(`✅ ОТПРАВЛЯЕМ ЗАПРОС на открытие клетки`);
+
+        fetch('/api/reveal_ticket_cells', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id: userId,
+                ticket_number: tNum,
+                cell_index: cIdx
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('📡 Ответ сервера:', data);
+            if (data.success) {
+                const cellDiv = targetCanvas.parentElement;
+                const numDiv = cellDiv.querySelector('.scratch-number-layer');
+                if (isWinCell) {
+                    numDiv.classList.add('win');
+                    numDiv.classList.remove('normal');
+                }
+                targetCanvas.style.display = 'none';
+                targetCanvas.isRevealed = true;
+                scratchProgress.delete(progressKey);
+
+                if (navigator.vibrate) navigator.vibrate(30);
+                showToast(`Клетка ${cellNumber} открыта! 🎉`, 'success');
+            } else {
+                console.log('❌ Сервер не подтвердил открытие:', data.message);
             }
-            targetCanvas.erasedPercent = (transparent / (targetCanvas.width * targetCanvas.height)) * 100;
-
-            console.log(`💥 Стёрто ${targetCanvas.erasedPercent.toFixed(1)}% клетки ${cIdx} билета ${tNum}`);
-
-            if (targetCanvas.erasedPercent >= 60 && !targetCanvas.isRevealed) {
-                console.log(`✅ ОТПРАВЛЯЕМ ЗАПРОС на открытие клетки ${cIdx} билета ${tNum}`);
-
-                // Отправляем HTTP-запрос на сервер
-                fetch('/api/reveal_ticket_cells', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        user_id: userId,
-                        ticket_number: tNum,
-                        cell_index: cIdx
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    console.log('📡 Ответ сервера:', data);
-                    if (data.success) {
-                        const cellDiv = targetCanvas.parentElement;
-                        const numDiv = cellDiv.querySelector('.scratch-number-layer');
-                        if (isWinCell) {
-                            numDiv.classList.add('win');
-                            numDiv.classList.remove('normal');
-                        }
-                        targetCanvas.style.display = 'none';
-                        targetCanvas.isRevealed = true;
-                        scratchProgress.delete(progressKey);
-
-                        if (navigator.vibrate) navigator.vibrate(30);
-                        showToast(`Клетка ${cellNumber} открыта! 🎉`, 'success');
-                        updateTopPlayers();
-
-                        // Обновляем локальный массив билетов
-                        if (currentTickets && currentTickets.length > 0) {
-                            for (let ticket of currentTickets) {
-                                if (ticket.number === tNum) {
-                                    ticket.revealed[cIdx] = true;
-                                    break;
-                                }
-                            }
-                        }
-                    } else {
-                        console.log('❌ Сервер не подтвердил открытие:', data.message);
-                    }
-                })
-                .catch(error => {
-                    console.error('❌ Ошибка запроса:', error);
-                });
-            }
-        };
+        })
+        .catch(error => {
+            console.error('❌ Ошибка запроса:', error);
+        });
+    }
+};
 
         let mouseErasing = false;
 

@@ -658,7 +658,8 @@ def register_routes(app, socketio):
         # ✅ 1. ОБНОВЛЯЕМ ДАННЫЕ ЛОТЕРЕИ ИЗ БД ПЕРЕД ПРОВЕРКОЙ
         refresh_lottery_data()
 
-        print(f"🎫 Покупка билета: user_id={user_id}, is_drawn={is_drawn}, pool={lottery_pool}, tickets_count={len(lottery_tickets)}")
+        print(
+            f"🎫 Покупка билета: user_id={user_id}, is_drawn={is_drawn}, pool={lottery_pool}, tickets_count={len(lottery_tickets)}")
 
         if is_drawn:
             response = jsonify({
@@ -714,7 +715,8 @@ def register_routes(app, socketio):
             # ✅ 4. ПОЛУЧАЕМ АКТУАЛЬНЫЕ ДАННЫЕ ИЗ ГЛОБАЛЬНЫХ ПЕРЕМЕННЫХ
             user_tickets_count = len([t for t in lottery_tickets if t.get("user_id") == user_id])
 
-            print(f"🎫 После покупки: pool={lottery_pool}, user_tickets={user_tickets_count}, total_tickets={len(lottery_tickets)}")
+            print(
+                f"🎫 После покупки: pool={lottery_pool}, user_tickets={user_tickets_count}, total_tickets={len(lottery_tickets)}")
 
             # ✅ 5. ВОЗВРАЩАЕМ ПОЛНЫЙ ОТВЕТ С АНТИКЭШ ЗАГОЛОВКАМИ
             result = {
@@ -823,66 +825,61 @@ def register_routes(app, socketio):
         print(f"🔍 [reveal_ticket_cells] Запрос: user={user_id}, ticket={ticket_number}, cell_index={cell_index}")
 
         if not user_id or ticket_number is None:
-            print(f"❌ [reveal_ticket_cells] Missing parameters")
             return jsonify({"success": False, "message": "Missing parameters"}), 400
 
         # Обновляем данные из БД
         refresh_lottery_data()
-        print(f"🔍 [reveal_ticket_cells] is_drawn={is_drawn}")
 
         if not is_drawn:
             return jsonify({"success": False, "message": "Розыгрыш ещё не начался!"}), 400
 
-        # Если указан конкретный индекс клетки (стирание одной клетки)
-        if cell_index is not None and 0 <= cell_index < 12:
-            print(f"🔍 [reveal_ticket_cells] Открываем клетку {cell_index} билета {ticket_number}")
+        # Ищем билет
+        ticket_found = None
+        for ticket in lottery_tickets:
+            if ticket.get("number") == ticket_number and ticket.get("user_id") == user_id:
+                ticket_found = ticket
+                break
 
-            for ticket in lottery_tickets:
-                if ticket.get("number") == ticket_number and ticket.get("user_id") == user_id:
-                    if ticket["revealed"][cell_index]:
-                        return jsonify({"success": False, "message": "Клетка уже открыта"}), 400
-
-                    ticket["revealed"][cell_index] = True
-                    save_lottery()
-                    refresh_lottery_data()
-
-                    print(f"✅ [reveal_ticket_cells] Клетка {cell_index} открыта")
-                    return jsonify({
-                        "success": True,
-                        "message": f"Клетка {cell_index + 1} открыта!",
-                        "cell_index": cell_index
-                    })
-
+        if not ticket_found:
             return jsonify({"success": False, "message": "Билет не найден"}), 404
 
-        # Если cell_index не указан — открываем все клетки билета
-        elif cell_index is None:
-            print(f"🔍 [reveal_ticket_cells] Открываем ВСЕ клетки билета {ticket_number}")
+        # Открываем все клетки, если cell_index не указан
+        if cell_index is None:
+            revealed_count = 0
+            for i in range(12):
+                if not ticket_found["revealed"][i]:
+                    ticket_found["revealed"][i] = True
+                    revealed_count += 1
+            if revealed_count > 0:
+                save_lottery()
+                refresh_lottery_data()
+                print(f"✅ Открыто {revealed_count} клеток билета {ticket_number}")
+                return jsonify({
+                    "success": True,
+                    "message": f"Открыто {revealed_count} клеток",
+                    "revealed_count": revealed_count
+                })
+            else:
+                return jsonify({"success": False, "message": "Все клетки уже открыты"}), 400
 
-            for ticket in lottery_tickets:
-                if ticket.get("number") == ticket_number and ticket.get("user_id") == user_id:
-                    revealed_count = 0
-                    for i in range(12):
-                        if not ticket["revealed"][i]:
-                            ticket["revealed"][i] = True
-                            revealed_count += 1
-
-                    if revealed_count > 0:
-                        save_lottery()
-                        refresh_lottery_data()
-                        print(f"✅ [reveal_ticket_cells] Открыто {revealed_count} клеток")
-                        return jsonify({
-                            "success": True,
-                            "message": f"Открыто {revealed_count} клеток",
-                            "revealed_count": revealed_count
-                        })
-                    else:
-                        return jsonify({"success": False, "message": "Все клетки уже открыты"}), 400
-
-            return jsonify({"success": False, "message": "Билет не найден"}), 404
-
-        else:
+        # Открываем конкретную клетку
+        if cell_index < 0 or cell_index >= 12:
             return jsonify({"success": False, "message": f"Неверный индекс клетки: {cell_index}"}), 400
+
+        if ticket_found["revealed"][cell_index]:
+            return jsonify({"success": False, "message": "Клетка уже открыта"}), 400
+
+        ticket_found["revealed"][cell_index] = True
+        save_lottery()
+        refresh_lottery_data()
+
+        print(f"✅ Клетка {cell_index} билета {ticket_number} открыта")
+
+        return jsonify({
+            "success": True,
+            "message": f"Клетка {cell_index + 1} открыта!",
+            "cell_index": cell_index
+        })
 
     @app.route('/api/reveal_all_tickets_fast', methods=['POST'])
     def api_reveal_all_tickets_fast():
@@ -2358,7 +2355,8 @@ def register_routes(app, socketio):
 
     @app.route('/api/sync', methods=['POST'])
     def api_sync():
-        from lottery import refresh_lottery_data, lottery_pool, lottery_tickets, is_drawn, winning_numbers, lottery_phase
+        from lottery import refresh_lottery_data, lottery_pool, lottery_tickets, is_drawn, winning_numbers, \
+            lottery_phase
 
         # ✅ ПРИНУДИТЕЛЬНО ОБНОВЛЯЕМ ДАННЫЕ ЛОТЕРЕИ ПЕРЕД ОТВЕТОМ
         refresh_lottery_data()
