@@ -193,17 +193,36 @@ def register_admin_routes(app):
         data = request.get_json()
         if not data:
             return jsonify({"success": False, "error": "No JSON"}), 400
+
         action = data['action']
         admin_id = request.args.get('user_id', 'Admin')
         admin_name = "Admin"
+
         if action == 'force_draw':
+            print("👑 Админ: принудительный розыгрыш лотереи")
             perform_draw()
+            # Отправляем уведомление через Socket.IO всем игрокам
+            from bot import socketio
+            socketio.emit('draw_completed', {
+                'is_drawn': True,
+                'winning_numbers': winning_numbers,
+                'message': '🎲 Админ запустил розыгрыш! Стирайте билеты!',
+                'end_time': draw_time.isoformat() if draw_time else None
+            })
             add_admin_log(f"🎲 Принудительный розыгрыш лотереи", admin_id, admin_name)
             return jsonify({"success": True, "msg": "Розыгрыш запущен"})
+
         elif action == 'reset_lottery':
+            print("👑 Админ: принудительный сброс лотереи")
             reset_lottery()
+            from bot import socketio
+            socketio.emit('draw_reset', {
+                'is_drawn': False,
+                'message': '🔄 Лотерея сброшена администратором! Можно покупать билеты.'
+            })
             add_admin_log(f"🔄 Сброс лотереи", admin_id, admin_name)
             return jsonify({"success": True, "msg": "Лотерея сброшена"})
+
         elif action == 'set_pool':
             global lottery_pool
             old_pool = lottery_pool
@@ -211,6 +230,7 @@ def register_admin_routes(app):
             save_lottery()
             add_admin_log(f"💰 Изменил призовой фонд с {old_pool} на {lottery_pool} USDT", admin_id, admin_name)
             return jsonify({"success": True, "msg": "Фонд изменён"})
+
         return jsonify({"success": False, "msg": "Неизвестное действие"})
 
     # === ПОИСК ИГРОКОВ ===

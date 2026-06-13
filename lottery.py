@@ -1,4 +1,3 @@
-# lottery.py
 import json
 import random
 import datetime
@@ -24,65 +23,104 @@ lottery_lock = threading.Lock()
 
 
 def load_lottery():
+    """Загружает состояние лотереи из БД"""
     global lottery_pool, lottery_tickets, global_ticket_counter, winning_numbers, is_drawn, draw_time, lottery_phase
 
-    with db.get_cursor() as cursor:
-        cursor.execute("""
-            SELECT prize_pool, tickets, global_ticket_counter, winning_numbers, 
-                   is_drawn, draw_time, lottery_phase 
-            FROM lottery LIMIT 1
-        """)
-        row = cursor.fetchone()
+    with lottery_lock:
+        with db.get_cursor() as cursor:
+            cursor.execute("""
+                SELECT prize_pool, tickets, global_ticket_counter, winning_numbers, 
+                       is_drawn, draw_time, lottery_phase 
+                FROM lottery LIMIT 1
+            """)
+            row = cursor.fetchone()
 
-        if row:
-            lottery_pool = row['prize_pool'] or 0
-            # ВАЖНО: всегда преобразуем в список, даже если в БД пустота
-            tickets_data = row['tickets']
-            if tickets_data and tickets_data != '[]':
-                lottery_tickets = json.loads(tickets_data)
-            else:
-                lottery_tickets = []
+            if row:
+                lottery_pool = row['prize_pool'] if row['prize_pool'] is not None else 0
 
-            global_ticket_counter = row['global_ticket_counter'] or 0
-            winning_numbers = json.loads(row['winning_numbers']) if row['winning_numbers'] else []
-            is_drawn = row['is_drawn'] == 1
-            lottery_phase = row['lottery_phase'] or 'buy'
+                # ВАЖНО: правильно парсим JSON
+                tickets_str = row['tickets']
+                if tickets_str and tickets_str != '[]' and tickets_str != 'null':
+                    try:
+                        lottery_tickets = json.loads(tickets_str)
+                    except:
+                        lottery_tickets = []
+                else:
+                    lottery_tickets = []
 
-            if row['draw_time']:
-                try:
-                    draw_time = datetime.datetime.fromisoformat(row['draw_time'])
-                except:
+                global_ticket_counter = row['global_ticket_counter'] if row['global_ticket_counter'] is not None else 0
+
+                winning_str = row['winning_numbers']
+                if winning_str and winning_str != '[]' and winning_str != 'null':
+                    try:
+                        winning_numbers = json.loads(winning_str)
+                    except:
+                        winning_numbers = []
+                else:
+                    winning_numbers = []
+
+                is_drawn = row['is_drawn'] == 1 if row['is_drawn'] is not None else False
+                lottery_phase = row['lottery_phase'] if row['lottery_phase'] else 'buy'
+
+                if row['draw_time']:
+                    try:
+                        draw_time = datetime.datetime.fromisoformat(row['draw_time'])
+                    except:
+                        draw_time = None
+                else:
                     draw_time = None
-            else:
-                draw_time = None
 
-    update_lottery_phase()
-    print(f"✅ Лотерея загружена: {len(lottery_tickets)} билетов, фонд {lottery_pool} USDT")
+        print(
+            f"📊 ЛОТЕРЕЯ ЗАГРУЖЕНА: фонд={lottery_pool}, билетов={len(lottery_tickets)}, счётчик={global_ticket_counter}, is_drawn={is_drawn}")
+        update_lottery_phase()
+
 
 def save_lottery():
-    with db.get_cursor() as cursor:
-        cursor.execute("UPDATE lottery SET prize_pool=?, tickets=?, global_ticket_counter=?, winning_numbers=?, is_drawn=?, draw_time=?, lottery_phase=?",
-                       (lottery_pool, json.dumps(lottery_tickets), global_ticket_counter, json.dumps(winning_numbers),
-                        1 if is_drawn else 0, draw_time.isoformat() if draw_time else None, lottery_phase))
+    """Сохраняет состояние лотереи в БД"""
+    with lottery_lock:
+        with db.get_cursor() as cursor:
+            cursor.execute("""
+                UPDATE lottery 
+                SET prize_pool=?, tickets=?, global_ticket_counter=?, 
+                    winning_numbers=?, is_drawn=?, draw_time=?, lottery_phase=?
+                WHERE id=1
+            """, (
+                lottery_pool,
+                json.dumps(lottery_tickets),
+                global_ticket_counter,
+                json.dumps(winning_numbers),
+                1 if is_drawn else 0,
+                draw_time.isoformat() if draw_time else None,
+                lottery_phase
+            ))
+        print(f"💾 ЛОТЕРЕЯ СОХРАНЕНА: фонд={lottery_pool}, билетов={len(lottery_tickets)}")
+
 
 def update_lottery_phase():
     global lottery_phase
     now = datetime.datetime.now()
     current_hour = now.hour
-    if 21 <= current_hour or current_hour < 0:
+    # С 21:00 до 00:00 — фаза раскрытия
+    if current_hour >= 21 or current_hour < 0:
         new_phase = "reveal"
     else:
         new_phase = "buy"
+
     if lottery_phase != new_phase:
         lottery_phase = new_phase
         with db.get_cursor() as cursor:
             cursor.execute("UPDATE lottery SET lottery_phase = ? WHERE id = 1", (lottery_phase,))
         add_log(f"🔄 Смена фазы лотереи: {lottery_phase}", 0, "System")
+        print(f"🔄 Смена фазы лотереи: {lottery_phase}")
+
 
 def generate_ticket_numbers():
+    """Генерирует 12 уникальных чисел от 1 до 80"""
     return sorted(random.sample(range(1, 81), 12))
 
+
 def generate_winning_numbers():
+    """Генерирует 12 выигрышных чисел от 1 до 80"""
     return sorted(random.sample(range(1, 81), 12))
 
 
@@ -90,6 +128,9 @@ def buy_ticket(user_id, user_data):
     global lottery_pool, lottery_tickets, global_ticket_counter, is_drawn
 
     with lottery_lock:
+        print(
+            f"🎫 buy_ticket START: user={user_id}, is_drawn={is_drawn}, pool_before={lottery_pool}, tickets_before={len(lottery_tickets)}")
+
         # Проверка на активную фазу стирания
         if is_drawn:
             return False, "Сейчас идёт стирание билетов! Новые билеты появятся в 00:00"
@@ -152,6 +193,8 @@ def buy_ticket(user_id, user_data):
         # Сохраняем состояние лотереи в БД
         save_lottery()
 
+        print(f"🎫 buy_ticket END: pool_after={lottery_pool}, tickets_after={len(lottery_tickets)}")
+
         # Логируем покупку
         add_log(
             f"🎫 Купил билет #{ticket_num}",
@@ -167,10 +210,13 @@ def buy_ticket(user_id, user_data):
 
         return True, f"Билет #{ticket_num} куплен!"
 
+
 def reveal_all_tickets(user_id):
+    """Открывает все клетки всех билетов пользователя"""
     with lottery_lock:
         if not is_drawn:
             return False, "Розыгрыш ещё не начался!"
+
         revealed_count = 0
         for ticket in lottery_tickets:
             if ticket.get("user_id") == user_id:
@@ -178,14 +224,19 @@ def reveal_all_tickets(user_id):
                     if not ticket["revealed"][i]:
                         ticket["revealed"][i] = True
                         revealed_count += 1
+
         if revealed_count > 0:
             save_lottery()
             add_log(f"🔓 Открыл все клетки ({revealed_count} клеток)", user_id, str(user_id))
             return True, f"Открыто {revealed_count} клеток!"
+
         return False, "Нет неоткрытых клеток"
 
+
 def perform_draw():
+    """Запускает розыгрыш лотереи"""
     global winning_numbers, is_drawn, draw_time, lottery_phase
+
     with lottery_lock:
         if lottery_tickets:
             winning_numbers = generate_winning_numbers()
@@ -193,37 +244,55 @@ def perform_draw():
             draw_time = datetime.datetime.now()
             lottery_phase = "reveal"
             save_lottery()
-            add_log(f"🎲 Розыгрыш лотереи начался. Выигрышные номера: {winning_numbers}", 0, "System")
+            add_log(f"🎲 РОЗЫГРЫШ ЛОТЕРЕИ! Выигрышные номера: {winning_numbers}", 0, "System")
+            print(f"🎲 РОЗЫГРЫШ: winning_numbers={winning_numbers}")
+
+            # Запускаем таймер на автоматическое открытие через 3 часа
             threading.Timer(10800, auto_reveal_and_distribute).start()
+        else:
+            print("⚠️ Попытка розыгрыша без билетов")
+
 
 def auto_reveal_and_distribute():
+    """Автоматически открывает все билеты и распределяет призы через 3 часа"""
     time.sleep(10800)
     with lottery_lock:
         if is_drawn:
+            # Открываем все неоткрытые клетки
             for ticket in lottery_tickets:
                 if not all(ticket.get("revealed", [])):
                     ticket["revealed"] = [True] * 12
+
             save_lottery()
             add_log(f"⏰ Автоматическое открытие билетов (время вышло в 00:00)", 0, "System")
             distribute_prizes()
+
+            # Ждём 1 час и сбрасываем лотерею
             time.sleep(3600)
             reset_lottery()
             schedule_next_draw()
 
+
 def distribute_prizes():
-    global lottery_pool, lottery_tickets
+    """Распределяет призы между победителями"""
+    global lottery_pool
+
     if not lottery_tickets:
         return
+
     results = []
     for ticket in lottery_tickets:
         if all(ticket.get("revealed", [])):
             matches = sum(1 for i in range(12) if ticket["numbers"][i] in winning_numbers)
             results.append({"user_id": ticket["user_id"], "matches": matches, "ticket": ticket})
+
     if not results:
         return
+
     max_matches = max([r["matches"] for r in results])
     winners = [r for r in results if r["matches"] == max_matches]
     prize_per_winner = round(lottery_pool / len(winners), 2)
+
     for winner in winners:
         if not winner["ticket"].get("reward_claimed", False):
             winner["ticket"]["reward_claimed"] = True
@@ -231,15 +300,31 @@ def distribute_prizes():
             add_usdt(winner["user_id"], prize_per_winner)
             add_wins(winner["user_id"], 1)
             user = get_user(winner["user_id"])
-            add_log(f"🏆 ПОБЕДА в лотерее! +{prize_per_winner} USDT (совпадений: {winner['matches']}/12)",
-                    winner["user_id"], user['username'], old_value=old_usdt, new_value=user['usdt'], currency="usdt")
-            send_telegram_message(winner["user_id"], f"🎉 ПОБЕДА! +{prize_per_winner} USDT! Совпадений: {winner['matches']}/12")
+            add_log(
+                f"🏆 ПОБЕДА в лотерее! +{prize_per_winner} USDT (совпадений: {winner['matches']}/12)",
+                winner["user_id"],
+                user['username'],
+                old_value=old_usdt,
+                new_value=user['usdt'],
+                currency="usdt"
+            )
+            send_telegram_message(
+                winner["user_id"],
+                f"🎉 ПОБЕДА! +{prize_per_winner} USDT! Совпадений: {winner['matches']}/12"
+            )
             update_achievement_progress(winner["user_id"], 'lucky', 1)
+
     save_lottery()
-    add_log(f"🎰 Завершение розыгрыша. Призовой фонд {lottery_pool} USDT распределён между {len(winners)} победителями", 0, "System")
+    add_log(
+        f"🎰 Завершение розыгрыша. Призовой фонд {lottery_pool} USDT распределён между {len(winners)} победителями",
+        0, "System"
+    )
+
 
 def reset_lottery():
+    """Полностью сбрасывает лотерею для нового дня"""
     global is_drawn, winning_numbers, draw_time, lottery_tickets, lottery_pool, global_ticket_counter, lottery_phase
+
     with lottery_lock:
         is_drawn = False
         winning_numbers = []
@@ -250,8 +335,12 @@ def reset_lottery():
         lottery_phase = "buy"
         save_lottery()
         add_log(f"🔄 Сброс лотереи для нового розыгрыша (новый день в 01:00)", 0, "System")
+        print("🔄 ЛОТЕРЕЯ СБРОШЕНА")
+
 
 def schedule_next_draw():
+    """Запускает поток ожидания следующего розыгрыша в 21:00"""
+
     def wait_and_draw():
         while True:
             now = datetime.datetime.now()
@@ -259,8 +348,11 @@ def schedule_next_draw():
             if now >= next_draw:
                 next_draw += datetime.timedelta(days=1)
             wait_seconds = (next_draw - now).total_seconds()
+            print(f"⏰ Следующий розыгрыш через {wait_seconds / 3600:.1f} часов")
             time.sleep(wait_seconds)
             perform_draw()
+            # Ждём 4 часа (с 21:00 до 01:00) и сбрасываем
             time.sleep(14400)
             reset_lottery()
+
     threading.Thread(target=wait_and_draw, daemon=True).start()
