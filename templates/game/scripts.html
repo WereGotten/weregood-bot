@@ -328,13 +328,17 @@
             }
         }
 
-        // ✅ КРИТИЧЕСКИ ВАЖНО: обновляем данные лотереи
+        // ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: обновляем лотерею из data.lottery
         if (data.lottery) {
-            // Обновляем призовой фонд в интерфейсе
+            console.log('📊 Получены данные лотереи:', data.lottery);
+
+            // Обновляем призовой фонд
             const prizePoolEl = document.getElementById('prizePool');
             if (prizePoolEl && data.lottery.prize_pool !== undefined) {
                 prizePoolEl.innerText = data.lottery.prize_pool.toFixed(2);
                 console.log('💰 Призовой фонд обновлён:', data.lottery.prize_pool);
+            } else {
+                console.log('⚠️ prizePoolEl не найден или нет данных');
             }
 
             // Обновляем количество билетов у игрока
@@ -348,10 +352,15 @@
                 console.log('🎫 Билетов у игрока:', data.lottery.user_tickets);
             }
 
+            // Обновляем LP в лотерейном блоке
+            const lotteryLPEl = document.getElementById('lotteryLPBalance');
+            if (lotteryLPEl && data.lottery.user_lp !== undefined) {
+                lotteryLPEl.innerText = data.lottery.user_lp;
+            }
+
             // Обновляем список билетов пользователя
             if (data.lottery.tickets) {
                 currentTickets = data.lottery.tickets;
-                // Перерисовываем карусель билетов
                 if (typeof updateCarousel === 'function') {
                     updateCarousel();
                 }
@@ -364,6 +373,8 @@
                 winningNumbers = data.lottery.winning_numbers || [];
                 updateDrawUI();
             }
+        } else {
+            console.log('⚠️ data.lottery отсутствует в ответе сервера');
         }
 
         if (data.leaderboard && data.leaderboard.length > 0) {
@@ -374,12 +385,6 @@
         }
 
         updateUI();
-
-        // ✅ Принудительно обновляем страницу лотереи, если она открыта
-        const activeTab = document.querySelector('.tab-pane.active')?.id;
-        if (activeTab === 'tabLottery') {
-            await loadUserTickets(); // Перезагружаем билеты
-        }
 
     } catch(e) {
         console.error('Sync error:', e);
@@ -1019,10 +1024,27 @@
         if (data.success) {
             playPurchaseSound();
             showToast(data.msg, 'success');
-            // ✅ КРИТИЧЕСКИ ВАЖНО: принудительно синхронизируем данные
-            await syncData(true);  // force=true
-            await loadUserTickets();  // перезагружаем билеты
-            setTimeout(() => syncData(true), 500); // повторная синхронизация
+            // Принудительно обновляем LP и другие данные
+            await syncData(true);
+            // Дополнительно обновляем лотерейные данные
+            setTimeout(async () => {
+                await syncData(true);
+                // Обновляем отображение фонда напрямую
+                const lottoRes = await fetch('/api/lottery_status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId })
+                });
+                const lottoData = await lottoRes.json();
+                const prizePoolEl = document.getElementById('prizePool');
+                if (prizePoolEl && lottoData.prize_pool !== undefined) {
+                    prizePoolEl.innerText = lottoData.prize_pool.toFixed(2);
+                }
+                const ticketsCountEl = document.getElementById('ticketsCount');
+                if (ticketsCountEl && lottoData.user_tickets !== undefined) {
+                    ticketsCountEl.innerText = lottoData.user_tickets;
+                }
+            }, 500);
         } else {
             playErrorSound();
             showToast(data.msg, 'error');
