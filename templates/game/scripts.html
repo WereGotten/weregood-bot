@@ -1211,427 +1211,506 @@
     };
 
     // ========== ОСНОВНАЯ ФУНКЦИЯ ЗАГРУЗКИ БИЛЕТОВ С ЗАЩИТОЙ ОТ СТИРАНИЯ ==========
-    async function loadUserTickets() {
-        // НЕ перезагружаем билеты если идет активное стирание!
-        if (isScratchingActive) {
-            console.log('⏳ Стирание активно, пропускаем перезагрузку билетов');
-            return;
-        }
+    // ==================== ПЕРЕМЕННЫЕ ДЛЯ СТИРАНИЯ ====================
+let isScratchingActive = false;
+let scratchTimeout = null;
 
-        console.log('🔄 loadUserTickets вызвана');
-        try {
-            let res = await fetch('/api/lottery_status', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: userId })
-            });
-            let data = await res.json();
-
-            console.log('📊 loadUserTickets получила данные:', {
-                prize_pool: data.prize_pool,
-                user_tickets: data.user_tickets,
-                is_drawn: data.is_drawn,
-                tickets_count: data.tickets?.length
-            });
-
-            // Обновляем глобальный статус розыгрыша
-            if (data.is_drawn !== undefined) {
-                isDrawn = data.is_drawn;
-                winningNumbers = data.winning_numbers || [];
-                updateDrawUI();
-            }
-
-            // Обновляем отображение фонда
-            const prizePoolEl = document.getElementById('prizePool');
-            if (prizePoolEl && data.prize_pool !== undefined) {
-                prizePoolEl.innerText = data.prize_pool.toFixed(2);
-            }
-
-            // Обновляем количество билетов
-            const ticketsCount = data.user_tickets || 0;
-            const ticketsCountEl = document.getElementById('ticketsCount');
-            if (ticketsCountEl) ticketsCountEl.innerText = ticketsCount;
-            const totalTicketsEl = document.getElementById('totalTickets');
-            if (totalTicketsEl) totalTicketsEl.innerText = ticketsCount;
-            const totalTicketsMiniEl = document.getElementById('totalTicketsMini');
-            if (totalTicketsMiniEl) totalTicketsMiniEl.innerText = ticketsCount;
-
-            // Обновляем LP в лотерейном блоке
-            const lotteryLPEl = document.getElementById('lotteryLPBalance');
-            if (lotteryLPEl && data.user_lp !== undefined) {
-                lotteryLPEl.innerText = data.user_lp;
-            }
-
-            // КРИТИЧЕСКИ ВАЖНО: обновляем массив билетов и карусель
-            if (data.tickets && data.tickets.length > 0) {
-                // Сохраняем текущий прогресс стирания перед обновлением
-                const savedProgress = new Map(scratchProgress);
-                currentTickets = data.tickets;
-                console.log('📋 Обновляем карусель, билетов:', currentTickets.length);
-                if (typeof updateCarousel === 'function') {
-                    updateCarousel();
-                    // Восстанавливаем прогресс стирания
-                    setTimeout(() => restoreScratchProgress(savedProgress), 100);
-                }
-            } else {
-                currentTickets = [];
-                const container = document.getElementById('ticketsContainer');
-                if (container) {
-                    container.innerHTML = '<div class="empty-state">😢 У вас пока нет билетов</div>';
-                }
-            }
-
-            // Обновляем топ игроков если розыгрыш идёт
-            if (isDrawn && typeof updateTopPlayers === 'function') {
-                updateTopPlayers();
-            }
-
-        } catch(e) {
-            console.error('Error loading tickets:', e);
-        }
+async function loadUserTickets() {
+    // НЕ перезагружаем билеты если идет активное стирание!
+    if (isScratchingActive) {
+        console.log('⏳ Стирание активно, пропускаем перезагрузку билетов');
+        return;
     }
 
-    // Функция восстановления прогресса после перезагрузки
-    function restoreScratchProgress(savedProgress) {
-        for (let [key, imageData] of savedProgress) {
-            const canvas = document.getElementById(key.replace('_progress', ''));
-            if (canvas && !canvas.isRevealed) {
+    console.log('🔄 loadUserTickets вызвана');
+    try {
+        let res = await fetch('/api/lottery_status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId })
+        });
+        let data = await res.json();
+
+        console.log('📊 loadUserTickets получила данные:', {
+            prize_pool: data.prize_pool,
+            user_tickets: data.user_tickets,
+            is_drawn: data.is_drawn,
+            tickets_count: data.tickets?.length
+        });
+
+        // Обновляем глобальный статус розыгрыша
+        if (data.is_drawn !== undefined) {
+            isDrawn = data.is_drawn;
+            winningNumbers = data.winning_numbers || [];
+            updateDrawUI();
+        }
+
+        // Обновляем отображение фонда
+        const prizePoolEl = document.getElementById('prizePool');
+        if (prizePoolEl && data.prize_pool !== undefined) {
+            prizePoolEl.innerText = data.prize_pool.toFixed(2);
+        }
+
+        // Обновляем количество билетов
+        const ticketsCount = data.user_tickets || 0;
+        const ticketsCountEl = document.getElementById('ticketsCount');
+        if (ticketsCountEl) ticketsCountEl.innerText = ticketsCount;
+        const totalTicketsEl = document.getElementById('totalTickets');
+        if (totalTicketsEl) totalTicketsEl.innerText = ticketsCount;
+        const totalTicketsMiniEl = document.getElementById('totalTicketsMini');
+        if (totalTicketsMiniEl) totalTicketsMiniEl.innerText = ticketsCount;
+
+        // Обновляем LP в лотерейном блоке
+        const lotteryLPEl = document.getElementById('lotteryLPBalance');
+        if (lotteryLPEl && data.user_lp !== undefined) {
+            lotteryLPEl.innerText = data.user_lp;
+        }
+
+        // КРИТИЧЕСКИ ВАЖНО: обновляем массив билетов и карусель
+        if (data.tickets && data.tickets.length > 0) {
+            // Сохраняем текущий прогресс стирания перед обновлением
+            const savedProgress = new Map(scratchProgress);
+            currentTickets = data.tickets;
+            console.log('📋 Обновляем карусель, билетов:', currentTickets.length);
+            if (typeof updateCarousel === 'function') {
+                updateCarousel();
+                // Восстанавливаем прогресс стирания
+                setTimeout(() => restoreScratchProgress(savedProgress), 150);
+            }
+        } else {
+            currentTickets = [];
+            const container = document.getElementById('ticketsContainer');
+            if (container) {
+                container.innerHTML = '<div class="empty-state">😢 У вас пока нет билетов</div>';
+            }
+            const dotsContainer = document.getElementById('carouselDots');
+            if (dotsContainer) dotsContainer.innerHTML = '';
+        }
+
+        // Обновляем топ игроков если розыгрыш идёт
+        if (isDrawn && typeof updateTopPlayers === 'function') {
+            updateTopPlayers();
+        }
+
+    } catch(e) {
+        console.error('Error loading tickets:', e);
+    }
+}
+
+// Функция восстановления прогресса после перезагрузки
+function restoreScratchProgress(savedProgress) {
+    console.log('🔄 Восстанавливаем прогресс стирания, элементов:', savedProgress.size);
+    for (let [key, imageData] of savedProgress) {
+        const canvasId = key.replace('_progress', '');
+        const canvas = document.getElementById(canvasId);
+        if (canvas && !canvas.isRevealed) {
+            try {
                 const ctx = canvas.getContext('2d');
                 ctx.putImageData(imageData, 0, 0);
                 scratchProgress.set(key, imageData);
-                console.log('🔄 Восстановлен прогресс стирания для', key);
-            }
-        }
-    }
 
-    function updateCarousel() {
-        const container = document.getElementById('ticketsContainer');
-        if (!container) {
-            console.warn('ticketsContainer не найден');
-            return;
-        }
-
-        console.log('🎨 updateCarousel, билетов:', currentTickets.length);
-
-        if (currentTickets.length === 0) {
-            container.innerHTML = '<div class="empty-state">😢 У вас пока нет билетов</div>';
-            const dotsContainer = document.getElementById('carouselDots');
-            if (dotsContainer) dotsContainer.innerHTML = '';
-            return;
-        }
-
-        let slidesHtml = '';
-        currentTickets.forEach((ticket, idx) => {
-            slidesHtml += `<div class="ticket-slide" data-index="${idx}">${renderTicketForCarousel(ticket)}</div>`;
-        });
-        container.innerHTML = slidesHtml;
-
-        let dotsHtml = '';
-        currentTickets.forEach((_, idx) => {
-            dotsHtml += `<div class="carousel-dot ${idx === currentTicketIndex ? 'active' : ''}" onclick="goToTicket(${idx})"></div>`;
-        });
-        const dotsContainer = document.getElementById('carouselDots');
-        if (dotsContainer) dotsContainer.innerHTML = dotsHtml;
-
-        // Инициализируем canvas для каждого билета
-        const allSlides = document.querySelectorAll('.ticket-slide');
-        allSlides.forEach((slide, idx) => {
-            if (currentTickets[idx]) {
-                initSlideCanvases(slide, currentTickets[idx]);
-            }
-        });
-
-        // Настраиваем скролл
-        let scrollTimeout;
-        container.onscroll = () => {
-            if (scrollTimeout) clearTimeout(scrollTimeout);
-            scrollTimeout = setTimeout(() => {
-                const scrollLeft = container.scrollLeft;
-                const slideWidth = container.clientWidth;
-                const newIndex = Math.round(scrollLeft / slideWidth);
-                if (newIndex !== currentTicketIndex && newIndex >= 0 && newIndex < currentTickets.length) {
-                    currentTicketIndex = newIndex;
-                    document.querySelectorAll('.carousel-dot').forEach((dot, i) => {
-                        dot.classList.toggle('active', i === currentTicketIndex);
-                    });
+                // Восстанавливаем процент стёртости
+                const imageDataCheck = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                let transparent = 0;
+                for (let j = 3; j < imageDataCheck.data.length; j += 4) {
+                    if (imageDataCheck.data[j] === 0) transparent++;
                 }
-            }, 100);
-        };
-    }
+                canvas.erasedPercent = (transparent / (canvas.width * canvas.height)) * 100;
 
-    window.goToTicket = (index) => {
-        const container = document.getElementById('ticketsContainer');
-        const slideWidth = container.clientWidth;
-        container.scrollTo({ left: slideWidth * index, behavior: 'smooth' });
-        currentTicketIndex = index;
-        document.querySelectorAll('.carousel-dot').forEach((dot, i) => dot.classList.toggle('active', i === currentTicketIndex));
-    };
-
-    function renderTicketForCarousel(ticket) {
-        const revealed = ticket.revealed || new Array(12).fill(false);
-        const numbers = ticket.numbers;
-        const ticketNumber = ticket.number;
-        let cellsHtml = '';
-        for (let i = 0; i < 12; i++) {
-            const isRevealed = revealed[i];
-            const number = numbers[i];
-            const isWin = isDrawn && winningNumbers.includes(number);
-            const canvasId = `scratch_${ticketNumber}_${i}`;
-            const bgClass = (isRevealed && isWin) ? 'win' : 'normal';
-            cellsHtml += `<div class="scratch-cell">
-                <div class="scratch-number-layer ${bgClass}" style="display: ${isRevealed ? 'flex' : 'none'};">${number}</div>
-                ${!isRevealed ? `<canvas id="${canvasId}" class="scratch-canvas" width="70" height="70"></canvas>` : ''}
-            </div>`;
-        }
-        let matches = 0, revealedCount = 0;
-        for (let i = 0; i < 12; i++) {
-            if (revealed[i]) {
-                revealedCount++;
-                if (isDrawn && winningNumbers.includes(numbers[i])) matches++;
+                console.log('🔄 Восстановлен прогресс для', canvasId, 'процент:', canvas.erasedPercent.toFixed(1));
+            } catch(e) {
+                console.error('Ошибка восстановления canvas:', canvasId, e);
             }
         }
-        let winningComboHtml = '';
-        if (isDrawn && winningNumbers.length > 0) {
-            winningComboHtml = `<div class="winning-combo-ticket">
-                <div class="winning-combo-title">🎲 ВЫИГРЫШНАЯ КОМБИНАЦИЯ 🎲</div>
-                <div class="winning-combo-numbers">${winningNumbers.map(num => `<div class="winning-combo-number">${num}</div>`).join('')}</div>
-            </div>`;
+    }
+}
+
+function updateCarousel() {
+    const container = document.getElementById('ticketsContainer');
+    if (!container) {
+        console.warn('ticketsContainer не найден');
+        return;
+    }
+
+    console.log('🎨 updateCarousel, билетов:', currentTickets.length);
+
+    if (currentTickets.length === 0) {
+        container.innerHTML = '<div class="empty-state">😢 У вас пока нет билетов</div>';
+        const dotsContainer = document.getElementById('carouselDots');
+        if (dotsContainer) dotsContainer.innerHTML = '';
+        return;
+    }
+
+    let slidesHtml = '';
+    currentTickets.forEach((ticket, idx) => {
+        slidesHtml += `<div class="ticket-slide" data-index="${idx}">${renderTicketForCarousel(ticket)}</div>`;
+    });
+    container.innerHTML = slidesHtml;
+
+    let dotsHtml = '';
+    currentTickets.forEach((_, idx) => {
+        dotsHtml += `<div class="carousel-dot ${idx === currentTicketIndex ? 'active' : ''}" onclick="goToTicket(${idx})"></div>`;
+    });
+    const dotsContainer = document.getElementById('carouselDots');
+    if (dotsContainer) dotsContainer.innerHTML = dotsHtml;
+
+    // Инициализируем canvas для каждого билета
+    const allSlides = document.querySelectorAll('.ticket-slide');
+    allSlides.forEach((slide, idx) => {
+        if (currentTickets[idx]) {
+            initSlideCanvases(slide, currentTickets[idx]);
         }
-        const revealAllCellsBtn = isDrawn ? `<button class="reveal-ticket-btn" onclick="revealAllCellsForTicket(${ticketNumber})">🔓 Открыть все клетки этого билета</button>` : '';
-        return `<div class="ticket-container" data-ticket-number="${ticketNumber}">
-            <div class="ticket-number"> Билет #${ticketNumber}</div>
-            <div class="ticket-purchase-num">Покупка #${ticket.purchase_number}</div>
-            <div class="scratch-grid">${cellsHtml}</div>
-            <div class="matches-counter">🏆 Совпадений: <span>${matches}/${revealedCount}</span></div>
-            ${revealAllCellsBtn}
-            ${winningComboHtml}
+    });
+
+    // Настраиваем скролл
+    let scrollTimeout;
+    container.onscroll = () => {
+        if (scrollTimeout) clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(() => {
+            const scrollLeft = container.scrollLeft;
+            const slideWidth = container.clientWidth;
+            const newIndex = Math.round(scrollLeft / slideWidth);
+            if (newIndex !== currentTicketIndex && newIndex >= 0 && newIndex < currentTickets.length) {
+                currentTicketIndex = newIndex;
+                document.querySelectorAll('.carousel-dot').forEach((dot, i) => {
+                    dot.classList.toggle('active', i === currentTicketIndex);
+                });
+            }
+        }, 100);
+    };
+}
+
+window.goToTicket = (index) => {
+    const container = document.getElementById('ticketsContainer');
+    const slideWidth = container.clientWidth;
+    container.scrollTo({ left: slideWidth * index, behavior: 'smooth' });
+    currentTicketIndex = index;
+    document.querySelectorAll('.carousel-dot').forEach((dot, i) => dot.classList.toggle('active', i === currentTicketIndex));
+};
+
+function renderTicketForCarousel(ticket) {
+    const revealed = ticket.revealed || new Array(12).fill(false);
+    const numbers = ticket.numbers;
+    const ticketNumber = ticket.number;
+    let cellsHtml = '';
+    for (let i = 0; i < 12; i++) {
+        const isRevealed = revealed[i];
+        const number = numbers[i];
+        const isWin = isDrawn && winningNumbers.includes(number);
+        const canvasId = `scratch_${ticketNumber}_${i}`;
+        const bgClass = (isRevealed && isWin) ? 'win' : 'normal';
+        cellsHtml += `<div class="scratch-cell">
+            <div class="scratch-number-layer ${bgClass}" style="display: ${isRevealed ? 'flex' : 'none'};">${number}</div>
+            ${!isRevealed ? `<canvas id="${canvasId}" class="scratch-canvas" width="70" height="70"></canvas>` : ''}
         </div>`;
     }
+    let matches = 0, revealedCount = 0;
+    for (let i = 0; i < 12; i++) {
+        if (revealed[i]) {
+            revealedCount++;
+            if (isDrawn && winningNumbers.includes(numbers[i])) matches++;
+        }
+    }
+    let winningComboHtml = '';
+    if (isDrawn && winningNumbers.length > 0) {
+        winningComboHtml = `<div class="winning-combo-ticket">
+            <div class="winning-combo-title">🎲 ВЫИГРЫШНАЯ КОМБИНАЦИЯ 🎲</div>
+            <div class="winning-combo-numbers">${winningNumbers.map(num => `<div class="winning-combo-number">${num}</div>`).join('')}</div>
+        </div>`;
+    }
+    const revealAllCellsBtn = isDrawn ? `<button class="reveal-ticket-btn" onclick="revealAllCellsForTicket(${ticketNumber})">🔓 Открыть все клетки этого билета</button>` : '';
+    return `<div class="ticket-container" data-ticket-number="${ticketNumber}">
+        <div class="ticket-number"> Билет #${ticketNumber}</div>
+        <div class="ticket-purchase-num">Покупка #${ticket.purchase_number}</div>
+        <div class="scratch-grid">${cellsHtml}</div>
+        <div class="matches-counter">🏆 Совпадений: <span>${matches}/${revealedCount}</span></div>
+        ${revealAllCellsBtn}
+        ${winningComboHtml}
+    </div>`;
+}
 
-    window.revealAllCellsForTicket = async function(ticketNumber) {
-        if (!isDrawn) {
-            showToast('Розыгрыш ещё не начался!', 'error');
-            return;
+window.revealAllCellsForTicket = async function(ticketNumber) {
+    if (!isDrawn) {
+        showToast('Розыгрыш ещё не начался!', 'error');
+        return;
+    }
+    try {
+        let res = await fetch('/api/reveal_ticket_cells', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId, ticket_number: ticketNumber })
+        });
+        let data = await res.json();
+        if (data.success) {
+            showToast(data.msg, 'success');
+            await loadUserTickets();
+            updateTopPlayers();
+        } else {
+            showToast(data.msg, 'error');
         }
-        try {
-            let res = await fetch('/api/reveal_ticket_cells', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: userId, ticket_number: ticketNumber })
-            });
-            let data = await res.json();
-            if (data.success) {
-                showToast(data.msg, 'success');
-                await loadUserTickets();
-                updateTopPlayers();
+    } catch(e) {
+        console.error('Error revealing cells:', e);
+        showToast('Ошибка при открытии клеток', 'error');
+    }
+};
+
+function initSlideCanvases(slideElement, ticket) {
+    if (!slideElement) return;
+    const ticketNumber = ticket.number;
+    const revealed = ticket.revealed || [];
+    for (let i = 0; i < 12; i++) {
+        const canvas = slideElement.querySelector(`#scratch_${ticketNumber}_${i}`);
+        if (canvas) {
+            const isRevealed = revealed[i] === true;
+            const number = ticket.numbers[i];
+            const isWin = isDrawn && winningNumbers.includes(number);
+            const numberDiv = canvas.parentElement.querySelector('.scratch-number-layer');
+            if (isRevealed) {
+                canvas.style.display = 'none';
+                canvas.isRevealed = true;
+                if (numberDiv) {
+                    numberDiv.style.display = 'flex';
+                    if (isWin) {
+                        numberDiv.classList.add('win');
+                        numberDiv.classList.remove('normal');
+                    } else {
+                        numberDiv.classList.add('normal');
+                        numberDiv.classList.remove('win');
+                    }
+                }
             } else {
-                showToast(data.msg, 'error');
+                initScratchCell(canvas.id, 70, number, isWin, false);
+                if (isDrawn) {
+                    setupScratchHandlers(canvas.id, ticket.number, i, 70, isWin, number);
+                }
             }
-        } catch(e) {
-            showToast('Ошибка при открытии клеток', 'error');
         }
+    }
+}
+
+function initScratchCell(canvasId, size, number, isWin, isRevealed) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    if (isRevealed) {
+        canvas.style.display = 'none';
+        canvas.isRevealed = true;
+        return;
+    }
+    drawScratchPattern(ctx, size);
+    canvas.isRevealed = false;
+    canvas.number = number;
+    canvas.isWin = isWin;
+    canvas.erasedPercent = 0;
+    const progressKey = `${canvasId}_progress`;
+    if (scratchProgress.has(progressKey)) {
+        const savedImageData = scratchProgress.get(progressKey);
+        if (savedImageData) {
+            ctx.putImageData(savedImageData, 0, 0);
+            const imageData = ctx.getImageData(0, 0, size, size);
+            let transparent = 0;
+            for (let i = 3; i < imageData.data.length; i += 4) if (imageData.data[i] === 0) transparent++;
+            canvas.erasedPercent = (transparent / (size * size)) * 100;
+        }
+    }
+}
+
+function drawScratchPattern(ctx, size) {
+    const grad = ctx.createLinearGradient(0, 0, size, size);
+    grad.addColorStop(0, '#8a8a8a');
+    grad.addColorStop(1, '#6a6a6a');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, size, size);
+    ctx.font = `bold ${size * 0.32}px 'Inter'`;
+    ctx.fillStyle = '#c0c0c0';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('WG', size / 2, size / 2);
+    ctx.beginPath();
+    ctx.strokeStyle = '#aaa';
+    ctx.lineWidth = 1.5;
+    for (let i = -size; i < size + size; i += 10) {
+        ctx.beginPath();
+        ctx.moveTo(i, 0);
+        ctx.lineTo(i + size, size);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, i);
+        ctx.lineTo(size, i + size);
+        ctx.stroke();
+    }
+}
+
+// ========== ОСНОВНАЯ ФУНКЦИЯ СТИРАНИЯ ==========
+function setupScratchHandlers(canvasId, ticketNumber, cellIndex, size, isWin, number) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+
+    const cell = canvas.parentElement;
+    const numberDiv = cell.querySelector('.scratch-number-layer');
+    numberDiv.style.display = 'flex';
+    numberDiv.innerHTML = number;
+    numberDiv.classList.add('normal');
+    numberDiv.classList.remove('win');
+
+    const getCoords = (clientX, clientY, targetCanvas) => {
+        const rect = targetCanvas.getBoundingClientRect();
+        const scaleX = targetCanvas.width / rect.width;
+        const scaleY = targetCanvas.height / rect.height;
+        let x = (clientX - rect.left) * scaleX;
+        let y = (clientY - rect.top) * scaleY;
+        x = Math.max(0, Math.min(targetCanvas.width, x));
+        y = Math.max(0, Math.min(targetCanvas.height, y));
+        return { x, y };
     };
 
-    function initSlideCanvases(slideElement, ticket) {
-        if (!slideElement) return;
-        const ticketNumber = ticket.number;
-        const revealed = ticket.revealed || [];
-        for (let i = 0; i < 12; i++) {
-            const canvas = slideElement.querySelector(`#scratch_${ticketNumber}_${i}`);
-            if (canvas) {
-                const isRevealed = revealed[i] === true;
-                const number = ticket.numbers[i];
-                const isWin = isDrawn && winningNumbers.includes(number);
-                const numberDiv = canvas.parentElement.querySelector('.scratch-number-layer');
-                if (isRevealed) {
-                    canvas.style.display = 'none';
-                    canvas.isRevealed = true;
-                    if (numberDiv) {
-                        numberDiv.style.display = 'flex';
-                        if (isWin) {
-                            numberDiv.classList.add('win');
-                            numberDiv.classList.remove('normal');
-                        } else {
-                            numberDiv.classList.add('normal');
-                            numberDiv.classList.remove('win');
+    const eraseAt = (targetCanvas, x, y, tNum, cIdx, isWinCell, cellNumber) => {
+        if (targetCanvas.isRevealed) return;
+
+        // Устанавливаем флаг активности стирания
+        isScratchingActive = true;
+        if (scratchTimeout) clearTimeout(scratchTimeout);
+
+        // Сбрасываем флаг через 1.5 секунды после последнего стирания
+        scratchTimeout = setTimeout(() => {
+            isScratchingActive = false;
+            console.log('✅ Стирание завершено, флаг сброшен');
+        }, 1500);
+
+        const ctx = targetCanvas.getContext('2d');
+        ctx.save();
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.beginPath();
+        ctx.arc(x, y, 14, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        const progressKey = `${targetCanvas.id}_progress`;
+        const imageData = ctx.getImageData(0, 0, targetCanvas.width, targetCanvas.height);
+        scratchProgress.set(progressKey, imageData);
+
+        let transparent = 0;
+        for (let j = 3; j < imageData.data.length; j += 4) {
+            if (imageData.data[j] === 0) transparent++;
+        }
+        targetCanvas.erasedPercent = (transparent / (targetCanvas.width * targetCanvas.height)) * 100;
+
+        console.log(`💥 Стёрто ${targetCanvas.erasedPercent.toFixed(1)}% клетки ${cIdx} билета ${tNum}`);
+
+        if (targetCanvas.erasedPercent >= 60 && !targetCanvas.isRevealed) {
+            console.log(`✅ ОТПРАВЛЯЕМ ЗАПРОС на открытие клетки ${cIdx} билета ${tNum}`);
+
+            // Отправляем HTTP-запрос на сервер
+            fetch('/api/reveal_ticket_cells', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: userId,
+                    ticket_number: tNum,
+                    cell_index: cIdx
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('📡 Ответ сервера:', data);
+                if (data.success) {
+                    const cellDiv = targetCanvas.parentElement;
+                    const numDiv = cellDiv.querySelector('.scratch-number-layer');
+                    if (isWinCell) {
+                        numDiv.classList.add('win');
+                        numDiv.classList.remove('normal');
+                    }
+                    targetCanvas.style.display = 'none';
+                    targetCanvas.isRevealed = true;
+                    scratchProgress.delete(progressKey);
+
+                    if (navigator.vibrate) navigator.vibrate(30);
+                    showToast(`Клетка ${cellNumber} открыта! 🎉`, 'success');
+                    updateTopPlayers();
+
+                    // Обновляем локальный массив билетов
+                    if (currentTickets && currentTickets.length > 0) {
+                        for (let ticket of currentTickets) {
+                            if (ticket.number === tNum) {
+                                ticket.revealed[cIdx] = true;
+                                break;
+                            }
                         }
                     }
                 } else {
-                    initScratchCell(canvas.id, 70, number, isWin, false);
-                    if (isDrawn) setupScratchHandlers(canvas.id, ticket.number, i, 70, isWin, number);
+                    console.log('❌ Сервер не подтвердил открытие:', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('❌ Ошибка запроса:', error);
+            });
+        }
+    };
+
+    let mouseErasing = false;
+
+    const onMouseMove = (e) => {
+        if (!mouseErasing || !isDrawn) return;
+        e.preventDefault();
+        const targetEl = document.elementFromPoint(e.clientX, e.clientY);
+        const targetCanvas = targetEl?.closest('.scratch-canvas');
+        if (targetCanvas && !targetCanvas.isRevealed) {
+            const match = targetCanvas.id.match(/scratch_(\d+)_(\d+)/);
+            if (match) {
+                const tNum = parseInt(match[1]);
+                const cIdx = parseInt(match[2]);
+                const currentTicket = currentTickets.find(t => t.number === tNum);
+                if (currentTicket) {
+                    const isWinCell = isDrawn && winningNumbers.includes(currentTicket.numbers[cIdx]);
+                    const { x, y } = getCoords(e.clientX, e.clientY, targetCanvas);
+                    eraseAt(targetCanvas, x, y, tNum, cIdx, isWinCell, currentTicket.numbers[cIdx]);
                 }
             }
         }
-    }
+    };
 
-    function initScratchCell(canvasId, size, number, isWin, isRevealed) {
-        const canvas = document.getElementById(canvasId);
-        if (!canvas) return;
-        canvas.width = size;
-        canvas.height = size;
-        const ctx = canvas.getContext('2d');
-        if (isRevealed) {
-            canvas.style.display = 'none';
-            canvas.isRevealed = true;
+    const onMouseUp = () => {
+        mouseErasing = false;
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+    };
+
+    const onMouseDown = (e) => {
+        if (!isDrawn) {
+            showToast('Розыгрыш ещё не начался! ⏳', 'error');
             return;
         }
-        drawScratchPattern(ctx, size);
-        canvas.isRevealed = false;
-        canvas.number = number;
-        canvas.isWin = isWin;
-        canvas.erasedPercent = 0;
-        const progressKey = `${canvasId}_progress`;
-        if (scratchProgress.has(progressKey)) {
-            const savedImageData = scratchProgress.get(progressKey);
-            if (savedImageData) {
-                ctx.putImageData(savedImageData, 0, 0);
-                const imageData = ctx.getImageData(0, 0, size, size);
-                let transparent = 0;
-                for (let i = 3; i < imageData.data.length; i += 4) if (imageData.data[i] === 0) transparent++;
-                canvas.erasedPercent = (transparent / (size * size)) * 100;
+        if (canvas.isRevealed) return;
+        e.preventDefault();
+        mouseErasing = true;
+        const { x, y } = getCoords(e.clientX, e.clientY, canvas);
+        const match = canvas.id.match(/scratch_(\d+)_(\d+)/);
+        if (match) {
+            const tNum = parseInt(match[1]);
+            const cIdx = parseInt(match[2]);
+            const currentTicket = currentTickets.find(t => t.number === tNum);
+            if (currentTicket) {
+                const isWinCell = isDrawn && winningNumbers.includes(currentTicket.numbers[cIdx]);
+                eraseAt(canvas, x, y, tNum, cIdx, isWinCell, currentTicket.numbers[cIdx]);
             }
         }
-    }
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+    };
 
-    function drawScratchPattern(ctx, size) {
-        const grad = ctx.createLinearGradient(0, 0, size, size);
-        grad.addColorStop(0, '#8a8a8a');
-        grad.addColorStop(1, '#6a6a6a');
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, size, size);
-        ctx.font = `bold ${size * 0.32}px 'Inter'`;
-        ctx.fillStyle = '#c0c0c0';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('WG', size / 2, size / 2);
-        ctx.beginPath();
-        ctx.strokeStyle = '#aaa';
-        ctx.lineWidth = 1.5;
-        for (let i = -size; i < size + size; i += 10) {
-            ctx.beginPath();
-            ctx.moveTo(i, 0);
-            ctx.lineTo(i + size, size);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(0, i);
-            ctx.lineTo(size, i + size);
-            ctx.stroke();
+    let activeTouches = new Map();
+
+    const onTouchStart = (e) => {
+        if (!isDrawn) {
+            showToast('Розыгрыш ещё не начался! ⏳', 'error');
+            return;
         }
-    }
-
-    // ========== ОСНОВНАЯ ФУНКЦИЯ СТИРАНИЯ С HTTP ЗАПРОСОМ ==========
-    function setupScratchHandlers(canvasId, ticketNumber, cellIndex, size, isWin, number) {
-        const canvas = document.getElementById(canvasId);
-        if (!canvas) return;
-
-        const cell = canvas.parentElement;
-        const numberDiv = cell.querySelector('.scratch-number-layer');
-        numberDiv.style.display = 'flex';
-        numberDiv.innerHTML = number;
-        numberDiv.classList.add('normal');
-        numberDiv.classList.remove('win');
-
-        const getCoords = (clientX, clientY, targetCanvas) => {
-            const rect = targetCanvas.getBoundingClientRect();
-            const scaleX = targetCanvas.width / rect.width;
-            const scaleY = targetCanvas.height / rect.height;
-            let x = (clientX - rect.left) * scaleX;
-            let y = (clientY - rect.top) * scaleY;
-            x = Math.max(0, Math.min(targetCanvas.width, x));
-            y = Math.max(0, Math.min(targetCanvas.height, y));
-            return { x, y };
-        };
-
-        // ========== ИСПРАВЛЕННАЯ ФУНКЦИЯ СТИРАНИЯ ==========
-        const eraseAt = (targetCanvas, x, y, tNum, cIdx, isWinCell, cellNumber) => {
-            if (targetCanvas.isRevealed) return;
-
-            // Устанавливаем флаг активности стирания
-            isScratchingActive = true;
-            if (scratchTimeout) clearTimeout(scratchTimeout);
-
-            // Сбрасываем флаг через 1.5 секунды после последнего стирания
-            scratchTimeout = setTimeout(() => {
-                isScratchingActive = false;
-                console.log('✅ Стирание завершено, флаг сброшен');
-            }, 1500);
-
-            const ctx = targetCanvas.getContext('2d');
-            ctx.save();
-            ctx.globalCompositeOperation = 'destination-out';
-            ctx.beginPath();
-            ctx.arc(x, y, 14, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
-
-            const progressKey = `${targetCanvas.id}_progress`;
-            const imageData = ctx.getImageData(0, 0, targetCanvas.width, targetCanvas.height);
-            scratchProgress.set(progressKey, imageData);
-
-            let transparent = 0;
-            for (let j = 3; j < imageData.data.length; j += 4) {
-                if (imageData.data[j] === 0) transparent++;
-            }
-            targetCanvas.erasedPercent = (transparent / (targetCanvas.width * targetCanvas.height)) * 100;
-
-            console.log(`💥 Стёрто ${targetCanvas.erasedPercent.toFixed(1)}% клетки ${cIdx} билета ${tNum}`);
-
-            if (targetCanvas.erasedPercent >= 60 && !targetCanvas.isRevealed) {
-                console.log(`✅ ОТПРАВЛЯЕМ ЗАПРОС на открытие клетки ${cIdx} билета ${tNum}`);
-
-                // Отправляем HTTP-запрос на сервер
-                fetch('/api/reveal_ticket_cells', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        user_id: userId,
-                        ticket_number: tNum,
-                        cell_index: cIdx
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    console.log('📡 Ответ сервера:', data);
-                    if (data.success) {
-                        const cellDiv = targetCanvas.parentElement;
-                        const numDiv = cellDiv.querySelector('.scratch-number-layer');
-                        if (isWinCell) {
-                            numDiv.classList.add('win');
-                            numDiv.classList.remove('normal');
-                        }
-                        targetCanvas.style.display = 'none';
-                        targetCanvas.isRevealed = true;
-                        scratchProgress.delete(progressKey);
-
-                        if (navigator.vibrate) navigator.vibrate(30);
-                        showToast(`Клетка ${cellNumber} открыта! 🎉`, 'success');
-                        updateTopPlayers();
-
-                        // Обновляем локальный массив билетов
-                        if (currentTickets && currentTickets.length > 0) {
-                            for (let ticket of currentTickets) {
-                                if (ticket.number === tNum) {
-                                    ticket.revealed[cIdx] = true;
-                                    break;
-                                }
-                            }
-                        }
-                    } else {
-                        console.log('❌ Сервер не подтвердил открытие:', data.message);
-                    }
-                })
-                .catch(error => {
-                    console.error('❌ Ошибка запроса:', error);
-                });
-            }
-        };
-
-        let mouseErasing = false;
-
-        const onMouseMove = (e) => {
-            if (!mouseErasing || !isDrawn) return;
-            e.preventDefault();
-            const targetEl = document.elementFromPoint(e.clientX, e.clientY);
+        e.preventDefault();
+        for (let i = 0; i < e.touches.length; i++) {
+            const touch = e.touches[i];
+            const targetEl = document.elementFromPoint(touch.clientX, touch.clientY);
             const targetCanvas = targetEl?.closest('.scratch-canvas');
             if (targetCanvas && !targetCanvas.isRevealed) {
                 const match = targetCanvas.id.match(/scratch_(\d+)_(\d+)/);
@@ -1641,106 +1720,50 @@
                     const currentTicket = currentTickets.find(t => t.number === tNum);
                     if (currentTicket) {
                         const isWinCell = isDrawn && winningNumbers.includes(currentTicket.numbers[cIdx]);
-                        const { x, y } = getCoords(e.clientX, e.clientY, targetCanvas);
+                        const { x, y } = getCoords(touch.clientX, touch.clientY, targetCanvas);
                         eraseAt(targetCanvas, x, y, tNum, cIdx, isWinCell, currentTicket.numbers[cIdx]);
+                        activeTouches.set(touch.identifier, targetCanvas);
                     }
                 }
             }
-        };
+        }
+    };
 
-        const onMouseUp = () => {
-            mouseErasing = false;
-            document.removeEventListener('mousemove', onMouseMove);
-            document.removeEventListener('mouseup', onMouseUp);
-        };
-
-        const onMouseDown = (e) => {
-            if (!isDrawn) {
-                showToast('Розыгрыш ещё не начался! ⏳', 'error');
-                return;
-            }
-            if (canvas.isRevealed) return;
-            e.preventDefault();
-            mouseErasing = true;
-            const { x, y } = getCoords(e.clientX, e.clientY, canvas);
-            const match = canvas.id.match(/scratch_(\d+)_(\d+)/);
-            if (match) {
-                const tNum = parseInt(match[1]);
-                const cIdx = parseInt(match[2]);
-                const currentTicket = currentTickets.find(t => t.number === tNum);
-                if (currentTicket) {
-                    const isWinCell = isDrawn && winningNumbers.includes(currentTicket.numbers[cIdx]);
-                    eraseAt(canvas, x, y, tNum, cIdx, isWinCell, currentTicket.numbers[cIdx]);
-                }
-            }
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', onMouseUp);
-        };
-
-        let activeTouches = new Map();
-
-        const onTouchStart = (e) => {
-            if (!isDrawn) {
-                showToast('Розыгрыш ещё не начался! ⏳', 'error');
-                return;
-            }
-            e.preventDefault();
-            for (let i = 0; i < e.touches.length; i++) {
-                const touch = e.touches[i];
-                const targetEl = document.elementFromPoint(touch.clientX, touch.clientY);
-                const targetCanvas = targetEl?.closest('.scratch-canvas');
-                if (targetCanvas && !targetCanvas.isRevealed) {
-                    const match = targetCanvas.id.match(/scratch_(\d+)_(\d+)/);
-                    if (match) {
-                        const tNum = parseInt(match[1]);
-                        const cIdx = parseInt(match[2]);
-                        const currentTicket = currentTickets.find(t => t.number === tNum);
-                        if (currentTicket) {
-                            const isWinCell = isDrawn && winningNumbers.includes(currentTicket.numbers[cIdx]);
-                            const { x, y } = getCoords(touch.clientX, touch.clientY, targetCanvas);
-                            eraseAt(targetCanvas, x, y, tNum, cIdx, isWinCell, currentTicket.numbers[cIdx]);
-                            activeTouches.set(touch.identifier, targetCanvas);
-                        }
+    const onTouchMove = (e) => {
+        if (!isDrawn) return;
+        e.preventDefault();
+        for (let i = 0; i < e.touches.length; i++) {
+            const touch = e.touches[i];
+            const targetEl = document.elementFromPoint(touch.clientX, touch.clientY);
+            const targetCanvas = targetEl?.closest('.scratch-canvas');
+            if (targetCanvas && !targetCanvas.isRevealed) {
+                const match = targetCanvas.id.match(/scratch_(\d+)_(\d+)/);
+                if (match) {
+                    const tNum = parseInt(match[1]);
+                    const cIdx = parseInt(match[2]);
+                    const currentTicket = currentTickets.find(t => t.number === tNum);
+                    if (currentTicket) {
+                        const isWinCell = isDrawn && winningNumbers.includes(currentTicket.numbers[cIdx]);
+                        const { x, y } = getCoords(touch.clientX, touch.clientY, targetCanvas);
+                        eraseAt(targetCanvas, x, y, tNum, cIdx, isWinCell, currentTicket.numbers[cIdx]);
+                        activeTouches.set(touch.identifier, targetCanvas);
                     }
                 }
             }
-        };
+        }
+    };
 
-        const onTouchMove = (e) => {
-            if (!isDrawn) return;
-            e.preventDefault();
-            for (let i = 0; i < e.touches.length; i++) {
-                const touch = e.touches[i];
-                const targetEl = document.elementFromPoint(touch.clientX, touch.clientY);
-                const targetCanvas = targetEl?.closest('.scratch-canvas');
-                if (targetCanvas && !targetCanvas.isRevealed) {
-                    const match = targetCanvas.id.match(/scratch_(\d+)_(\d+)/);
-                    if (match) {
-                        const tNum = parseInt(match[1]);
-                        const cIdx = parseInt(match[2]);
-                        const currentTicket = currentTickets.find(t => t.number === tNum);
-                        if (currentTicket) {
-                            const isWinCell = isDrawn && winningNumbers.includes(currentTicket.numbers[cIdx]);
-                            const { x, y } = getCoords(touch.clientX, touch.clientY, targetCanvas);
-                            eraseAt(targetCanvas, x, y, tNum, cIdx, isWinCell, currentTicket.numbers[cIdx]);
-                            activeTouches.set(touch.identifier, targetCanvas);
-                        }
-                    }
-                }
-            }
-        };
+    const onTouchEnd = (e) => {
+        e.preventDefault();
+        for (let i = 0; i < e.changedTouches.length; i++) activeTouches.delete(e.changedTouches[i].identifier);
+    };
 
-        const onTouchEnd = (e) => {
-            e.preventDefault();
-            for (let i = 0; i < e.changedTouches.length; i++) activeTouches.delete(e.changedTouches[i].identifier);
-        };
-
-        canvas.addEventListener('mousedown', onMouseDown);
-        canvas.addEventListener('touchstart', onTouchStart, { passive: false });
-        canvas.addEventListener('touchmove', onTouchMove, { passive: false });
-        canvas.addEventListener('touchend', onTouchEnd);
-        canvas.addEventListener('touchcancel', onTouchEnd);
-    }
+    canvas.addEventListener('mousedown', onMouseDown);
+    canvas.addEventListener('touchstart', onTouchStart, { passive: false });
+    canvas.addEventListener('touchmove', onTouchMove, { passive: false });
+    canvas.addEventListener('touchend', onTouchEnd);
+    canvas.addEventListener('touchcancel', onTouchEnd);
+}
 
     function updateTopPlayers() {
         if (!isDrawn) return;

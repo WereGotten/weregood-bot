@@ -181,7 +181,7 @@ def buy_ticket(user_id, user_data):
     global lottery_pool, lottery_tickets, global_ticket_counter, is_drawn
 
     with lottery_lock:
-        print(f"🎫 Покупка билета: user={user_id}, is_drawn={is_drawn}")
+        print(f"🎫 [buy_ticket] Начало: user={user_id}, is_drawn={is_drawn}, tickets={len(lottery_tickets)}")
 
         # Проверка: розыгрыш не должен идти
         if is_drawn:
@@ -240,11 +240,10 @@ def buy_ticket(user_id, user_data):
         # Добавляем 0.40 USDT в призовой фонд
         lottery_pool = round(lottery_pool + 0.40, 2)
 
-        # КРИТИЧЕСКИ ВАЖНО: сохраняем в БД!
+        # ✅ СОХРАНЯЕМ В БД
         save_lottery()
 
-        # Принудительно синхронизируем с БД (на всякий случай)
-        refresh_lottery_data()
+        print(f"🎫 [buy_ticket] Билет #{ticket_num} куплен! Всего билетов={len(lottery_tickets)}, фонд={lottery_pool}")
 
         add_log(
             f"🎫 Купил билет #{ticket_num}",
@@ -256,7 +255,6 @@ def buy_ticket(user_id, user_data):
         )
         update_achievement_progress(user_id, 'gambler', 1)
 
-        print(f"🎫 Билет #{ticket_num} куплен! Всего билетов={len(lottery_tickets)}, фонд={lottery_pool} USDT")
         return True, f"Билет #{ticket_num} куплен!"
 
 

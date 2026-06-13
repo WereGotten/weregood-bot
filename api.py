@@ -655,8 +655,11 @@ def register_routes(app, socketio):
         if banned:
             return jsonify({"success": False, "msg": f"Вы забанены! {ban_info['reason']}"})
 
-        # Обновляем данные лотереи из БД
+        # ✅ 1. ОБНОВЛЯЕМ ДАННЫЕ ЛОТЕРЕИ ИЗ БД ПЕРЕД ПРОВЕРКОЙ
+        from lottery import refresh_lottery_data, lottery_pool, lottery_tickets, is_drawn
         refresh_lottery_data()
+
+        print(f"🎫 Покупка билета: user_id={user_id}, is_drawn={is_drawn}, pool={lottery_pool}")
 
         if is_drawn:
             return jsonify({
@@ -666,20 +669,51 @@ def register_routes(app, socketio):
             }), 400
 
         user = get_user(user_id)
+
+        # Проверяем достаточно ли LP
+        if user["lp"] < 100:
+            return jsonify({
+                "success": False,
+                "msg": f"❌ Не хватает LP! Нужно 100, у вас {user['lp']}",
+                "lp": user["lp"]
+            }), 400
+
+        # Проверяем лимит билетов (не больше 10)
+        from lottery import lottery_tickets
+        user_tickets_before = len([t for t in lottery_tickets if t.get("user_id") == user_id])
+        if user_tickets_before >= 10:
+            return jsonify({
+                "success": False,
+                "msg": "❌ У вас уже 10 билетов! Нельзя купить больше.",
+                "lp": user["lp"]
+            }), 400
+
+        # ✅ 2. ПОКУПАЕМ БИЛЕТ
+        from lottery import buy_ticket
         success, msg = buy_ticket(user_id, user)
 
+        print(f"🎫 Результат покупки: success={success}, msg={msg}")
+
         if success:
+            # ✅ 3. ПРИНУДИТЕЛЬНО ОБНОВЛЯЕМ ДАННЫЕ ПОСЛЕ ПОКУПКИ
             refresh_lottery_data()
+
+            # ✅ 4. ПОЛУЧАЕМ АКТУАЛЬНЫЕ ДАННЫЕ ИЗ ГЛОБАЛЬНЫХ ПЕРЕМЕННЫХ
+            from lottery import lottery_pool, lottery_tickets
             user_tickets_count = len([t for t in lottery_tickets if t.get("user_id") == user_id])
+
+            print(f"🎫 После покупки: pool={lottery_pool}, user_tickets={user_tickets_count}")
+
+            # ✅ 5. ВОЗВРАЩАЕМ ПОЛНЫЙ ОТВЕТ
             return jsonify({
-                "success": success,
+                "success": True,
                 "msg": msg,
                 "lp": user["lp"],
                 "user_tickets": user_tickets_count,
                 "prize_pool": lottery_pool
             })
 
-        return jsonify({"success": success, "msg": msg, "lp": user["lp"]})
+        return jsonify({"success": False, "msg": msg, "lp": user["lp"]})
 
     @app.route('/api/lottery_status', methods=['POST'])
     def api_lottery_status():
