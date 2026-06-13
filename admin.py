@@ -1,4 +1,3 @@
-# admin.py
 import json
 import time
 import datetime
@@ -12,9 +11,15 @@ from models import (
     get_logs, add_log, update_energy_in_db, get_achievements_top,
     online_users, online_users_lock, update_online_count, send_telegram_message
 )
-from lottery import lottery_pool, lottery_tickets, perform_draw, reset_lottery, save_lottery, is_drawn
 from utils import require_admin, check_rate_limit
 from config import ADMIN_SECRET
+
+# Импортируем из lottery все необходимые переменные и функции
+from lottery import (
+    lottery_pool, lottery_tickets, global_ticket_counter,
+    winning_numbers, is_drawn, draw_time, lottery_phase,
+    perform_draw, reset_lottery, save_lottery, refresh_lottery_data
+)
 
 
 # ========== ДОПОЛНИТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ РАБОТЫ С ВЫВОДАМИ И СТАТИСТИКОЙ ==========
@@ -126,13 +131,12 @@ def get_stats_history(period='week', metric='clicks'):
     return {"labels": labels, "data": data}
 
 
-# ========== РЕГИСТРАЦИЯ АДМИН-МАРШРУТОВ ==========
-
 def register_admin_routes(app):
     # === СТАТИСТИКА ===
     @app.route('/api/admin/stats', methods=['GET'])
     @require_admin
     def api_admin_stats():
+        refresh_lottery_data()  # Обновляем данные лотереи
         update_online_count()
         with db.get_cursor() as cursor:
             cursor.execute("SELECT COUNT(*) as total FROM users")
@@ -176,16 +180,29 @@ def register_admin_routes(app):
     @app.route('/api/admin/lottery_participants', methods=['GET'])
     @require_admin
     def api_admin_lottery_participants():
+        refresh_lottery_data()  # Обновляем данные
         participants = []
         for ticket in lottery_tickets:
+            # Получаем имя пользователя
+            user = get_user(ticket.get('user_id'))
+            username = user.get('username') or user.get('first_name') or f"Player_{ticket.get('user_id')}"
             participants.append({
                 "user_id": ticket.get('user_id'),
+                "username": username,
                 "ticket_number": ticket.get('number'),
                 "purchase_number": ticket.get('purchase_number'),
                 "revealed_count": sum(ticket.get('revealed', [])),
                 "numbers": ticket.get('numbers', [])
             })
-        return jsonify({"success": True, "participants": participants, "count": len(participants)})
+        participants.sort(key=lambda x: x['ticket_number'])
+        return jsonify({
+            "success": True,
+            "participants": participants,
+            "count": len(participants),
+            "prize_pool": lottery_pool,
+            "is_drawn": is_drawn,
+            "winning_numbers": winning_numbers if is_drawn else []
+        })
 
     @app.route('/api/admin/lottery_action', methods=['POST'])
     @require_admin
@@ -194,44 +211,95 @@ def register_admin_routes(app):
         if not data:
             return jsonify({"success": False, "error": "No JSON"}), 400
 
-        action = data['action']
+        action = data.get('action')
         admin_id = request.args.get('user_id', 'Admin')
         admin_name = "Admin"
 
+        # Получаем реальное имя админа
+        if admin_id != 'Admin' and str(admin_id).isdigit():
+            admin_user = get_user(int(admin_id))
+            if admin_user:
+                admin_name = admin_user.get('username') or admin_user.get('first_name') or str(admin_id)
+
         if action == 'force_draw':
             print("👑 Админ: принудительный розыгрыш лотереи")
-            perform_draw()
-            # Отправляем уведомление через Socket.IO всем игрокам
-            from bot import socketio
-            socketio.emit('draw_completed', {
-                'is_drawn': True,
-                'winning_numbers': winning_numbers,
-                'message': '🎲 Админ запустил розыгрыш! Стирайте билеты!',
-                'end_time': draw_time.isoformat() if draw_time else None
-            })
-            add_admin_log(f"🎲 Принудительный розыгрыш лотереи", admin_id, admin_name)
-            return jsonify({"success": True, "msg": "Розыгрыш запущен"})
+            try:
+                perform_draw()
+
+                # Отправляем уведомление через Socket.IO всем игрокам
+                try:
+                    from bot import socketio
+                    socketio.emit('draw_completed', {
+                        'is_drawn': True,
+                        'winning_numbers': winning_numbers,
+                        'message': '🎲 Администратор запустил розыгрыш! Стирайте билеты в течение 3 часов!',
+                        'end_time': draw_time.isoformat() if draw_time else None
+                    })
+                except Exception as e:
+                    print(f"Socket emit error: {e}")
+
+                add_admin_log(f"🎲 Принудительный розыгрыш лотереи", admin_id, admin_name)
+                return jsonify({"success": True, "msg": "Розыгрыш запущен! Выигрышные номера сгенерированы."})
+            except Exception as e:
+                print(f"Ошибка при розыгрыше: {e}")
+                return jsonify({"success": False, "error": str(e)}), 500
 
         elif action == 'reset_lottery':
             print("👑 Админ: принудительный сброс лотереи")
-            reset_lottery()
-            from bot import socketio
-            socketio.emit('draw_reset', {
-                'is_drawn': False,
-                'message': '🔄 Лотерея сброшена администратором! Можно покупать билеты.'
-            })
-            add_admin_log(f"🔄 Сброс лотереи", admin_id, admin_name)
-            return jsonify({"success": True, "msg": "Лотерея сброшена"})
+            try:
+                reset_lottery()
+
+                # Отправляем уведомление через Socket.IO всем игрокам
+                try:
+                    from bot import socketio
+                    socketio.emit('draw_reset', {
+                        'is_drawn': False,
+                        'message': '🔄 Лотерея сброшена администратором! Можно покупать новые билеты.'
+                    })
+                except Exception as e:
+                    print(f"Socket emit error: {e}")
+
+                add_admin_log(f"🔄 Сброс лотереи", admin_id, admin_name)
+                return jsonify({"success": True, "msg": "Лотерея сброшена! Все билеты удалены."})
+            except Exception as e:
+                print(f"Ошибка при сбросе: {e}")
+                return jsonify({"success": False, "error": str(e)}), 500
 
         elif action == 'set_pool':
-            global lottery_pool
-            old_pool = lottery_pool
-            lottery_pool = data.get('amount', 0)
-            save_lottery()
-            add_admin_log(f"💰 Изменил призовой фонд с {old_pool} на {lottery_pool} USDT", admin_id, admin_name)
-            return jsonify({"success": True, "msg": "Фонд изменён"})
+            try:
+                global lottery_pool
+                old_pool = lottery_pool
+                new_pool = float(data.get('amount', 0))
+                lottery_pool = round(new_pool, 2)
+                save_lottery()
+                add_admin_log(f"💰 Изменил призовой фонд с {old_pool} на {lottery_pool} USDT", admin_id, admin_name)
+                return jsonify(
+                    {"success": True, "msg": f"Фонд изменён на {lottery_pool} USDT", "new_pool": lottery_pool})
+            except Exception as e:
+                return jsonify({"success": False, "error": str(e)}), 500
+
+        elif action == 'get_status':
+            refresh_lottery_data()
+            return jsonify({
+                "success": True,
+                "prize_pool": lottery_pool,
+                "total_tickets": len(lottery_tickets),
+                "is_drawn": is_drawn,
+                "winning_numbers": winning_numbers if is_drawn else [],
+                "lottery_phase": lottery_phase,
+                "global_ticket_counter": global_ticket_counter
+            })
 
         return jsonify({"success": False, "msg": "Неизвестное действие"})
+
+    # === СПИСОК ПОЛЬЗОВАТЕЛЕЙ ДЛЯ РАССЫЛКИ ===
+    @app.route('/api/admin/users_list', methods=['GET'])
+    @require_admin
+    def api_admin_users_list():
+        with db.get_cursor() as cursor:
+            cursor.execute("SELECT COUNT(*) as total FROM users")
+            row = cursor.fetchone()
+            return jsonify({"success": True, "total": row['total'] if row else 0})
 
     # === ПОИСК ИГРОКОВ ===
     @app.route('/api/admin/search_users', methods=['POST'])
@@ -257,7 +325,7 @@ def register_admin_routes(app):
                         pass
                 banned, _ = is_banned(row['user_id'])
                 username_display = 'Аноним' if hide_from_top else (
-                            row['username'] or row['first_name'] or str(row['user_id']))
+                        row['username'] or row['first_name'] or str(row['user_id']))
                 users.append({
                     "user_id": row['user_id'],
                     "username": username_display,
