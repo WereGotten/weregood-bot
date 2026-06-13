@@ -811,6 +811,41 @@ def register_routes(app, socketio):
                      "revealed": revealed_count})
             return jsonify({"success": False, "msg": "Нет неоткрытых клеток"})
 
+    @app.route('/api/reveal_cell', methods=['POST'])
+    def api_reveal_cell():
+        data = request.json
+        if not data:
+            return jsonify({"success": False, "message": "No data"}), 400
+
+        user_id = data.get('user_id')
+        ticket_number = data.get('ticket_number')
+        cell_index = data.get('cell_index')
+
+        if not user_id or ticket_number is None or cell_index is None:
+            return jsonify({"success": False, "message": "Missing parameters"}), 400
+
+        from lottery import lottery_tickets, save_lottery, refresh_lottery_data
+
+        # Обновляем данные перед операцией
+        refresh_lottery_data()
+
+        print(f"🔍 Запрос на открытие клетки: user={user_id}, ticket={ticket_number}, cell={cell_index}")
+        print(f"📋 Всего билетов в памяти: {len(lottery_tickets)}")
+
+        for ticket in lottery_tickets:
+            if ticket.get("number") == ticket_number and ticket.get("user_id") == user_id:
+                if cell_index < len(ticket["revealed"]) and not ticket["revealed"][cell_index]:
+                    ticket["revealed"][cell_index] = True
+                    save_lottery()
+                    print(f"🔓 Клетка {cell_index} билета {ticket_number} открыта игроком {user_id}")
+                    return jsonify({"success": True, "message": "Cell revealed"})
+                else:
+                    return jsonify({"success": False,
+                                    "message": f"Cell already revealed or invalid index. revealed={ticket['revealed'][cell_index] if cell_index < len(ticket['revealed']) else 'out of range'}"})
+
+        print(f"❌ Билет {ticket_number} не найден для пользователя {user_id}")
+        return jsonify({"success": False, "message": "Ticket not found"})
+
     @app.route('/api/recent_players', methods=['GET'])
     def api_recent_players():
         if not check_rate_limit(f"recent_players_{request.remote_addr}", limit=20, window_seconds=60):
