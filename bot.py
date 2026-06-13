@@ -4,6 +4,7 @@ import sqlite3
 import random
 import datetime
 import threading
+from threading import Thread
 import time
 import hashlib
 import json
@@ -145,6 +146,17 @@ user_energy_locks = defaultdict(threading.Lock)
 
 click_queue = Queue()
 click_workers = 25
+
+# Глобальные переменные для отслеживания активной рассылки
+active_broadcast = {
+    'is_running': False,
+    'total': 0,
+    'sent': 0,
+    'errors': 0,
+    'stop_requested': False,
+    'current_batch': []
+}
+
 
 def process_click_worker():
     while True:
@@ -4188,6 +4200,229 @@ def api_achievements_top():
     limit = int(request.args.get('limit', 50))
     top = get_achievements_top(limit)
     return jsonify({"success": True, "top": top})
+
+def get_all_user_ids_for_broadcast():
+    """Получение всех ID пользователей для рассылки"""
+    with db.get_cursor() as cursor:
+        cursor.execute("SELECT user_id FROM users ORDER BY user_id")
+        return [row['user_id'] for row in cursor.fetchall()]
+
+
+def send_telegram_message_sync(chat_id, text, reply_markup=None):
+    """Синхронная отправка сообщения в Telegram"""
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    try:
+        data = {"chat_id": chat_id, "text": text, "parse_mode": "HTML"}
+        if reply_markup:
+            data["reply_markup"] = reply_markup
+        verify_ssl = not DEBUG_MODE
+        response = requests.post(url, json=data, timeout=10, verify=verify_ssl)
+        if response.status_code == 200:
+            return True, None
+        else:
+            error_data = response.json()
+            error_msg = error_data.get('description', 'Unknown error')
+            return False, error_msg
+    except Exception as e:
+        return False, str(e)
+
+
+def run_broadcast_worker(message, has_button=False, button_text='', button_url='', test_user_id=None):
+    """Фоновый поток для рассылки сообщений"""
+    global active_broadcast
+
+    # Получаем список пользователей
+    if test_user_id:
+        user_ids = [test_user_id]
+        active_broadcast['total'] = 1
+    else:
+        user_ids = get_all_user_ids_for_broadcast()
+        active_broadcast['total'] = len(user_ids)
+
+    active_broadcast['sent'] = 0
+    active_broadcast['errors'] = 0
+    active_broadcast['stop_requested'] = False
+    active_broadcast['is_running'] = True
+
+    # Создаём клавиатуру, если нужна кнопка
+    reply_markup = None
+    if has_button and button_text and button_url:
+        reply_markup = {
+            "inline_keyboard": [[{
+                "text": button_text,
+                "url": button_url
+            }]]
+        }
+
+    print(f"📢 Начинаем рассылку {'(ТЕСТОВАЯ)' if test_user_id else ''} на {active_broadcast['total']} пользователей")
+
+    for i, user_id in enumerate(user_ids):
+        if active_broadcast['stop_requested']:
+            print(
+                f"🛑 Рассылка остановлена пользователем. Отправлено: {active_broadcast['sent']}, Ошибок: {active_broadcast['errors']}")
+            break
+
+        # Отправляем сообщение
+        success, error_msg = send_telegram_message_sync(user_id, message, reply_markup)
+
+        if success:
+            active_broadcast['sent'] += 1
+            add_admin_log(f"📢 Рассылка: сообщение отправлено пользователю {user_id}", 0, "System")
+        else:
+            active_broadcast['errors'] += 1
+            logger.warning(f"❌ Не удалось отправить сообщение пользователю {user_id}: {error_msg}")
+
+        # Обновляем прогресс каждые 10 сообщений
+        if (i + 1) % 10 == 0:
+            print(f"📊 Прогресс: {active_broadcast['sent'] + active_broadcast['errors']}/{active_broadcast['total']}")
+
+        # Небольшая задержка, чтобы не спамить API Telegram
+        time.sleep(0.1)
+
+    active_broadcast['is_running'] = False
+    print(f"✅ Рассылка завершена! Отправлено: {active_broadcast['sent']}, Ошибок: {active_broadcast['errors']}")
+
+
+def start_broadcast_async(message, has_button=False, button_text='', button_url='', test_user_id=None):
+    """Запуск рассылки в отдельном потоке"""
+    if active_broadcast['is_running']:
+        return False, "Рассылка уже выполняется. Дождитесь завершения или остановите её."
+
+    # Проверяем, есть ли пользователи
+    if not test_user_id:
+        user_count = len(get_all_user_ids_for_broadcast())
+        if user_count == 0:
+            return False, "Нет пользователей для рассылки"
+
+    thread = Thread(target=run_broadcast_worker, args=(message, has_button, button_text, button_url, test_user_id),
+                    daemon=True)
+    thread.start()
+
+    return True, "Рассылка запущена"
+
+
+@app.route('/api/admin/send_broadcast', methods=['POST'])
+@require_admin
+def api_send_broadcast():
+    """API для запуска рассылки"""
+    global active_broadcast
+
+    data = request.get_json()
+    if not data:
+        return jsonify({"success": False, "error": "No data"}), 400
+
+    message = data.get('message', '').strip()
+    has_button = data.get('has_button', False)
+    button_text = data.get('button_text', '').strip()
+    button_url = data.get('button_url', '').strip()
+    is_test = data.get('is_test', False)
+    test_user_id = data.get('test_user_id')
+
+    if not message:
+        return jsonify({"success": False, "error": "Введите текст сообщения"}), 400
+
+    if has_button:
+        if not button_text or not button_url:
+            return jsonify({"success": False, "error": "Укажите текст и ссылку для кнопки"}), 400
+
+    # Тестовый режим
+    if is_test:
+        if not test_user_id:
+            return jsonify({"success": False, "error": "Укажите ID пользователя для теста"}), 400
+
+        # Проверяем, существует ли пользователь
+        try:
+            test_user = get_user(test_user_id)
+            if not test_user:
+                return jsonify({"success": False, "error": f"Пользователь с ID {test_user_id} не найден"}), 404
+        except:
+            return jsonify({"success": False, "error": f"Пользователь с ID {test_user_id} не найден"}), 404
+
+        # Отправляем тестовое сообщение напрямую (без потока)
+        reply_markup = None
+        if has_button and button_text and button_url:
+            reply_markup = {
+                "inline_keyboard": [[{
+                    "text": button_text,
+                    "url": button_url
+                }]]
+            }
+
+        success, error_msg = send_telegram_message_sync(test_user_id, message, reply_markup)
+
+        if success:
+            add_admin_log(f"📢 ТЕСТОВАЯ рассылка отправлена пользователю {test_user_id}",
+                          request.args.get('user_id', 'Admin'), "Admin")
+            return jsonify({
+                "success": True,
+                "sent": 1,
+                "errors": 0,
+                "message": "Тестовое сообщение отправлено успешно!"
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "error": f"Не удалось отправить: {error_msg}"
+            }), 500
+
+    # Полноценная рассылка
+    success, msg = start_broadcast_async(message, has_button, button_text, button_url)
+
+    if success:
+        add_admin_log(f"📢 ЗАПУЩЕНА массовая рассылка на {active_broadcast['total']} пользователей",
+                      request.args.get('user_id', 'Admin'), "Admin")
+        return jsonify({
+            "success": True,
+            "message": msg,
+            "total": active_broadcast['total']
+        })
+    else:
+        return jsonify({"success": False, "error": msg}), 400
+
+
+@app.route('/api/admin/broadcast/status', methods=['GET'])
+@require_admin
+def api_broadcast_status():
+    """Получение статуса текущей рассылки"""
+    global active_broadcast
+
+    return jsonify({
+        "success": True,
+        "is_running": active_broadcast['is_running'],
+        "total": active_broadcast['total'],
+        "sent": active_broadcast['sent'],
+        "errors": active_broadcast['errors'],
+        "progress": int(
+            (active_broadcast['sent'] + active_broadcast['errors']) / max(active_broadcast['total'], 1) * 100)
+    })
+
+
+@app.route('/api/admin/broadcast/cancel', methods=['POST'])
+@require_admin
+def api_broadcast_cancel():
+    """Остановка текущей рассылки"""
+    global active_broadcast
+
+    if not active_broadcast['is_running']:
+        return jsonify({"success": False, "error": "Нет активной рассылки"}), 400
+
+    active_broadcast['stop_requested'] = True
+
+    add_admin_log(f"🛑 ОСТАНОВЛЕНА массовая рассылка (отправлено: {active_broadcast['sent']})",
+                  request.args.get('user_id', 'Admin'), "Admin")
+
+    return jsonify({"success": True, "message": "Рассылка остановлена"})
+
+
+@app.route('/api/admin/users_list', methods=['GET'])
+@require_admin
+def api_users_list():
+    """Получение количества пользователей для рассылки"""
+    user_ids = get_all_user_ids_for_broadcast()
+    return jsonify({
+        "success": True,
+        "total": len(user_ids)
+    })
 
 # ========== АДМИН-ЭНДПОИНТЫ ==========
 @app.route('/api/admin/stats', methods=['GET'])
