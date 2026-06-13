@@ -1009,11 +1009,26 @@
 
     // ==================== ЛОТЕРЕЯ ====================
     document.getElementById('ticketBtn').onclick = async () => {
+    // Сначала проверяем статус розыгрыша
+    const statusRes = await fetch('/api/lottery_status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId })
+    });
+    const statusData = await statusRes.json();
+
+    if (statusData.is_drawn) {
+        playErrorSound();
+        showToast('❌ Розыгрыш уже начался! Новые билеты появятся в 00:00', 'error');
+        return;
+    }
+
     if (localLP < 100) {
         playErrorSound();
         showToast('Не хватает LP (нужно 100)', 'error');
         return;
     }
+
     try {
         let res = await fetch('/api/buy_ticket', {
             method: 'POST',
@@ -1024,47 +1039,11 @@
         if (data.success) {
             playPurchaseSound();
             showToast(data.msg, 'success');
-
-            // ✅ Только ОДИН запрос на обновление
-            const lottoRes = await fetch('/api/lottery_status', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: userId })
-            });
-            const lottoData = await lottoRes.json();
-
-            // Обновляем UI напрямую
-            const prizePoolEl = document.getElementById('prizePool');
-            if (prizePoolEl && lottoData.prize_pool !== undefined) {
-                prizePoolEl.innerText = lottoData.prize_pool.toFixed(2);
-            }
-
-            const ticketsCountEl = document.getElementById('ticketsCount');
-            if (ticketsCountEl && lottoData.user_tickets !== undefined) {
-                ticketsCountEl.innerText = lottoData.user_tickets;
-            }
-
-            const totalTicketsEl = document.getElementById('totalTickets');
-            if (totalTicketsEl) totalTicketsEl.innerText = lottoData.user_tickets || 0;
-
-            const totalTicketsMiniEl = document.getElementById('totalTicketsMini');
-            if (totalTicketsMiniEl) totalTicketsMiniEl.innerText = lottoData.user_tickets || 0;
-
-            // Обновляем локальную переменную LP
-            if (lottoData.user_lp !== undefined) {
-                localLP = lottoData.user_lp;
-                document.getElementById('lpBalance').innerText = localLP;
-                document.getElementById('lotteryLPBalance').innerText = localLP;
-            }
-
-            // Обновляем массив билетов
-            if (lottoData.tickets) {
-                currentTickets = lottoData.tickets;
-                if (typeof updateCarousel === 'function') {
-                    updateCarousel();
-                }
-            }
-
+            await syncData(true);
+            setTimeout(async () => {
+                await loadUserTickets();
+                await updateStatus();
+            }, 500);
         } else {
             playErrorSound();
             showToast(data.msg, 'error');

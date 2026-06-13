@@ -216,7 +216,11 @@ def perform_draw():
             draw_time = datetime.datetime.now()
             lottery_phase = "reveal"
             save_lottery()
-            add_log(f"🎲 РОЗЫГРЫШ! Выигрышные номера: {winning_numbers}", 0, "System")
+
+            # ✅ ПРИНУДИТЕЛЬНО ОБНОВЛЯЕМ ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
+            refresh_lottery_data()
+
+            add_log(f"🎲 Розыгрыш лотереи начался. Выигрышные номера: {winning_numbers}", 0, "System")
             print(f"🎲 РОЗЫГРЫШ: winning_numbers={winning_numbers}, is_drawn={is_drawn}")
             threading.Timer(10800, auto_reveal_and_distribute).start()
         else:

@@ -641,17 +641,47 @@ def register_routes(app, socketio):
         data = request.json
         if not data:
             return jsonify({"success": False, "msg": "No data"}), 400
+
         user_id = data.get('user_id')
         is_valid, user_id = validate_user_id(user_id)
         if not is_valid:
             return jsonify({"success": False, "msg": "Invalid user_id"}), 400
+
         if not check_rate_limit(f"ticket_{user_id}", limit=5, window_seconds=60):
             return jsonify({"success": False, "msg": "Слишком частые покупки билетов"}), 429
+
         banned, ban_info = is_banned(user_id)
         if banned:
             return jsonify({"success": False, "msg": f"Вы забанены! {ban_info['reason']}"})
+
+        # ✅ ПРОВЕРЯЕМ СТАТУС РОЗЫГРЫША ПЕРЕД ПОКУПКОЙ
+        from lottery import is_drawn, refresh_lottery_data
+        refresh_lottery_data()  # Обновляем данные из БД
+
+        if is_drawn:
+            return jsonify({
+                "success": False,
+                "msg": "❌ Розыгрыш уже начался! Новые билеты появятся в 00:00",
+                "is_drawn": True
+            }), 400
+
         user = get_user(user_id)
         success, msg = buy_ticket(user_id, user)
+
+        # ✅ Если покупка успешна, обновляем данные лотереи
+        if success:
+            refresh_lottery_data()
+            # Получаем актуальное количество билетов пользователя
+            from lottery import lottery_tickets
+            user_tickets_count = len([t for t in lottery_tickets if t.get("user_id") == user_id])
+            return jsonify({
+                "success": success,
+                "msg": msg,
+                "lp": user["lp"],
+                "user_tickets": user_tickets_count,
+                "prize_pool": lottery_pool
+            })
+
         return jsonify({"success": success, "msg": msg, "lp": user["lp"]})
 
     @app.route('/api/lottery_status', methods=['POST'])
