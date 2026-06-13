@@ -1,4 +1,4 @@
-# bot.py - WEBHOOK ВЕРСИЯ (без polling)
+# bot.py - WEBHOOK ВЕРСИЯ (ПОЛНОСТЬЮ РАБОЧАЯ)
 import threading
 import secrets
 import os
@@ -6,6 +6,7 @@ import hashlib
 import json
 import time
 import requests as http_requests
+import logging
 from flask import Flask, render_template, send_from_directory, jsonify, request
 from flask_socketio import SocketIO
 from flask_cors import CORS
@@ -20,6 +21,9 @@ from admin import register_admin_routes
 from models import add_admin_log, get_user, safe_update_user, add_log, update_achievement_progress, \
     handle_successful_payment
 from utils import send_telegram_message, sanitize_string, check_origin
+
+# Подавляем лишние логи Werkzeug (опционально)
+logging.getLogger('werkzeug').setLevel(logging.ERROR)
 
 # Загрузка переменных окружения
 load_dotenv()
@@ -60,7 +64,9 @@ socketio = SocketIO(app,
                     ping_timeout=60,
                     ping_interval=25,
                     max_http_buffer_size=1e6,
-                    async_mode='threading')
+                    async_mode='threading',
+                    logger=False,
+                    engineio_logger=False)
 
 # Передаём socketio в fortune.py
 set_socketio(socketio)
@@ -192,7 +198,7 @@ def webhook():
                     send_telegram_message(chat_id, "⛔ У вас нет доступа к админ-панели")
 
         # Обработка PreCheckoutQuery (оплата Stars)
-        elif 'pre_checkout_query' in update:
+        if 'pre_checkout_query' in update:
             query = update['pre_checkout_query']
             answer_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/answerPreCheckoutQuery"
             http_requests.post(answer_url, json={"pre_checkout_query_id": query["id"], "ok": True}, timeout=5)
@@ -278,4 +284,5 @@ if __name__ == '__main__':
     print(f"📡 Webhook URL: https://weregood.ru/webhook")
     print("=" * 60)
 
-    socketio.run(app, host='0.0.0.0', port=5000, debug=False, use_reloader=False, allow_unsafe_werkzeug=True)
+    socketio.run(app, host='0.0.0.0', port=5000, debug=False, use_reloader=False, allow_unsafe_werkzeug=True,
+                 log_output=False)
