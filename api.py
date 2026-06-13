@@ -656,25 +656,19 @@ def register_routes(app, socketio):
 
     @app.route('/api/lottery_status', methods=['POST'])
     def api_lottery_status():
+        from lottery import get_lottery_status
+
         data = request.json
         if not data:
             return jsonify({"error": "No data"}), 400
+
         user_id = data.get('user_id')
         is_valid, user_id = validate_user_id(user_id)
         if not is_valid:
             return jsonify({"error": "Invalid user_id"}), 400
-        user = get_user(user_id)
-        user_tickets = [t for t in lottery_tickets if t.get("user_id") == user_id]
-        update_lottery_phase()
-        return jsonify({
-            "prize_pool": lottery_pool,
-            "user_tickets": len(user_tickets),
-            "user_lp": user["lp"],
-            "is_drawn": is_drawn,
-            "winning_numbers": winning_numbers if is_drawn else [],
-            "tickets": user_tickets,
-            "lottery_phase": lottery_phase
-        })
+
+        result = get_lottery_status(user_id)
+        return jsonify(result)
 
     @app.route('/api/lottery_all_tickets', methods=['GET'])
     def api_lottery_all_tickets():

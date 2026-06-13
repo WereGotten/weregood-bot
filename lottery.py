@@ -23,11 +23,13 @@ lottery_lock = threading.Lock()
 
 
 def load_lottery():
+    """Загружает состояние лотереи из БД при старте сервера"""
     global lottery_pool, lottery_tickets, global_ticket_counter, winning_numbers, is_drawn, draw_time, lottery_phase
     try:
         with db.get_cursor() as cursor:
             cursor.execute(
-                "SELECT prize_pool, tickets, global_ticket_counter, winning_numbers, is_drawn, draw_time, lottery_phase FROM lottery LIMIT 1")
+                "SELECT prize_pool, tickets, global_ticket_counter, winning_numbers, is_drawn, draw_time, lottery_phase FROM lottery LIMIT 1"
+            )
             row = cursor.fetchone()
             if row:
                 lottery_pool = row['prize_pool'] if row['prize_pool'] is not None else 0
@@ -66,7 +68,50 @@ def load_lottery():
         print(f"❌ Ошибка загрузки лотереи: {e}")
 
 
+def refresh_lottery_data():
+    """Принудительно перезагружает данные лотереи из БД (для синхронизации)"""
+    global lottery_pool, lottery_tickets, global_ticket_counter, winning_numbers, is_drawn, draw_time, lottery_phase
+
+    try:
+        with db.get_cursor() as cursor:
+            cursor.execute(
+                "SELECT prize_pool, tickets, global_ticket_counter, winning_numbers, is_drawn, draw_time, lottery_phase FROM lottery LIMIT 1"
+            )
+            row = cursor.fetchone()
+            if row:
+                lottery_pool = row['prize_pool'] if row['prize_pool'] is not None else 0
+                tickets_data = row['tickets']
+                if tickets_data and tickets_data != '[]':
+                    try:
+                        lottery_tickets = json.loads(tickets_data)
+                    except:
+                        lottery_tickets = []
+                else:
+                    lottery_tickets = []
+                global_ticket_counter = row['global_ticket_counter'] if row['global_ticket_counter'] is not None else 0
+
+                winning_data = row['winning_numbers']
+                if winning_data and winning_data != '[]':
+                    try:
+                        winning_numbers = json.loads(winning_data)
+                    except:
+                        winning_numbers = []
+                else:
+                    winning_numbers = []
+
+                is_drawn = row['is_drawn'] == 1 if row['is_drawn'] is not None else False
+                lottery_phase = row['lottery_phase'] if row['lottery_phase'] else 'buy'
+
+                print(f"🔄 ПРИНУДИТЕЛЬНАЯ СИНХРОНИЗАЦИЯ: {len(lottery_tickets)} билетов, фонд {lottery_pool} USDT")
+                return True
+        return False
+    except Exception as e:
+        print(f"❌ Ошибка синхронизации лотереи: {e}")
+        return False
+
+
 def save_lottery():
+    """Сохраняет состояние лотереи в БД"""
     try:
         with db.get_cursor() as cursor:
             cursor.execute("""
@@ -299,3 +344,27 @@ def schedule_next_draw():
             reset_lottery()
 
     threading.Thread(target=wait_and_draw, daemon=True).start()
+
+
+def get_lottery_status(user_id=None):
+    """Возвращает текущее состояние лотереи для API (с принудительной синхронизацией)"""
+    refresh_lottery_data()
+
+    result = {
+        "prize_pool": lottery_pool,
+        "is_drawn": is_drawn,
+        "winning_numbers": winning_numbers if is_drawn else [],
+        "lottery_phase": lottery_phase,
+        "user_tickets": 0,
+        "user_lp": 0,
+        "tickets": []
+    }
+
+    if user_id:
+        user = get_user(user_id)
+        result["user_lp"] = user.get("lp", 0)
+        user_tickets = [t for t in lottery_tickets if t.get("user_id") == user_id]
+        result["user_tickets"] = len(user_tickets)
+        result["tickets"] = user_tickets
+
+    return result
