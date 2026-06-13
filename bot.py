@@ -4,7 +4,6 @@ import sqlite3
 import random
 import datetime
 import threading
-from threading import Thread
 import time
 import hashlib
 import json
