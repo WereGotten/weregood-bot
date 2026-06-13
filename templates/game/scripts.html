@@ -1375,21 +1375,45 @@
             return { x, y };
         };
         const eraseAt = (targetCanvas, x, y, tNum, cIdx, isWinCell, cellNumber) => {
-            if (targetCanvas.isRevealed) return;
-            const ctx = targetCanvas.getContext('2d');
-            ctx.save();
-            ctx.globalCompositeOperation = 'destination-out';
-            ctx.beginPath();
-            ctx.arc(x, y, 14, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
-            const progressKey = `${targetCanvas.id}_progress`;
-            const imageData = ctx.getImageData(0, 0, targetCanvas.width, targetCanvas.height);
-            scratchProgress.set(progressKey, imageData);
-            let transparent = 0;
-            for (let j = 3; j < imageData.data.length; j += 4) if (imageData.data[j] === 0) transparent++;
-            targetCanvas.erasedPercent = (transparent / (targetCanvas.width * targetCanvas.height)) * 100;
-            if (targetCanvas.erasedPercent >= 60 && !targetCanvas.isRevealed) {
+    if (targetCanvas.isRevealed) return;
+
+    const ctx = targetCanvas.getContext('2d');
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.beginPath();
+    ctx.arc(x, y, 14, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    const progressKey = `${targetCanvas.id}_progress`;
+    const imageData = ctx.getImageData(0, 0, targetCanvas.width, targetCanvas.height);
+    scratchProgress.set(progressKey, imageData);
+
+    let transparent = 0;
+    for (let j = 3; j < imageData.data.length; j += 4) {
+        if (imageData.data[j] === 0) transparent++;
+    }
+    targetCanvas.erasedPercent = (transparent / (targetCanvas.width * targetCanvas.height)) * 100;
+
+    console.log(`💥 Стёрто ${targetCanvas.erasedPercent}% клетки ${cIdx} билета ${tNum}`);
+
+    if (targetCanvas.erasedPercent >= 60 && !targetCanvas.isRevealed) {
+        console.log(`✅ ОТПРАВЛЯЕМ ЗАПРОС на открытие клетки ${cIdx} билета ${tNum}`);
+
+        // Отправляем HTTP-запрос на сервер
+        fetch('/api/reveal_ticket_cells', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id: userId,
+                ticket_number: tNum,
+                cell_index: cIdx
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('📡 Ответ сервера:', data);
+            if (data.success) {
                 const cellDiv = targetCanvas.parentElement;
                 const numDiv = cellDiv.querySelector('.scratch-number-layer');
                 if (isWinCell) {
@@ -1399,12 +1423,30 @@
                 targetCanvas.style.display = 'none';
                 targetCanvas.isRevealed = true;
                 scratchProgress.delete(progressKey);
-                if (socket && socket.connected) socket.emit('reveal_cell', { user_id: userId, ticket_number: tNum, cell_index: cIdx });
+
                 if (navigator.vibrate) navigator.vibrate(30);
                 showToast(`Клетка ${cellNumber} открыта! 🎉`, 'success');
                 updateTopPlayers();
+
+                // Обновляем локальный массив билетов
+                if (currentTickets && currentTickets.length > 0) {
+                    for (let ticket of currentTickets) {
+                        if (ticket.number === tNum) {
+                            ticket.revealed[cIdx] = true;
+                            break;
+                        }
+                    }
+                }
+            } else {
+                console.log('❌ Сервер не подтвердил открытие:', data.message);
+                // Если сервер вернул ошибку — возвращаем клетку в исходное состояние?
             }
-        };
+        })
+        .catch(error => {
+            console.error('❌ Ошибка запроса:', error);
+        });
+    }
+};
         let mouseErasing = false;
         const onMouseMove = (e) => {
             if (!mouseErasing || !isDrawn) return;
