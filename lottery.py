@@ -23,13 +23,10 @@ lottery_lock = threading.Lock()
 
 
 def load_lottery():
-    """Загружает состояние лотереи из БД при старте сервера"""
     global lottery_pool, lottery_tickets, global_ticket_counter, winning_numbers, is_drawn, draw_time, lottery_phase
     try:
         with db.get_cursor() as cursor:
-            cursor.execute(
-                "SELECT prize_pool, tickets, global_ticket_counter, winning_numbers, is_drawn, draw_time, lottery_phase FROM lottery LIMIT 1"
-            )
+            cursor.execute("SELECT prize_pool, tickets, global_ticket_counter, winning_numbers, is_drawn, draw_time, lottery_phase FROM lottery LIMIT 1")
             row = cursor.fetchone()
             if row:
                 lottery_pool = row['prize_pool'] if row['prize_pool'] is not None else 0
@@ -42,7 +39,6 @@ def load_lottery():
                 else:
                     lottery_tickets = []
                 global_ticket_counter = row['global_ticket_counter'] if row['global_ticket_counter'] is not None else 0
-
                 winning_data = row['winning_numbers']
                 if winning_data and winning_data != '[]':
                     try:
@@ -51,10 +47,8 @@ def load_lottery():
                         winning_numbers = []
                 else:
                     winning_numbers = []
-
                 is_drawn = row['is_drawn'] == 1 if row['is_drawn'] is not None else False
                 lottery_phase = row['lottery_phase'] if row['lottery_phase'] else 'buy'
-
                 if row['draw_time']:
                     try:
                         draw_time = datetime.datetime.fromisoformat(row['draw_time'])
@@ -69,14 +63,10 @@ def load_lottery():
 
 
 def refresh_lottery_data():
-    """Принудительно перезагружает данные лотереи из БД (для синхронизации)"""
     global lottery_pool, lottery_tickets, global_ticket_counter, winning_numbers, is_drawn, draw_time, lottery_phase
-
     try:
         with db.get_cursor() as cursor:
-            cursor.execute(
-                "SELECT prize_pool, tickets, global_ticket_counter, winning_numbers, is_drawn, draw_time, lottery_phase FROM lottery LIMIT 1"
-            )
+            cursor.execute("SELECT prize_pool, tickets, global_ticket_counter, winning_numbers, is_drawn, draw_time, lottery_phase FROM lottery LIMIT 1")
             row = cursor.fetchone()
             if row:
                 lottery_pool = row['prize_pool'] if row['prize_pool'] is not None else 0
@@ -89,7 +79,6 @@ def refresh_lottery_data():
                 else:
                     lottery_tickets = []
                 global_ticket_counter = row['global_ticket_counter'] if row['global_ticket_counter'] is not None else 0
-
                 winning_data = row['winning_numbers']
                 if winning_data and winning_data != '[]':
                     try:
@@ -98,20 +87,17 @@ def refresh_lottery_data():
                         winning_numbers = []
                 else:
                     winning_numbers = []
-
                 is_drawn = row['is_drawn'] == 1 if row['is_drawn'] is not None else False
                 lottery_phase = row['lottery_phase'] if row['lottery_phase'] else 'buy'
-
-                print(f"🔄 ПРИНУДИТЕЛЬНАЯ СИНХРОНИЗАЦИЯ: {len(lottery_tickets)} билетов, фонд {lottery_pool} USDT")
+                print(f"🔄 Синхронизация: {len(lottery_tickets)} билетов, фонд {lottery_pool} USDT")
                 return True
         return False
     except Exception as e:
-        print(f"❌ Ошибка синхронизации лотереи: {e}")
+        print(f"❌ Ошибка синхронизации: {e}")
         return False
 
 
 def save_lottery():
-    """Сохраняет состояние лотереи в БД"""
     try:
         with db.get_cursor() as cursor:
             cursor.execute("""
@@ -130,7 +116,7 @@ def save_lottery():
             ))
         print(f"💾 Лотерея сохранена: билетов={len(lottery_tickets)}, фонд={lottery_pool}")
     except Exception as e:
-        print(f"❌ Ошибка сохранения лотереи: {e}")
+        print(f"❌ Ошибка сохранения: {e}")
 
 
 def update_lottery_phase():
@@ -142,15 +128,13 @@ def update_lottery_phase():
             new_phase = "reveal"
         else:
             new_phase = "buy"
-
         if lottery_phase != new_phase:
             lottery_phase = new_phase
             with db.get_cursor() as cursor:
                 cursor.execute("UPDATE lottery SET lottery_phase = ? WHERE id = 1", (lottery_phase,))
-            add_log(f"🔄 Смена фазы лотереи: {lottery_phase}", 0, "System")
-            print(f"🔄 Смена фазы лотереи: {lottery_phase}")
+            print(f"🔄 Смена фазы: {lottery_phase}")
     except Exception as e:
-        print(f"❌ Ошибка update_lottery_phase: {e}")
+        print(f"❌ Ошибка update_phase: {e}")
 
 
 def generate_ticket_numbers():
@@ -163,50 +147,32 @@ def generate_winning_numbers():
 
 def buy_ticket(user_id, user_data):
     global lottery_pool, lottery_tickets, global_ticket_counter, is_drawn
-
     with lottery_lock:
-        print(f"🎫 Покупка билета: user={user_id}, is_drawn={is_drawn}, tickets_before={len(lottery_tickets)}")
-
+        print(f"🎫 Покупка билета: user={user_id}, is_drawn={is_drawn}")
         if is_drawn:
-            return False, "Сейчас идёт стирание билетов! Новые билеты появятся в 00:00"
-
+            return False, "Сейчас идёт стирание билетов!"
         if user_data["lp"] < 100:
-            return False, "Не хватает LP (нужно 100)"
-
+            return False, "Не хватает LP"
         bought = len([t for t in lottery_tickets if t.get("user_id") == user_id])
         if bought >= 10:
             return False, "Уже куплено 10 билетов"
-
-        # Списываем LP
         old_lp = user_data["lp"]
         user_data["lp"] -= 100
         safe_update_user(user_id, lp=user_data["lp"])
-
-        # Увеличиваем счётчик
         global_ticket_counter += 1
         ticket_num = global_ticket_counter
-
-        # Имя для истории
         if user_data.get('username') and user_data['username'] != '':
             display_name = '@' + user_data['username']
         elif user_data.get('first_name') and user_data['first_name'] != '':
             display_name = user_data['first_name']
         else:
             display_name = f"Player_{user_id}"
-
-        # Сохраняем в историю
         with db.get_cursor() as cursor:
             cursor.execute("UPDATE lottery SET global_ticket_counter = ? WHERE id = 1", (global_ticket_counter,))
-            cursor.execute("""
-                INSERT INTO lottery_tickets_history (user_id, ticket_number, username, created_at) 
-                VALUES (?, ?, ?, datetime('now', 'localtime'))
-            """, (user_id, ticket_num, display_name))
-
-        # Создаём билет
+            cursor.execute("INSERT INTO lottery_tickets_history (user_id, ticket_number, username, created_at) VALUES (?, ?, ?, datetime('now', 'localtime'))", (user_id, ticket_num, display_name))
         ticket_numbers = generate_ticket_numbers()
         user_ticket_counter = user_data.get("ticket_counter", 0) + 1
         safe_update_user(user_id, ticket_counter=user_ticket_counter)
-
         ticket_data = {
             "number": ticket_num,
             "purchase_number": user_ticket_counter,
@@ -215,17 +181,12 @@ def buy_ticket(user_id, user_data):
             "reward_claimed": False,
             "user_id": user_id
         }
-
         lottery_tickets.append(ticket_data)
         lottery_pool = round(lottery_pool + 0.40, 2)
-
         save_lottery()
-
-        add_log(f"🎫 Купил билет #{ticket_num}", user_id, user_data.get('username', str(user_id)),
-                old_value=old_lp, new_value=user_data['lp'], currency="lp")
+        add_log(f"🎫 Купил билет #{ticket_num}", user_id, user_data.get('username', str(user_id)), old_value=old_lp, new_value=user_data['lp'], currency="lp")
         update_achievement_progress(user_id, 'gambler', 1)
-
-        print(f"🎫 Билет куплен! tickets_after={len(lottery_tickets)}, pool_after={lottery_pool}")
+        print(f"🎫 Билет куплен! tickets={len(lottery_tickets)}, pool={lottery_pool}")
         return True, f"Билет #{ticket_num} куплен!"
 
 
@@ -233,7 +194,6 @@ def reveal_all_tickets(user_id):
     with lottery_lock:
         if not is_drawn:
             return False, "Розыгрыш ещё не начался!"
-
         revealed_count = 0
         for ticket in lottery_tickets:
             if ticket.get("user_id") == user_id:
@@ -241,10 +201,8 @@ def reveal_all_tickets(user_id):
                     if not ticket["revealed"][i]:
                         ticket["revealed"][i] = True
                         revealed_count += 1
-
         if revealed_count > 0:
             save_lottery()
-            add_log(f"🔓 Открыл все клетки ({revealed_count} клеток)", user_id, str(user_id))
             return True, f"Открыто {revealed_count} клеток!"
         return False, "Нет неоткрытых клеток"
 
@@ -258,8 +216,8 @@ def perform_draw():
             draw_time = datetime.datetime.now()
             lottery_phase = "reveal"
             save_lottery()
-            add_log(f"🎲 Розыгрыш лотереи начался. Выигрышные номера: {winning_numbers}", 0, "System")
-            print(f"🎲 РОЗЫГРЫШ: winning_numbers={winning_numbers}")
+            add_log(f"🎲 РОЗЫГРЫШ! Выигрышные номера: {winning_numbers}", 0, "System")
+            print(f"🎲 РОЗЫГРЫШ: winning_numbers={winning_numbers}, is_drawn={is_drawn}")
             threading.Timer(10800, auto_reveal_and_distribute).start()
         else:
             print("⚠️ Попытка розыгрыша без билетов")
@@ -273,7 +231,6 @@ def auto_reveal_and_distribute():
                 if not all(ticket.get("revealed", [])):
                     ticket["revealed"] = [True] * 12
             save_lottery()
-            add_log(f"⏰ Автоматическое открытие билетов (время вышло в 00:00)", 0, "System")
             distribute_prizes()
             time.sleep(3600)
             reset_lottery()
@@ -284,20 +241,16 @@ def distribute_prizes():
     global lottery_pool
     if not lottery_tickets:
         return
-
     results = []
     for ticket in lottery_tickets:
         if all(ticket.get("revealed", [])):
             matches = sum(1 for i in range(12) if ticket["numbers"][i] in winning_numbers)
             results.append({"user_id": ticket["user_id"], "matches": matches, "ticket": ticket})
-
     if not results:
         return
-
     max_matches = max([r["matches"] for r in results])
     winners = [r for r in results if r["matches"] == max_matches]
     prize_per_winner = round(lottery_pool / len(winners), 2)
-
     for winner in winners:
         if not winner["ticket"].get("reward_claimed", False):
             winner["ticket"]["reward_claimed"] = True
@@ -305,13 +258,9 @@ def distribute_prizes():
             add_usdt(winner["user_id"], prize_per_winner)
             add_wins(winner["user_id"], 1)
             user = get_user(winner["user_id"])
-            add_log(f"🏆 ПОБЕДА в лотерее! +{prize_per_winner} USDT", winner["user_id"], user['username'],
-                    old_value=old_usdt, new_value=user['usdt'], currency="usdt")
+            add_log(f"🏆 ПОБЕДА! +{prize_per_winner} USDT", winner["user_id"], user['username'])
             send_telegram_message(winner["user_id"], f"🎉 ПОБЕДА! +{prize_per_winner} USDT!")
-            update_achievement_progress(winner["user_id"], 'lucky', 1)
-
     save_lottery()
-    add_log(f"🎰 Призовой фонд {lottery_pool} USDT распределён", 0, "System")
 
 
 def reset_lottery():
@@ -325,7 +274,6 @@ def reset_lottery():
         global_ticket_counter = 0
         lottery_phase = "buy"
         save_lottery()
-        add_log(f"🔄 Сброс лотереи для нового розыгрыша", 0, "System")
         print("🔄 ЛОТЕРЕЯ СБРОШЕНА")
 
 
@@ -342,14 +290,11 @@ def schedule_next_draw():
             perform_draw()
             time.sleep(14400)
             reset_lottery()
-
     threading.Thread(target=wait_and_draw, daemon=True).start()
 
 
 def get_lottery_status(user_id=None):
-    """Возвращает текущее состояние лотереи для API (с принудительной синхронизацией)"""
     refresh_lottery_data()
-
     result = {
         "prize_pool": lottery_pool,
         "is_drawn": is_drawn,
@@ -359,12 +304,10 @@ def get_lottery_status(user_id=None):
         "user_lp": 0,
         "tickets": []
     }
-
     if user_id:
         user = get_user(user_id)
         result["user_lp"] = user.get("lp", 0)
         user_tickets = [t for t in lottery_tickets if t.get("user_id") == user_id]
         result["user_tickets"] = len(user_tickets)
         result["tickets"] = user_tickets
-
     return result
