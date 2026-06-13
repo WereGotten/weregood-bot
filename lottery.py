@@ -1,3 +1,4 @@
+# lottery.py
 import json
 import random
 import datetime
@@ -137,9 +138,11 @@ def save_lottery():
                 draw_time.isoformat() if draw_time else None,
                 lottery_phase
             ))
-        print(f"💾 Лотерея сохранена: билетов={len(lottery_tickets)}, фонд={lottery_pool}")
+        print(f"💾 Лотерея сохранена: билетов={len(lottery_tickets)}, фонд={lottery_pool} USDT")
+        return True
     except Exception as e:
         print(f"❌ Ошибка сохранения лотереи: {e}")
+        return False
 
 
 def update_lottery_phase():
@@ -236,7 +239,12 @@ def buy_ticket(user_id, user_data):
 
         # Добавляем 0.40 USDT в призовой фонд
         lottery_pool = round(lottery_pool + 0.40, 2)
+
+        # КРИТИЧЕСКИ ВАЖНО: сохраняем в БД!
         save_lottery()
+
+        # Принудительно синхронизируем с БД (на всякий случай)
+        refresh_lottery_data()
 
         add_log(
             f"🎫 Купил билет #{ticket_num}",
@@ -268,7 +276,6 @@ def reveal_cell(user_id, ticket_number, cell_index):
                 ticket["revealed"][cell_index] = True
                 save_lottery()
 
-                # Проверяем, открыта ли вся клетка (для достижения)
                 revealed_count = sum(ticket["revealed"])
                 if revealed_count == 12:
                     update_achievement_progress(user_id, 'brave', 1)
@@ -305,21 +312,6 @@ def reveal_all_tickets(user_id):
         return False, "Нет неоткрытых клеток"
 
 
-def reveal_all_tickets_for_user(user_id):
-    """Открытие всех билетов пользователя (для принудительного завершения)"""
-    with lottery_lock:
-        revealed_count = 0
-        for ticket in lottery_tickets:
-            if ticket.get("user_id") == user_id:
-                for i in range(12):
-                    if not ticket["revealed"][i]:
-                        ticket["revealed"][i] = True
-                        revealed_count += 1
-        if revealed_count > 0:
-            save_lottery()
-        return revealed_count
-
-
 def perform_draw():
     """Проведение розыгрыша лотереи"""
     global winning_numbers, is_drawn, draw_time, lottery_phase
@@ -335,37 +327,30 @@ def perform_draw():
         lottery_phase = "reveal"
         save_lottery()
 
-        # Принудительно обновляем глобальные переменные
         refresh_lottery_data()
 
         add_log(f"🎲 РОЗЫГРЫШ ЛОТЕРЕИ! Выигрышные номера: {winning_numbers}", 0, "System")
         print(f"🎲 РОЗЫГРЫШ: winning_numbers={winning_numbers}, is_drawn={is_drawn}, билетов={len(lottery_tickets)}")
 
-        # Запускаем таймер на автоматическое раскрытие через 3 часа
         threading.Timer(10800, auto_reveal_and_distribute).start()
 
 
 def auto_reveal_and_distribute():
     """Автоматическое раскрытие всех билетов через 3 часа после розыгрыша"""
     print("⏰ Прошло 3 часа, автоматическое раскрытие билетов...")
-    time.sleep(10800)  # 3 часа
+    time.sleep(10800)
 
     with lottery_lock:
         if is_drawn:
-            # Открываем все неоткрытые клетки
             for ticket in lottery_tickets:
                 if not all(ticket.get("revealed", [])):
                     ticket["revealed"] = [True] * 12
             save_lottery()
             add_log(f"⏰ Автоматическое открытие билетов (время вышло в 00:00)", 0, "System")
 
-            # Распределяем призы
             distribute_prizes()
 
-            # Ждём час перед сбросом
             time.sleep(3600)
-
-            # Сбрасываем лотерею
             reset_lottery()
             schedule_next_draw()
 
@@ -392,7 +377,6 @@ def distribute_prizes():
         print("⚠️ Нет полностью открытых билетов для распределения")
         return
 
-    # Находим максимальное количество совпадений
     max_matches = max([r["matches"] for r in results])
     winners = [r for r in results if r["matches"] == max_matches]
 
@@ -462,7 +446,6 @@ def schedule_next_draw():
 
             perform_draw()
 
-            # Ждём 4 часа для раскрытия (до 01:00)
             time.sleep(14400)
             reset_lottery()
 

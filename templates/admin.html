@@ -908,6 +908,7 @@
                     <button class="btn btn-danger" onclick="clearAllWallets()">🗑️ Очистить все кошельки</button>
                     <button class="btn btn-danger" onclick="resetDailyClicks()">🔄 Сбросить ТОП ДНЯ</button>
                     <button class="btn btn-danger" onclick="resetAllAdLimits()">🎬 Сбросить лимиты рекламы ВСЕМ</button>
+                    <button class="btn btn-secondary" onclick="refreshLotteryData()" style="background: rgba(0,150,255,0.2); color: #0096ff;">🔄 Принудительно обновить данные лотереи</button>
                 </div>
 
                 <div class="chart-card">
@@ -1438,13 +1439,38 @@
 
         // ========== ЛОТЕРЕЯ ==========
         async function loadLotteryStats() {
-            const data = await apiRequest('lottery_participants');
-            if (!data.success) return;
-            document.getElementById('lotteryPool').innerText = formatNumber(window.lotteryPool);
-            document.getElementById('totalTickets').innerText = data.count;
-            document.getElementById('participantsCount').innerText = new Set(data.participants.map(p => p.user_id)).size;
-            const tbody = document.getElementById('participantsList');
-            if (tbody) {
+    try {
+        // Сначала получаем свежие данные через специальный эндпоинт
+        const refreshResponse = await fetch(`/api/admin/refresh_lottery?key=${adminKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const refreshData = await refreshResponse.json();
+
+        if (refreshData.success) {
+            // Обновляем призовой фонд
+            const lotteryPoolEl = document.getElementById('lotteryPool');
+            if (lotteryPoolEl) {
+                lotteryPoolEl.innerText = refreshData.prize_pool?.toFixed(2) || '0';
+                window.lotteryPool = refreshData.prize_pool || 0;
+            }
+
+            // Обновляем общее количество билетов
+            const totalTicketsEl = document.getElementById('totalTickets');
+            if (totalTicketsEl) totalTicketsEl.innerText = refreshData.total_tickets || 0;
+
+            // Обновляем количество участников
+            const participantsCountEl = document.getElementById('participantsCount');
+            if (participantsCountEl) participantsCountEl.innerText = refreshData.participants_count || 0;
+        }
+
+        // Загружаем список участников
+        const data = await apiRequest('lottery_participants');
+        if (!data.success) return;
+
+        const tbody = document.getElementById('participantsList');
+        if (tbody) {
+            if (data.participants && data.participants.length > 0) {
                 tbody.innerHTML = data.participants.map(p => `
                     <tr>
                         <td>${p.user_id}</td>
@@ -1454,8 +1480,14 @@
                         <td><button class="btn-sm" onclick="openPlayerProfile(${p.user_id})">👤 Профиль</button></td>
                     </tr>
                 `).join('');
+            } else {
+                tbody.innerHTML = '<tr><td colspan="5" class="loading">Нет билетов</td></tr>';
             }
         }
+    } catch(e) {
+        console.error('Error loading lottery stats:', e);
+    }
+}
 
         async function forceDraw() {
             if (!confirm('Запустить розыгрыш?')) return;
@@ -2071,6 +2103,43 @@
             document.getElementById('deleteUserModal').classList.remove('active');
             document.getElementById('deleteConfirmText').value = '';
         }
+
+async function refreshLotteryData() {
+    try {
+        console.log('🔄 Запрашиваем обновление данных лотереи...');
+
+        // Запрашиваем свежие данные с сервера
+        const response = await fetch(`/api/admin/refresh_lottery?key=${adminKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            console.log('✅ Данные лотереи обновлены:', result);
+
+            // Обновляем отображение призового фонда
+            if (result.prize_pool !== undefined) {
+                document.getElementById('lotteryPool').innerText = result.prize_pool.toFixed(2);
+                window.lotteryPool = result.prize_pool;
+            }
+
+            // Обновляем список участников
+            await loadLotteryStats();
+
+            alert('✅ Данные лотереи обновлены!\n\n' +
+                  `💰 Призовой фонд: ${result.prize_pool || 0} USDT\n` +
+                  `🎫 Билетов: ${result.total_tickets || 0}\n` +
+                  `👥 Участников: ${result.participants_count || 0}`);
+        } else {
+            alert('❌ Ошибка: ' + (result.error || 'Не удалось обновить данные'));
+        }
+    } catch(e) {
+        console.error('Refresh error:', e);
+        alert('❌ Ошибка при обновлении: ' + e.message);
+    }
+}
 
         async function confirmDeleteUser() {
             const confirmText = document.getElementById('deleteConfirmText')?.value.trim();

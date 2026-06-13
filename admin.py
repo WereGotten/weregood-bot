@@ -175,27 +175,26 @@ def register_admin_routes(app):
     @app.route('/api/admin/lottery_participants', methods=['GET'])
     @require_admin
     def api_admin_lottery_participants():
+        from lottery import refresh_lottery_data, lottery_tickets
+
+        # Обновляем данные перед отправкой
         refresh_lottery_data()
+
         participants = []
         for ticket in lottery_tickets:
-            user = get_user(ticket.get('user_id'))
-            username = user.get('username') or user.get('first_name') or f"Player_{ticket.get('user_id')}"
+            revealed_count = sum(ticket.get('revealed', []))
             participants.append({
                 "user_id": ticket.get('user_id'),
-                "username": username,
                 "ticket_number": ticket.get('number'),
                 "purchase_number": ticket.get('purchase_number'),
-                "revealed_count": sum(ticket.get('revealed', [])),
+                "revealed_count": revealed_count,
                 "numbers": ticket.get('numbers', [])
             })
-        participants.sort(key=lambda x: x['ticket_number'])
+
         return jsonify({
             "success": True,
             "participants": participants,
-            "count": len(participants),
-            "prize_pool": lottery_pool,
-            "is_drawn": is_drawn,
-            "winning_numbers": winning_numbers if is_drawn else []
+            "count": len(participants)
         })
 
     @app.route('/api/admin/lottery_action', methods=['POST'])
@@ -721,6 +720,32 @@ def register_admin_routes(app):
                 (code, reward_type, reward_amount, max_uses, password, admin_id))
         add_admin_log(f"🎫 Создал промокод {code}", admin_id, admin_name)
         return jsonify({"success": True, "code": code})
+
+    @app.route('/api/admin/refresh_lottery', methods=['POST'])
+    @require_admin
+    def api_admin_refresh_lottery():
+        try:
+            from lottery import refresh_lottery_data, lottery_pool, lottery_tickets
+
+            # Принудительно обновляем данные из БД
+            refresh_lottery_data()
+
+            # Подсчитываем статистику
+            unique_users = set()
+            for ticket in lottery_tickets:
+                if ticket.get('user_id'):
+                    unique_users.add(ticket.get('user_id'))
+
+            return jsonify({
+                "success": True,
+                "prize_pool": lottery_pool,
+                "total_tickets": len(lottery_tickets),
+                "participants_count": len(unique_users),
+                "message": "Данные лотереи обновлены"
+            })
+        except Exception as e:
+            print(f"Error refreshing lottery: {e}")
+            return jsonify({"success": False, "error": str(e)}), 500
 
     @app.route('/api/admin/delete_promo', methods=['POST'])
     @require_admin
