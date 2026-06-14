@@ -4424,35 +4424,73 @@ def api_achievements_top():
 def api_admin_stats():
     update_online_count()
     with db.get_cursor() as cursor:
+        # Общее количество игроков
         cursor.execute("SELECT COUNT(*) as total FROM users")
         total_users = cursor.fetchone()['total']
-        cursor.execute(
-            "SELECT SUM(wg) as total_wg, SUM(lp) as total_lp, SUM(usdt) as total_usdt, SUM(wins) as total_wins, SUM(total_clicks) as total_clicks FROM users")
+
+        # Основная статистика
+        cursor.execute("""
+            SELECT 
+                SUM(wg) as total_wg,
+                SUM(lp) as total_lp,
+                SUM(usdt) as total_usdt,
+                SUM(wins) as total_wins,
+                SUM(total_clicks) as total_clicks
+            FROM users
+        """)
         stats = cursor.fetchone()
-        cursor.execute(
-            "SELECT SUM(json_extract(upgrade_counts, '$.1')) as upgrade_1, SUM(json_extract(upgrade_counts, '$.2')) as upgrade_2, SUM(json_extract(upgrade_counts, '$.3')) as upgrade_3 FROM users")
+
+        # Количество улучшений
+        cursor.execute("""
+            SELECT 
+                SUM(json_extract(upgrade_counts, '$.1')) as upgrade_1,
+                SUM(json_extract(upgrade_counts, '$.2')) as upgrade_2,
+                SUM(json_extract(upgrade_counts, '$.3')) as upgrade_3,
+                SUM(energy_upgrades) as total_energy_upgrades,
+                SUM(stars) as total_stars
+            FROM users
+        """)
         upgrade_stats = cursor.fetchone()
-        cursor.execute("SELECT SUM(stars) as total_stars, SUM(energy_upgrades) as total_energy_upgrades FROM users")
-        star_stats = cursor.fetchone()
+
+        # Билеты
         cursor.execute("SELECT COUNT(*) as total_tickets FROM lottery_tickets_history")
         ticket_history = cursor.fetchone()
-        cursor.execute("SELECT SUM(amount) as total_donated FROM successful_payments")
-        donated = cursor.fetchone()
+
+        # Текущие билеты
         total_current_tickets = len(lottery_tickets)
+
+        # Участники лотереи
         players_in_lottery = len(set([t.get('user_id') for t in lottery_tickets if t.get('user_id')]))
+
+        # Онлайн
         with online_users_lock:
             online_count = len(online_users)
-        return jsonify({"success": True, "total_users": total_users, "total_wg": round(stats['total_wg'] or 0, 2),
-                        "total_lp": int(stats['total_lp'] or 0), "total_usdt": round(stats['total_usdt'] or 0, 2),
-                        "total_wins": int(stats['total_wins'] or 0), "total_clicks": int(stats['total_clicks'] or 0),
-                        "upgrade_1": int(upgrade_stats['upgrade_1'] or 0),
-                        "upgrade_2": int(upgrade_stats['upgrade_2'] or 0),
-                        "upgrade_3": int(upgrade_stats['upgrade_3'] or 0),
-                        "total_stars": int(star_stats['total_stars'] or 0),
-                        "total_energy_upgrades": int(star_stats['total_energy_upgrades'] or 0),
-                        "total_tickets_history": int(ticket_history['total_tickets'] or 0),
-                        "total_current_tickets": total_current_tickets, "players_in_lottery": players_in_lottery,
-                        "lottery_pool": lottery_pool, "is_drawn": is_drawn, "online": online_count})
+
+        # Всего улучшений всех типов
+        total_upgrades = (upgrade_stats['upgrade_1'] or 0) + (upgrade_stats['upgrade_2'] or 0) + (
+                    upgrade_stats['upgrade_3'] or 0)
+
+        return jsonify({
+            "success": True,
+            "total_users": total_users,
+            "total_wg": round(stats['total_wg'] or 0, 2),
+            "total_lp": int(stats['total_lp'] or 0),
+            "total_usdt": round(stats['total_usdt'] or 0, 2),
+            "total_wins": int(stats['total_wins'] or 0),
+            "total_clicks": int(stats['total_clicks'] or 0),
+            "upgrade_1": int(upgrade_stats['upgrade_1'] or 0),
+            "upgrade_2": int(upgrade_stats['upgrade_2'] or 0),
+            "upgrade_3": int(upgrade_stats['upgrade_3'] or 0),
+            "total_upgrades": total_upgrades,
+            "total_energy_upgrades": int(upgrade_stats['total_energy_upgrades'] or 0),
+            "total_stars": int(upgrade_stats['total_stars'] or 0),
+            "total_tickets_history": int(ticket_history['total_tickets'] or 0),
+            "total_current_tickets": total_current_tickets,
+            "players_in_lottery": players_in_lottery,
+            "lottery_pool": lottery_pool,
+            "is_drawn": is_drawn,
+            "online": online_count
+        })
 
 @app.route('/api/admin/lottery_participants', methods=['GET'])
 @require_admin
