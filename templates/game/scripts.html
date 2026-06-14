@@ -4951,29 +4951,24 @@ let contestTicketsCount = 0;
 
 // ФИКСИРОВАННАЯ ДАТА СТАРТА КОНКУРСА: 14 июня 2026, 17:00 МСК
 function getContestStartDate() {
-    // 14 июня 2026, 17:00 MSK = 14:00 UTC
     return new Date(Date.UTC(2026, 5, 14, 14, 0, 0));
 }
 
-// ДАТА ОКОНЧАНИЯ: через 144 часа (6 дней)
 function getContestEndDate() {
     const start = getContestStartDate();
     return new Date(start.getTime() + (144 * 3600 * 1000));
 }
 
-// Текущее время по МСК
 function getNowMSK() {
     const now = new Date();
     return new Date(now.getTime() + (3 * 60 * 60 * 1000));
 }
 
-// Проверка админа
 function isAdminUser() {
     const adminIds = [5264622363, 685035265];
     return adminIds.includes(userId);
 }
 
-// Сохранение прогресса
 function saveContestData() {
     const data = {
         newReferrals: contestNewReferrals,
@@ -4983,7 +4978,6 @@ function saveContestData() {
     localStorage.setItem('contest_data', JSON.stringify(data));
 }
 
-// Загрузка прогресса
 function loadContestData() {
     const saved = localStorage.getItem('contest_data');
     if (saved) {
@@ -4996,7 +4990,6 @@ function loadContestData() {
     }
 }
 
-// Получение зашифрованной реферальной ссылки
 async function getSecureReferralLink() {
     try {
         const res = await fetch('/api/get_referral_link', {
@@ -5012,7 +5005,6 @@ async function getSecureReferralLink() {
     }
 }
 
-// Обновление списка рефералов (последние 5)
 function updateReferralsList(referrals) {
     const container = document.getElementById('contestReferralsList');
     const showAllBtn = document.getElementById('showAllReferralsBtn');
@@ -5032,7 +5024,7 @@ function updateReferralsList(referrals) {
     let html = '';
     for (let i = 0; i < lastReferrals.length; i++) {
         const ref = lastReferrals[i];
-        const clicks = Math.min(300, Math.floor((ref.earned_wg || 0) / 0.01));
+        const clicks = ref.total_clicks || 0;
         const isCompleted = clicks >= 300;
         const statusClass = isCompleted ? 'completed' : 'pending';
         const statusText = isCompleted ? '✓ Выполнен' : `${clicks}/300`;
@@ -5060,7 +5052,6 @@ function updateReferralsList(referrals) {
     }
 }
 
-// Модалка со всеми рефералами
 window.showAllReferralsModal = function() {
     const modal = document.getElementById('allReferralsModal');
     const listContainer = document.getElementById('allReferralsList');
@@ -5069,17 +5060,23 @@ window.showAllReferralsModal = function() {
     listContainer.innerHTML = '<div class="empty-state">Загрузка...</div>';
     modal.classList.add('active');
 
-    fetch('/api/get_referrals', {
+    fetch('/api/get_referrals_with_clicks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: userId })
     })
     .then(res => res.json())
     .then(data => {
+        if (!data.success) {
+            listContainer.innerHTML = '<div class="empty-state">❌ Ошибка загрузки</div>';
+            return;
+        }
+
         const allReferrals = data.referrals || [];
         const contestStart = getContestStartDate();
+
         const newReferrals = allReferrals.filter(ref => {
-            const refDate = new Date(ref.created_at || ref.date);
+            const refDate = new Date(ref.date);
             const refDateMSK = new Date(refDate.getTime() + (3 * 60 * 60 * 1000));
             return refDateMSK >= contestStart;
         });
@@ -5091,7 +5088,7 @@ window.showAllReferralsModal = function() {
 
         let html = '';
         for (const ref of newReferrals) {
-            const clicks = Math.min(300, Math.floor((ref.earned_wg || 0) / 0.01));
+            const clicks = ref.total_clicks || 0;
             const isCompleted = clicks >= 300;
             html += `
                 <div class="all-referral-item" onclick="openPlayerProfile(${ref.user_id}, 0)">
@@ -5117,7 +5114,6 @@ window.closeAllReferralsModal = function() {
     if (modal) modal.classList.remove('active');
 };
 
-// Сброс прогресса (для админов)
 window.resetContestProgress = function() {
     if (!isAdminUser()) {
         showToast('🚧 Только для администраторов', 'error');
@@ -5131,7 +5127,6 @@ window.resetContestProgress = function() {
     loadContestReferralsData();
 };
 
-// ОТКРЫТИЕ СТРАНИЦЫ КОНКУРСА
 window.openContestPage = async function() {
     playNavSound();
 
@@ -5271,7 +5266,6 @@ window.closeContestPage = function() {
     }
 };
 
-// ТАЙМЕР
 function startContestTimer() {
     if (contestTimerInterval) clearInterval(contestTimerInterval);
 
@@ -5309,39 +5303,54 @@ function startContestTimer() {
     contestTimerInterval = setInterval(updateTimer, 1000);
 }
 
-// ЗАГРУЗКА ДАННЫХ РЕФЕРАЛОВ
+// ОСНОВНАЯ ФУНКЦИЯ ЗАГРУЗКИ ДАННЫХ (ОДИН ЗАПРОС!)
 async function loadContestReferralsData() {
     try {
-        const res = await fetch('/api/get_referrals', {
+        const res = await fetch('/api/get_referrals_with_clicks', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_id: userId })
         });
         const data = await res.json();
+
+        if (!data.success) {
+            console.error('API error:', data.error);
+            return;
+        }
+
         const allReferrals = data.referrals || [];
-
         const contestStart = getContestStartDate();
-        console.log('📅 Конкурс начался (МСК):', contestStart.toLocaleString());
 
-        // Фильтруем ТОЛЬКО новых рефералов
+        console.log('📅 Конкурс начался (МСК):', contestStart.toLocaleString());
+        console.log('👥 Всего рефералов:', allReferrals.length);
+
+        // Фильтруем ТОЛЬКО новых рефералов (по дате)
         const newReferrals = [];
         for (const ref of allReferrals) {
-            const refDate = new Date(ref.created_at || ref.date);
+            const refDate = new Date(ref.date);
             const refDateMSK = new Date(refDate.getTime() + (3 * 60 * 60 * 1000));
+
             if (refDateMSK >= contestStart) {
-                console.log(`✅ Новый реферал: ${ref.username} (${refDateMSK.toLocaleString()})`);
+                console.log(`✅ Новый реферал: ${ref.username} — ${ref.total_clicks || 0} кликов`);
                 newReferrals.push(ref);
+            } else {
+                console.log(`❌ Старый реферал (игнор): ${ref.username}`);
             }
         }
 
         contestNewReferrals = newReferrals;
         updateReferralsList(contestNewReferrals);
 
-        // Подсчёт выполненных
+        // Подсчёт выполненных (300+ кликов)
         let qualified = 0;
         for (const ref of newReferrals) {
-            const clicks = Math.min(300, Math.floor((ref.earned_wg || 0) / 0.01));
-            if (clicks >= 300) qualified++;
+            const clicks = ref.total_clicks || 0;
+            if (clicks >= 300) {
+                qualified++;
+                console.log(`   ✅ ${ref.username} выполнил условие (${clicks}/300)`);
+            } else {
+                console.log(`   ⏳ ${ref.username} ещё не выполнил (${clicks}/300)`);
+            }
         }
 
         contestQualifiedCount = qualified;
@@ -5370,13 +5379,11 @@ async function loadContestReferralsData() {
     }
 }
 
-// ТОП УЧАСТНИКОВ
 async function loadContestWinnersList() {
     const container = document.getElementById('contestWinnersList');
     if (!container) return;
 
     try {
-        // Показываем текущего игрока
         const html = `
             <div class="winner-item" onclick="openPlayerProfile(${userId}, 0)">
                 <div class="winner-avatar">${photoUrl ? `<img src="${photoUrl}">` : '👤'}</div>

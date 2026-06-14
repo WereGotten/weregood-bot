@@ -5213,6 +5213,54 @@ def api_sync():
         "server_time": time.time()
     })
 
+
+@app.route('/api/get_referrals_with_clicks', methods=['POST'])
+def api_get_referrals_with_clicks():
+    """Возвращает рефералов с их количеством кликов одним запросом"""
+    data = request.json
+    if not data:
+        return jsonify({"success": False, "error": "No data"}), 400
+
+    user_id = data.get('user_id')
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"success": False, "error": "Invalid user_id"}), 400
+
+    with db.get_cursor() as cursor:
+        # Получаем всех рефералов пользователя
+        cursor.execute('''
+            SELECT r.user_id as referred_id, r.username, r.first_name, r.created_at, 
+                   r.total_spent_lp, r.total_earned_wg,
+                   u.avatar_url, u.total_clicks
+            FROM referrals r
+            LEFT JOIN users u ON r.referred_id = u.user_id
+            WHERE r.referrer_id = ?
+            ORDER BY r.created_at DESC
+        ''', (user_id,))
+        rows = cursor.fetchall()
+
+        referrals = []
+        for row in rows:
+            # Имя пользователя
+            if row['username'] and row['username'] != '':
+                display_name = '@' + row['username']
+            elif row['first_name'] and row['first_name'] != '':
+                display_name = row['first_name']
+            else:
+                display_name = f"Player_{row['referred_id']}"
+
+            referrals.append({
+                "user_id": row['referred_id'],
+                "username": display_name,
+                "avatar_url": row['avatar_url'] or '',
+                "earned_wg": row['total_earned_wg'] or 0,
+                "earned_lp": (row['total_spent_lp'] or 0) * 0.05,
+                "date": row['created_at'],
+                "total_clicks": row['total_clicks'] or 0  # ← РЕАЛЬНЫЕ КЛИКИ!
+            })
+
+        return jsonify({"success": True, "referrals": referrals})
+
 def get_daily_leaderboard_top_fast(limit=5):
     global leaderboard_cache, leaderboard_cache_time
     now = time.time()
