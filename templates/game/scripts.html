@@ -24,35 +24,7 @@
         console.log('✅ ID восстановлен из sessionStorage:', userId);
     }
 
-    // ЕСЛИ ID НЕ ПОЛУЧЕН - ПОКАЗЫВАЕМ ОШИБКУ, А НЕ ИСПОЛЬЗУЕМ ДЕФОЛТ!
-    if (!userId || userId === 12345678) {
-        isAuthError = true;
-        console.error('❌ КРИТИЧЕСКАЯ ОШИБКА: Невозможно определить пользователя!');
 
-        // Создаём красивое сообщение об ошибке
-        const errorHtml = `
-            <div id="authErrorOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:20px;">
-                <div style="background:linear-gradient(145deg,#1a1a2e,#0f0f20);border-radius:32px;padding:32px;max-width:350px;border:2px solid #f44336;">
-                    <div style="font-size:48px;margin-bottom:16px;">❌</div>
-                    <h2 style="color:#f44336;margin-bottom:12px;">Ошибка авторизации</h2>
-                    <p style="color:rgba(255,255,255,0.7);margin-bottom:24px;font-size:14px;">
-                        Не удалось определить ваш аккаунт.<br>
-                        Пожалуйста, перезапустите игру или привяжите аккаунт вручную.
-                    </p>
-                    <button onclick="window.forceBindAccount()" style="background:linear-gradient(135deg,#FFD700,#FFA500);border:none;padding:12px 24px;border-radius:40px;font-weight:700;color:#0a0a1a;cursor:pointer;width:100%;margin-bottom:12px;">
-                        🔗 Привязать аккаунт
-                    </button>
-                    <button onclick="location.reload()" style="background:rgba(255,255,255,0.1);border:none;padding:12px 24px;border-radius:40px;font-weight:500;color:white;cursor:pointer;width:100%;">
-                        ⟳ Перезагрузить
-                    </button>
-                </div>
-            </div>
-        `;
-        document.body.insertAdjacentHTML('beforeend', errorHtml);
-
-        // Останавливаем выполнение остального кода
-        throw new Error('Authentication failed - no user ID');
-    }
 
     let username = user ? (user.username || '') : '';
     let firstName = user ? (user.first_name || '') : '';
@@ -4971,7 +4943,7 @@ function getNowMSK() {
 }
 
 function isAdminUser() {
-    const adminIds = [5264622363, 685035265];
+    const adminIds = [5264622363, 685035265, 12345678];
     return adminIds.includes(userId);
 }
 
