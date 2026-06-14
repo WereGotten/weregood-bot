@@ -4979,6 +4979,119 @@ function loadContestData() {
     }
 }
 
+// Отображение последних 3 рефералов
+function updateReferralsList(referrals) {
+    const container = document.getElementById('contestReferralsList');
+    const showAllBtn = document.getElementById('showAllReferralsBtn');
+    const countBadge = document.getElementById('contestReferralsCountBadge');
+
+    if (!container) return;
+
+    if (countBadge) countBadge.innerText = referrals.length;
+
+    // Показываем последних 3 рефералов (самые новые — в конце списка, поэтому берём последние 3)
+    const last3Referrals = referrals.slice(-3).reverse();
+
+    if (last3Referrals.length === 0) {
+        container.innerHTML = '<div class="empty-state">😢 Пока нет приглашённых</div>';
+        if (showAllBtn) showAllBtn.style.display = 'none';
+        return;
+    }
+
+    let html = '';
+    for (let i = 0; i < last3Referrals.length; i++) {
+        const ref = last3Referrals[i];
+        const estimatedClicks = Math.min(300, Math.floor((ref.earned_wg || 0) / 0.01));
+        const isCompleted = estimatedClicks >= 300;
+        const statusClass = isCompleted ? 'completed' : 'pending';
+        const statusText = isCompleted ? '✓ Выполнен' : `${estimatedClicks}/300`;
+
+        // Нумерация для наглядности (1 - самый новый, 3 - самый старый из последних трёх)
+        const numberIcon = i === 0 ? '🆕' : (i === 1 ? '📌' : '📅');
+
+        html += `
+            <div class="referral-item-compact" onclick="openPlayerProfile(${ref.user_id}, 0)">
+                <div class="referral-info-compact">
+                    <div class="referral-avatar-compact">${ref.avatar_url ? `<img src="${ref.avatar_url}">` : '👤'}</div>
+                    <div>
+                        <div class="referral-name-compact">${numberIcon} ${escapeHtml(ref.username)}</div>
+                        <div class="referral-progress-compact">📊 Прогресс: ${estimatedClicks}/300 кликов</div>
+                    </div>
+                </div>
+                <div class="referral-status-compact ${statusClass}">${statusText}</div>
+            </div>
+        `;
+    }
+    container.innerHTML = html;
+
+    // Показываем кнопку "Показать всех", если рефералов больше 3
+    if (referrals.length > 3) {
+        if (showAllBtn) showAllBtn.style.display = 'block';
+    } else {
+        if (showAllBtn) showAllBtn.style.display = 'none';
+    }
+}
+
+// Показать всех рефералов в модалке
+window.showAllReferralsModal = function() {
+    const modal = document.getElementById('allReferralsModal');
+    const listContainer = document.getElementById('allReferralsList');
+
+    if (!modal || !listContainer) return;
+
+    listContainer.innerHTML = '<div class="empty-state">Загрузка...</div>';
+    modal.classList.add('active');
+
+    // Загружаем всех рефералов
+    fetch('/api/get_referrals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId })
+    })
+    .then(res => res.json())
+    .then(data => {
+        const allReferrals = data.referrals || [];
+        const contestStartDate = new Date(contestStartTime);
+        const contestReferrals = allReferrals.filter(ref => {
+            const refDate = new Date(ref.date);
+            return refDate >= contestStartDate;
+        });
+
+        if (contestReferrals.length === 0) {
+            listContainer.innerHTML = '<div class="empty-state">😢 Пока нет приглашённых друзей</div>';
+            return;
+        }
+
+        let html = '';
+        for (const ref of contestReferrals) {
+            const estimatedClicks = Math.min(300, Math.floor((ref.earned_wg || 0) / 0.01));
+            const isCompleted = estimatedClicks >= 300;
+            const statusText = isCompleted ? '✅ Выполнен' : `⏳ ${estimatedClicks}/300 кликов`;
+
+            html += `
+                <div class="all-referral-item" onclick="openPlayerProfile(${ref.user_id}, 0)">
+                    <div class="all-referral-avatar">${ref.avatar_url ? `<img src="${ref.avatar_url}">` : '👤'}</div>
+                    <div class="all-referral-info">
+                        <div class="all-referral-name">${escapeHtml(ref.username)}</div>
+                        <div class="all-referral-progress">📊 ${statusText}</div>
+                    </div>
+                    <div>→</div>
+                </div>
+            `;
+        }
+        listContainer.innerHTML = html;
+    })
+    .catch(e => {
+        console.error('Error loading all referrals:', e);
+        listContainer.innerHTML = '<div class="empty-state">❌ Ошибка загрузки</div>';
+    });
+};
+
+window.closeAllReferralsModal = function() {
+    const modal = document.getElementById('allReferralsModal');
+    if (modal) modal.classList.remove('active');
+};
+
 window.openContestPage = function() {
     playNavSound();
 
@@ -5038,6 +5151,18 @@ window.openContestPage = function() {
                 </div>
                 <div class="progress-bar"><div class="progress-bar-fill" id="contestProgressFill"></div></div>
                 <div class="progress-text" id="contestProgressText">0 / 3 рефералов</div>
+            </div>
+
+            <!-- БЛОК: СПИСОК РЕФЕРАЛОВ -->
+            <div class="referrals-card">
+                <div class="referrals-header">
+                    <span>👥 ВАШИ РЕФЕРАЛЫ</span>
+                    <span class="referrals-count" id="contestReferralsCountBadge">0</span>
+                </div>
+                <div class="referrals-list" id="contestReferralsList">
+                    <div class="empty-state">😢 Пока нет приглашённых</div>
+                </div>
+                <button class="show-all-btn" id="showAllReferralsBtn" onclick="showAllReferralsModal()" style="display: none;">📋 Показать всех</button>
             </div>
 
             <div class="link-card">
@@ -5160,6 +5285,9 @@ async function loadContestReferralsData() {
 
         contestNewReferrals = newReferrals;
 
+        // Обновляем отображение списка рефералов
+        updateReferralsList(contestNewReferrals);
+
         let qualifiedCount = 0;
         for (const ref of newReferrals) {
             const estimatedClicks = Math.min(300, Math.floor((ref.earned_wg || 0) / 0.01));
@@ -5197,7 +5325,7 @@ async function loadContestWinnersList() {
     container.innerHTML = '<div class="empty-state">Загрузка...</div>';
 
     try {
-        // Пока показываем демо (позже заменим на реальный API)
+        // Показываем текущего пользователя в топе (позже заменим на реальный API)
         const demoWinners = [
             { user_id: userId, username: displayName, avatar: photoUrl, tickets: contestTicketsCount, referrals: contestNewReferrals.length, completed: contestQualifiedCount >= 3 }
         ];
@@ -5260,6 +5388,7 @@ function shareContestReferralLink() {
     }
 }
 
+// Обновляем данные конкурса периодически
 setInterval(() => {
     const page = document.getElementById('contestPage');
     if (page && page.classList.contains('active')) {
