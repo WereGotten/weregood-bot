@@ -4950,13 +4950,17 @@ let contestNewReferrals = [];
 let contestQualifiedCount = 0;
 let contestTicketsCount = 0;
 
+// 7 дней = 168 часов
+const CONTEST_DURATION_HOURS = 168;
+
 function getContestStartDate() {
+    // 14 июня 2026, 14:00 UTC = 17:00 MSK
     return new Date(Date.UTC(2026, 5, 14, 14, 0, 0));
 }
 
 function getContestEndDate() {
     const start = getContestStartDate();
-    return new Date(start.getTime() + (144 * 3600 * 1000));
+    return new Date(start.getTime() + (CONTEST_DURATION_HOURS * 3600 * 1000));
 }
 
 function getNowMSK() {
@@ -5151,7 +5155,7 @@ window.openContestPage = async function() {
         <div id="contestTab" class="contest-tab-content active">
             <div class="timer-card">
                 <div class="timer-label">ДО ОКОНЧАНИЯ КОНКУРСА</div>
-                <div class="timer-value" id="contestTimer">144:00:00</div>
+                <div class="timer-value" id="contestTimer">168:00:00</div>
                 <div class="timer-bar"><div class="timer-bar-fill" id="contestTimerBar"></div></div>
             </div>
 
@@ -5284,7 +5288,7 @@ function startContestTimer() {
             timerEl.innerText = `${hours.toString().padStart(3, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         }
 
-        const totalSeconds = 144 * 3600;
+        const totalSeconds = CONTEST_DURATION_HOURS * 3600;
         const elapsedSeconds = (now - getContestStartDate().getTime()) / 1000;
         const percent = Math.max(0, Math.min(100, (elapsedSeconds / totalSeconds) * 100));
         const barFill = document.getElementById('contestTimerBar');
@@ -5295,7 +5299,6 @@ function startContestTimer() {
     contestTimerInterval = setInterval(updateTimer, 1000);
 }
 
-// ========== ГЛАВНАЯ ФУНКЦИЯ — НОВАЯ ЛОГИКА БИЛЕТОВ ==========
 async function loadContestReferralsData() {
     try {
         const res = await fetch('/api/get_referrals', {
@@ -5311,7 +5314,7 @@ async function loadContestReferralsData() {
         console.log('📅 Конкурс начался (МСК):', contestStart.toLocaleString());
         console.log('👥 Всего рефералов:', allReferrals.length);
 
-        // Фильтруем только новых рефералов
+        // Фильтруем только новых рефералов (после даты старта)
         const newReferrals = [];
         for (const ref of allReferrals) {
             const refDate = new Date(ref.date);
@@ -5327,8 +5330,7 @@ async function loadContestReferralsData() {
         contestNewReferrals = newReferrals;
         updateReferralsList(contestNewReferrals);
 
-        // ========== НОВАЯ ЛОГИКА ПОДСЧЁТА ==========
-        // Считаем только выполненных рефералов (300+ кликов)
+        // Считаем выполненных рефералов (300+ кликов)
         let completedCount = 0;
         for (const ref of newReferrals) {
             if ((ref.total_clicks || 0) >= 300) {
@@ -5339,9 +5341,8 @@ async function loadContestReferralsData() {
             }
         }
 
-        // Билеты = каждые 3 реферала
+        // БИЛЕТЫ: каждые 3 реферала = 1 билет, прогресс = остаток
         contestTicketsCount = Math.floor(completedCount / 3);
-        // Прогресс = остаток от деления на 3 (0, 1 или 2)
         contestQualifiedCount = completedCount % 3;
 
         console.log(`📊 Выполнено рефералов: ${completedCount}`);
@@ -5397,7 +5398,6 @@ async function loadContestWinnersList() {
             else if (player.rank === 3) rankDisplay = '🥉';
             else rankDisplay = `${player.rank}`;
 
-            // Прогресс = остаток от деления на 3
             const progress = player.new_referrals % 3;
             const statusText = player.is_qualified ? 'Участник' : `${progress}/3`;
             const badgeClass = player.is_qualified ? 'completed' : '';
