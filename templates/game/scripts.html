@@ -61,6 +61,8 @@
     let chatId = userId;
     let displayName = firstName || username || 'Игрок';
 
+    const BOT_USERNAME = 'WereGooodbot';
+
     // ФЛАГИ ДЛЯ СТИРАНИЯ - ПРЕДОТВРАЩАЕМ ПЕРЕЗАГРУЗКУ БИЛЕТОВ
     let isScratchingActive = false;
     let scratchTimeout = null;
@@ -4940,15 +4942,15 @@
     function calculateBet() {
         // функция расчёта комиссии, если нужна
     }
+
     // ==================== РЕФЕРАЛЬНЫЙ КОНКУРС ====================
 let contestTimerInterval = null;
 let contestStartTime = null;
-const CONTEST_DURATION_HOURS = 144; // 7 дней = 168 часов, но ты сказал 144
+const CONTEST_DURATION_HOURS = 144;
 
 // Проверка, является ли пользователь админом (только для тебя)
 function isAdminUser() {
-    // Твой Telegram ID (замени на свой)
-    const adminIds = [5264622363]; // твой ID из .env
+    const adminIds = [5264622363]; // твой Telegram ID из .env
     return adminIds.includes(userId);
 }
 
@@ -4962,31 +4964,15 @@ window.openContestPage = function() {
         return;
     }
 
-    // Загружаем HTML шаблон если его нет
-    const existingPage = document.getElementById('contestPage');
-    if (existingPage && existingPage.innerHTML.trim() === '') {
-        // Загружаем содержимое
-        fetch('/static/contest.html')
-            .then(response => response.text())
-            .then(html => {
-                existingPage.innerHTML = html;
-                initContestPage();
-            })
-            .catch(() => {
-                // Если файла нет, используем встроенный
-                loadInlineContestPage();
-            });
-    } else if (existingPage) {
-        initContestPage();
-    } else {
-        loadInlineContestPage();
-    }
-};
-
-function loadInlineContestPage() {
+    // Получаем контейнер
     const container = document.getElementById('contestPage');
-    if (!container) return;
+    if (!container) {
+        console.error('contestPage container not found');
+        showToast('Ошибка загрузки страницы', 'error');
+        return;
+    }
 
+    // Заполняем контейнер HTML напрямую
     container.innerHTML = `
         <div class="contest-header">
             <button class="back-btn" onclick="closeContestPage()">←</button>
@@ -5022,7 +5008,7 @@ function loadInlineContestPage() {
                 </div>
             </div>
             <div class="progress-bar-container">
-                <div class="progress-bar-bg"><div class="progress-bar-fill" id="contestProgressFill" style="width: 0%"></div></div>
+                <div class="progress-bar-bg"><div class="progress-bar-fill" id="contestProgressFill"></div></div>
                 <div class="progress-text" id="contestProgressText">0/3 рефералов</div>
             </div>
         </div>
@@ -5055,36 +5041,36 @@ function loadInlineContestPage() {
             <div class="info-text"><strong>Как получить билеты?</strong><p>За каждого реферала, который выполнил условие (300 кликов), вы получаете 1 билет. Чем больше билетов — тем выше шанс выиграть приз!</p></div>
         </div>
     `;
-    initContestPage();
-}
 
-function closeContestPage() {
+    // Показываем страницу
+    container.classList.add('active');
+
+    // Устанавливаем реферальную ссылку
+    const referralInput = document.getElementById('contestReferralLink');
+    if (referralInput) {
+        const botName = window.BOT_USERNAME || 'WereGooodbot';
+        const link = `https://t.me/${botName}/WereGood?startapp=${userId}`;
+        referralInput.value = link;
+    }
+
+    // Запускаем таймер
+    startContestTimer();
+
+    // Загружаем данные рефералов для конкурса
+    loadContestReferralsData();
+};
+
+// Закрытие страницы конкурса
+window.closeContestPage = function() {
     const page = document.getElementById('contestPage');
     if (page) page.classList.remove('active');
     if (contestTimerInterval) {
         clearInterval(contestTimerInterval);
         contestTimerInterval = null;
     }
-}
+};
 
-function initContestPage() {
-    const page = document.getElementById('contestPage');
-    if (page) page.classList.add('active');
-
-    // Устанавливаем реферальную ссылку
-    const referralInput = document.getElementById('contestReferralLink');
-    if (referralInput) {
-        const link = document.getElementById('referralLinkInput')?.value || `https://t.me/${BOT_USERNAME}/WereGood?startapp=${userId}`;
-        referralInput.value = link;
-    }
-
-    // Запускаем таймер (144 часа от текущего момента)
-    startContestTimer();
-
-    // Загружаем данные рефералов для конкурса
-    loadContestReferralsData();
-}
-
+// Запуск таймера конкурса
 function startContestTimer() {
     if (contestTimerInterval) clearInterval(contestTimerInterval);
 
@@ -5128,6 +5114,7 @@ function startContestTimer() {
     contestTimerInterval = setInterval(updateTimer, 1000);
 }
 
+// Загрузка данных рефералов для конкурса
 async function loadContestReferralsData() {
     try {
         const res = await fetch('/api/get_referrals', {
@@ -5136,9 +5123,6 @@ async function loadContestReferralsData() {
             body: JSON.stringify({ user_id: userId })
         });
         const data = await res.json();
-
-        // Получаем клики рефералов (нужно добавить API на бэкенде)
-        // Пока используем мок-данные на основе total_earned_wg (чем больше заработано WG, тем больше кликов)
         const referrals = data.referrals || [];
 
         let qualifiedCount = 0;
@@ -5199,16 +5183,18 @@ async function loadContestReferralsData() {
     }
 }
 
-function copyContestReferralLink() {
+// Копирование ссылки конкурса
+window.copyContestReferralLink = function() {
     const input = document.getElementById('contestReferralLink');
     if (input) {
         input.select();
         document.execCommand('copy');
         showToast('🔗 Ссылка скопирована!', 'success');
     }
-}
+};
 
-function shareContestReferralLink() {
+// Поделиться ссылкой конкурса
+window.shareContestReferralLink = function() {
     const link = document.getElementById('contestReferralLink')?.value || '';
     const message = `🏆 Участвуй в реферальном конкурсе WereGood!\n\nПриглашай друзей, выполняй условия и выигрывай LP Coin!\n\n${link}`;
 
@@ -5219,7 +5205,7 @@ function shareContestReferralLink() {
     } else {
         window.open(`https://t.me/share/url?text=${encodeURIComponent(message)}`, '_blank');
     }
-}
+};
 
 // Обновляем данные конкурса периодически
 setInterval(() => {
