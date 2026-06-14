@@ -3792,9 +3792,9 @@ def api_get_referrals():
         return jsonify({"referrals": [], "total_earned_lp": 0, "total_earned_wg": 0}), 400
 
     with db.get_cursor() as cursor:
-        # ОДИН ЗАПРОС — получаем всё сразу: рефералов + их клики
         cursor.execute('''
             SELECT 
+                r.referred_id,
                 r.username, 
                 r.first_name, 
                 r.created_at, 
@@ -3821,14 +3821,14 @@ def api_get_referrals():
             total_earned_wg += earned_wg
 
             referrals.append({
-                "user_id": row['user_id'],  # ← добавил user_id
+                "user_id": row['referred_id'],  # ← ГЛАВНОЕ: добавил ID реферала
                 "username": escape_html(name),
                 "avatar_url": row['avatar_url'] or '',
                 "date": row['created_at'],
                 "spent_lp": row['total_spent_lp'] or 0,
                 "earned_lp": round(earned_lp, 2),
                 "earned_wg": round(earned_wg, 4),
-                "total_clicks": row['total_clicks'] or 0  # ← РЕАЛЬНЫЕ КЛИКИ!
+                "total_clicks": row['total_clicks'] or 0  # ← РЕАЛЬНЫЕ КЛИКИ
             })
 
     return jsonify({
