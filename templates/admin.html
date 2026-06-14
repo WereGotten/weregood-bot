@@ -796,6 +796,85 @@
             background: linear-gradient(90deg, #FFD700, #FFA500);
             transition: width 0.3s;
         }
+
+        /* Стили для админки конкурса */
+        .contest-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .contest-stat-card {
+            background: linear-gradient(145deg, #1a1a2e, #0f0f20);
+            border-radius: 16px;
+            padding: 15px;
+            text-align: center;
+            border: 1px solid rgba(255,215,0,0.1);
+        }
+
+        .contest-stat-icon {
+            font-size: 2rem;
+            margin-bottom: 8px;
+        }
+
+        .contest-stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #FFD700;
+        }
+
+        .contest-stat-label {
+            font-size: 0.7rem;
+            opacity: 0.6;
+            margin-top: 5px;
+        }
+
+        .admin-action-btn {
+            background: rgba(255,215,0,0.15);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            color: #FFD700;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.1s;
+        }
+
+        .admin-action-btn:active {
+            transform: scale(0.97);
+        }
+
+        .contest-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .contest-table th,
+        .contest-table td {
+            padding: 10px 12px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .contest-table th {
+            background: rgba(255,215,0,0.1);
+            color: #FFD700;
+            font-size: 0.7rem;
+        }
+
+        .status-qualified {
+            color: #22c55e;
+            font-weight: 600;
+        }
+
+        .status-not-qualified {
+            color: #FFA500;
+        }
+
+        .winner-row {
+            background: rgba(255,215,0,0.05);
+        }
     </style>
 </head>
 <body>
@@ -804,7 +883,7 @@
         <div class="sidebar">
             <div class="sidebar-header">
                 <h1>👑 WereGood</h1>
-                <p>Admin Panel v2.0</p>
+                <p>Admin Panel v3.0</p>
             </div>
             <div class="nav-item active" data-page="dashboard">
                 <span class="nav-icon">📊</span>
@@ -813,6 +892,10 @@
             <div class="nav-item" data-page="charts">
                 <span class="nav-icon">📈</span>
                 <span class="nav-label">Графики</span>
+            </div>
+            <div class="nav-item" data-page="contest">
+                <span class="nav-icon">🏆</span>
+                <span class="nav-label">Реферальный конкурс</span>
             </div>
             <div class="nav-item" data-page="lottery">
                 <span class="nav-icon">🎲</span>
@@ -883,6 +966,91 @@
                 </div>
             </div>
 
+            <!-- Страница РЕФЕРАЛЬНОГО КОНКУРСА -->
+            <div id="page-contest" class="page-content" style="display: none;">
+                <div class="chart-card">
+                    <h2>🏆 Реферальный конкурс</h2>
+
+                    <!-- Статистика -->
+                    <div class="contest-stats-grid">
+                        <div class="contest-stat-card">
+                            <div class="contest-stat-icon">👥</div>
+                            <div class="contest-stat-value" id="adminContestParticipants">0</div>
+                            <div class="contest-stat-label">Участников конкурса</div>
+                        </div>
+                        <div class="contest-stat-card">
+                            <div class="contest-stat-icon">📊</div>
+                            <div class="contest-stat-value" id="adminContestTotalReferrals">0</div>
+                            <div class="contest-stat-label">Всего новых рефералов</div>
+                        </div>
+                        <div class="contest-stat-card">
+                            <div class="contest-stat-icon">🎫</div>
+                            <div class="contest-stat-value" id="adminContestTotalTickets">0</div>
+                            <div class="contest-stat-label">Всего билетов</div>
+                        </div>
+                        <div class="contest-stat-card">
+                            <div class="contest-stat-icon">⏰</div>
+                            <div class="contest-stat-value" id="adminContestTimeLeft">--</div>
+                            <div class="contest-stat-label">До окончания</div>
+                        </div>
+                    </div>
+
+                    <!-- Кнопки управления -->
+                    <div style="display: flex; gap: 10px; margin-bottom: 25px; flex-wrap: wrap;">
+                        <button class="admin-action-btn" onclick="refreshAdminContest()" style="background: #2196F3; color: white;">🔄 Обновить</button>
+                        <button class="admin-action-btn" onclick="resetContestFromAdmin()" style="background: #f44336; color: white;">⚠️ Сбросить конкурс</button>
+                        <button class="admin-action-btn" onclick="exportContestData()" style="background: #4CAF50; color: white;">📥 Экспорт CSV</button>
+                        <button class="admin-action-btn" onclick="distributeContestPrizes()" style="background: #FF9800; color: white;">🎁 Выдать призы</button>
+                        <button class="admin-action-btn" onclick="forceEndContest()" style="background: #9C27B0; color: white;">⏰ Принудительное завершение</button>
+                    </div>
+
+                    <!-- Топ-50 участников -->
+                    <div class="admin-subsection" style="margin-bottom: 25px;">
+                        <h3 style="margin-bottom: 15px; color: #FFD700;">🏆 ТОП-50 участников конкурса</h3>
+                        <div style="overflow-x: auto; max-height: 400px; overflow-y: auto;">
+                            <table class="contest-table">
+                                <thead>
+                                    <tr><th>#</th><th>ID</th><th>Игрок</th><th>Новых рефералов</th><th>Билетов</th><th>Статус</th></tr>
+                                </thead>
+                                <tbody id="adminContestTopTable">
+                                    <tr><td colspan="6" style="text-align: center;">Загрузка...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Все игроки с билетами -->
+                    <div class="admin-subsection" style="margin-bottom: 25px;">
+                        <h3 style="margin-bottom: 15px; color: #FFD700;">🎫 Все игроки с билетами</h3>
+                        <div style="overflow-x: auto;">
+                            <table class="contest-table">
+                                <thead>
+                                    <tr><th>ID</th><th>Игрок</th><th>Билетов</th><th>Рефералов</th><th>Действия</th></tr>
+                                </thead>
+                                <tbody id="adminContestTicketsTable">
+                                    <tr><td colspan="5" style="text-align: center;">Загрузка...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Все рефералы конкурса -->
+                    <div class="admin-subsection">
+                        <h3 style="margin-bottom: 15px; color: #FFD700;">📋 Все рефералы конкурса</h3>
+                        <div style="overflow-x: auto; max-height: 400px; overflow-y: auto;">
+                            <table class="contest-table">
+                                <thead>
+                                    <tr><th>ID реферера</th><th>Реферер</th><th>ID реферала</th><th>Реферал</th><th>Дата регистрации</th><th>Клики</th><th>Статус</th></tr>
+                                </thead>
+                                <tbody id="adminContestReferralsTable">
+                                    <tr><td colspan="7" style="text-align: center;">Загрузка...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Страница лотереи -->
             <div id="page-lottery" class="page-content" style="display: none;">
                 <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
@@ -916,13 +1084,7 @@
                     <div style="overflow-x: auto;">
                         <table class="data-table">
                             <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Билет №</th>
-                                    <th>Покупка №</th>
-                                    <th>Открыто</th>
-                                    <th>Действия</th>
-                                </tr>
+                                <tr><th>ID</th><th>Билет №</th><th>Покупка №</th><th>Открыто</th><th>Действия</th></tr>
                             </thead>
                             <tbody id="participantsList"></tbody>
                         </table>
@@ -953,16 +1115,7 @@
                     <div style="overflow-x: auto;">
                         <table class="data-table">
                             <thead>
-                                <tr>
-                                    <th>Код</th>
-                                    <th>Награда</th>
-                                    <th>Использовано</th>
-                                    <th>Макс.</th>
-                                    <th>Пароль</th>
-                                    <th>Статус</th>
-                                    <th>Активации</th>
-                                    <th>Действия</th>
-                                </tr>
+                                <tr><th>Код</th><th>Награда</th><th>Использовано</th><th>Макс.</th><th>Пароль</th><th>Статус</th><th>Активации</th><th>Действия</th></tr>
                             </thead>
                             <tbody id="promoCodesList"></tbody>
                         </table>
@@ -1027,7 +1180,6 @@
                         <small style="opacity: 0.5;">Поддерживает HTML-разметку. Ссылки открываются прямо в Telegram.</small>
                     </div>
 
-                    <!-- БЛОК С КНОПКОЙ -->
                     <div class="form-group">
                         <label style="display: flex; align-items: center; gap: 8px;">
                             <input type="checkbox" id="broadcastHasButton">
@@ -1045,7 +1197,6 @@
                             <input type="text" id="broadcastButtonUrl" class="form-input" placeholder="https://t.me/WereGooodbot/WereGood">
                         </div>
                     </div>
-                    <!-- КОНЕЦ БЛОКА С КНОПКОЙ -->
 
                     <div class="form-group" style="border-top: 1px solid rgba(255,215,0,0.2); padding-top: 15px; margin-top: 15px;">
                         <label style="display: flex; align-items: center; gap: 8px;">
@@ -1090,16 +1241,7 @@
                     <div style="overflow-x: auto;">
                         <table class="data-table">
                             <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Имя</th>
-                                    <th>Роль</th>
-                                    <th>WG</th>
-                                    <th>LP</th>
-                                    <th>USDT</th>
-                                    <th>Статус</th>
-                                    <th>Действия</th>
-                                </tr>
+                                <tr><th>ID</th><th>Имя</th><th>Роль</th><th>WG</th><th>LP</th><th>USDT</th><th>Статус</th><th>Действия</th></tr>
                             </thead>
                             <tbody id="playersList"></tbody>
                         </table>
@@ -1308,6 +1450,7 @@
         let currentLogTotalPages = 1;
         let currentLogTotal = 0;
         const LOGS_PER_PAGE = 100;
+        let contestUpdateInterval = null;
 
         // ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
         function formatNumber(num) {
@@ -1437,57 +1580,225 @@
             });
         }
 
+        // ========== АДМИНКА КОНКУРСА ==========
+        async function loadAdminContestData() {
+            try {
+                const res = await fetch(`/api/admin/contest_stats?key=${adminKey}`);
+                const data = await res.json();
+
+                if (!data.success) {
+                    console.error('Ошибка загрузки:', data.error);
+                    return;
+                }
+
+                // Статистика
+                document.getElementById('adminContestParticipants').innerText = data.stats.participants || 0;
+                document.getElementById('adminContestTotalReferrals').innerText = data.stats.new_referrals || 0;
+                document.getElementById('adminContestTotalTickets').innerText = data.stats.total_tickets || 0;
+                document.getElementById('adminContestTimeLeft').innerHTML = data.stats.time_left || '--';
+
+                // Топ участников
+                let topHtml = '';
+                for (let i = 0; i < data.top.length; i++) {
+                    const p = data.top[i];
+                    const medal = p.rank === 1 ? '🥇' : (p.rank === 2 ? '🥈' : (p.rank === 3 ? '🥉' : p.rank));
+                    const statusClass = p.is_qualified ? 'status-qualified' : 'status-not-qualified';
+                    const statusText = p.is_qualified ? '✅ Участник' : `⏳ ${p.new_referrals}/3`;
+                    topHtml += `
+                        <tr>
+                            <td>${medal}</td>
+                            <td>${p.user_id}</td>
+                            <td>${escapeHtml(p.username)}</td>
+                            <td>${p.new_referrals}</td>
+                            <td style="color:#FFD700; font-weight:700;">${p.tickets}</td>
+                            <td class="${statusClass}">${statusText}</td>
+                        </tr>
+                    `;
+                }
+                document.getElementById('adminContestTopTable').innerHTML = topHtml || '<tr><td colspan="6" class="loading">Нет данных</td></tr>';
+
+                // Игроки с билетами
+                let ticketsHtml = '';
+                for (const p of data.ticket_holders) {
+                    ticketsHtml += `
+                        <tr>
+                            <td>${p.user_id}</td>
+                            <td>${escapeHtml(p.username)}</td>
+                            <td style="color:#FFD700; font-weight:700;">${p.tickets}</td>
+                            <td>${p.new_referrals}</td>
+                            <td><button class="btn-sm" onclick="openPlayerProfile(${p.user_id})">👤 Профиль</button></td>
+                        </tr>
+                    `;
+                }
+                document.getElementById('adminContestTicketsTable').innerHTML = ticketsHtml || '<tr><td colspan="5" class="loading">Нет игроков с билетами</td></tr>';
+
+                // Все рефералы конкурса
+                let referralsHtml = '';
+                for (const ref of data.referrals) {
+                    const statusClass = ref.is_completed ? 'status-qualified' : 'status-not-qualified';
+                    const statusText = ref.is_completed ? '✅ Выполнен' : `⏳ ${ref.clicks}/300`;
+                    referralsHtml += `
+                        <tr>
+                            <td>${ref.referrer_id}</td>
+                            <td>${escapeHtml(ref.referrer_name)}</td>
+                            <td>${ref.referred_id}</td>
+                            <td>${escapeHtml(ref.referred_name)}</td>
+                            <td>${ref.created_at}</td>
+                            <td>${ref.clicks}</td>
+                            <td class="${statusClass}">${statusText}</td>
+                        </tr>
+                    `;
+                }
+                document.getElementById('adminContestReferralsTable').innerHTML = referralsHtml || '<tr><td colspan="7" class="loading">Нет рефералов</td></tr>';
+
+            } catch(e) {
+                console.error('Error loading admin contest data:', e);
+            }
+        }
+
+        function refreshAdminContest() {
+            loadAdminContestData();
+            showToast('🔄 Данные конкурса обновлены', 'info');
+        }
+
+        async function resetContestFromAdmin() {
+            if (!confirm('⚠️ ВНИМАНИЕ! Это действие:\n\n- Удалит ВСЕ данные конкурса\n- Сбросит прогресс ВСЕХ игроков\n- Обнулит билеты\n\nПродолжить?')) return;
+            if (!confirm('🔴 ПОСЛЕДНЕЕ ПРЕДУПРЕЖДЕНИЕ! Данные будут удалены безвозвратно. Вы уверены?')) return;
+
+            try {
+                const res = await fetch(`/api/admin/reset_contest?key=${adminKey}`, { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('✅ Конкурс полностью сброшен!', 'success');
+                    loadAdminContestData();
+                } else {
+                    showToast('❌ Ошибка: ' + data.error, 'error');
+                }
+            } catch(e) {
+                showToast('❌ Ошибка при сбросе', 'error');
+            }
+        }
+
+        async function exportContestData() {
+            try {
+                const res = await fetch(`/api/admin/export_contest?key=${adminKey}`);
+                const data = await res.json();
+                if (!data.success) {
+                    showToast('❌ Ошибка экспорта', 'error');
+                    return;
+                }
+
+                let csv = "Ранг,ID,Игрок,Новых рефералов,Билетов,Статус\n";
+                for (const p of data.top) {
+                    csv += `${p.rank},${p.user_id},"${p.username}",${p.new_referrals},${p.tickets},${p.is_qualified ? "Участник" : `${p.new_referrals}/3`}\n`;
+                }
+
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `contest_top_${new Date().toISOString().slice(0,19)}.csv`;
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast('📥 Экспорт завершён', 'success');
+            } catch(e) {
+                showToast('❌ Ошибка экспорта', 'error');
+            }
+        }
+
+        async function distributeContestPrizes() {
+            if (!confirm('🎁 Выдать призы победителям конкурса?\n\nПризы будут распределены согласно текущему топу.')) return;
+
+            try {
+                const res = await fetch(`/api/admin/distribute_contest_prizes?key=${adminKey}`, { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(`✅ Призы выданы! ${data.message}`, 'success');
+                    loadAdminContestData();
+                } else {
+                    showToast('❌ Ошибка: ' + data.error, 'error');
+                }
+            } catch(e) {
+                showToast('❌ Ошибка при выдаче призов', 'error');
+            }
+        }
+
+        async function forceEndContest() {
+            if (!confirm('⏰ Принудительно завершить конкурс?\n\nПосле завершения конкурс остановится и будут выданы призы.')) return;
+
+            try {
+                const res = await fetch(`/api/admin/force_end_contest?key=${adminKey}`, { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('✅ Конкурс завершён!', 'success');
+                    loadAdminContestData();
+                } else {
+                    showToast('❌ Ошибка: ' + data.error, 'error');
+                }
+            } catch(e) {
+                showToast('❌ Ошибка', 'error');
+            }
+        }
+
+        function showToast(msg, type) {
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                background: ${type === 'success' ? '#4CAF50' : (type === 'error' ? '#f44336' : '#2196F3')};
+                color: white;
+                padding: 12px 24px;
+                border-radius: 8px;
+                z-index: 10000;
+                animation: fadeInOut 3s ease;
+            `;
+            toast.innerText = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
         // ========== ЛОТЕРЕЯ ==========
         async function loadLotteryStats() {
-    try {
-        // Сначала получаем свежие данные через специальный эндпоинт
-        const refreshResponse = await fetch(`/api/admin/refresh_lottery?key=${adminKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-        });
-        const refreshData = await refreshResponse.json();
-
-        if (refreshData.success) {
-            // Обновляем призовой фонд
-            const lotteryPoolEl = document.getElementById('lotteryPool');
-            if (lotteryPoolEl) {
-                lotteryPoolEl.innerText = refreshData.prize_pool?.toFixed(2) || '0';
-                window.lotteryPool = refreshData.prize_pool || 0;
-            }
-
-            // Обновляем общее количество билетов
-            const totalTicketsEl = document.getElementById('totalTickets');
-            if (totalTicketsEl) totalTicketsEl.innerText = refreshData.total_tickets || 0;
-
-            // Обновляем количество участников
-            const participantsCountEl = document.getElementById('participantsCount');
-            if (participantsCountEl) participantsCountEl.innerText = refreshData.participants_count || 0;
-        }
-
-        // Загружаем список участников
-        const data = await apiRequest('lottery_participants');
-        if (!data.success) return;
-
-        const tbody = document.getElementById('participantsList');
-        if (tbody) {
-            if (data.participants && data.participants.length > 0) {
-                tbody.innerHTML = data.participants.map(p => `
-                    <tr>
-                        <td>${p.user_id}</td>
-                        <td>#${p.ticket_number}</td>
-                        <td>${p.purchase_number}</td>
-                        <td>${p.revealed_count}/12</td>
-                        <td><button class="btn-sm" onclick="openPlayerProfile(${p.user_id})">👤 Профиль</button></td>
-                    </tr>
-                `).join('');
-            } else {
-                tbody.innerHTML = '<tr><td colspan="5" class="loading">Нет билетов</td></tr>';
+            try {
+                const refreshResponse = await fetch(`/api/admin/refresh_lottery?key=${adminKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const refreshData = await refreshResponse.json();
+                if (refreshData.success) {
+                    const lotteryPoolEl = document.getElementById('lotteryPool');
+                    if (lotteryPoolEl) {
+                        lotteryPoolEl.innerText = refreshData.prize_pool?.toFixed(2) || '0';
+                        window.lotteryPool = refreshData.prize_pool || 0;
+                    }
+                    const totalTicketsEl = document.getElementById('totalTickets');
+                    if (totalTicketsEl) totalTicketsEl.innerText = refreshData.total_tickets || 0;
+                    const participantsCountEl = document.getElementById('participantsCount');
+                    if (participantsCountEl) participantsCountEl.innerText = refreshData.participants_count || 0;
+                }
+                const data = await apiRequest('lottery_participants');
+                if (!data.success) return;
+                const tbody = document.getElementById('participantsList');
+                if (tbody) {
+                    if (data.participants && data.participants.length > 0) {
+                        tbody.innerHTML = data.participants.map(p => `
+                            <tr>
+                                <td>${p.user_id}</td>
+                                <td>#${p.ticket_number}</td>
+                                <td>${p.purchase_number}</td>
+                                <td>${p.revealed_count}/12</td>
+                                <td><button class="btn-sm" onclick="openPlayerProfile(${p.user_id})">👤 Профиль</button></td>
+                            </tr>
+                        `).join('');
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="5" class="loading">Нет билетов</td></tr>';
+                    }
+                }
+            } catch(e) {
+                console.error('Error loading lottery stats:', e);
             }
         }
-    } catch(e) {
-        console.error('Error loading lottery stats:', e);
-    }
-}
 
         async function forceDraw() {
             if (!confirm('Запустить розыгрыш?')) return;
@@ -1543,6 +1854,27 @@
             if (!confirm('⚠️ Удалить ВСЕ TON кошельки?')) return;
             const result = await apiRequest('clear_wallets', { method: 'POST' });
             alert(result.success ? `✅ Удалено ${result.count} кошельков` : '❌ Ошибка');
+        }
+
+        async function refreshLotteryData() {
+            try {
+                const response = await fetch(`/api/admin/refresh_lottery?key=${adminKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const result = await response.json();
+                if (result.success) {
+                    document.getElementById('lotteryPool').innerText = result.prize_pool.toFixed(2);
+                    window.lotteryPool = result.prize_pool;
+                    await loadLotteryStats();
+                    alert(`✅ Данные лотереи обновлены!\n\n💰 Призовой фонд: ${result.prize_pool || 0} USDT\n🎫 Билетов: ${result.total_tickets || 0}\n👥 Участников: ${result.participants_count || 0}`);
+                } else {
+                    alert('❌ Ошибка: ' + (result.error || 'Не удалось обновить данные'));
+                }
+            } catch(e) {
+                console.error('Refresh error:', e);
+                alert('❌ Ошибка при обновлении: ' + e.message);
+            }
         }
 
         // ========== ВЫВОД СРЕДСТВ ==========
@@ -1773,10 +2105,10 @@
                             <span class="clickable-value" onclick='showPromoDetail(${JSON.stringify(p).replace(/'/g, "&#39;")})'>📋 ${p.activations.length} активаций</span>
                             <br><span class="promo-link" onclick="copyToClipboard('${promoUrl}')">🔗 Скопировать ссылку</span>
                         </td>
-                                                    <button class="btn-sm" onclick="deletePromoCode(${p.id}, '${p.code}')">🗑️ Удалить</button>
-                        </td>
+                        <td><button class="btn-sm" onclick="deletePromoCode(${p.id}, '${p.code}')">🗑️ Удалить</button></td>
                     </tr>
-                `}).join('');
+                `;
+            }).join('');
         }
 
         function showPromoDetail(promo) {
@@ -2103,43 +2435,6 @@
             document.getElementById('deleteUserModal').classList.remove('active');
             document.getElementById('deleteConfirmText').value = '';
         }
-
-async function refreshLotteryData() {
-    try {
-        console.log('🔄 Запрашиваем обновление данных лотереи...');
-
-        // Запрашиваем свежие данные с сервера
-        const response = await fetch(`/api/admin/refresh_lottery?key=${adminKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            console.log('✅ Данные лотереи обновлены:', result);
-
-            // Обновляем отображение призового фонда
-            if (result.prize_pool !== undefined) {
-                document.getElementById('lotteryPool').innerText = result.prize_pool.toFixed(2);
-                window.lotteryPool = result.prize_pool;
-            }
-
-            // Обновляем список участников
-            await loadLotteryStats();
-
-            alert('✅ Данные лотереи обновлены!\n\n' +
-                  `💰 Призовой фонд: ${result.prize_pool || 0} USDT\n` +
-                  `🎫 Билетов: ${result.total_tickets || 0}\n` +
-                  `👥 Участников: ${result.participants_count || 0}`);
-        } else {
-            alert('❌ Ошибка: ' + (result.error || 'Не удалось обновить данные'));
-        }
-    } catch(e) {
-        console.error('Refresh error:', e);
-        alert('❌ Ошибка при обновлении: ' + e.message);
-    }
-}
 
         async function confirmDeleteUser() {
             const confirmText = document.getElementById('deleteConfirmText')?.value.trim();
@@ -2511,91 +2806,91 @@ async function refreshLotteryData() {
         }
 
         async function startBroadcast(isTest = false) {
-    const message = document.getElementById('broadcastMessage').value;
-    const testUserId = document.getElementById('broadcastTestUserId')?.value;
-    const hasButton = document.getElementById('broadcastHasButton')?.checked || false;
-    const buttonText = document.getElementById('broadcastButtonText')?.value || '';
-    const buttonUrl = document.getElementById('broadcastButtonUrl')?.value || '';
+            const message = document.getElementById('broadcastMessage').value;
+            const testUserId = document.getElementById('broadcastTestUserId')?.value;
+            const hasButton = document.getElementById('broadcastHasButton')?.checked || false;
+            const buttonText = document.getElementById('broadcastButtonText')?.value || '';
+            const buttonUrl = document.getElementById('broadcastButtonUrl')?.value || '';
 
-    if (!message.trim()) {
-        alert('Введите сообщение для рассылки');
-        return;
-    }
-
-    if (isTest) {
-        if (!testUserId) {
-            alert('Введите ID пользователя для теста');
-            return;
-        }
-        if (!confirm(`Отправить тестовое сообщение пользователю ${testUserId}?`)) return;
-    } else {
-        if (!confirm(`Отправить сообщение ВСЕМ ${document.getElementById('broadcastTotal')?.innerText || 'пользователям'}?`)) return;
-    }
-
-    const startBtn = document.getElementById('startBroadcastBtn');
-    const progressDiv = document.getElementById('broadcastStatus');
-    const progressBar = document.getElementById('broadcastProgressBar');
-    const progressText = document.getElementById('broadcastProgressText');
-    const sentSpan = document.getElementById('broadcastSent');
-    const failedSpan = document.getElementById('broadcastFailed');
-    const totalSpan = document.getElementById('broadcastTotal');
-
-    startBtn.disabled = true;
-    progressDiv.style.display = 'block';
-    sentSpan.innerText = '0';
-    failedSpan.innerText = '0';
-    if (progressBar) progressBar.style.width = '0%';
-    if (progressText) progressText.innerText = `0 / ${totalSpan?.innerText || '?'}`;
-
-    try {
-        let url = '/api/admin/send_broadcast';
-        let body = {
-            message: message,
-            has_button: hasButton,
-            button_text: buttonText,
-            button_url: buttonUrl,
-            is_test: isTest,
-            test_user_id: testUserId ? parseInt(testUserId) : null
-        };
-
-        console.log('📤 Отправка запроса на рассылку:', body);
-
-        const response = await fetch(`${url}?key=${adminKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-        });
-
-        const data = await response.json();
-        console.log('📥 Ответ сервера:', data);
-
-        if (data.success) {
-            if (progressBar) progressBar.style.width = '100%';
-            if (sentSpan) sentSpan.innerText = data.sent || 1;
-            if (progressText) progressText.innerText = `1 / 1`;
+            if (!message.trim()) {
+                alert('Введите сообщение для рассылки');
+                return;
+            }
 
             if (isTest) {
-                alert('✅ Тестовое сообщение отправлено!');
+                if (!testUserId) {
+                    alert('Введите ID пользователя для теста');
+                    return;
+                }
+                if (!confirm(`Отправить тестовое сообщение пользователю ${testUserId}?`)) return;
             } else {
-                alert(`✅ Рассылка завершена!\nОтправлено: ${data.sent}\nОшибок: ${data.errors || 0}`);
+                if (!confirm(`Отправить сообщение ВСЕМ ${document.getElementById('broadcastTotal')?.innerText || 'пользователям'}?`)) return;
             }
-        } else {
-            alert(`❌ Ошибка: ${data.error}`);
+
+            const startBtn = document.getElementById('startBroadcastBtn');
+            const progressDiv = document.getElementById('broadcastStatus');
+            const progressBar = document.getElementById('broadcastProgressBar');
+            const progressText = document.getElementById('broadcastProgressText');
+            const sentSpan = document.getElementById('broadcastSent');
+            const failedSpan = document.getElementById('broadcastFailed');
+            const totalSpan = document.getElementById('broadcastTotal');
+
+            startBtn.disabled = true;
+            progressDiv.style.display = 'block';
+            sentSpan.innerText = '0';
+            failedSpan.innerText = '0';
+            if (progressBar) progressBar.style.width = '0%';
+            if (progressText) progressText.innerText = `0 / ${totalSpan?.innerText || '?'}`;
+
+            try {
+                let url = '/api/admin/send_broadcast';
+                let body = {
+                    message: message,
+                    has_button: hasButton,
+                    button_text: buttonText,
+                    button_url: buttonUrl,
+                    is_test: isTest,
+                    test_user_id: testUserId ? parseInt(testUserId) : null
+                };
+
+                console.log('📤 Отправка запроса на рассылку:', body);
+
+                const response = await fetch(`${url}?key=${adminKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                const data = await response.json();
+                console.log('📥 Ответ сервера:', data);
+
+                if (data.success) {
+                    if (progressBar) progressBar.style.width = '100%';
+                    if (sentSpan) sentSpan.innerText = data.sent || 1;
+                    if (progressText) progressText.innerText = `1 / 1`;
+
+                    if (isTest) {
+                        alert('✅ Тестовое сообщение отправлено!');
+                    } else {
+                        alert(`✅ Рассылка завершена!\nОтправлено: ${data.sent}\nОшибок: ${data.errors || 0}`);
+                    }
+                } else {
+                    alert(`❌ Ошибка: ${data.error}`);
+                }
+            } catch(e) {
+                console.error('Broadcast error:', e);
+                alert('❌ Ошибка при отправке рассылки: ' + e.message);
+            } finally {
+                startBtn.disabled = false;
+                setTimeout(() => {
+                    if (progressDiv) progressDiv.style.display = 'none';
+                }, 3000);
+            }
         }
-    } catch(e) {
-        console.error('Broadcast error:', e);
-        alert('❌ Ошибка при отправке рассылки: ' + e.message);
-    } finally {
-        startBtn.disabled = false;
-        setTimeout(() => {
-            if (progressDiv) progressDiv.style.display = 'none';
-        }, 3000);
-    }
-}
 
         // ========== ИНИЦИАЛИЗАЦИЯ ==========
         document.addEventListener('DOMContentLoaded', function() {
-            // Обработчик для кнопки
+            // Обработчик для кнопки рассылки
             const hasButtonCheckbox = document.getElementById('broadcastHasButton');
             const buttonSettings = document.getElementById('broadcastButtonSettings');
             if (hasButtonCheckbox && buttonSettings) {
@@ -2672,6 +2967,7 @@ async function refreshLotteryData() {
                     const titles = {
                         dashboard: '📊 Статистика сервера',
                         charts: '📈 Графики и аналитика',
+                        contest: '🏆 Реферальный конкурс',
                         lottery: '🎲 Управление лотереей',
                         tasks: '📋 Управление заданиями',
                         promocodes: '🎫 Управление промокодами',
@@ -2682,6 +2978,13 @@ async function refreshLotteryData() {
                     };
                     document.getElementById('pageTitle').innerText = titles[page] || page;
 
+                    if (page === 'contest') {
+                        loadAdminContestData();
+                        if (contestUpdateInterval) clearInterval(contestUpdateInterval);
+                        contestUpdateInterval = setInterval(loadAdminContestData, 30000);
+                    } else {
+                        if (contestUpdateInterval) clearInterval(contestUpdateInterval);
+                    }
                     if (page === 'lottery') loadLotteryStats();
                     if (page === 'tasks') loadTasks();
                     if (page === 'logs') loadLogs(1);

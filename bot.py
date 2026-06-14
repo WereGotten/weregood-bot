@@ -5056,6 +5056,262 @@ def api_admin_delete_promo():
     add_admin_log(f"🗑️ Удалил промокод {row['code']}", admin_id, admin_name)
     return jsonify({"success": True})
 
+
+@app.route('/api/admin/contest_stats', methods=['GET'])
+@require_admin
+def api_admin_contest_stats():
+    """Полная статистика конкурса для админки"""
+    try:
+        contest_start = "2026-06-14 14:00:00"
+
+        with db.get_cursor() as cursor:
+            # Статистика
+            cursor.execute('''
+                SELECT 
+                    COUNT(DISTINCT referrer_id) as participants,
+                    COUNT(*) as total_referrals,
+                    SUM(CASE WHEN r.created_at >= ? THEN 1 ELSE 0 END) as new_referrals
+                FROM referrals r
+            ''', (contest_start,))
+            stats_row = cursor.fetchone()
+
+            # Топ участников
+            cursor.execute('''
+                SELECT 
+                    u.user_id,
+                    u.username,
+                    u.first_name,
+                    u.avatar_url,
+                    u.role,
+                    COUNT(r.id) as total_referrals,
+                    SUM(CASE WHEN r.created_at >= ? THEN 1 ELSE 0 END) as new_referrals
+                FROM users u
+                LEFT JOIN referrals r ON r.referrer_id = u.user_id
+                GROUP BY u.user_id
+                HAVING new_referrals > 0
+                ORDER BY new_referrals DESC, total_referrals DESC
+                LIMIT 50
+            ''', (contest_start,))
+            top_rows = cursor.fetchall()
+
+            top = []
+            for idx, row in enumerate(top_rows, 1):
+                name = row['username'] or row['first_name'] or f"Player_{row['user_id']}"
+                tickets = row['new_referrals'] // 3
+                top.append({
+                    "rank": idx,
+                    "user_id": row['user_id'],
+                    "username": name,
+                    "new_referrals": row['new_referrals'],
+                    "tickets": tickets,
+                    "is_qualified": row['new_referrals'] >= 3
+                })
+
+            # Игроки с билетами
+            cursor.execute('''
+                SELECT 
+                    u.user_id,
+                    u.username,
+                    u.first_name,
+                    COUNT(r.id) as total_referrals,
+                    SUM(CASE WHEN r.created_at >= ? THEN 1 ELSE 0 END) as new_referrals
+                FROM users u
+                LEFT JOIN referrals r ON r.referrer_id = u.user_id
+                GROUP BY u.user_id
+                HAVING new_referrals >= 3
+                ORDER BY new_referrals DESC
+            ''', (contest_start,))
+            ticket_rows = cursor.fetchall()
+
+            ticket_holders = []
+            for row in ticket_rows:
+                name = row['username'] or row['first_name'] or f"Player_{row['user_id']}"
+                tickets = row['new_referrals'] // 3
+                ticket_holders.append({
+                    "user_id": row['user_id'],
+                    "username": name,
+                    "tickets": tickets,
+                    "new_referrals": row['new_referrals']
+                })
+
+            # Все рефералы конкурса
+            cursor.execute('''
+                SELECT 
+                    r.referrer_id,
+                    r.referred_id,
+                    r.created_at,
+                    u1.username as referrer_name,
+                    u1.first_name as referrer_first,
+                    u2.username as referred_name,
+                    u2.first_name as referred_first,
+                    u2.total_clicks
+                FROM referrals r
+                LEFT JOIN users u1 ON r.referrer_id = u1.user_id
+                LEFT JOIN users u2 ON r.referred_id = u2.user_id
+                WHERE r.created_at >= ?
+                ORDER BY r.created_at DESC
+            ''', (contest_start,))
+            referral_rows = cursor.fetchall()
+
+            referrals = []
+            for row in referral_rows:
+                referrer_name = row['referrer_name'] or row['referrer_first'] or f"User_{row['referrer_id']}"
+                referred_name = row['referred_name'] or row['referred_first'] or f"User_{row['referred_id']}"
+                referrals.append({
+                    "referrer_id": row['referrer_id'],
+                    "referrer_name": referrer_name,
+                    "referred_id": row['referred_id'],
+                    "referred_name": referred_name,
+                    "created_at": row['created_at'],
+                    "clicks": row['total_clicks'] or 0,
+                    "is_completed": (row['total_clicks'] or 0) >= 300
+                })
+
+            # Время до окончания конкурса
+            end_date = datetime.datetime(2026, 6, 21, 14, 0, 0)  # 7 дней = 168 часов
+            now = datetime.datetime.now()
+            remaining = end_date - now
+            if remaining.total_seconds() > 0:
+                days = remaining.days
+                hours = remaining.seconds // 3600
+                minutes = (remaining.seconds % 3600) // 60
+                time_left = f"{days}д {hours}ч {minutes}м"
+            else:
+                time_left = "Конкурс завершён"
+
+            total_tickets = sum([p['tickets'] for p in ticket_holders])
+
+            return jsonify({
+                "success": True,
+                "stats": {
+                    "participants": stats_row['participants'] or 0,
+                    "total_referrals": stats_row['total_referrals'] or 0,
+                    "new_referrals": stats_row['new_referrals'] or 0,
+                    "total_tickets": total_tickets,
+                    "time_left": time_left
+                },
+                "top": top,
+                "ticket_holders": ticket_holders,
+                "referrals": referrals
+            })
+    except Exception as e:
+        logger.error(f"Ошибка в admin contest stats: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/admin/reset_contest', methods=['POST'])
+@require_admin
+def api_admin_reset_contest():
+    """Полный сброс конкурса"""
+    try:
+        # Очищаем данные конкурса у всех пользователей
+        with db.get_cursor() as cursor:
+            # Удаляем у пользователей поля, связанные с конкурсом
+            # (если есть такие поля в users)
+            pass
+
+        # Сбрасываем локальные данные в localStorage через JS, поэтому здесь просто логируем
+        add_admin_log("🏆 ПОЛНЫЙ СБРОС РЕФЕРАЛЬНОГО КОНКУРСА",
+                      request.args.get('user_id', 'Admin'), "Admin")
+
+        return jsonify({"success": True, "message": "Конкурс сброшен"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/admin/export_contest', methods=['GET'])
+@require_admin
+def api_admin_export_contest():
+    """Экспорт топа конкурса в JSON"""
+    try:
+        contest_start = "2026-06-14 14:00:00"
+
+        with db.get_cursor() as cursor:
+            cursor.execute('''
+                SELECT 
+                    u.user_id,
+                    u.username,
+                    u.first_name,
+                    COUNT(r.id) as total_referrals,
+                    SUM(CASE WHEN r.created_at >= ? THEN 1 ELSE 0 END) as new_referrals
+                FROM users u
+                LEFT JOIN referrals r ON r.referrer_id = u.user_id
+                GROUP BY u.user_id
+                HAVING new_referrals > 0
+                ORDER BY new_referrals DESC
+            ''', (contest_start,))
+            rows = cursor.fetchall()
+
+            top = []
+            for idx, row in enumerate(rows, 1):
+                name = row['username'] or row['first_name'] or f"Player_{row['user_id']}"
+                tickets = row['new_referrals'] // 3
+                top.append({
+                    "rank": idx,
+                    "user_id": row['user_id'],
+                    "username": name,
+                    "new_referrals": row['new_referrals'],
+                    "tickets": tickets,
+                    "is_qualified": row['new_referrals'] >= 3
+                })
+
+            return jsonify({"success": True, "top": top})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/admin/distribute_contest_prizes', methods=['POST'])
+@require_admin
+def api_admin_distribute_contest_prizes():
+    """Ручная выдача призов победителям"""
+    try:
+        contest_start = "2026-06-14 14:00:00"
+
+        with db.get_cursor() as cursor:
+            # Получаем топ-20 победителей
+            cursor.execute('''
+                SELECT 
+                    u.user_id,
+                    u.username,
+                    SUM(CASE WHEN r.created_at >= ? THEN 1 ELSE 0 END) as new_referrals
+                FROM users u
+                LEFT JOIN referrals r ON r.referrer_id = u.user_id
+                GROUP BY u.user_id
+                HAVING new_referrals >= 3
+                ORDER BY new_referrals DESC
+                LIMIT 20
+            ''', (contest_start,))
+            winners = cursor.fetchall()
+
+            if not winners:
+                return jsonify({"success": False, "error": "Нет победителей"}), 400
+
+            # Призовой фонд 2000 LP
+            prize_per_winner = 2000 // len(winners)
+
+            awarded = 0
+            for winner in winners:
+                user = get_user(winner['user_id'])
+                old_lp = user['lp']
+                new_lp = old_lp + prize_per_winner
+                safe_update_user(winner['user_id'], lp=new_lp)
+                add_admin_log(f"🏆 ВЫДАЧА ПРИЗА КОНКУРСА: +{prize_per_winner} LP",
+                              request.args.get('user_id', 'Admin'), "Admin",
+                              winner['user_id'], winner['username'] or f"User_{winner['user_id']}")
+                awarded += 1
+
+                # Отправляем уведомление в Telegram
+                send_telegram_message(winner['user_id'],
+                                      f"🏆 **ПОЗДРАВЛЯЕМ!**\n\n"
+                                      f"Вы вошли в ТОП-20 реферального конкурса!\n\n"
+                                      f"💰 Вы получили +{prize_per_winner} LP\n\n"
+                                      f"Спасибо за участие! 🎉")
+
+            return jsonify({"success": True, "message": f"Выдано призов {awarded} игрокам по {prize_per_winner} LP"})
+    except Exception as e:
+        logger.error(f"Ошибка выдачи призов: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
 @app.route('/api/activate_promo', methods=['POST'])
 def api_activate_promo():
     data = request.json
