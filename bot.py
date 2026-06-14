@@ -5924,18 +5924,19 @@ if __name__ == '__main__':
     # Отключаем старый polling (комментируем)
     # threading.Thread(target=handle_telegram_updates, daemon=True).start()
 
-    # Устанавливаем вебхук при запуске
-    webhook_url = f"https://weregood.ru/webhook/{TELEGRAM_TOKEN}"
-    set_webhook_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/setWebhook"
-
-    try:
-        response = requests.post(set_webhook_url, json={
-            "url": webhook_url,
-            "secret_token": TELEGRAM_WEBHOOK_SECRET
-        })
-        print(f"Webhook установлен: {response.json()}")
-    except Exception as e:
-        print(f"Ошибка установки вебхука: {e}")
+    # Устанавливаем вебхук при запуске (ЗАКОММЕНТИРОВАНО)
+    # webhook_url = f"https://weregood.ru/webhook/{TELEGRAM_TOKEN}"
+    # set_webhook_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/setWebhook"
+    #
+    # try:
+    #     response = requests.post(set_webhook_url, json={
+    #         "url": webhook_url,
+    #         "secret_token": TELEGRAM_WEBHOOK_SECRET
+    #     }, timeout=5)
+    #     print(f"Webhook установлен: {response.json()}")
+    # except Exception as e:
+    #     print(f"Ошибка установки вебхука: {e}")
+    print("⚠️ Вебхук НЕ устанавливается автоматически. Установи вручную через админ-панель.")
 
     print("\n" + "=" * 60)
     print("🔧 WereGood Bot - ВЕБХУК РЕЖИМ")
@@ -5945,4 +5946,4 @@ if __name__ == '__main__':
     print(f"📡 Webhook: {webhook_url}")
     print("=" * 60)
 
-    socketio.run(app, host='0.0.0.0', port=5000, debug=False, use_reloader=False)
+    socketio.run(app, host='0.0.0.0', port=5000, debug=False, use_reloader=False, allow_unsafe_werkzeug=True)
