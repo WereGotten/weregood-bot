@@ -5059,18 +5059,13 @@ window.showAllReferralsModal = function() {
     listContainer.innerHTML = '<div class="empty-state">Загрузка...</div>';
     modal.classList.add('active');
 
-    fetch('/api/get_contest_referrals', {
+    fetch('/api/get_referrals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: userId })
     })
     .then(res => res.json())
     .then(data => {
-        if (!data.success) {
-            listContainer.innerHTML = '<div class="empty-state">❌ Ошибка загрузки</div>';
-            return;
-        }
-
         const allReferrals = data.referrals || [];
         const contestStart = getContestStartDate();
 
@@ -5300,20 +5295,15 @@ function startContestTimer() {
     contestTimerInterval = setInterval(updateTimer, 1000);
 }
 
-// ========== ГЛАВНАЯ ФУНКЦИЯ ЗАГРУЗКИ ДАННЫХ (ИСПОЛЬЗУЕТ НОВЫЙ ЭНДПОИНТ) ==========
+// ========== ГЛАВНАЯ ФУНКЦИЯ — ОДИН ЗАПРОС, ВСЕ ДАННЫЕ ==========
 async function loadContestReferralsData() {
     try {
-        const res = await fetch('/api/get_contest_referrals', {
+        const res = await fetch('/api/get_referrals', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_id: userId })
         });
         const data = await res.json();
-
-        if (!data.success) {
-            console.error('API error:', data.error);
-            return;
-        }
 
         const allReferrals = data.referrals || [];
         const contestStart = getContestStartDate();
@@ -5337,15 +5327,14 @@ async function loadContestReferralsData() {
         contestNewReferrals = newReferrals;
         updateReferralsList(contestNewReferrals);
 
-        // Подсчёт выполненных (300+ кликов)
+        // Подсчёт выполненных
         let qualified = 0;
         for (const ref of newReferrals) {
-            const clicks = ref.total_clicks || 0;
-            if (clicks >= 300) {
+            if ((ref.total_clicks || 0) >= 300) {
                 qualified++;
-                console.log(`   ✅ ${ref.username} выполнил условие (${clicks}/300)`);
+                console.log(`   ✅ ${ref.username} выполнил условие (${ref.total_clicks}/300)`);
             } else {
-                console.log(`   ⏳ ${ref.username} ещё не выполнил (${clicks}/300)`);
+                console.log(`   ⏳ ${ref.username} ещё не выполнил (${ref.total_clicks || 0}/300)`);
             }
         }
 

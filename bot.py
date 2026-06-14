@@ -3780,6 +3780,7 @@ def api_get_referral_link():
     add_log(f"📨 Получил реферальную ссылку", user_id, user['username'])
     return jsonify({"link": link})
 
+
 @app.route('/api/get_referrals', methods=['POST'])
 def api_get_referrals():
     data = request.json
@@ -3789,29 +3790,47 @@ def api_get_referrals():
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid:
         return jsonify({"referrals": [], "total_earned_lp": 0, "total_earned_wg": 0}), 400
+
     with db.get_cursor() as cursor:
+        # ОДИН ЗАПРОС — получаем всё сразу: рефералов + их клики
         cursor.execute('''
-            SELECT r.username, r.first_name, r.created_at, r.total_spent_lp, r.total_earned_wg
-            FROM referrals r 
+            SELECT 
+                r.username, 
+                r.first_name, 
+                r.created_at, 
+                r.total_spent_lp, 
+                r.total_earned_wg,
+                u.avatar_url,
+                u.total_clicks
+            FROM referrals r
+            LEFT JOIN users u ON r.referred_id = u.user_id
             WHERE r.referrer_id = ?
+            ORDER BY r.created_at DESC
         ''', (user_id,))
         rows = cursor.fetchall()
+
         referrals = []
         total_earned_lp = 0
         total_earned_wg = 0
+
         for row in rows:
             name = row['username'] or row['first_name'] or "Игрок"
             earned_lp = (row['total_spent_lp'] or 0) * 0.05
             earned_wg = (row['total_earned_wg'] or 0)
             total_earned_lp += earned_lp
             total_earned_wg += earned_wg
+
             referrals.append({
+                "user_id": row['user_id'],  # ← добавил user_id
                 "username": escape_html(name),
+                "avatar_url": row['avatar_url'] or '',
                 "date": row['created_at'],
                 "spent_lp": row['total_spent_lp'] or 0,
                 "earned_lp": round(earned_lp, 2),
-                "earned_wg": round(earned_wg, 4)
+                "earned_wg": round(earned_wg, 4),
+                "total_clicks": row['total_clicks'] or 0  # ← РЕАЛЬНЫЕ КЛИКИ!
             })
+
     return jsonify({
         "referrals": referrals,
         "total_earned_lp": round(total_earned_lp, 2),
