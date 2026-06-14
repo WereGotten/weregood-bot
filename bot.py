@@ -5233,55 +5233,60 @@ def api_sync():
     })
 
 
-@app.route('/api/get_contest_referrals', methods=['POST'])
-def api_get_contest_referrals():
-    """Возвращает рефералов с их реальным количеством кликов для конкурса"""
-    data = request.json
-    if not data:
-        return jsonify({"success": False, "error": "No data"}), 400
+@app.route('/api/contest/leaderboard', methods=['GET'])
+def api_contest_leaderboard():
+    """Возвращает топ участников конкурса (кто пригласил больше новых рефералов)"""
+    try:
+        contest_start_date = datetime.datetime(2026, 6, 14, 14, 0, 0)  # 14 июня 2026, 14:00 UTC = 17:00 MSK
 
-    user_id = data.get('user_id')
-    is_valid, user_id = validate_user_id(user_id)
-    if not is_valid:
-        return jsonify({"success": False, "error": "Invalid user_id"}), 400
+        with db.get_cursor() as cursor:
+            # Получаем всех пользователей, у которых есть рефералы
+            cursor.execute('''
+                SELECT 
+                    u.user_id,
+                    u.username,
+                    u.first_name,
+                    u.avatar_url,
+                    u.role,
+                    COUNT(r.id) as total_referrals,
+                    SUM(CASE WHEN datetime(r.created_at) >= ? THEN 1 ELSE 0 END) as new_referrals
+                FROM users u
+                LEFT JOIN referrals r ON r.referrer_id = u.user_id
+                GROUP BY u.user_id
+                HAVING new_referrals > 0
+                ORDER BY new_referrals DESC, total_referrals DESC
+                LIMIT 100
+            ''', (contest_start_date.isoformat(),))
+            rows = cursor.fetchall()
 
-    with db.get_cursor() as cursor:
-        # Получаем рефералов с их реальными кликами
-        cursor.execute('''
-            SELECT 
-                r.user_id as referred_id,
-                r.username,
-                r.first_name,
-                r.created_at,
-                r.total_earned_wg,
-                u.avatar_url,
-                u.total_clicks
-            FROM referrals r
-            LEFT JOIN users u ON r.referred_id = u.user_id
-            WHERE r.referrer_id = ?
-            ORDER BY r.created_at DESC
-        ''', (user_id,))
-        rows = cursor.fetchall()
+            leaderboard = []
+            for idx, row in enumerate(rows, 1):
+                # Формируем имя
+                if row['username'] and row['username'] != '':
+                    display_name = '@' + row['username']
+                elif row['first_name'] and row['first_name'] != '':
+                    display_name = row['first_name']
+                else:
+                    display_name = f"Player_{row['user_id']}"
 
-        referrals = []
-        for row in rows:
-            if row['username'] and row['username'] != '':
-                display_name = '@' + row['username']
-            elif row['first_name'] and row['first_name'] != '':
-                display_name = row['first_name']
-            else:
-                display_name = f"Player_{row['referred_id']}"
+                # Считаем билеты (за каждые 3 новых реферала)
+                tickets = row['new_referrals'] // 3
 
-            referrals.append({
-                "user_id": row['referred_id'],
-                "username": display_name,
-                "avatar_url": row['avatar_url'] or '',
-                "earned_wg": row['total_earned_wg'] or 0,
-                "date": row['created_at'],
-                "total_clicks": row['total_clicks'] or 0  # ← РЕАЛЬНЫЕ КЛИКИ!
-            })
+                leaderboard.append({
+                    "rank": idx,
+                    "user_id": row['user_id'],
+                    "username": display_name,
+                    "avatar_url": row['avatar_url'] or '',
+                    "role": row['role'] or 'player',
+                    "new_referrals": row['new_referrals'],
+                    "tickets": tickets,
+                    "is_qualified": row['new_referrals'] >= 3
+                })
 
-        return jsonify({"success": True, "referrals": referrals})
+            return jsonify({"success": True, "leaderboard": leaderboard})
+    except Exception as e:
+        logger.error(f"Ошибка получения топа конкурса: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 def get_daily_leaderboard_top_fast(limit=5):
     global leaderboard_cache, leaderboard_cache_time

@@ -5368,27 +5368,57 @@ async function loadContestWinnersList() {
     const container = document.getElementById('contestWinnersList');
     if (!container) return;
 
+    container.innerHTML = '<div class="empty-state">Загрузка...</div>';
+
     try {
-        const html = `
-            <div class="winner-item" onclick="openPlayerProfile(${userId}, 0)">
-                <div class="winner-avatar">${photoUrl ? `<img src="${photoUrl}">` : '👤'}</div>
-                <div class="winner-info">
-                    <div class="winner-name">
-                        ${escapeHtml(displayName)}
-                        <span class="winner-badge ${contestQualifiedCount >= 3 ? 'completed' : ''}">${contestQualifiedCount >= 3 ? 'Участник' : `${contestNewReferrals.length}/3`}</span>
+        const res = await fetch('/api/contest/leaderboard');
+        const data = await res.json();
+
+        if (!data.success || !data.leaderboard || data.leaderboard.length === 0) {
+            container.innerHTML = '<div class="empty-state">😢 Пока нет участников конкурса</div>';
+            return;
+        }
+
+        let html = '';
+        for (const player of data.leaderboard) {
+            const avatarHtml = player.avatar_url ? `<img src="${player.avatar_url}">` : '👤';
+
+            // Медальки для топ-3
+            let rankDisplay = '';
+            if (player.rank === 1) rankDisplay = '🥇';
+            else if (player.rank === 2) rankDisplay = '🥈';
+            else if (player.rank === 3) rankDisplay = '🥉';
+            else rankDisplay = `${player.rank}`;
+
+            // Бейдж статуса
+            const badgeClass = player.is_qualified ? 'completed' : '';
+            const badgeText = player.is_qualified ? 'Участник' : `${player.new_referrals}/3`;
+
+            html += `
+                <div class="winner-item" onclick="openPlayerProfile(${player.user_id}, 0)">
+                    <div class="winner-rank" style="min-width: 45px; font-size: 1.1rem; font-weight: 700; color: #FFD700;">${rankDisplay}</div>
+                    <div class="winner-avatar">${avatarHtml}</div>
+                    <div class="winner-info">
+                        <div class="winner-name">
+                            ${escapeHtml(player.username)}
+                            <span class="winner-badge ${badgeClass}">${badgeText}</span>
+                            ${player.role === 'founder' ? '<span class="role-badge founder" style="font-size:0.55rem; padding:2px 6px;">👑</span>' : ''}
+                            ${player.role === 'legend' ? '<span class="role-badge legend" style="font-size:0.55rem; padding:2px 6px;">👑</span>' : ''}
+                        </div>
+                        <div class="winner-stats">
+                            <span>🎫 ${player.tickets} билетов</span>
+                            <span>👥 ${player.new_referrals} рефералов</span>
+                        </div>
                     </div>
-                    <div class="winner-stats">
-                        <span>🎫 ${contestTicketsCount} билетов</span>
-                        <span>👥 ${contestNewReferrals.length} рефералов</span>
-                    </div>
+                    <div style="font-size: 1.2rem; color: #FFD700;">→</div>
                 </div>
-                <div>→</div>
-            </div>
-        `;
+            `;
+        }
         container.innerHTML = html;
+
     } catch(e) {
-        console.error(e);
-        container.innerHTML = '<div class="empty-state">❌ Ошибка загрузки</div>';
+        console.error('Error loading contest leaderboard:', e);
+        container.innerHTML = '<div class="empty-state">❌ Ошибка загрузки топа</div>';
     }
 }
 

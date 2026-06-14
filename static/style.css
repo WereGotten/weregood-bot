@@ -5826,3 +5826,15 @@ body.light-theme .star-upgrade-card {
     font-size: 0.6rem;
     color: rgba(255,255,255,0.5);
 }
+
+.winner-rank {
+    min-width: 45px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+.winner-rank:first-child {
+    color: #FFD700;
+    text-shadow: 0 0 5px #FFD700;
+}
