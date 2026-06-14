@@ -557,7 +557,7 @@ ALLOWED_UPDATE_FIELDS = {
     'avatar_url', 'usdt', 'wins', 'role', 'stars', 'max_energy',
     'energy_upgrades', 'energy_limit_upgrades', 'unlocked_prefixes',
     'tutorial_completed', 'ton_wallet', 'banned_until', 'ban_reason', 'banned_by',
-    'completed_achievements', 'daily_clicks'
+    'completed_achievements', 'daily_clicks',  # ← ЗАПЯТАЯ ДОБАВЛЕНА
     'fortune_bets_count', 'fortune_wins_count', 'fortune_total_bet_amount'
 }
 
@@ -1297,6 +1297,25 @@ def init_db():
         except sqlite3.OperationalError:
             cursor.execute("ALTER TABLE fortune_active_bets ADD COLUMN net_amount REAL DEFAULT 0")
             print("✅ Добавлена колонка net_amount в fortune_active_bets")
+
+            # Добавь в init_db() после других ALTER TABLE:
+            try:
+                cursor.execute("ALTER TABLE users ADD COLUMN fortune_bets_count INTEGER DEFAULT 0")
+                print("✅ Добавлена колонка fortune_bets_count")
+            except:
+                pass
+
+            try:
+                cursor.execute("ALTER TABLE users ADD COLUMN fortune_wins_count INTEGER DEFAULT 0")
+                print("✅ Добавлена колонка fortune_wins_count")
+            except:
+                pass
+
+            try:
+                cursor.execute("ALTER TABLE users ADD COLUMN fortune_total_bet_amount REAL DEFAULT 0")
+                print("✅ Добавлена колонка fortune_total_bet_amount")
+            except:
+                pass
         # ========== ЗАПОЛНЕНИЕ ДОСТИЖЕНИЙ ==========
         # ========== ЗАПОЛНЕНИЕ ДОСТИЖЕНИЙ ==========
         achievements_list = [
@@ -5917,7 +5936,13 @@ restore_fortune_from_db()
 start_fortune_timer_thread()
 
 if __name__ == '__main__':
+    # Запускаем polling для Telegram
     threading.Thread(target=handle_telegram_updates, daemon=True).start()
+
+    # Запускаем Фортуну
+    restore_fortune_from_db()
+    start_fortune_timer_thread()
+
     print("\n" + "=" * 60)
     print("🔧 WereGood Bot - ПОЛНАЯ ВЕРСИЯ С ДОСТИЖЕНИЯМИ И ФОРТУНОЙ")
     print("=" * 60)
@@ -5944,4 +5969,5 @@ if __name__ == '__main__':
     print(f"👑 Админ-панель: http://0.0.0.0:5000/admin?key={ADMIN_SECRET}")
     print(f"🎫 Активация промокода: {WEBHOOK_URL}/claim?code=ВАШ_КОД")
     print("=" * 60)
+
     socketio.run(app, host='0.0.0.0', port=5000, debug=False, use_reloader=False, allow_unsafe_werkzeug=True)
