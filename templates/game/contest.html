@@ -1,0 +1,100 @@
+<div id="contestPage" class="contest-page">
+    <div class="contest-header">
+        <button class="back-btn" onclick="closeContestPage()">←</button>
+        <h2>🏆 РЕФЕРАЛЬНЫЙ КОНКУРС 🏆</h2>
+    </div>
+
+    <!-- ТАЙМЕР -->
+    <div class="contest-timer-card">
+        <div class="timer-label">⏰ ДО ОКОНЧАНИЯ КОНКУРСА</div>
+        <div class="contest-timer-value" id="contestTimer">144:00:00</div>
+        <div class="timer-bar-bg">
+            <div class="timer-bar-fill" id="contestTimerBar"></div>
+        </div>
+    </div>
+
+    <!-- ПРИЗОВОЙ ФОНД -->
+    <div class="contest-prize-card">
+        <div class="prize-icon">🏆</div>
+        <div class="prize-info">
+            <div class="prize-label">ПРИЗОВОЙ ФОНД</div>
+            <div class="prize-value">2 000 LP</div>
+            <div class="prize-winners">20 победителей</div>
+        </div>
+    </div>
+
+    <!-- ВАШ ПРОГРЕСС -->
+    <div class="contest-progress-card">
+        <div class="progress-title">📊 ВАШ ПРОГРЕСС</div>
+        <div class="progress-stats">
+            <div class="stat-item">
+                <span class="stat-icon">👥</span>
+                <span class="stat-label">Приглашено рефералов:</span>
+                <span class="stat-value" id="contestReferralsCount">0</span>
+                <span class="stat-target">/ 3</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-icon">🎫</span>
+                <span class="stat-label">Ваши билеты:</span>
+                <span class="stat-value" id="contestTicketsCount">0</span>
+                <span class="stat-target">билетов</span>
+            </div>
+        </div>
+        <div class="progress-bar-container">
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill" id="contestProgressFill" style="width: 0%"></div>
+            </div>
+            <div class="progress-text" id="contestProgressText">0/3 рефералов</div>
+        </div>
+    </div>
+
+    <!-- УСЛОВИЯ КОНКУРСА -->
+    <div class="contest-rules-card">
+        <div class="rules-header">📋 УСЛОВИЯ КОНКУРСА</div>
+        <div class="rules-content">
+            <p>🏆 Призовой фонд: <strong>2 000 LP Coin</strong>, которые разделят между собой <strong>20 игроков</strong>.</p>
+            <p>📌 Для участия нужно выполнить условия:</p>
+            <ul>
+                <li>Пригласить минимум <strong>3 новых рефералов</strong></li>
+                <li>Каждый реферал после регистрации должен сделать <strong>300 кликов</strong> по монете</li>
+                <li>Только после этого реферал засчитывается в ваш прогресс</li>
+            </ul>
+            <p>⏰ Подведение итогов через <strong>7 дней</strong> после начала конкурса.</p>
+            <p>🎫 Каждый выполненный реферал даёт вам <strong>1 билет</strong> в розыгрыше призового фонда!</p>
+        </div>
+    </div>
+
+    <!-- ВАША РЕФЕРАЛЬНАЯ ССЫЛКА -->
+    <div class="contest-link-card">
+        <div class="link-header">🔗 ВАША РЕФЕРАЛЬНАЯ ССЫЛКА</div>
+        <div class="link-row">
+            <input type="text" id="contestReferralLink" readonly class="contest-link-input">
+            <button class="contest-copy-btn" onclick="copyContestReferralLink()">
+                📋 Копировать
+            </button>
+        </div>
+        <button class="contest-share-btn" onclick="shareContestReferralLink()">
+            📤 Поделиться ссылкой
+        </button>
+    </div>
+
+    <!-- СПИСОК РЕФЕРАЛОВ С ПРОГРЕССОМ -->
+    <div class="contest-referrals-card">
+        <div class="referrals-header">
+            <span>👥 МОИ РЕФЕРАЛЫ</span>
+            <span class="referrals-badge" id="contestReferralsBadge">0/3</span>
+        </div>
+        <div class="contest-referrals-list" id="contestReferralsList">
+            <div class="empty-state">😢 Пока нет приглашённых друзей</div>
+        </div>
+    </div>
+
+    <!-- ИНФОРМАЦИЯ О БИЛЕТАХ -->
+    <div class="contest-info-card">
+        <div class="info-icon">🎫</div>
+        <div class="info-text">
+            <strong>Как получить билеты?</strong>
+            <p>За каждого реферала, который выполнил условие (300 кликов), вы получаете 1 билет. Чем больше билетов — тем выше шанс выиграть приз!</p>
+        </div>
+    </div>
+</div>

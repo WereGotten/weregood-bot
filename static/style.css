@@ -5153,3 +5153,384 @@ body.light-theme .star-upgrade-card {
         height: 24px;
     }
 }
+/* ========== СТРАНИЦА КОНКУРСА ========== */
+.contest-page {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    max-width: 500px;
+    margin: 0 auto;
+    background: linear-gradient(145deg, #0a0a1a, #0d0d20);
+    z-index: 300;
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.contest-page.active {
+    transform: translateX(0);
+}
+
+.contest-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255, 215, 0, 0.15);
+}
+
+.contest-header h2 {
+    font-size: 1.1rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+/* Таймер */
+.contest-timer-card {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.12), rgba(255, 165, 0, 0.06));
+    border-radius: 24px;
+    padding: 20px;
+    margin-bottom: 20px;
+    text-align: center;
+    border: 1px solid rgba(255, 215, 0, 0.2);
+}
+
+.contest-timer-value {
+    font-size: 2rem;
+    font-weight: 800;
+    font-family: 'Courier New', monospace;
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    letter-spacing: 4px;
+    margin: 12px 0;
+}
+
+.timer-bar-bg {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    height: 6px;
+    overflow: hidden;
+    margin-top: 12px;
+}
+
+.timer-bar-fill {
+    background: linear-gradient(90deg, #FFD700, #FFA500);
+    height: 100%;
+    width: 0%;
+    border-radius: 20px;
+    transition: width 0.3s linear;
+}
+
+/* Призовой фонд */
+.contest-prize-card {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 165, 0, 0.08));
+    border-radius: 24px;
+    padding: 20px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border: 1px solid rgba(255, 215, 0, 0.25);
+}
+
+.prize-icon {
+    font-size: 3rem;
+}
+
+.prize-info {
+    flex: 1;
+}
+
+.prize-label {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.5);
+    letter-spacing: 1px;
+}
+
+.prize-value {
+    font-size: 1.6rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.prize-winners {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.6);
+    margin-top: 4px;
+}
+
+/* Прогресс */
+.contest-progress-card {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    padding: 16px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(255, 215, 0, 0.1);
+}
+
+.progress-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #FFD700;
+    margin-bottom: 12px;
+}
+
+.progress-stats {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.stat-item {
+    flex: 1;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 16px;
+    padding: 12px;
+    text-align: center;
+}
+
+.stat-icon {
+    font-size: 1.3rem;
+    display: block;
+    margin-bottom: 6px;
+}
+
+.stat-label {
+    font-size: 0.6rem;
+    color: rgba(255, 255, 255, 0.5);
+    display: block;
+    margin-bottom: 4px;
+}
+
+.stat-value {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #FFD700;
+}
+
+.stat-target {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.progress-bar-container {
+    margin-top: 12px;
+}
+
+.progress-text {
+    font-size: 0.6rem;
+    text-align: center;
+    margin-top: 8px;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* Условия */
+.contest-rules-card {
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 20px;
+    padding: 16px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(255, 215, 0, 0.1);
+}
+
+.rules-header {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #FFD700;
+    margin-bottom: 12px;
+}
+
+.rules-content {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.7);
+    line-height: 1.5;
+}
+
+.rules-content ul {
+    margin: 8px 0;
+    padding-left: 20px;
+}
+
+.rules-content li {
+    margin: 6px 0;
+}
+
+/* Реферальная ссылка */
+.contest-link-card {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    padding: 16px;
+    margin-bottom: 20px;
+}
+
+.link-header {
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.link-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.contest-link-input {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 215, 0, 0.15);
+    border-radius: 30px;
+    padding: 10px 12px;
+    color: white;
+    font-size: 0.65rem;
+    outline: none;
+}
+
+.contest-copy-btn {
+    background: rgba(255, 215, 0, 0.12);
+    border: none;
+    border-radius: 30px;
+    padding: 8px 16px;
+    color: #FFD700;
+    font-weight: 600;
+    font-size: 0.7rem;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.contest-share-btn {
+    width: 100%;
+    background: rgba(255, 215, 0, 0.1);
+    border: 1px solid rgba(255, 215, 0, 0.2);
+    border-radius: 30px;
+    padding: 10px;
+    font-weight: 600;
+    font-size: 0.75rem;
+    color: #FFD700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+/* Список рефералов */
+.contest-referrals-card {
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 20px;
+    padding: 16px;
+    margin-bottom: 20px;
+}
+
+.referrals-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #FFD700;
+}
+
+.referrals-badge {
+    background: rgba(255, 215, 0, 0.15);
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.65rem;
+}
+
+.contest-referrals-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.contest-referral-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+    margin-bottom: 8px;
+}
+
+.referral-info {
+    flex: 1;
+}
+
+.referral-name {
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.referral-progress {
+    font-size: 0.6rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.referral-status {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+}
+
+.referral-status.completed {
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+}
+
+.referral-status.pending {
+    background: rgba(255, 165, 0, 0.15);
+    color: #FFA500;
+}
+
+/* Инфо карточка */
+.contest-info-card {
+    background: rgba(255, 215, 0, 0.08);
+    border-radius: 16px;
+    padding: 12px;
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.info-icon {
+    font-size: 1.5rem;
+}
+
+.info-text {
+    flex: 1;
+    font-size: 0.65rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.info-text strong {
+    display: block;
+    margin-bottom: 4px;
+    color: #FFD700;
+}
+
+@media (max-width: 480px) {
+    .contest-timer-value {
+        font-size: 1.4rem;
+        letter-spacing: 2px;
+    }
+    .prize-value {
+        font-size: 1.2rem;
+    }
+}

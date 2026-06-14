@@ -4940,9 +4940,293 @@
     function calculateBet() {
         // функция расчёта комиссии, если нужна
     }
-    // ==================== КНОПКА В РАЗРАБОТКЕ ====================
-window.showDevelopmentToast = function() {
+    // ==================== РЕФЕРАЛЬНЫЙ КОНКУРС ====================
+let contestTimerInterval = null;
+let contestStartTime = null;
+const CONTEST_DURATION_HOURS = 144; // 7 дней = 168 часов, но ты сказал 144
+
+// Проверка, является ли пользователь админом (только для тебя)
+function isAdminUser() {
+    // Твой Telegram ID (замени на свой)
+    const adminIds = [5264622363]; // твой ID из .env
+    return adminIds.includes(userId);
+}
+
+// Открытие страницы конкурса
+window.openContestPage = function() {
     playNavSound();
-    showToast('🚧 В разработке', 'info');
+
+    // Проверяем, админ ли пользователь
+    if (!isAdminUser()) {
+        showToast('🚧 Функция в разработке', 'info');
+        return;
+    }
+
+    // Загружаем HTML шаблон если его нет
+    const existingPage = document.getElementById('contestPage');
+    if (existingPage && existingPage.innerHTML.trim() === '') {
+        // Загружаем содержимое
+        fetch('/static/contest.html')
+            .then(response => response.text())
+            .then(html => {
+                existingPage.innerHTML = html;
+                initContestPage();
+            })
+            .catch(() => {
+                // Если файла нет, используем встроенный
+                loadInlineContestPage();
+            });
+    } else if (existingPage) {
+        initContestPage();
+    } else {
+        loadInlineContestPage();
+    }
 };
+
+function loadInlineContestPage() {
+    const container = document.getElementById('contestPage');
+    if (!container) return;
+
+    container.innerHTML = `
+        <div class="contest-header">
+            <button class="back-btn" onclick="closeContestPage()">←</button>
+            <h2>🏆 РЕФЕРАЛЬНЫЙ КОНКУРС 🏆</h2>
+        </div>
+        <div class="contest-timer-card">
+            <div class="timer-label">⏰ ДО ОКОНЧАНИЯ КОНКУРСА</div>
+            <div class="contest-timer-value" id="contestTimer">144:00:00</div>
+            <div class="timer-bar-bg"><div class="timer-bar-fill" id="contestTimerBar"></div></div>
+        </div>
+        <div class="contest-prize-card">
+            <div class="prize-icon">🏆</div>
+            <div class="prize-info">
+                <div class="prize-label">ПРИЗОВОЙ ФОНД</div>
+                <div class="prize-value">2 000 LP</div>
+                <div class="prize-winners">20 победителей</div>
+            </div>
+        </div>
+        <div class="contest-progress-card">
+            <div class="progress-title">📊 ВАШ ПРОГРЕСС</div>
+            <div class="progress-stats">
+                <div class="stat-item">
+                    <span class="stat-icon">👥</span>
+                    <span class="stat-label">Приглашено рефералов:</span>
+                    <span class="stat-value" id="contestReferralsCount">0</span>
+                    <span class="stat-target">/ 3</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-icon">🎫</span>
+                    <span class="stat-label">Ваши билеты:</span>
+                    <span class="stat-value" id="contestTicketsCount">0</span>
+                    <span class="stat-target">билетов</span>
+                </div>
+            </div>
+            <div class="progress-bar-container">
+                <div class="progress-bar-bg"><div class="progress-bar-fill" id="contestProgressFill" style="width: 0%"></div></div>
+                <div class="progress-text" id="contestProgressText">0/3 рефералов</div>
+            </div>
+        </div>
+        <div class="contest-rules-card">
+            <div class="rules-header">📋 УСЛОВИЯ КОНКУРСА</div>
+            <div class="rules-content">
+                <p>🏆 Призовой фонд: <strong>2 000 LP Coin</strong>, которые разделят между собой <strong>20 игроков</strong>.</p>
+                <p>📌 Для участия нужно выполнить условия:</p>
+                <ul><li>Пригласить минимум <strong>3 новых рефералов</strong></li>
+                <li>Каждый реферал после регистрации должен сделать <strong>300 кликов</strong> по монете</li>
+                <li>Только после этого реферал засчитывается в ваш прогресс</li></ul>
+                <p>⏰ Подведение итогов через <strong>7 дней</strong> после начала конкурса.</p>
+                <p>🎫 Каждый выполненный реферал даёт вам <strong>1 билет</strong> в розыгрыше призового фонда!</p>
+            </div>
+        </div>
+        <div class="contest-link-card">
+            <div class="link-header">🔗 ВАША РЕФЕРАЛЬНАЯ ССЫЛКА</div>
+            <div class="link-row">
+                <input type="text" id="contestReferralLink" readonly class="contest-link-input">
+                <button class="contest-copy-btn" onclick="copyContestReferralLink()">📋 Копировать</button>
+            </div>
+            <button class="contest-share-btn" onclick="shareContestReferralLink()">📤 Поделиться ссылкой</button>
+        </div>
+        <div class="contest-referrals-card">
+            <div class="referrals-header"><span>👥 МОИ РЕФЕРАЛЫ</span><span class="referrals-badge" id="contestReferralsBadge">0/3</span></div>
+            <div class="contest-referrals-list" id="contestReferralsList"><div class="empty-state">😢 Пока нет приглашённых друзей</div></div>
+        </div>
+        <div class="contest-info-card">
+            <div class="info-icon">🎫</div>
+            <div class="info-text"><strong>Как получить билеты?</strong><p>За каждого реферала, который выполнил условие (300 кликов), вы получаете 1 билет. Чем больше билетов — тем выше шанс выиграть приз!</p></div>
+        </div>
+    `;
+    initContestPage();
+}
+
+function closeContestPage() {
+    const page = document.getElementById('contestPage');
+    if (page) page.classList.remove('active');
+    if (contestTimerInterval) {
+        clearInterval(contestTimerInterval);
+        contestTimerInterval = null;
+    }
+}
+
+function initContestPage() {
+    const page = document.getElementById('contestPage');
+    if (page) page.classList.add('active');
+
+    // Устанавливаем реферальную ссылку
+    const referralInput = document.getElementById('contestReferralLink');
+    if (referralInput) {
+        const link = document.getElementById('referralLinkInput')?.value || `https://t.me/${BOT_USERNAME}/WereGood?startapp=${userId}`;
+        referralInput.value = link;
+    }
+
+    // Запускаем таймер (144 часа от текущего момента)
+    startContestTimer();
+
+    // Загружаем данные рефералов для конкурса
+    loadContestReferralsData();
+}
+
+function startContestTimer() {
+    if (contestTimerInterval) clearInterval(contestTimerInterval);
+
+    // Сохраняем время старта в localStorage
+    let startTime = localStorage.getItem('contest_start_time');
+    if (!startTime) {
+        startTime = Date.now();
+        localStorage.setItem('contest_start_time', startTime);
+    }
+    contestStartTime = parseInt(startTime);
+    const endTime = contestStartTime + (CONTEST_DURATION_HOURS * 3600 * 1000);
+
+    function updateTimer() {
+        const now = Date.now();
+        let remaining = Math.max(0, endTime - now);
+
+        const hours = Math.floor(remaining / (3600 * 1000));
+        const minutes = Math.floor((remaining % (3600 * 1000)) / (60 * 1000));
+        const seconds = Math.floor((remaining % (60 * 1000)) / 1000);
+
+        const timerElement = document.getElementById('contestTimer');
+        if (timerElement) {
+            timerElement.innerText = `${hours.toString().padStart(3, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        const totalSeconds = CONTEST_DURATION_HOURS * 3600;
+        const elapsedSeconds = (now - contestStartTime) / 1000;
+        const percent = Math.max(0, Math.min(100, (elapsedSeconds / totalSeconds) * 100));
+        const barFill = document.getElementById('contestTimerBar');
+        if (barFill) barFill.style.width = percent + '%';
+
+        if (remaining <= 0) {
+            clearInterval(contestTimerInterval);
+            contestTimerInterval = null;
+            if (timerElement) timerElement.innerText = '00:00:00';
+            showToast('🏆 Конкурс завершён! Итоги скоро будут подведены!', 'success');
+        }
+    }
+
+    updateTimer();
+    contestTimerInterval = setInterval(updateTimer, 1000);
+}
+
+async function loadContestReferralsData() {
+    try {
+        const res = await fetch('/api/get_referrals', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId })
+        });
+        const data = await res.json();
+
+        // Получаем клики рефералов (нужно добавить API на бэкенде)
+        // Пока используем мок-данные на основе total_earned_wg (чем больше заработано WG, тем больше кликов)
+        const referrals = data.referrals || [];
+
+        let qualifiedCount = 0;
+        let ticketsCount = 0;
+        let referralsHtml = '';
+
+        for (const ref of referrals) {
+            // Предполагаем, что 0.01 WG = 1 клик (примерно)
+            const estimatedClicks = Math.min(300, Math.floor((ref.earned_wg || 0) / 0.01));
+            const isCompleted = estimatedClicks >= 300;
+
+            if (isCompleted) {
+                qualifiedCount++;
+                ticketsCount++;
+            }
+
+            const statusClass = isCompleted ? 'completed' : 'pending';
+            const statusText = isCompleted ? '✓ Выполнено' : `${estimatedClicks}/300 кликов`;
+
+            referralsHtml += `
+                <div class="contest-referral-item">
+                    <div class="referral-info">
+                        <div class="referral-name">${escapeHtml(ref.username)}</div>
+                        <div class="referral-progress">📊 Прогресс: ${estimatedClicks}/300 кликов</div>
+                    </div>
+                    <div class="referral-status ${statusClass}">${statusText}</div>
+                </div>
+            `;
+        }
+
+        const referralsList = document.getElementById('contestReferralsList');
+        if (referralsList) {
+            if (referralsHtml === '') {
+                referralsList.innerHTML = '<div class="empty-state">😢 Пока нет приглашённых друзей</div>';
+            } else {
+                referralsList.innerHTML = referralsHtml;
+            }
+        }
+
+        const referralsCountEl = document.getElementById('contestReferralsCount');
+        if (referralsCountEl) referralsCountEl.innerText = qualifiedCount;
+
+        const ticketsCountEl = document.getElementById('contestTicketsCount');
+        if (ticketsCountEl) ticketsCountEl.innerText = ticketsCount;
+
+        const referralsBadge = document.getElementById('contestReferralsBadge');
+        if (referralsBadge) referralsBadge.innerText = `${qualifiedCount}/3`;
+
+        const progressPercent = Math.min(100, (qualifiedCount / 3) * 100);
+        const progressFill = document.getElementById('contestProgressFill');
+        if (progressFill) progressFill.style.width = progressPercent + '%';
+
+        const progressText = document.getElementById('contestProgressText');
+        if (progressText) progressText.innerText = `${qualifiedCount}/3 рефералов`;
+
+    } catch(e) {
+        console.error('Error loading contest referrals:', e);
+    }
+}
+
+function copyContestReferralLink() {
+    const input = document.getElementById('contestReferralLink');
+    if (input) {
+        input.select();
+        document.execCommand('copy');
+        showToast('🔗 Ссылка скопирована!', 'success');
+    }
+}
+
+function shareContestReferralLink() {
+    const link = document.getElementById('contestReferralLink')?.value || '';
+    const message = `🏆 Участвуй в реферальном конкурсе WereGood!\n\nПриглашай друзей, выполняй условия и выигрывай LP Coin!\n\n${link}`;
+
+    if (navigator.share) {
+        navigator.share({ title: 'WereGood Конкурс', text: message }).catch(() => {
+            window.open(`https://t.me/share/url?text=${encodeURIComponent(message)}`, '_blank');
+        });
+    } else {
+        window.open(`https://t.me/share/url?text=${encodeURIComponent(message)}`, '_blank');
+    }
+}
+
+// Обновляем данные конкурса периодически
+setInterval(() => {
+    const page = document.getElementById('contestPage');
+    if (page && page.classList.contains('active')) {
+        loadContestReferralsData();
+    }
+}, 30000);
+
 </script>
