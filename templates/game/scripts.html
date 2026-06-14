@@ -5204,9 +5204,9 @@ window.openContestPage = async function() {
                 <div class="rules-title">📋 ПРАВИЛА КОНКУРСА</div>
                 <ul class="rules-list">
                     <li>🗓️ Конкурс начался <strong>14 июня 2026, 17:00 МСК</strong></li>
-                    <li>Пригласи минимум 3 новых друзей за время конкурса</li>
+                    <li>Пригласи новых друзей за время конкурса</li>
                     <li>Каждый друг должен набрать 300 кликов по монете</li>
-                    <li>За каждые 3 выполненных реферала → 1 билет</li>
+                    <li><strong>За каждые 3 выполненных реферала → 1 билет</strong></li>
                     <li>Чем больше билетов — тем выше шанс выиграть 2 000 LP</li>
                 </ul>
             </div>
@@ -5295,7 +5295,7 @@ function startContestTimer() {
     contestTimerInterval = setInterval(updateTimer, 1000);
 }
 
-// ========== ГЛАВНАЯ ФУНКЦИЯ — ОДИН ЗАПРОС, ВСЕ ДАННЫЕ ==========
+// ========== ГЛАВНАЯ ФУНКЦИЯ — НОВАЯ ЛОГИКА БИЛЕТОВ ==========
 async function loadContestReferralsData() {
     try {
         const res = await fetch('/api/get_referrals', {
@@ -5327,34 +5327,42 @@ async function loadContestReferralsData() {
         contestNewReferrals = newReferrals;
         updateReferralsList(contestNewReferrals);
 
-        // Подсчёт выполненных
-        let qualified = 0;
+        // ========== НОВАЯ ЛОГИКА ПОДСЧЁТА ==========
+        // Считаем только выполненных рефералов (300+ кликов)
+        let completedCount = 0;
         for (const ref of newReferrals) {
             if ((ref.total_clicks || 0) >= 300) {
-                qualified++;
+                completedCount++;
                 console.log(`   ✅ ${ref.username} выполнил условие (${ref.total_clicks}/300)`);
             } else {
                 console.log(`   ⏳ ${ref.username} ещё не выполнил (${ref.total_clicks || 0}/300)`);
             }
         }
 
-        contestQualifiedCount = qualified;
-        contestTicketsCount = Math.floor(qualified / 3);
+        // Билеты = каждые 3 реферала
+        contestTicketsCount = Math.floor(completedCount / 3);
+        // Прогресс = остаток от деления на 3 (0, 1 или 2)
+        contestQualifiedCount = completedCount % 3;
+
+        console.log(`📊 Выполнено рефералов: ${completedCount}`);
+        console.log(`🎫 Получено билетов: ${contestTicketsCount}`);
+        console.log(`📈 Текущий прогресс: ${contestQualifiedCount}/3`);
+
         saveContestData();
 
         // Обновление UI
         const qEl = document.getElementById('contestReferralsCount');
-        if (qEl) qEl.innerText = qualified;
+        if (qEl) qEl.innerText = contestQualifiedCount;
 
         const tEl = document.getElementById('contestTicketsCount');
         if (tEl) tEl.innerText = contestTicketsCount;
 
-        const progressPercent = Math.min(100, (qualified / 3) * 100);
+        const progressPercent = Math.min(100, (contestQualifiedCount / 3) * 100);
         const pFill = document.getElementById('contestProgressFill');
         if (pFill) pFill.style.width = progressPercent + '%';
 
         const pText = document.getElementById('contestProgressText');
-        if (pText) pText.innerText = `${qualified} / 3 рефералов`;
+        if (pText) pText.innerText = `${contestQualifiedCount} / 3 рефералов`;
 
         const badge = document.getElementById('contestReferralsCountBadge');
         if (badge) badge.innerText = newReferrals.length;
@@ -5383,16 +5391,16 @@ async function loadContestWinnersList() {
         for (const player of data.leaderboard) {
             const avatarHtml = player.avatar_url ? `<img src="${player.avatar_url}">` : '👤';
 
-            // Медальки для топ-3
             let rankDisplay = '';
             if (player.rank === 1) rankDisplay = '🥇';
             else if (player.rank === 2) rankDisplay = '🥈';
             else if (player.rank === 3) rankDisplay = '🥉';
             else rankDisplay = `${player.rank}`;
 
-            // Бейдж статуса
+            // Прогресс = остаток от деления на 3
+            const progress = player.new_referrals % 3;
+            const statusText = player.is_qualified ? 'Участник' : `${progress}/3`;
             const badgeClass = player.is_qualified ? 'completed' : '';
-            const badgeText = player.is_qualified ? 'Участник' : `${player.new_referrals}/3`;
 
             html += `
                 <div class="winner-item" onclick="openPlayerProfile(${player.user_id}, 0)">
@@ -5401,7 +5409,7 @@ async function loadContestWinnersList() {
                     <div class="winner-info">
                         <div class="winner-name">
                             ${escapeHtml(player.username)}
-                            <span class="winner-badge ${badgeClass}">${badgeText}</span>
+                            <span class="winner-badge ${badgeClass}">${statusText}</span>
                             ${player.role === 'founder' ? '<span class="role-badge founder" style="font-size:0.55rem; padding:2px 6px;">👑</span>' : ''}
                             ${player.role === 'legend' ? '<span class="role-badge legend" style="font-size:0.55rem; padding:2px 6px;">👑</span>' : ''}
                         </div>
