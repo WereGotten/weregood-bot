@@ -4979,6 +4979,22 @@ function loadContestData() {
     }
 }
 
+// Получение зашифрованной реферальной ссылки с сервера (как в профиле)
+async function getSecureReferralLink() {
+    try {
+        const res = await fetch('/api/get_referral_link', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId })
+        });
+        const data = await res.json();
+        return data.link;
+    } catch(e) {
+        console.error('Error getting referral link:', e);
+        return null;
+    }
+}
+
 // Отображение последних 3 рефералов
 function updateReferralsList(referrals) {
     const container = document.getElementById('contestReferralsList');
@@ -5092,7 +5108,7 @@ window.closeAllReferralsModal = function() {
     if (modal) modal.classList.remove('active');
 };
 
-window.openContestPage = function() {
+window.openContestPage = async function() {
     playNavSound();
 
     if (!isAdminUser()) {
@@ -5209,11 +5225,17 @@ window.openContestPage = function() {
         };
     });
 
-    // Устанавливаем ссылку
-    const botName = window.BOT_USERNAME || 'WereGooodbot';
+    // Устанавливаем ЗАШИФРОВАННУЮ реферальную ссылку (как в профиле)
     const referralInput = document.getElementById('contestReferralLink');
     if (referralInput) {
-        referralInput.value = `https://t.me/${botName}/WereGood?startapp=${userId}`;
+        const secureLink = await getSecureReferralLink();
+        if (secureLink) {
+            referralInput.value = secureLink;
+        } else {
+            const botName = window.BOT_USERNAME || 'WereGooodbot';
+            referralInput.value = `https://t.me/${botName}/WereGood?startapp=${userId}`;
+            referralInput.style.opacity = '0.7';
+        }
     }
 
     startContestTimer();
@@ -5368,15 +5390,21 @@ async function loadContestWinnersList() {
 
 function copyContestReferralLink() {
     const input = document.getElementById('contestReferralLink');
-    if (input) {
+    if (input && input.value && !input.value.includes('Смотри в разделе')) {
         input.select();
         document.execCommand('copy');
         showToast('🔗 Ссылка скопирована!', 'success');
+    } else if (input) {
+        showToast('❌ Ссылка не загружена, попробуйте позже', 'error');
     }
 }
 
 function shareContestReferralLink() {
     const link = document.getElementById('contestReferralLink')?.value || '';
+    if (!link || link.includes('Смотри в разделе')) {
+        showToast('❌ Ссылка не загружена, попробуйте позже', 'error');
+        return;
+    }
     const message = `🏆 Участвуй в реферальном конкурсе WereGood!\n\nПриглашай друзей и выигрывай 2 000 LP!\n\n${link}`;
 
     if (navigator.share) {
