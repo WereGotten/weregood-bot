@@ -4946,10 +4946,29 @@
     // ==================== РЕФЕРАЛЬНЫЙ КОНКУРС ====================
 let contestTimerInterval = null;
 let contestStartTime = null;
-const CONTEST_DURATION_HOURS = 144;
+let contestEndTime = null;
 let contestNewReferrals = [];
 let contestQualifiedCount = 0;
 let contestTicketsCount = 0;
+
+// ФИКСИРОВАННАЯ ДАТА СТАРТА КОНКУРСА: 14 июня 2026, 17:00 МСК
+function getContestStartDate() {
+    // 14 июня 2026 года, 17:00 по МСК (UTC+3)
+    // UTC+3 = нужно вычесть 3 часа для UTC
+    return new Date(Date.UTC(2026, 5, 14, 14, 0, 0)); // 14:00 UTC = 17:00 MSK
+}
+
+// ФИКСИРОВАННАЯ ДАТА КОНЦА КОНКУРСА: через 144 часа (6 дней)
+function getContestEndDate() {
+    const start = getContestStartDate();
+    return new Date(start.getTime() + (CONTEST_DURATION_HOURS * 3600 * 1000));
+}
+
+// Текущее время по МСК
+function getNowMSK() {
+    const now = new Date();
+    return new Date(now.getTime() + (3 * 60 * 60 * 1000));
+}
 
 function isAdminUser() {
     const adminIds = [5264622363, 685035265];
@@ -4958,10 +4977,9 @@ function isAdminUser() {
 
 function saveContestData() {
     const data = {
-        startTime: contestStartTime,
-        newReferrals: contestNewReferrals,
         qualifiedCount: contestQualifiedCount,
-        ticketsCount: contestTicketsCount
+        ticketsCount: contestTicketsCount,
+        newReferrals: contestNewReferrals
     };
     localStorage.setItem('contest_data', JSON.stringify(data));
 }
@@ -4971,12 +4989,14 @@ function loadContestData() {
     if (saved) {
         try {
             const data = JSON.parse(saved);
-            contestStartTime = data.startTime;
             contestNewReferrals = data.newReferrals || [];
             contestQualifiedCount = data.qualifiedCount || 0;
             contestTicketsCount = data.ticketsCount || 0;
         } catch(e) {}
     }
+    // Устанавливаем фиксированную дату старта
+    contestStartTime = getContestStartDate().getTime();
+    contestEndTime = getContestEndDate().getTime();
 }
 
 // Получение зашифрованной реферальной ссылки
@@ -5063,12 +5083,14 @@ window.showAllReferralsModal = function() {
     .then(res => res.json())
     .then(data => {
         const allReferrals = data.referrals || [];
-        const contestStartDate = new Date(contestStartTime);
+        const contestStartDate = getContestStartDate();
 
-        // Фильтруем только новых (после даты старта)
+        // Фильтруем только новых (после 14.06.2026 17:00 МСК)
         const newReferrals = allReferrals.filter(ref => {
             const refDate = new Date(ref.created_at || ref.date);
-            return refDate >= contestStartDate;
+            // Приводим дату реферала к МСК для сравнения
+            const refDateMSK = new Date(refDate.getTime() + (3 * 60 * 60 * 1000));
+            return refDateMSK >= contestStartDate;
         });
 
         if (newReferrals.length === 0) {
@@ -5106,27 +5128,21 @@ window.closeAllReferralsModal = function() {
     if (modal) modal.classList.remove('active');
 };
 
-// Сброс прогресса конкурса (только для админов)
+// Сброс прогресса (очищает сохранённых рефералов, но дата старта остаётся фиксированной)
 window.resetContestProgress = function() {
     if (!isAdminUser()) {
         showToast('🚧 Только для администраторов', 'error');
         return;
     }
 
-    // Устанавливаем дату начала конкурса на текущий момент
-    contestStartTime = Date.now();
-    localStorage.setItem('contest_start_time', contestStartTime);
-
-    // Очищаем прогресс
     contestNewReferrals = [];
     contestQualifiedCount = 0;
     contestTicketsCount = 0;
     saveContestData();
 
-    showToast('📅 Прогресс конкурса сброшен! Учитываются только новые рефералы', 'success');
-    console.log('📅 Новая дата начала конкурса:', new Date(contestStartTime).toLocaleString());
+    const startDate = getContestStartDate();
+    showToast(`📅 Прогресс сброшен! Конкурс начался ${startDate.toLocaleString()}`, 'success');
 
-    // Перезагружаем данные
     loadContestReferralsData();
 };
 
@@ -5145,13 +5161,6 @@ window.openContestPage = async function() {
     }
 
     loadContestData();
-
-    // Устанавливаем дату старта если её нет
-    if (!contestStartTime || contestStartTime === 0) {
-        contestStartTime = Date.now();
-        localStorage.setItem('contest_start_time', contestStartTime);
-        saveContestData();
-    }
 
     container.innerHTML = `
         <div class="contest-header">
@@ -5219,6 +5228,7 @@ window.openContestPage = async function() {
             <div class="rules-card">
                 <div class="rules-title">📋 ПРАВИЛА КОНКУРСА</div>
                 <ul class="rules-list">
+                    <li>🗓️ Конкурс начался <strong>14 июня 2026, 17:00 МСК</strong></li>
                     <li>Пригласи минимум 3 новых друзей за время конкурса</li>
                     <li>Каждый друг должен набрать 300 кликов по монете</li>
                     <li>За каждые 3 выполненных реферала → 1 билет</li>
@@ -5279,17 +5289,23 @@ window.closeContestPage = function() {
 function startContestTimer() {
     if (contestTimerInterval) clearInterval(contestTimerInterval);
 
-    let startTime = localStorage.getItem('contest_start_time');
-    if (!startTime) {
-        startTime = Date.now();
-        localStorage.setItem('contest_start_time', startTime);
-    }
-    contestStartTime = parseInt(startTime);
-    const endTime = contestStartTime + (CONTEST_DURATION_HOURS * 3600 * 1000);
+    contestStartTime = getContestStartDate().getTime();
+    contestEndTime = getContestEndDate().getTime();
 
     function updateTimer() {
-        const now = Date.now();
-        let remaining = Math.max(0, endTime - now);
+        const nowMSK = getNowMSK();
+        const now = nowMSK.getTime();
+        let remaining = Math.max(0, contestEndTime - now);
+
+        if (remaining <= 0) {
+            clearInterval(contestTimerInterval);
+            contestTimerInterval = null;
+            const timerEl = document.getElementById('contestTimer');
+            if (timerEl) timerEl.innerText = '00:00:00';
+            showToast('🏆 Конкурс завершён!', 'success');
+            return;
+        }
+
         const hours = Math.floor(remaining / (3600 * 1000));
         const minutes = Math.floor((remaining % (3600 * 1000)) / (60 * 1000));
         const seconds = Math.floor((remaining % (60 * 1000)) / 1000);
@@ -5304,12 +5320,6 @@ function startContestTimer() {
         const percent = Math.max(0, Math.min(100, (elapsedSeconds / totalSeconds) * 100));
         const barFill = document.getElementById('contestTimerBar');
         if (barFill) barFill.style.width = percent + '%';
-
-        if (remaining <= 0 && contestTimerInterval) {
-            clearInterval(contestTimerInterval);
-            contestTimerInterval = null;
-            showToast('🏆 Конкурс завершён!', 'success');
-        }
     }
     updateTimer();
     contestTimerInterval = setInterval(updateTimer, 1000);
@@ -5325,36 +5335,28 @@ async function loadContestReferralsData() {
         const data = await res.json();
         const allReferrals = data.referrals || [];
 
-        // Убеждаемся, что дата старта конкурса установлена
-        if (!contestStartTime || contestStartTime === 0) {
-            let startTime = localStorage.getItem('contest_start_time');
-            if (!startTime) {
-                startTime = Date.now();
-                localStorage.setItem('contest_start_time', startTime);
-            }
-            contestStartTime = parseInt(startTime);
-        }
-
-        const contestStartDate = new Date(contestStartTime);
+        const contestStartDate = getContestStartDate();
 
         console.log('╔════════════════════════════════════════════╗');
         console.log('║     ДЕБАГ РЕФЕРАЛЬНОГО КОНКУРСА           ║');
         console.log('╚════════════════════════════════════════════╝');
-        console.log('📅 Конкурс начался:', contestStartDate.toLocaleString());
+        console.log('📅 Конкурс начался (МСК):', contestStartDate.toLocaleString());
         console.log('👥 Всего рефералов в системе:', allReferrals.length);
 
-        // Фильтруем ТОЛЬКО НОВЫХ рефералов (после даты старта)
+        // Фильтруем ТОЛЬКО НОВЫХ рефералов (после 14.06.2026 17:00 МСК)
         const newReferrals = [];
 
         for (const ref of allReferrals) {
             const refDate = new Date(ref.created_at || ref.date);
-            const isAfterStart = refDate >= contestStartDate;
+            // Приводим дату реферала к МСК для сравнения
+            const refDateMSK = new Date(refDate.getTime() + (3 * 60 * 60 * 1000));
+            const isAfterStart = refDateMSK >= contestStartDate;
 
             if (isAfterStart) {
-                console.log(`✅ ${ref.username} - НОВЫЙ реферал (${refDate.toLocaleString()})`);
+                console.log(`✅ ${ref.username} - НОВЫЙ реферал (${refDateMSK.toLocaleString()})`);
                 newReferrals.push(ref);
             } else {
-                console.log(`❌ ${ref.username} - СТАРЫЙ реферал (${refDate.toLocaleString()}) - ИГНОРИРУЕТСЯ`);
+                console.log(`❌ ${ref.username} - СТАРЫЙ реферал (${refDateMSK.toLocaleString()}) - ИГНОРИРУЕТСЯ`);
             }
         }
 
