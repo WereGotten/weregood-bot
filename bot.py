@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Optional, Tuple, Dict, Any, List
 from queue import Queue
 
-from flask import Flask, request, jsonify, render_template, send_from_directory, abort
+from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
 import requests
@@ -5847,103 +5847,101 @@ def schedule_daily_top_reset():
 
 schedule_daily_top_reset()
 
+def handle_telegram_updates():
+    last_update_id = 0
+    verify_ssl = not DEBUG_MODE
+    while True:
+        try:
+            url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/getUpdates"
+            params = {"offset": last_update_id + 1, "timeout": 30}
+            response = requests.get(url, params=params, timeout=35, verify=verify_ssl)
+            updates = response.json()
+            if updates.get("ok"):
+                for update in updates.get("result", []):
+                    last_update_id = update["update_id"]
+                    if "message" in update and "text" in update["message"]:
+                        text = update["message"]["text"]
+                        chat_id = update["message"]["chat"]["id"]
+                        username = sanitize_string(update["message"]["chat"].get("username", ""))
+                        first_name = sanitize_string(update["message"]["chat"].get("first_name", ""))
+                        last_name = sanitize_string(update["message"]["chat"].get("last_name", ""))
+                        if text.startswith("/start"):
+                            parts = text.split()
+                            ref_code = parts[1] if len(parts) > 1 else None
+                            with db.get_cursor() as cursor:
+                                cursor.execute("SELECT * FROM users WHERE user_id=?", (chat_id,))
+                                existing = cursor.fetchone()
+                                if not existing:
+                                    now = time.time()
+                                    ref_code_new = hashlib.md5(str(chat_id).encode()).hexdigest()[:8]
+                                    role = "founder" if chat_id == 5264622363 else "player"
+                                    unlocked = json.dumps(["player", "founder"]) if role == "founder" else json.dumps(["player"])
+                                    referrer_id = 0
+                                    if ref_code:
+                                        cursor.execute("SELECT user_id, username FROM users WHERE referral_code=?", (ref_code,))
+                                        referrer_row = cursor.fetchone()
+                                        if referrer_row:
+                                            referrer_id = referrer_row['user_id']
+                                            cursor.execute('INSERT INTO referrals (referrer_id, referred_id, username, first_name) VALUES (?, ?, ?, ?)',
+                                                           (referrer_id, chat_id, username, first_name))
+                                            send_telegram_message(referrer_id, f"🎉 Новый реферал! {first_name or username} присоединился по вашей ссылке!")
+                                    cursor.execute('''INSERT INTO users (user_id, wg, lp, energy, last_energy_update, tickets, total_clicks, upgrade_counts, ticket_counter, referral_code, referrer_id, likes, dislikes, settings, username, first_name, last_name, avatar_url, usdt, wins, role, stars, max_energy, energy_upgrades, energy_limit_upgrades, unlocked_prefixes, tutorial_completed, ton_wallet, banned_until, ban_reason, banned_by, completed_achievements) VALUES (?, 0, 0, 500, ?, '[]', 0, '{"1":0,"2":0,"3":0}', 0, ?, ?, 0, 0, '{"theme":"dark"}', ?, ?, ?, ?, 0, 0, ?, 0, 500, 0, 0, ?, 0, '', 0, '', 0, 0)''',
+                                        (chat_id, now, ref_code_new, referrer_id, username, first_name, last_name, "", role, unlocked))
+                            keyboard = {"inline_keyboard": [[{"text": "💰 Открыть игру", "web_app": {"url": WEBHOOK_URL}}]]}
+                            send_telegram_message(chat_id, "✨ Добро пожаловать в WereGood!\n\n💰 Кликай по монете, улучшай заработок и участвуй в вызовах!\n\n⬇️ Нажми на кнопку ниже, чтобы начать!", keyboard)
+                        elif text.startswith("/help"):
+                            keyboard = {"inline_keyboard": [[{"text": "💰 Открыть игру", "web_app": {"url": WEBHOOK_URL}}]]}
+                            send_telegram_message(chat_id, "🎮 **WereGood - Помощь**\n\n💰 **Клик по монете** - зарабатывай WG\n⚡ **Энергия** - восстанавливается со временем\n🎲 **Лотерея** - участвуй за 100 LP в 21:00\n👥 **Рефералы** - приглашай друзей и получай 5%\n⭐ **Stars** - покупай улучшения за Telegram Stars\n💎 **TON** - покупай улучшения за TON\n\n🔗 **Ссылка на игру:**", keyboard)
+                        elif text.startswith("/admin"):
+                            if chat_id in ADMIN_IDS:
+                                admin_url = f"{WEBHOOK_URL}/admin?key={ADMIN_SECRET}&user_id={chat_id}"
+                                keyboard = {"inline_keyboard": [[{"text": "👑 Открыть админ-панель", "web_app": {"url": admin_url}}]]}
+                                send_telegram_message(chat_id, "👑 Админ-панель WereGood\n\n• 📊 Статистика\n• 💰 Выдача валюты\n• 🎲 Управление лотереей\n• 👑 Управление префиксами\n• 💸 Заявки на вывод\n• 🎫 Промокоды\n\n⬇️ Нажми на кнопку", keyboard)
+                            else:
+                                send_telegram_message(chat_id, "⛔ У вас нет доступа к админ-панели")
+                    elif "pre_checkout_query" in update:
+                        query = update["pre_checkout_query"]
+                        answer_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/answerPreCheckoutQuery"
+                        requests.post(answer_url, json={"pre_checkout_query_id": query["id"], "ok": True}, timeout=5, verify=verify_ssl)
+                    elif "message" in update and "successful_payment" in update["message"]:
+                        chat_id = update["message"]["chat"]["id"]
+                        handle_successful_payment(chat_id, update["message"]["successful_payment"])
+            time.sleep(1)
+        except Exception as e:
+            logger.error(f"Ошибка в polling: {e}")
+            time.sleep(5)
+
+
 
 restore_fortune_from_db()
 start_fortune_timer_thread()
 
-
-# Эндпоинт для вебхука
-@app.route(f'/webhook/{TELEGRAM_TOKEN}', methods=['POST'])
-def webhook():
-    """Обработка входящих обновлений от Telegram"""
-    try:
-        # Проверка секретного токена для безопасности
-        if request.headers.get('X-Telegram-Bot-Api-Secret-Token') != TELEGRAM_WEBHOOK_SECRET:
-            abort(403)
-
-        update = request.json
-        if update:
-            # Обрабатываем обновление в отдельном потоке
-            threading.Thread(target=process_webhook_update, args=(update,)).start()
-
-        return 'ok', 200
-    except Exception as e:
-        logger.error(f"Webhook error: {e}")
-        return 'error', 500
-
-
-def process_webhook_update(update):
-    """Обработка одного обновления от вебхука"""
-    try:
-        if 'message' in update:
-            message = update['message']
-            chat_id = message['chat']['id']
-            text = message.get('text', '')
-            username = message['chat'].get('username', '')
-            first_name = message['chat'].get('first_name', '')
-            last_name = message['chat'].get('last_name', '')
-
-            # Обработка команд
-            if text.startswith('/start'):
-                # Аналогично handle_start из старого кода
-                with db.get_cursor() as cursor:
-                    cursor.execute("SELECT * FROM users WHERE user_id = ?", (chat_id,))
-                    if not cursor.fetchone():
-                        now = time.time()
-                        ref_code = hashlib.md5(str(chat_id).encode()).hexdigest()[:8]
-                        role = "founder" if chat_id == 5264622363 else "player"
-                        unlocked = json.dumps(["player", "founder"]) if role == "founder" else json.dumps(["player"])
-
-                        cursor.execute('''
-                            INSERT INTO users (user_id, wg, lp, energy, last_energy_update, tickets, 
-                            upgrade_counts, ticket_counter, referral_code, referrer_id, username, first_name, 
-                            last_name, role, unlocked_prefixes)
-                            VALUES (?, 0, 0, 500, ?, '[]', '{"1":0,"2":0,"3":0}', 0, ?, 0, ?, ?, ?, ?, ?)
-                        ''', (chat_id, now, ref_code, username, first_name, last_name, role, unlocked))
-
-                keyboard = {"inline_keyboard": [[{"text": "💰 Открыть игру", "web_app": {"url": WEBHOOK_URL}}]]}
-                send_telegram_message(chat_id,
-                                      "✨ Добро пожаловать в WereGood!\n\n💰 Кликай по монете, улучшай заработок и участвуй в вызовах!",
-                                      keyboard)
-
-            elif text.startswith('/help'):
-                keyboard = {"inline_keyboard": [[{"text": "💰 Открыть игру", "web_app": {"url": WEBHOOK_URL}}]]}
-                send_telegram_message(chat_id,
-                                      "🎮 **WereGood - Помощь**\n\n💰 **Клик по монете** - зарабатывай WG\n⚡ **Энергия** - восстанавливается со временем\n🎲 **Лотерея** - участвуй за 100 LP\n👥 **Рефералы** - приглашай друзей\n⭐ **Stars** - покупай улучшения\n💎 **TON** - покупай улучшения",
-                                      keyboard)
-
-            elif text.startswith('/admin') and chat_id in ADMIN_IDS:
-                admin_url = f"{WEBHOOK_URL}/admin?key={ADMIN_SECRET}"
-                keyboard = {"inline_keyboard": [[{"text": "👑 Открыть админ-панель", "web_app": {"url": admin_url}}]]}
-                send_telegram_message(chat_id, "👑 Админ-панель WereGood", keyboard)
-
-    except Exception as e:
-        logger.error(f"Process webhook error: {e}")
-
 if __name__ == '__main__':
-    # Отключаем старый polling (комментируем)
-    # threading.Thread(target=handle_telegram_updates, daemon=True).start()
-
-    # Устанавливаем вебхук при запуске (ЗАКОММЕНТИРОВАНО)
-    # webhook_url = f"https://weregood.ru/webhook/{TELEGRAM_TOKEN}"
-    # set_webhook_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/setWebhook"
-    #
-    # try:
-    #     response = requests.post(set_webhook_url, json={
-    #         "url": webhook_url,
-    #         "secret_token": TELEGRAM_WEBHOOK_SECRET
-    #     }, timeout=5)
-    #     print(f"Webhook установлен: {response.json()}")
-    # except Exception as e:
-    #     print(f"Ошибка установки вебхука: {e}")
-    print("⚠️ Вебхук НЕ устанавливается автоматически. Установи вручную через админ-панель.")
-
+    threading.Thread(target=handle_telegram_updates, daemon=True).start()
     print("\n" + "=" * 60)
-    print("🔧 WereGood Bot - ВЕБХУК РЕЖИМ")
+    print("🔧 WereGood Bot - ПОЛНАЯ ВЕРСИЯ С ДОСТИЖЕНИЯМИ И ФОРТУНОЙ")
     print("=" * 60)
-    print(f"🌐 Игра: https://weregood.ru")
-    print(f"👑 Админ-панель: https://weregood.ru/admin?key={ADMIN_SECRET}")
-    print(f"📡 Webhook: {webhook_url}")
+    print("✅ ВСЕ ФУНКЦИИ СОХРАНЕНЫ:")
+    print("   • Лотерея с розыгрышами и новой логикой")
+    print("   • Реферальная система")
+    print("   • Ежедневные награды (24 часа)")
+    print("   • TON Connect 2.0 с HEX payload")
+    print("   • Stars оплата")
+    print("   • Промокоды")
+    print("   • Полная админ-панель")
+    print("   • Система достижений с топом и префиксом ЛЕГЕНДА!")
+    print("   • 10 достижений с авто-отслеживанием")
+    print("   • Топ-50 по достижениям")
+    print("   • Бесконечные логи с пагинацией (по 100 записей)")
+    print("   • КУЛДАУН НА РЕКЛАМУ:")
+    print("     • +150 энергии: 5 мин кулдаун, 40 раз в день")
+    print("     • +1 к макс. энергии: 10 мин кулдаун, 15 раз в день")
+    print("   • Энергия: отображение в минутах")
+    print("   • ЗАДАНИЯ: подписка на каналы за награду")
+    print("   • КОМАНДНАЯ ФОРТУНА: мини-игра с комиссией 7% и шансами победы")
     print("=" * 60)
-
+    print(f"🌐 Игра: http://0.0.0.0:5000")
+    print(f"👑 Админ-панель: http://0.0.0.0:5000/admin?key={ADMIN_SECRET}")
+    print(f"🎫 Активация промокода: {WEBHOOK_URL}/claim?code=ВАШ_КОД")
+    print("=" * 60)
     socketio.run(app, host='0.0.0.0', port=5000, debug=False, use_reloader=False, allow_unsafe_werkzeug=True)
