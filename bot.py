@@ -5235,12 +5235,13 @@ def api_sync():
 
 @app.route('/api/contest/leaderboard', methods=['GET'])
 def api_contest_leaderboard():
-    """Возвращает топ участников конкурса (кто пригласил больше новых рефералов)"""
+    """Возвращает топ участников конкурса"""
     try:
-        contest_start_date = datetime.datetime(2026, 6, 14, 14, 0, 0)  # 14 июня 2026, 14:00 UTC = 17:00 MSK
+        # 14 июня 2026, 17:00 МСК = 14:00 UTC
+        contest_start_date = "2026-06-14 14:00:00"
 
         with db.get_cursor() as cursor:
-            # Получаем всех пользователей, у которых есть рефералы
+            # Получаем топ игроков по новым рефералам (без datetime(), просто строковое сравнение)
             cursor.execute('''
                 SELECT 
                     u.user_id,
@@ -5249,15 +5250,19 @@ def api_contest_leaderboard():
                     u.avatar_url,
                     u.role,
                     COUNT(r.id) as total_referrals,
-                    SUM(CASE WHEN datetime(r.created_at) >= ? THEN 1 ELSE 0 END) as new_referrals
+                    SUM(CASE WHEN r.created_at >= ? THEN 1 ELSE 0 END) as new_referrals
                 FROM users u
                 LEFT JOIN referrals r ON r.referrer_id = u.user_id
                 GROUP BY u.user_id
                 HAVING new_referrals > 0
                 ORDER BY new_referrals DESC, total_referrals DESC
                 LIMIT 100
-            ''', (contest_start_date.isoformat(),))
+            ''', (contest_start_date,))
             rows = cursor.fetchall()
+
+            print(f"📊 Конкурс топ: найдено {len(rows)} участников")
+            for row in rows:
+                print(f"   - {row['username'] or row['first_name']}: {row['new_referrals']} новых рефералов")
 
             leaderboard = []
             for idx, row in enumerate(rows, 1):
