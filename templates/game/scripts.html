@@ -5128,16 +5128,14 @@ window.resetContestProgress = function() {
 window.openContestPage = async function() {
     playNavSound();
 
-    if (!isAdminUser()) {
-        showToast('🚧 Функция в разработке', 'info');
-        return;
-    }
+    // Проверку на админа УДАЛИЛИ — теперь все могут зайти
 
     const container = document.getElementById('contestPage');
     if (!container) {
         showToast('Ошибка загрузки страницы', 'error');
         return;
     }
+
 
     loadContestData();
 
