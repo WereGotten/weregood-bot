@@ -5091,12 +5091,11 @@ body.light-theme .star-upgrade-card {
     border: none;
 }
 
-/* ========== КНОПКИ ПО БОКАМ ОТ МОНЕТЫ ========== */
+/* ========== КНОПКИ ПО БОКАМ ОТ МОНЕТЫ (ВВЕРХУ) ========== */
 .joystick-corner-left {
     position: absolute;
     left: 0;
-    top: 50%;
-    transform: translateY(-50%);
+    top: -15px;
     cursor: pointer;
     z-index: 10;
 }
@@ -5104,15 +5103,14 @@ body.light-theme .star-upgrade-card {
 .joystick-corner-right {
     position: absolute;
     right: 0;
-    top: 50%;
-    transform: translateY(-50%);
+    top: -15px;
     cursor: pointer;
     z-index: 10;
 }
 
 .joystick-small-left {
-    width: 52px;
-    height: 52px;
+    width: 48px;
+    height: 48px;
     background: rgba(255, 215, 0, 0.15);
     border-radius: 50%;
     display: flex;
@@ -5124,14 +5122,14 @@ body.light-theme .star-upgrade-card {
 }
 
 .joystick-small-right {
-    width: 52px;
-    height: 52px;
+    width: 48px;
+    height: 48px;
     background: rgba(255, 215, 0, 0.15);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 28px;
+    font-size: 26px;
     border: 1px solid rgba(255, 215, 0, 0.3);
     transition: all 0.1s ease;
     backdrop-filter: blur(4px);
@@ -5144,11 +5142,11 @@ body.light-theme .star-upgrade-card {
 
 @media (max-width: 480px) {
     .joystick-small-left, .joystick-small-right {
-        width: 44px;
-        height: 44px;
+        width: 42px;
+        height: 42px;
     }
     .joystick-small-right {
-        font-size: 24px;
+        font-size: 22px;
     }
     .joystick-small-left img {
         width: 24px;
