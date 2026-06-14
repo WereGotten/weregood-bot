@@ -4945,7 +4945,6 @@
 
     // ==================== РЕФЕРАЛЬНЫЙ КОНКУРС ====================
 let contestTimerInterval = null;
-let contestStartTime = null;
 let contestNewReferrals = [];
 let contestQualifiedCount = 0;
 let contestTicketsCount = 0;
@@ -5023,7 +5022,7 @@ function updateReferralsList(referrals) {
     let html = '';
     for (let i = 0; i < lastReferrals.length; i++) {
         const ref = lastReferrals[i];
-        const clicks = Math.min(300, Math.floor((ref.earned_wg || 0) / 0.01));
+        const clicks = ref.total_clicks || 0;
         const isCompleted = clicks >= 300;
         const statusClass = isCompleted ? 'completed' : 'pending';
         const statusText = isCompleted ? '✓ Выполнен' : `${clicks}/300`;
@@ -5059,13 +5058,18 @@ window.showAllReferralsModal = function() {
     listContainer.innerHTML = '<div class="empty-state">Загрузка...</div>';
     modal.classList.add('active');
 
-    fetch('/api/get_referrals', {
+    fetch('/api/get_contest_referrals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: userId })
     })
     .then(res => res.json())
     .then(data => {
+        if (!data.success) {
+            listContainer.innerHTML = '<div class="empty-state">❌ Ошибка загрузки</div>';
+            return;
+        }
+
         const allReferrals = data.referrals || [];
         const contestStart = getContestStartDate();
 
@@ -5082,7 +5086,7 @@ window.showAllReferralsModal = function() {
 
         let html = '';
         for (const ref of newReferrals) {
-            const clicks = Math.min(300, Math.floor((ref.earned_wg || 0) / 0.01));
+            const clicks = ref.total_clicks || 0;
             const isCompleted = clicks >= 300;
             html += `
                 <div class="all-referral-item" onclick="openPlayerProfile(${ref.user_id}, 0)">
@@ -5297,43 +5301,58 @@ function startContestTimer() {
 
 async function loadContestReferralsData() {
     try {
-        const res = await fetch('/api/get_referrals', {
+        const res = await fetch('/api/get_contest_referrals', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_id: userId })
         });
         const data = await res.json();
-        const allReferrals = data.referrals || [];
 
+        if (!data.success) {
+            console.error('API error:', data.error);
+            return;
+        }
+
+        const allReferrals = data.referrals || [];
         const contestStart = getContestStartDate();
 
         console.log('📅 Конкурс начался (МСК):', contestStart.toLocaleString());
         console.log('👥 Всего рефералов:', allReferrals.length);
 
+        // Фильтруем только новых рефералов
         const newReferrals = [];
         for (const ref of allReferrals) {
             const refDate = new Date(ref.date);
             const refDateMSK = new Date(refDate.getTime() + (3 * 60 * 60 * 1000));
 
             if (refDateMSK >= contestStart) {
-                console.log(`✅ Новый реферал: ${ref.username}`);
+                console.log(`✅ Новый реферал: ${ref.username} — ${ref.total_clicks} кликов`);
                 newReferrals.push(ref);
+            } else {
+                console.log(`❌ Старый реферал (игнор): ${ref.username}`);
             }
         }
 
         contestNewReferrals = newReferrals;
         updateReferralsList(contestNewReferrals);
 
+        // Подсчёт выполненных (300+ кликов)
         let qualified = 0;
         for (const ref of newReferrals) {
-            const clicks = Math.min(300, Math.floor((ref.earned_wg || 0) / 0.01));
-            if (clicks >= 300) qualified++;
+            const clicks = ref.total_clicks || 0;
+            if (clicks >= 300) {
+                qualified++;
+                console.log(`   ✅ ${ref.username} выполнил условие (${clicks}/300)`);
+            } else {
+                console.log(`   ⏳ ${ref.username} ещё не выполнил (${clicks}/300)`);
+            }
         }
 
         contestQualifiedCount = qualified;
         contestTicketsCount = Math.floor(qualified / 3);
         saveContestData();
 
+        // Обновление UI
         const qEl = document.getElementById('contestReferralsCount');
         if (qEl) qEl.innerText = qualified;
 
@@ -5351,7 +5370,7 @@ async function loadContestReferralsData() {
         if (badge) badge.innerText = newReferrals.length;
 
     } catch(e) {
-        console.error('❌ Ошибка:', e);
+        console.error('❌ Ошибка загрузки рефералов:', e);
     }
 }
 

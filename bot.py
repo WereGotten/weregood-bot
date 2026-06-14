@@ -5214,9 +5214,9 @@ def api_sync():
     })
 
 
-@app.route('/api/get_referrals_with_clicks', methods=['POST'])
-def api_get_referrals_with_clicks():
-    """Возвращает рефералов с их количеством кликов одним запросом"""
+@app.route('/api/get_contest_referrals', methods=['POST'])
+def api_get_contest_referrals():
+    """Возвращает рефералов с их реальным количеством кликов для конкурса"""
     data = request.json
     if not data:
         return jsonify({"success": False, "error": "No data"}), 400
@@ -5227,11 +5227,16 @@ def api_get_referrals_with_clicks():
         return jsonify({"success": False, "error": "Invalid user_id"}), 400
 
     with db.get_cursor() as cursor:
-        # Получаем всех рефералов пользователя
+        # Получаем рефералов с их реальными кликами
         cursor.execute('''
-            SELECT r.user_id as referred_id, r.username, r.first_name, r.created_at, 
-                   r.total_spent_lp, r.total_earned_wg,
-                   u.avatar_url, u.total_clicks
+            SELECT 
+                r.user_id as referred_id,
+                r.username,
+                r.first_name,
+                r.created_at,
+                r.total_earned_wg,
+                u.avatar_url,
+                u.total_clicks
             FROM referrals r
             LEFT JOIN users u ON r.referred_id = u.user_id
             WHERE r.referrer_id = ?
@@ -5241,7 +5246,6 @@ def api_get_referrals_with_clicks():
 
         referrals = []
         for row in rows:
-            # Имя пользователя
             if row['username'] and row['username'] != '':
                 display_name = '@' + row['username']
             elif row['first_name'] and row['first_name'] != '':
@@ -5254,7 +5258,6 @@ def api_get_referrals_with_clicks():
                 "username": display_name,
                 "avatar_url": row['avatar_url'] or '',
                 "earned_wg": row['total_earned_wg'] or 0,
-                "earned_lp": (row['total_spent_lp'] or 0) * 0.05,
                 "date": row['created_at'],
                 "total_clicks": row['total_clicks'] or 0  # ← РЕАЛЬНЫЕ КЛИКИ!
             })
