@@ -4945,11 +4945,11 @@
 
     // ==================== РЕФЕРАЛЬНЫЙ КОНКУРС ====================
 let contestTimerInterval = null;
+let contestStartTime = null;
 let contestNewReferrals = [];
 let contestQualifiedCount = 0;
 let contestTicketsCount = 0;
 
-// ФИКСИРОВАННАЯ ДАТА СТАРТА КОНКУРСА: 14 июня 2026, 17:00 МСК
 function getContestStartDate() {
     return new Date(Date.UTC(2026, 5, 14, 14, 0, 0));
 }
@@ -5000,7 +5000,6 @@ async function getSecureReferralLink() {
         const data = await res.json();
         return data.link;
     } catch(e) {
-        console.error('Error getting referral link:', e);
         return null;
     }
 }
@@ -5024,7 +5023,7 @@ function updateReferralsList(referrals) {
     let html = '';
     for (let i = 0; i < lastReferrals.length; i++) {
         const ref = lastReferrals[i];
-        const clicks = ref.total_clicks || 0;
+        const clicks = Math.min(300, Math.floor((ref.earned_wg || 0) / 0.01));
         const isCompleted = clicks >= 300;
         const statusClass = isCompleted ? 'completed' : 'pending';
         const statusText = isCompleted ? '✓ Выполнен' : `${clicks}/300`;
@@ -5060,18 +5059,13 @@ window.showAllReferralsModal = function() {
     listContainer.innerHTML = '<div class="empty-state">Загрузка...</div>';
     modal.classList.add('active');
 
-    fetch('/api/get_referrals_with_clicks', {
+    fetch('/api/get_referrals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: userId })
     })
     .then(res => res.json())
     .then(data => {
-        if (!data.success) {
-            listContainer.innerHTML = '<div class="empty-state">❌ Ошибка загрузки</div>';
-            return;
-        }
-
         const allReferrals = data.referrals || [];
         const contestStart = getContestStartDate();
 
@@ -5088,7 +5082,7 @@ window.showAllReferralsModal = function() {
 
         let html = '';
         for (const ref of newReferrals) {
-            const clicks = ref.total_clicks || 0;
+            const clicks = Math.min(300, Math.floor((ref.earned_wg || 0) / 0.01));
             const isCompleted = clicks >= 300;
             html += `
                 <div class="all-referral-item" onclick="openPlayerProfile(${ref.user_id}, 0)">
@@ -5227,7 +5221,6 @@ window.openContestPage = async function() {
 
     container.classList.add('active');
 
-    // Вкладки
     document.querySelectorAll('.contest-tab').forEach(tab => {
         tab.onclick = () => {
             document.querySelectorAll('.contest-tab').forEach(t => t.classList.remove('active'));
@@ -5242,7 +5235,6 @@ window.openContestPage = async function() {
         };
     });
 
-    // Реферальная ссылка
     const referralInput = document.getElementById('contestReferralLink');
     if (referralInput) {
         const secureLink = await getSecureReferralLink();
@@ -5303,61 +5295,45 @@ function startContestTimer() {
     contestTimerInterval = setInterval(updateTimer, 1000);
 }
 
-// ОСНОВНАЯ ФУНКЦИЯ ЗАГРУЗКИ ДАННЫХ (ОДИН ЗАПРОС!)
 async function loadContestReferralsData() {
     try {
-        const res = await fetch('/api/get_referrals_with_clicks', {
+        const res = await fetch('/api/get_referrals', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_id: userId })
         });
         const data = await res.json();
-
-        if (!data.success) {
-            console.error('API error:', data.error);
-            return;
-        }
-
         const allReferrals = data.referrals || [];
+
         const contestStart = getContestStartDate();
 
         console.log('📅 Конкурс начался (МСК):', contestStart.toLocaleString());
         console.log('👥 Всего рефералов:', allReferrals.length);
 
-        // Фильтруем ТОЛЬКО новых рефералов (по дате)
         const newReferrals = [];
         for (const ref of allReferrals) {
             const refDate = new Date(ref.date);
             const refDateMSK = new Date(refDate.getTime() + (3 * 60 * 60 * 1000));
 
             if (refDateMSK >= contestStart) {
-                console.log(`✅ Новый реферал: ${ref.username} — ${ref.total_clicks || 0} кликов`);
+                console.log(`✅ Новый реферал: ${ref.username}`);
                 newReferrals.push(ref);
-            } else {
-                console.log(`❌ Старый реферал (игнор): ${ref.username}`);
             }
         }
 
         contestNewReferrals = newReferrals;
         updateReferralsList(contestNewReferrals);
 
-        // Подсчёт выполненных (300+ кликов)
         let qualified = 0;
         for (const ref of newReferrals) {
-            const clicks = ref.total_clicks || 0;
-            if (clicks >= 300) {
-                qualified++;
-                console.log(`   ✅ ${ref.username} выполнил условие (${clicks}/300)`);
-            } else {
-                console.log(`   ⏳ ${ref.username} ещё не выполнил (${clicks}/300)`);
-            }
+            const clicks = Math.min(300, Math.floor((ref.earned_wg || 0) / 0.01));
+            if (clicks >= 300) qualified++;
         }
 
         contestQualifiedCount = qualified;
         contestTicketsCount = Math.floor(qualified / 3);
         saveContestData();
 
-        // Обновление UI
         const qEl = document.getElementById('contestReferralsCount');
         if (qEl) qEl.innerText = qualified;
 
@@ -5375,7 +5351,7 @@ async function loadContestReferralsData() {
         if (badge) badge.innerText = newReferrals.length;
 
     } catch(e) {
-        console.error('❌ Ошибка загрузки рефералов:', e);
+        console.error('❌ Ошибка:', e);
     }
 }
 
@@ -5402,8 +5378,7 @@ async function loadContestWinnersList() {
         `;
         container.innerHTML = html;
     } catch(e) {
-        console.error(e);
-        container.innerHTML = '<div class="empty-state">❌ Ошибка загрузки</div>';
+        container.innerHTML = '<div class="empty-state">❌ Ошибка</div>';
     }
 }
 
@@ -5429,7 +5404,6 @@ function shareContestReferralLink() {
     }
 }
 
-// Автообновление
 setInterval(() => {
     const page = document.getElementById('contestPage');
     if (page && page.classList.contains('active')) {
