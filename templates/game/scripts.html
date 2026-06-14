@@ -5292,22 +5292,71 @@ async function loadContestReferralsData() {
         const data = await res.json();
         const allReferrals = data.referrals || [];
 
-        console.log('📋 Загружено рефералов:', allReferrals.length);
+        // Убеждаемся, что дата старта конкурса установлена
+        if (!contestStartTime || contestStartTime === 0) {
+            let startTime = localStorage.getItem('contest_start_time');
+            if (!startTime) {
+                startTime = Date.now();
+                localStorage.setItem('contest_start_time', startTime);
+            }
+            contestStartTime = parseInt(startTime);
+        }
 
-        contestReferrals = allReferrals;
+        const contestStartDate = new Date(contestStartTime);
 
-        // Обновляем отображение списка рефералов (показываем всех)
+        console.log('📅 Конкурс начался:', contestStartDate.toLocaleString());
+        console.log('👥 Всего рефералов:', allReferrals.length);
+
+        // Фильтруем ТОЛЬКО новых рефералов (после даты старта конкурса)
+        // Используем created_at из API
+        const newReferrals = [];
+        const oldReferrals = [];
+
+        for (const ref of allReferrals) {
+            // Пробуем получить дату из разных полей
+            let refDate = null;
+            if (ref.created_at) {
+                refDate = new Date(ref.created_at);
+            } else if (ref.date) {
+                refDate = new Date(ref.date);
+            }
+
+            if (!refDate) {
+                console.warn(`⚠️ У реферала ${ref.username} нет даты регистрации, считаем старым`);
+                oldReferrals.push(ref);
+                continue;
+            }
+
+            const isAfterStart = refDate >= contestStartDate;
+
+            console.log(`👤 ${ref.username}:`);
+            console.log(`   - Дата: ${refDate.toLocaleString()}`);
+            console.log(`   - После старта конкурса: ${isAfterStart ? '✅ ДА' : '❌ НЕТ'}`);
+
+            if (isAfterStart) {
+                newReferrals.push(ref);
+            } else {
+                oldReferrals.push(ref);
+            }
+        }
+
+        console.log(`📊 ИТОГО новых рефералов: ${newReferrals.length}`);
+        console.log(`📊 ИТОГО старых (игнорируются): ${oldReferrals.length}`);
+
+        contestReferrals = newReferrals; // Сохраняем только новых!
+
+        // Обновляем отображение списка рефералов (только новые)
         updateReferralsList(contestReferrals);
 
-        // Считаем выполненных (с кликами >= 300)
+        // Считаем выполненных среди НОВЫХ рефералов
         let qualifiedCount = 0;
-        for (const ref of allReferrals) {
+        for (const ref of newReferrals) {
             const estimatedClicks = Math.min(300, Math.floor((ref.earned_wg || 0) / 0.01));
             if (estimatedClicks >= 300) {
                 qualifiedCount++;
-                console.log(`✅ ${ref.username} выполнил условие (${estimatedClicks}/300)`);
+                console.log(`   ✅ ${ref.username} выполнил условие (${estimatedClicks}/300 кликов)`);
             } else {
-                console.log(`⏳ ${ref.username} ещё не выполнил (${estimatedClicks}/300)`);
+                console.log(`   ⏳ ${ref.username} ещё не выполнил (${estimatedClicks}/300 кликов)`);
             }
         }
 
@@ -5329,7 +5378,7 @@ async function loadContestReferralsData() {
         if (progressText) progressText.innerText = `${qualifiedCount} / 3 рефералов`;
 
         const countBadge = document.getElementById('contestReferralsCountBadge');
-        if (countBadge) countBadge.innerText = allReferrals.length;
+        if (countBadge) countBadge.innerText = newReferrals.length;
 
     } catch(e) {
         console.error('❌ Ошибка загрузки рефералов:', e);
