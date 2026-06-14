@@ -25,6 +25,23 @@
         };
         document.head.appendChild(tonScript);
     </script>
+
+    <!-- Telegram Mini Apps Analytics SDK -->
+    <script>
+        (function() {
+            if (window.Telegram && window.Telegram.WebApp) {
+                var script = document.createElement('script');
+                script.src = 'https://tganalytics.xyz/index.js';
+                script.onload = function() {
+                    window.telegramAnalytics.init({
+                        token: 'eyJhcHBfbmFtZSI6IndlcmVnb29kIiwiYXBwX3VybCI6Imh0dHBzOi8vdC5tZS9XZXJlR29vb2Rib3QiLCJhcHBfZG9tYWluIjoiaHR0cHM6Ly93ZXJlZ29vZC5ydS8ifQ==!/Jd1QUzU6q1h1gN60VfBz53M1flHZlcVC5pcyACO9tM='
+                    });
+                    window.telegramAnalytics.trackEvent('app_started');
+                };
+                document.head.appendChild(script);
+            }
+        })();
+    </script>
 </head>
 <body>
     <div class="app">
