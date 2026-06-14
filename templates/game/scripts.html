@@ -4979,7 +4979,7 @@ function loadContestData() {
     }
 }
 
-// Получение зашифрованной реферальной ссылки с сервера (как в профиле)
+// Получение зашифрованной реферальной ссылки с сервера
 async function getSecureReferralLink() {
     try {
         const res = await fetch('/api/get_referral_link', {
@@ -5022,7 +5022,6 @@ function updateReferralsList(referrals) {
         const statusClass = isCompleted ? 'completed' : 'pending';
         const statusText = isCompleted ? '✓ Выполнен' : `${estimatedClicks}/300`;
 
-        // Нумерация для наглядности (1 - самый новый, 3 - самый старый из последних трёх)
         const numberIcon = i === 0 ? '🆕' : (i === 1 ? '📌' : '📅');
 
         html += `
@@ -5040,7 +5039,6 @@ function updateReferralsList(referrals) {
     }
     container.innerHTML = html;
 
-    // Показываем кнопку "Показать всех", если рефералов больше 3
     if (referrals.length > 3) {
         if (showAllBtn) showAllBtn.style.display = 'block';
     } else {
@@ -5058,7 +5056,6 @@ window.showAllReferralsModal = function() {
     listContainer.innerHTML = '<div class="empty-state">Загрузка...</div>';
     modal.classList.add('active');
 
-    // Загружаем всех рефералов
     fetch('/api/get_referrals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -5108,6 +5105,24 @@ window.closeAllReferralsModal = function() {
     if (modal) modal.classList.remove('active');
 };
 
+// Принудительный сброс даты начала конкурса (для администраторов)
+window.resetContestDate = function() {
+    if (!isAdminUser()) {
+        showToast('🚧 Только для администраторов', 'error');
+        return;
+    }
+    localStorage.removeItem('contest_start_time');
+    contestStartTime = Date.now();
+    localStorage.setItem('contest_start_time', contestStartTime);
+    contestNewReferrals = [];
+    contestQualifiedCount = 0;
+    contestTicketsCount = 0;
+    saveContestData();
+    showToast('📅 Дата конкурса сброшена! Теперь все новые рефералы будут учитываться', 'success');
+    console.log('📅 Новая дата начала конкурса:', new Date(contestStartTime));
+    loadContestReferralsData();
+};
+
 window.openContestPage = async function() {
     playNavSound();
 
@@ -5124,6 +5139,16 @@ window.openContestPage = async function() {
 
     loadContestData();
 
+    // Убеждаемся, что дата старта установлена
+    if (!contestStartTime || contestStartTime === 0) {
+        let startTime = localStorage.getItem('contest_start_time');
+        if (!startTime) {
+            startTime = Date.now();
+            localStorage.setItem('contest_start_time', startTime);
+        }
+        contestStartTime = parseInt(startTime);
+    }
+
     container.innerHTML = `
         <div class="contest-header">
             <button class="back-btn" onclick="closeContestPage()">←</button>
@@ -5135,7 +5160,6 @@ window.openContestPage = async function() {
             <div class="contest-tab" data-tab="top">🏆 Топ участников</div>
         </div>
 
-        <!-- Вкладка Конкурс -->
         <div id="contestTab" class="contest-tab-content active">
             <div class="timer-card">
                 <div class="timer-label">ДО ОКОНЧАНИЯ КОНКУРСА</div>
@@ -5169,14 +5193,13 @@ window.openContestPage = async function() {
                 <div class="progress-text" id="contestProgressText">0 / 3 рефералов</div>
             </div>
 
-            <!-- БЛОК: СПИСОК РЕФЕРАЛОВ -->
             <div class="referrals-card">
                 <div class="referrals-header">
-                    <span>👥 ВАШИ РЕФЕРАЛЫ</span>
+                    <span>👥 НОВЫЕ РЕФЕРАЛЫ</span>
                     <span class="referrals-count" id="contestReferralsCountBadge">0</span>
                 </div>
                 <div class="referrals-list" id="contestReferralsList">
-                    <div class="empty-state">😢 Пока нет приглашённых</div>
+                    <div class="empty-state">😢 Пока нет новых приглашённых</div>
                 </div>
                 <button class="show-all-btn" id="showAllReferralsBtn" onclick="showAllReferralsModal()" style="display: none;">📋 Показать всех</button>
             </div>
@@ -5200,7 +5223,6 @@ window.openContestPage = async function() {
             </div>
         </div>
 
-        <!-- Вкладка Топ участников -->
         <div id="topTab" class="contest-tab-content">
             <div class="winners-list" id="contestWinnersList">
                 <div class="empty-state">Загрузка...</div>
@@ -5225,7 +5247,7 @@ window.openContestPage = async function() {
         };
     });
 
-    // Устанавливаем ЗАШИФРОВАННУЮ реферальную ссылку (как в профиле)
+    // Устанавливаем зашифрованную реферальную ссылку
     const referralInput = document.getElementById('contestReferralLink');
     if (referralInput) {
         const secureLink = await getSecureReferralLink();
@@ -5299,11 +5321,48 @@ async function loadContestReferralsData() {
         const data = await res.json();
         const allReferrals = data.referrals || [];
 
+        // Убеждаемся, что contestStartTime установлен
+        if (!contestStartTime || contestStartTime === 0) {
+            let startTime = localStorage.getItem('contest_start_time');
+            if (!startTime) {
+                startTime = Date.now();
+                localStorage.setItem('contest_start_time', startTime);
+            }
+            contestStartTime = parseInt(startTime);
+        }
+
         const contestStartDate = new Date(contestStartTime);
-        const newReferrals = allReferrals.filter(ref => {
+
+        console.log('╔════════════════════════════════════════════╗');
+        console.log('║     ДЕБАГ РЕФЕРАЛЬНОГО КОНКУРСА           ║');
+        console.log('╚════════════════════════════════════════════╝');
+        console.log('📅 Дата начала конкурса:', contestStartDate.toLocaleString());
+        console.log('📅 Текущая дата:', new Date().toLocaleString());
+        console.log('👥 Всего рефералов в системе:', allReferrals.length);
+
+        // Фильтруем ТОЛЬКО новых рефералов (после даты старта)
+        const newReferrals = [];
+        const oldReferrals = [];
+
+        for (const ref of allReferrals) {
             const refDate = new Date(ref.date);
-            return refDate >= contestStartDate;
-        });
+            const isAfterStart = refDate >= contestStartDate;
+
+            console.log(`👤 ${ref.username}:`);
+            console.log(`   - Дата регистрации: ${refDate.toLocaleString()}`);
+            console.log(`   - После начала конкурса: ${isAfterStart ? '✅ ДА' : '❌ НЕТ'}`);
+            console.log(`   - Заработано WG: ${ref.earned_wg || 0}`);
+
+            if (isAfterStart) {
+                newReferrals.push(ref);
+            } else {
+                oldReferrals.push(ref);
+            }
+        }
+
+        console.log(`📊 ИТОГО:`);
+        console.log(`   - НОВЫХ рефералов (после старта): ${newReferrals.length}`);
+        console.log(`   - СТАРЫХ рефералов (игнорируются): ${oldReferrals.length}`);
 
         contestNewReferrals = newReferrals;
 
@@ -5315,6 +5374,9 @@ async function loadContestReferralsData() {
             const estimatedClicks = Math.min(300, Math.floor((ref.earned_wg || 0) / 0.01));
             if (estimatedClicks >= 300) {
                 qualifiedCount++;
+                console.log(`   ✅ ${ref.username} выполнил условие (${estimatedClicks}/300 кликов)`);
+            } else {
+                console.log(`   ⏳ ${ref.username} ещё не выполнил (${estimatedClicks}/300 кликов)`);
             }
         }
 
@@ -5335,8 +5397,13 @@ async function loadContestReferralsData() {
         const progressText = document.getElementById('contestProgressText');
         if (progressText) progressText.innerText = `${qualifiedCount} / 3 рефералов`;
 
+        const countBadge = document.getElementById('contestReferralsCountBadge');
+        if (countBadge) countBadge.innerText = newReferrals.length;
+
+        console.log('══════════════════════════════════════════════');
+
     } catch(e) {
-        console.error('Error loading contest referrals:', e);
+        console.error('❌ Ошибка загрузки рефералов:', e);
     }
 }
 
@@ -5347,7 +5414,6 @@ async function loadContestWinnersList() {
     container.innerHTML = '<div class="empty-state">Загрузка...</div>';
 
     try {
-        // Показываем текущего пользователя в топе (позже заменим на реальный API)
         const demoWinners = [
             { user_id: userId, username: displayName, avatar: photoUrl, tickets: contestTicketsCount, referrals: contestNewReferrals.length, completed: contestQualifiedCount >= 3 }
         ];
