@@ -5031,7 +5031,7 @@ function updateReferralsList(referrals) {
         const isCompleted = clicks >= 300;
         const statusClass = isCompleted ? 'completed' : 'pending';
         const statusText = isCompleted ? '✓ Выполнен' : `${clicks}/300`;
-        const icons = ['🆕', '📌', '📅', '👤', '👥'];
+        const icons = ['', '', '', '👤', '👥'];
 
         html += `
             <div class="referral-item-compact" onclick="openPlayerProfile(${ref.user_id}, 0)">
@@ -5039,7 +5039,7 @@ function updateReferralsList(referrals) {
                     <div class="referral-avatar-compact">${ref.avatar_url ? `<img src="${ref.avatar_url}">` : '👤'}</div>
                     <div>
                         <div class="referral-name-compact">${icons[i] || '👤'} ${escapeHtml(ref.username)}</div>
-                        <div class="referral-progress-compact">📊 Прогресс: ${clicks}/300 кликов</div>
+                        <div class="referral-progress-compact"> Прогресс: ${clicks}/300 кликов</div>
                     </div>
                 </div>
                 <div class="referral-status-compact ${statusClass}">${statusText}</div>
@@ -5093,7 +5093,7 @@ window.showAllReferralsModal = function() {
                     <div class="all-referral-avatar">${ref.avatar_url ? `<img src="${ref.avatar_url}">` : '👤'}</div>
                     <div class="all-referral-info">
                         <div class="all-referral-name">${escapeHtml(ref.username)}</div>
-                        <div class="all-referral-progress">📊 ${isCompleted ? '✅ Выполнен' : `⏳ ${clicks}/300 кликов`}</div>
+                        <div class="all-referral-progress"> ${isCompleted ? '✅ Выполнен' : `⏳ ${clicks}/300 кликов`}</div>
                     </div>
                     <div>→</div>
                 </div>
@@ -5207,7 +5207,7 @@ window.openContestPage = async function() {
             <div class="rules-card">
                 <div class="rules-title">📋 ПРАВИЛА КОНКУРСА</div>
                 <ul class="rules-list">
-                    <li>🗓️ Конкурс начался <strong>14 июня 2026, 17:00 МСК</strong></li>
+                    <li>🗓️ Конкурс начался <strong>14 июня 2026, 19:00 МСК</strong></li>
                     <li>Пригласи новых друзей за время конкурса</li>
                     <li>Каждый друг должен набрать 300 кликов по монете</li>
                     <li><strong>За каждые 3 выполненных реферала → 1 билет</strong></li>
