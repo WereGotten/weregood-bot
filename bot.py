@@ -1571,7 +1571,7 @@ def process_withdrawal_db(withdrawal_id, status, admin_id, admin_name):
 def send_telegram_message(chat_id, text, reply_markup=None):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     try:
-        data = {"chat_id": chat_id, "text": text, "parse_mode": "Markdown"}
+        data = {"chat_id": chat_id, "text": text, "parse_mode": "HTML"}
         if reply_markup:
             data["reply_markup"] = reply_markup
         verify_ssl = not DEBUG_MODE
@@ -5312,6 +5312,108 @@ def api_admin_distribute_contest_prizes():
         logger.error(f"Ошибка выдачи призов: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
+
+# ========== РАССЫЛКА ==========
+broadcast_active = False
+broadcast_cancel = False
+
+
+@app.route('/api/admin/users_list', methods=['GET'])
+@require_admin
+def api_admin_users_list():
+    """Возвращает список всех пользователей для рассылки"""
+    with db.get_cursor() as cursor:
+        cursor.execute("SELECT COUNT(*) as total FROM users")
+        row = cursor.fetchone()
+        return jsonify({"success": True, "total": row['total']})
+
+
+@app.route('/api/admin/send_broadcast', methods=['POST'])
+@require_admin
+def api_admin_send_broadcast():
+    """Массовая рассылка сообщений всем пользователям"""
+    global broadcast_active, broadcast_cancel
+
+    data = request.json
+    if not data:
+        return jsonify({"success": False, "error": "No data"}), 400
+
+    message = data.get('message', '').strip()
+    is_test = data.get('is_test', False)
+    test_user_id = data.get('test_user_id')
+    has_button = data.get('has_button', False)
+    button_text = data.get('button_text', '')
+    button_url = data.get('button_url', '')
+
+    if not message:
+        return jsonify({"success": False, "error": "Сообщение не может быть пустым"}), 400
+
+    # Если тестовый режим
+    if is_test and test_user_id:
+        try:
+            keyboard = None
+            if has_button and button_text and button_url:
+                keyboard = {
+                    "inline_keyboard": [[{"text": button_text, "web_app": {"url": button_url}}]]
+                }
+            send_telegram_message(test_user_id, message, keyboard)
+            return jsonify({"success": True, "sent": 1, "errors": 0})
+        except Exception as e:
+            return jsonify({"success": False, "error": str(e)}), 500
+
+    # Получаем всех пользователей
+    with db.get_cursor() as cursor:
+        cursor.execute("SELECT user_id FROM users")
+        users = cursor.fetchall()
+
+    if not users:
+        return jsonify({"success": False, "error": "Нет пользователей"}), 400
+
+    broadcast_active = True
+    broadcast_cancel = False
+
+    sent = 0
+    errors = 0
+
+    try:
+        for user in users:
+            if broadcast_cancel:
+                break
+
+            user_id = user['user_id']
+            try:
+                keyboard = None
+                if has_button and button_text and button_url:
+                    keyboard = {
+                        "inline_keyboard": [[{"text": button_text, "web_app": {"url": button_url}}]]
+                    }
+                send_telegram_message(user_id, message, keyboard)
+                sent += 1
+            except Exception as e:
+                errors += 1
+                logger.error(f"Broadcast error to {user_id}: {e}")
+
+            # Задержка чтобы не спамить
+            time.sleep(0.1)
+
+    finally:
+        broadcast_active = False
+        broadcast_cancel = False
+
+    add_admin_log(f"📢 МАССОВАЯ РАССЫЛКА: отправлено {sent} сообщений, ошибок {errors}",
+                  request.args.get('user_id', 'Admin'), "Admin")
+
+    return jsonify({"success": True, "sent": sent, "errors": errors})
+
+
+@app.route('/api/admin/broadcast/cancel', methods=['POST'])
+@require_admin
+def api_admin_broadcast_cancel():
+    """Остановка текущей рассылки"""
+    global broadcast_cancel
+    broadcast_cancel = True
+    return jsonify({"success": True, "message": "Рассылка остановлена"})
+
 @app.route('/api/activate_promo', methods=['POST'])
 def api_activate_promo():
     data = request.json
@@ -5808,6 +5910,8 @@ def handle_telegram_updates():
         except Exception as e:
             logger.error(f"Ошибка в polling: {e}")
             time.sleep(5)
+
+
 
 restore_fortune_from_db()
 start_fortune_timer_thread()
