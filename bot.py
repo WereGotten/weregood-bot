@@ -3321,6 +3321,7 @@ def api_online_count():
     with online_users_lock:
         return jsonify({"online": len(online_users)})
 
+
 @app.route('/api/register', methods=['POST'])
 def api_register():
     if not check_rate_limit(f"register_{request.remote_addr}", limit=10, window_seconds=60):
@@ -3332,12 +3333,19 @@ def api_register():
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid:
         return jsonify({"success": False, "error": "Invalid user_id"}), 400
+
+    # ========== НОВАЯ ПРОВЕРКА: защита от фейковых ID ==========
+    if user_id <= 0 or user_id == 12345678 or user_id == 1:
+        logger.warning(f"❌ Попытка регистрации с невалидным ID: {user_id}")
+        return jsonify({"success": False, "error": "Invalid user_id"}), 400
+
     username = sanitize_string(data.get('username', ''), 50)
     first_name = sanitize_string(data.get('first_name', ''), 50)
     last_name = sanitize_string(data.get('last_name', ''), 50)
     avatar_url = sanitize_string(data.get('avatar_url', ''), 200)
     referral_code = sanitize_string(data.get('referral_code', ''), 50)
     logger.info(f"📝 Регистрация/обновление: user_id={user_id}, username={username}, first_name={first_name}")
+
     with db.get_cursor() as cursor:
         cursor.execute("SELECT * FROM users WHERE user_id=?", (user_id,))
         existing = cursor.fetchone()
@@ -3366,12 +3374,15 @@ def api_register():
                 referrer_row = cursor.fetchone()
                 if referrer_row:
                     referrer_id = referrer_row['user_id']
-                    cursor.execute(
-                        'INSERT INTO referrals (referrer_id, referred_id, username, first_name, total_spent_lp) VALUES (?, ?, ?, ?, 0)',
-                        (referrer_id, user_id, username, first_name))
-                    add_log(f"👥 Новый реферал! {username or first_name} зарегистрировался по вашей ссылке", referrer_id,
-                            get_user(referrer_id)['username'])
-                    update_achievement_progress(referrer_id, 'social', 1)
+                    # Проверка, что реферер не фейковый
+                    if referrer_id > 0 and referrer_id != 12345678 and referrer_id != 1:
+                        cursor.execute(
+                            'INSERT INTO referrals (referrer_id, referred_id, username, first_name, total_spent_lp) VALUES (?, ?, ?, ?, 0)',
+                            (referrer_id, user_id, username, first_name))
+                        add_log(f"👥 Новый реферал! {username or first_name} зарегистрировался по вашей ссылке",
+                                referrer_id,
+                                get_user(referrer_id)['username'])
+                        update_achievement_progress(referrer_id, 'social', 1)
             cursor.execute('''
                 INSERT INTO users (
                     user_id, wg, lp, energy, last_energy_update, tickets, total_clicks, upgrade_counts, 
@@ -5373,7 +5384,7 @@ def api_admin_send_broadcast():
                 if is_test and test_user_id:
                     cursor.execute("SELECT user_id FROM users WHERE user_id = ?", (test_user_id,))
                 else:
-                    cursor.execute("SELECT user_id FROM users")
+                    cursor.execute("SELECT user_id FROM users WHERE user_id > 0 AND user_id != 12345678")
                 users = cursor.fetchall()
 
             keyboard = None
