@@ -5350,9 +5350,7 @@ def api_admin_users_list():
 @app.route('/api/admin/send_broadcast', methods=['POST'])
 @require_admin
 def api_admin_send_broadcast():
-    """Массовая рассылка сообщений всем пользователям"""
-    global broadcast_active, broadcast_cancel
-
+    """Массовая рассылка сообщений всем пользователям (асинхронно)"""
     data = request.json
     if not data:
         return jsonify({"success": False, "error": "No data"}), 400
@@ -5367,62 +5365,43 @@ def api_admin_send_broadcast():
     if not message:
         return jsonify({"success": False, "error": "Сообщение не может быть пустым"}), 400
 
-    # Если тестовый режим
-    if is_test and test_user_id:
+    # Запускаем рассылку в фоновом потоке
+    def broadcast_worker():
         try:
+            # Получаем пользователей
+            with db.get_cursor() as cursor:
+                if is_test and test_user_id:
+                    cursor.execute("SELECT user_id FROM users WHERE user_id = ?", (test_user_id,))
+                else:
+                    cursor.execute("SELECT user_id FROM users")
+                users = cursor.fetchall()
+
             keyboard = None
             if has_button and button_text and button_url:
                 keyboard = {
                     "inline_keyboard": [[{"text": button_text, "web_app": {"url": button_url}}]]
                 }
-            send_telegram_message(test_user_id, message, keyboard)
-            return jsonify({"success": True, "sent": 1, "errors": 0})
+
+            sent = 0
+            errors = 0
+            for user in users:
+                try:
+                    send_telegram_message(user['user_id'], message, keyboard)
+                    sent += 1
+                except Exception as e:
+                    errors += 1
+                    logger.error(f"Broadcast error to {user['user_id']}: {e}")
+                time.sleep(0.05)  # 20 сообщений в секунду
+
+            add_admin_log(f"📢 РАССЫЛКА: отправлено {sent}, ошибок {errors}",
+                          request.args.get('user_id', 'Admin'), "Admin")
         except Exception as e:
-            return jsonify({"success": False, "error": str(e)}), 500
+            logger.error(f"Broadcast worker error: {e}")
 
-    # Получаем всех пользователей
-    with db.get_cursor() as cursor:
-        cursor.execute("SELECT user_id FROM users")
-        users = cursor.fetchall()
+    thread = threading.Thread(target=broadcast_worker, daemon=True)
+    thread.start()
 
-    if not users:
-        return jsonify({"success": False, "error": "Нет пользователей"}), 400
-
-    broadcast_active = True
-    broadcast_cancel = False
-
-    sent = 0
-    errors = 0
-
-    try:
-        for user in users:
-            if broadcast_cancel:
-                break
-
-            user_id = user['user_id']
-            try:
-                keyboard = None
-                if has_button and button_text and button_url:
-                    keyboard = {
-                        "inline_keyboard": [[{"text": button_text, "web_app": {"url": button_url}}]]
-                    }
-                send_telegram_message(user_id, message, keyboard)
-                sent += 1
-            except Exception as e:
-                errors += 1
-                logger.error(f"Broadcast error to {user_id}: {e}")
-
-            # Задержка чтобы не спамить
-            time.sleep(0.1)
-
-    finally:
-        broadcast_active = False
-        broadcast_cancel = False
-
-    add_admin_log(f"📢 МАССОВАЯ РАССЫЛКА: отправлено {sent} сообщений, ошибок {errors}",
-                  request.args.get('user_id', 'Admin'), "Admin")
-
-    return jsonify({"success": True, "sent": sent, "errors": errors})
+    return jsonify({"success": True, "message": "Рассылка запущена в фоновом режиме"})
 
 
 @app.route('/api/admin/broadcast/cancel', methods=['POST'])
