@@ -4947,8 +4947,9 @@
 let contestTimerInterval = null;
 let contestStartTime = null;
 let contestNewReferrals = [];
-let contestQualifiedCount = 0;
-let contestTicketsCount = 0;
+let contestCompletedReferrals = 0;     // ВСЕГО выполненных рефералов (с 300+ кликами)
+let contestTicketsCount = 0;           // БИЛЕТОВ (completedReferrals / 3)
+let contestProgressRemainder = 0;      // ОСТАТОК до следующего билета (completedReferrals % 3)
 
 // 7 дней = 168 часов
 const CONTEST_DURATION_HOURS = 168;
@@ -4976,8 +4977,9 @@ function isAdminUser() {
 function saveContestData() {
     const data = {
         newReferrals: contestNewReferrals,
-        qualifiedCount: contestQualifiedCount,
-        ticketsCount: contestTicketsCount
+        completedReferrals: contestCompletedReferrals,
+        ticketsCount: contestTicketsCount,
+        lastUpdated: Date.now()
     };
     localStorage.setItem('contest_data', JSON.stringify(data));
 }
@@ -4987,9 +4989,13 @@ function loadContestData() {
     if (saved) {
         try {
             const data = JSON.parse(saved);
-            contestNewReferrals = data.newReferrals || [];
-            contestQualifiedCount = data.qualifiedCount || 0;
-            contestTicketsCount = data.ticketsCount || 0;
+            // Загружаем только свежие данные (не старше 10 секунд)
+            if (data.lastUpdated && Date.now() - data.lastUpdated < 10000) {
+                contestNewReferrals = data.newReferrals || [];
+                contestCompletedReferrals = data.completedReferrals || 0;
+                contestTicketsCount = data.ticketsCount || 0;
+                contestProgressRemainder = contestCompletedReferrals % 3;
+            }
         } catch(e) {}
     }
 }
@@ -5031,7 +5037,7 @@ function updateReferralsList(referrals) {
         const isCompleted = clicks >= 300;
         const statusClass = isCompleted ? 'completed' : 'pending';
         const statusText = isCompleted ? '✓ Выполнен' : `${clicks}/300`;
-        const icons = ['', '', '', '👤', '👥'];
+        const icons = ['🥇', '🥈', '🥉', '👤', '👥'];
 
         html += `
             <div class="referral-item-compact" onclick="openPlayerProfile(${ref.user_id}, 0)">
@@ -5118,8 +5124,9 @@ window.resetContestProgress = function() {
         return;
     }
     contestNewReferrals = [];
-    contestQualifiedCount = 0;
+    contestCompletedReferrals = 0;
     contestTicketsCount = 0;
+    contestProgressRemainder = 0;
     saveContestData();
     showToast('📅 Прогресс конкурса сброшен!', 'success');
     loadContestReferralsData();
@@ -5128,14 +5135,11 @@ window.resetContestProgress = function() {
 window.openContestPage = async function() {
     playNavSound();
 
-    // Проверку на админа УДАЛИЛИ — теперь все могут зайти
-
     const container = document.getElementById('contestPage');
     if (!container) {
         showToast('Ошибка загрузки страницы', 'error');
         return;
     }
-
 
     loadContestData();
 
@@ -5171,7 +5175,7 @@ window.openContestPage = async function() {
                     <div class="progress-item">
                         <div class="icon">👥</div>
                         <div class="count" id="contestReferralsCount">0</div>
-                        <div class="label">выполнено / 3</div>
+                        <div class="label">до след. билета</div>
                     </div>
                     <div class="progress-item">
                         <div class="icon">🎫</div>
@@ -5207,9 +5211,9 @@ window.openContestPage = async function() {
                 <ul class="rules-list">
                     <li>🗓️ Конкурс начался <strong>14 июня 2026, 19:00 МСК</strong></li>
                     <li>Пригласи новых друзей за время конкурса</li>
-                    <li>Каждый друг должен набрать 300 кликов по монете</li>
+                    <li>Каждый друг должен набрать <strong>300 кликов</strong> по монете</li>
                     <li><strong>За каждые 3 выполненных реферала → 1 билет</strong></li>
-                    <li>Чем больше билетов — тем выше шанс выиграть 2 000 LP</li>
+                    <li>Чем больше билетов — тем выше шанс выиграть <strong>2 000 LP</strong></li>
                 </ul>
             </div>
         </div>
@@ -5328,40 +5332,51 @@ async function loadContestReferralsData() {
         contestNewReferrals = newReferrals;
         updateReferralsList(contestNewReferrals);
 
-        // Считаем выполненных рефералов (300+ кликов)
+        // ========== ГЛАВНОЕ: считаем ТОЛЬКО выполнивших условие (300+ кликов) ==========
         let completedCount = 0;
         for (const ref of newReferrals) {
-            if ((ref.total_clicks || 0) >= 300) {
+            const clicks = ref.total_clicks || 0;
+            if (clicks >= 300) {
                 completedCount++;
-                console.log(`   ✅ ${ref.username} выполнил условие (${ref.total_clicks}/300)`);
+                console.log(`   ✅ ${ref.username} ВЫПОЛНИЛ условие (${clicks}/300)`);
             } else {
-                console.log(`   ⏳ ${ref.username} ещё не выполнил (${ref.total_clicks || 0}/300)`);
+                console.log(`   ⏳ ${ref.username} ещё не выполнил (${clicks}/300)`);
             }
         }
 
-        // БИЛЕТЫ: каждые 3 реферала = 1 билет, прогресс = остаток
+        // ========== БИЛЕТЫ: 1 билет за каждые 3 ВЫПОЛНЕННЫХ реферала ==========
+        contestCompletedReferrals = completedCount;
         contestTicketsCount = Math.floor(completedCount / 3);
-        contestQualifiedCount = completedCount % 3;
+        contestProgressRemainder = completedCount % 3;
 
-        console.log(`📊 Выполнено рефералов: ${completedCount}`);
+        console.log(`📊 ВСЕГО выполнено рефералов: ${completedCount}`);
         console.log(`🎫 Получено билетов: ${contestTicketsCount}`);
-        console.log(`📈 Текущий прогресс: ${contestQualifiedCount}/3`);
+        console.log(`📈 Осталось до следующего билета: ${contestProgressRemainder}/3`);
 
         saveContestData();
 
         // Обновление UI
         const qEl = document.getElementById('contestReferralsCount');
-        if (qEl) qEl.innerText = contestQualifiedCount;
+        if (qEl) qEl.innerText = contestProgressRemainder;
 
         const tEl = document.getElementById('contestTicketsCount');
         if (tEl) tEl.innerText = contestTicketsCount;
 
-        const progressPercent = Math.min(100, (contestQualifiedCount / 3) * 100);
+        const progressPercent = Math.min(100, (contestProgressRemainder / 3) * 100);
         const pFill = document.getElementById('contestProgressFill');
         if (pFill) pFill.style.width = progressPercent + '%';
 
         const pText = document.getElementById('contestProgressText');
-        if (pText) pText.innerText = `${contestQualifiedCount} / 3 рефералов`;
+        if (pText) {
+            const needed = 3 - contestProgressRemainder;
+            if (completedCount === 0) {
+                pText.innerText = `0 / 3 рефералов (нужно ещё 3)`;
+            } else if (contestProgressRemainder === 0) {
+                pText.innerText = `${contestProgressRemainder} / 3 рефералов (готово к следующему билету!)`;
+            } else {
+                pText.innerText = `${contestProgressRemainder} / 3 рефералов (нужно ещё ${needed})`;
+            }
+        }
 
         const badge = document.getElementById('contestReferralsCountBadge');
         if (badge) badge.innerText = newReferrals.length;
@@ -5396,9 +5411,9 @@ async function loadContestWinnersList() {
             else if (player.rank === 3) rankDisplay = '🥉';
             else rankDisplay = `${player.rank}`;
 
-            const progress = player.new_referrals % 3;
-            const statusText = player.is_qualified ? 'Участник' : `${progress}/3`;
-            const badgeClass = player.is_qualified ? 'completed' : '';
+            const isQualified = player.new_referrals >= 3;
+            const statusText = isQualified ? 'Участник' : `${player.new_referrals}/3`;
+            const badgeClass = isQualified ? 'completed' : '';
 
             html += `
                 <div class="winner-item" onclick="openPlayerProfile(${player.user_id}, 0)">
