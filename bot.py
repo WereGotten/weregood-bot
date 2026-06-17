@@ -1593,10 +1593,12 @@ def send_telegram_message(chat_id, text, reply_markup=None):
         data = {"chat_id": chat_id, "text": text, "parse_mode": "HTML"}
         if reply_markup:
             data["reply_markup"] = reply_markup
-        verify_ssl = not DEBUG_MODE
-        requests.post(url, json=data, timeout=5, verify=verify_ssl)
+        # Увеличиваем таймаут с 5 до 15 секунд
+        response = requests.post(url, json=data, timeout=15, verify=False)  # verify=False для теста
+        return response
     except Exception as e:
         logger.error(f"Ошибка отправки сообщения: {e}")
+        return None
 
 def calculate_energy(user_data):
     now = time.time()
@@ -1687,7 +1689,7 @@ def create_stars_invoice(chat_id, user_id):
         payload = json.dumps({"user_id": user_id, "type": "energy_upgrade"})
         provider_token = ""
         currency = "XTR"
-        prices = [{"label": "Энергетический усилитель", "amount": 25}]
+        prices = [{"label": "Энергетический усилитель", "amount": 27}]
         url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/createInvoiceLink"
         data = {"title": title, "description": description, "payload": payload, "provider_token": provider_token,
                 "currency": currency, "prices": prices}
@@ -2583,7 +2585,7 @@ def api_ton_create_lp_boost_payment():
     if not proj_wallet:
         logger.critical("🚨 PROJECT_WALLET_ADDRESS отсутствует!")
         return jsonify({"success": False, "error": "Ошибка конфигурации платежного шлюза"}), 500
-    payment_amount_ton = 0.13
+    payment_amount_ton = 0.20
     payment_amount_nano = int(payment_amount_ton * 1e9)
     return jsonify({
         "success": True,
