@@ -289,37 +289,49 @@
     if (profileWins) profileWins.innerText = localWins;
 
     // ========== ОБНОВЛЕНИЕ ДОХОДА С УЧЁТОМ PAYDAY ==========
-    const earningPerClick = document.getElementById('earningPerClick');
-    const clickAmount = document.getElementById('clickAmount');
+const earningPerClick = document.getElementById('earningPerClick');
+const clickAmount = document.getElementById('clickAmount');
 
-    // Проверяем, активен ли PayDay (используем глобальную переменную или localStorage)
-    const paydayMultiplier = window.paydayMultiplier || 1;
-    const isPaydayActive = paydayMultiplier > 1;
+// Проверяем, активен ли PayDay (используем глобальную переменную)
+const paydayMultiplier = window.paydayMultiplier || 1;
+const isPaydayActive = paydayMultiplier > 1;
 
-    // Отображаемый доход (с множителем или без)
-    let displayEarning = isPaydayActive ? localEarning * paydayMultiplier : localEarning;
+// localEarning уже содержит доход с множителем (приходит с сервера)
+// Поэтому просто показываем его
+let displayEarning = localEarning;
 
-    if (earningPerClick) {
-        earningPerClick.innerText = displayEarning.toFixed(2);
-        if (isPaydayActive) {
-            earningPerClick.style.color = '#FF6B00';
-            earningPerClick.style.fontWeight = '800';
-            // Добавляем бейдж с множителем
-            let badge = earningPerClick.parentElement?.querySelector('.payday-badge');
-            if (!badge && earningPerClick.parentElement) {
-                badge = document.createElement('span');
-                badge.className = 'payday-badge';
-                badge.style.cssText = 'background: #FF6B00; color: white; padding: 2px 8px; border-radius: 20px; font-size: 0.6rem; margin-left: 6px;';
-                earningPerClick.parentElement.appendChild(badge);
-            }
-            if (badge) badge.innerText = `🔥 x${paydayMultiplier}`;
-        } else {
-            earningPerClick.style.color = '';
-            earningPerClick.style.fontWeight = '';
-            const badge = earningPerClick.parentElement?.querySelector('.payday-badge');
-            if (badge) badge.remove();
+if (earningPerClick) {
+    earningPerClick.innerText = displayEarning.toFixed(2);
+    if (isPaydayActive) {
+        earningPerClick.style.color = '#FF6B00';
+        earningPerClick.style.fontWeight = '800';
+        // Добавляем бейдж с множителем
+        let badge = earningPerClick.parentElement?.querySelector('.payday-badge');
+        if (!badge && earningPerClick.parentElement) {
+            badge = document.createElement('span');
+            badge.className = 'payday-badge';
+            badge.style.cssText = 'background: #FF6B00; color: white; padding: 2px 8px; border-radius: 20px; font-size: 0.6rem; margin-left: 6px;';
+            earningPerClick.parentElement.appendChild(badge);
         }
+        if (badge) badge.innerText = `🔥 x${paydayMultiplier}`;
+    } else {
+        earningPerClick.style.color = '';
+        earningPerClick.style.fontWeight = '';
+        const badge = earningPerClick.parentElement?.querySelector('.payday-badge');
+        if (badge) badge.remove();
     }
+}
+
+if (clickAmount) {
+    clickAmount.innerText = displayEarning.toFixed(2);
+    if (isPaydayActive) {
+        clickAmount.style.color = '#FF6B00';
+        clickAmount.style.fontWeight = '800';
+    } else {
+        clickAmount.style.color = '';
+        clickAmount.style.fontWeight = '';
+    }
+}
 
     if (clickAmount) {
         clickAmount.innerText = displayEarning.toFixed(2);
