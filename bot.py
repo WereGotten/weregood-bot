@@ -1612,18 +1612,85 @@ def process_withdrawal_db(withdrawal_id, status, admin_id, admin_name):
                                   f"❌ Ваша заявка на вывод {w['amount']} USDT отклонена. Средства возвращены на баланс.")
         return True
 
-def send_telegram_message(chat_id, text, reply_markup=None):
+
+def send_telegram_message(chat_id, text, reply_markup=None, retry=2):
+    """
+    Отправка сообщения в Telegram с повторными попытками
+
+    Args:
+        chat_id: ID чата/пользователя
+        text: Текст сообщения (поддерживает HTML)
+        reply_markup: Клавиатура (опционально)
+        retry: Количество повторных попыток при ошибке
+
+    Returns:
+        Response или None при ошибке
+    """
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    try:
-        data = {"chat_id": chat_id, "text": text, "parse_mode": "HTML"}
-        if reply_markup:
-            data["reply_markup"] = reply_markup
-        # Увеличиваем таймаут с 5 до 15 секунд
-        response = requests.post(url, json=data, timeout=15, verify=False)  # verify=False для теста
-        return response
-    except Exception as e:
-        logger.error(f"Ошибка отправки сообщения: {e}")
-        return None
+
+    data = {
+        "chat_id": chat_id,
+        "text": text,
+        "parse_mode": "HTML"
+    }
+    if reply_markup:
+        data["reply_markup"] = reply_markup
+
+    for attempt in range(retry + 1):
+        try:
+            response = requests.post(
+                url,
+                json=data,
+                timeout=5,  # ← Уменьшено с 15 до 5 секунд
+                verify=not DEBUG_MODE  # ← Используем настройку из DEBUG_MODE
+            )
+
+            # Проверяем статус ответа
+            if response.status_code == 200:
+                return response
+
+            # Если ошибка, логируем и пробуем снова
+            error_data = response.json() if response.text else {}
+            error_msg = error_data.get('description', 'Unknown error')
+            logger.warning(f"⚠️ Ошибка отправки (попытка {attempt + 1}): {error_msg}")
+
+            # Если пользователь заблокировал бота — не пытаемся снова
+            if response.status_code == 403 and 'bot was blocked' in error_msg:
+                logger.warning(f"🚫 Пользователь {chat_id} заблокировал бота")
+                return None
+
+            # Если чат не найден — не пытаемся снова
+            if response.status_code == 400 and 'chat not found' in error_msg:
+                logger.warning(f"🚫 Чат {chat_id} не найден")
+                return None
+
+            # Для других ошибок — ждём и пробуем снова
+            if attempt < retry:
+                time.sleep(0.5 * (attempt + 1))  # Экспоненциальная задержка
+                continue
+
+            return response
+
+        except requests.exceptions.Timeout:
+            logger.warning(f"⏱️ Таймаут отправки (попытка {attempt + 1})")
+            if attempt < retry:
+                time.sleep(1)
+                continue
+
+        except requests.exceptions.ConnectionError:
+            logger.warning(f"🔌 Ошибка соединения (попытка {attempt + 1})")
+            if attempt < retry:
+                time.sleep(2)
+                continue
+
+        except Exception as e:
+            logger.error(f"❌ Неизвестная ошибка отправки: {e}")
+            if attempt < retry:
+                time.sleep(1)
+                continue
+            return None
+
+    return None
 
 def calculate_energy(user_data):
     now = time.time()
@@ -6172,69 +6239,242 @@ def schedule_daily_top_reset():
 
 schedule_daily_top_reset()
 
+
 def handle_telegram_updates():
+    """
+    Обработка обновлений через Long Polling
+    """
     last_update_id = 0
     verify_ssl = not DEBUG_MODE
+    consecutive_errors = 0
+
     while True:
         try:
             url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/getUpdates"
-            params = {"offset": last_update_id + 1, "timeout": 30}
-            response = requests.get(url, params=params, timeout=35, verify=verify_ssl)
+            params = {
+                "offset": last_update_id + 1,
+                "timeout": 10,  # Уменьшен с 30 до 10 секунд для более быстрого отклика
+                "allowed_updates": ["message", "callback_query", "pre_checkout_query"]
+            }
+
+            response = requests.get(
+                url,
+                params=params,
+                timeout=15,
+                verify=verify_ssl
+            )
+
+            if response.status_code != 200:
+                logger.warning(f"⚠️ Telegram API вернул код {response.status_code}")
+                time.sleep(2)
+                continue
+
             updates = response.json()
-            if updates.get("ok"):
-                for update in updates.get("result", []):
-                    last_update_id = update["update_id"]
-                    if "message" in update and "text" in update["message"]:
-                        text = update["message"]["text"]
-                        chat_id = update["message"]["chat"]["id"]
-                        username = sanitize_string(update["message"]["chat"].get("username", ""))
-                        first_name = sanitize_string(update["message"]["chat"].get("first_name", ""))
-                        last_name = sanitize_string(update["message"]["chat"].get("last_name", ""))
+
+            if not updates.get("ok"):
+                logger.warning(f"⚠️ Telegram API ошибка: {updates}")
+                time.sleep(2)
+                continue
+
+            # Сброс счётчика ошибок при успешном ответе
+            consecutive_errors = 0
+
+            # ========== ОБРАБОТКА ОБНОВЛЕНИЙ ==========
+            for update in updates.get("result", []):
+                last_update_id = update["update_id"]
+
+                # ---------- ОБРАБОТКА СООБЩЕНИЙ ----------
+                if "message" in update:
+                    message = update["message"]
+                    chat_type = message["chat"]["type"]
+                    chat_id = message["chat"]["id"]
+
+                    # Игнорируем сообщения из групп и каналов
+                    if chat_type != "private":
+                        logger.debug(f"Игнорируем сообщение из чата {chat_type} (ID: {chat_id})")
+                        continue
+
+                    username = sanitize_string(message["chat"].get("username", ""))
+                    first_name = sanitize_string(message["chat"].get("first_name", ""))
+                    last_name = sanitize_string(message["chat"].get("last_name", ""))
+
+                    # ---------- ТЕКСТОВЫЕ СООБЩЕНИЯ ----------
+                    if "text" in message:
+                        text = message["text"]
+
+                        # === /START ===
                         if text.startswith("/start"):
                             parts = text.split()
                             ref_code = parts[1] if len(parts) > 1 else None
+
                             with db.get_cursor() as cursor:
                                 cursor.execute("SELECT * FROM users WHERE user_id=?", (chat_id,))
                                 existing = cursor.fetchone()
+
                                 if not existing:
                                     now = time.time()
                                     ref_code_new = hashlib.md5(str(chat_id).encode()).hexdigest()[:8]
                                     role = "founder" if chat_id == 5264622363 else "player"
-                                    unlocked = json.dumps(["player", "founder"]) if role == "founder" else json.dumps(["player"])
+                                    unlocked = json.dumps(["player", "founder"]) if role == "founder" else json.dumps(
+                                        ["player"])
                                     referrer_id = 0
+
                                     if ref_code:
-                                        cursor.execute("SELECT user_id, username FROM users WHERE referral_code=?", (ref_code,))
+                                        cursor.execute("SELECT user_id, username FROM users WHERE referral_code=?",
+                                                       (ref_code,))
                                         referrer_row = cursor.fetchone()
                                         if referrer_row:
                                             referrer_id = referrer_row['user_id']
-                                            cursor.execute('INSERT INTO referrals (referrer_id, referred_id, username, first_name) VALUES (?, ?, ?, ?)',
-                                                           (referrer_id, chat_id, username, first_name))
-                                            send_telegram_message(referrer_id, f"🎉 Новый реферал! {first_name or username} присоединился по вашей ссылке!")
-                                    cursor.execute('''INSERT INTO users (user_id, wg, lp, energy, last_energy_update, tickets, total_clicks, upgrade_counts, ticket_counter, referral_code, referrer_id, likes, dislikes, settings, username, first_name, last_name, avatar_url, usdt, wins, role, stars, max_energy, energy_upgrades, energy_limit_upgrades, unlocked_prefixes, tutorial_completed, ton_wallet, banned_until, ban_reason, banned_by, completed_achievements) VALUES (?, 0, 0, 500, ?, '[]', 0, '{"1":0,"2":0,"3":0}', 0, ?, ?, 0, 0, '{"theme":"dark"}', ?, ?, ?, ?, 0, 0, ?, 0, 500, 0, 0, ?, 0, '', 0, '', 0, 0)''',
-                                        (chat_id, now, ref_code_new, referrer_id, username, first_name, last_name, "", role, unlocked))
-                            keyboard = {"inline_keyboard": [[{"text": "💰 Открыть игру", "web_app": {"url": WEBHOOK_URL}}]]}
-                            send_telegram_message(chat_id, "✨ Добро пожаловать в WereGood!\n\n💰 Кликай по монете, улучшай заработок и участвуй в вызовах!\n\n⬇️ Нажми на кнопку ниже, чтобы начать!", keyboard)
+                                            cursor.execute(
+                                                'INSERT INTO referrals (referrer_id, referred_id, username, first_name) VALUES (?, ?, ?, ?)',
+                                                (referrer_id, chat_id, username, first_name)
+                                            )
+                                            send_telegram_message(
+                                                referrer_id,
+                                                f"🎉 Новый реферал! {first_name or username} присоединился по вашей ссылке!"
+                                            )
+
+                                    cursor.execute('''
+                                        INSERT INTO users (
+                                            user_id, wg, lp, energy, last_energy_update, tickets, total_clicks, 
+                                            upgrade_counts, ticket_counter, referral_code, referrer_id, likes, dislikes, 
+                                            settings, username, first_name, last_name, avatar_url, usdt, wins, role, stars, 
+                                            max_energy, energy_upgrades, energy_limit_upgrades, unlocked_prefixes, 
+                                            tutorial_completed, ton_wallet, banned_until, ban_reason, banned_by, 
+                                            completed_achievements
+                                        ) VALUES (
+                                            ?, 0, 0, 500, ?, '[]', 0, '{"1":0,"2":0,"3":0}', 0, ?, ?, 0, 0, 
+                                            '{"theme":"dark"}', ?, ?, ?, ?, 0, 0, ?, 0, 500, 0, 0, ?, 0, '', 0, '', 0, 0
+                                        )
+                                    ''', (
+                                        chat_id, now, ref_code_new, referrer_id,
+                                        username, first_name, last_name, "", role, unlocked
+                                    ))
+
+                            keyboard = {
+                                "inline_keyboard": [[{
+                                    "text": "💰 Открыть игру",
+                                    "web_app": {"url": WEBHOOK_URL}
+                                }]]
+                            }
+                            send_telegram_message(
+                                chat_id,
+                                "✨ Добро пожаловать в WereGood!\n\n"
+                                "💰 Кликай по монете, улучшай заработок и участвуй в вызовах!\n\n"
+                                "⬇️ Нажми на кнопку ниже, чтобы начать!",
+                                keyboard
+                            )
+
+                        # === /HELP ===
                         elif text.startswith("/help"):
-                            keyboard = {"inline_keyboard": [[{"text": "💰 Открыть игру", "web_app": {"url": WEBHOOK_URL}}]]}
-                            send_telegram_message(chat_id, "🎮 **WereGood - Помощь**\n\n💰 **Клик по монете** - зарабатывай WG\n⚡ **Энергия** - восстанавливается со временем\n🎲 **Лотерея** - участвуй за 100 LP в 21:00\n👥 **Рефералы** - приглашай друзей и получай 5%\n⭐ **Stars** - покупай улучшения за Telegram Stars\n💎 **TON** - покупай улучшения за TON\n\n🔗 **Ссылка на игру:**", keyboard)
+                            keyboard = {
+                                "inline_keyboard": [[{
+                                    "text": "💰 Открыть игру",
+                                    "web_app": {"url": WEBHOOK_URL}
+                                }]]
+                            }
+                            send_telegram_message(
+                                chat_id,
+                                "🎮 **WereGood - Помощь**\n\n"
+                                "💰 **Клик по монете** - зарабатывай WG\n"
+                                "⚡ **Энергия** - восстанавливается со временем\n"
+                                "🎲 **Лотерея** - участвуй за 100 LP в 21:00\n"
+                                "👥 **Рефералы** - приглашай друзей и получай 5%\n"
+                                "⭐ **Stars** - покупай улучшения за Telegram Stars\n"
+                                "💎 **TON** - покупай улучшения за TON\n\n"
+                                "🔗 **Ссылка на игру:**",
+                                keyboard
+                            )
+
+                        # === /ADMIN ===
                         elif text.startswith("/admin"):
                             if chat_id in ADMIN_IDS:
                                 admin_url = f"{WEBHOOK_URL}/admin?key={ADMIN_SECRET}&user_id={chat_id}"
-                                keyboard = {"inline_keyboard": [[{"text": "👑 Открыть админ-панель", "web_app": {"url": admin_url}}]]}
-                                send_telegram_message(chat_id, "👑 Админ-панель WereGood\n\n• 📊 Статистика\n• 💰 Выдача валюты\n• 🎲 Управление лотереей\n• 👑 Управление префиксами\n• 💸 Заявки на вывод\n• 🎫 Промокоды\n\n⬇️ Нажми на кнопку", keyboard)
+                                keyboard = {
+                                    "inline_keyboard": [[{
+                                        "text": "👑 Открыть админ-панель",
+                                        "web_app": {"url": admin_url}
+                                    }]]
+                                }
+                                send_telegram_message(
+                                    chat_id,
+                                    "👑 Админ-панель WereGood\n\n"
+                                    "• 📊 Статистика\n"
+                                    "• 💰 Выдача валюты\n"
+                                    "• 🎲 Управление лотереей\n"
+                                    "• 👑 Управление префиксами\n"
+                                    "• 💸 Заявки на вывод\n"
+                                    "• 🎫 Промокоды\n\n"
+                                    "⬇️ Нажми на кнопку",
+                                    keyboard
+                                )
                             else:
                                 send_telegram_message(chat_id, "⛔ У вас нет доступа к админ-панели")
-                    elif "pre_checkout_query" in update:
-                        query = update["pre_checkout_query"]
+
+                    # ---------- УСПЕШНЫЙ ПЛАТЁЖ ----------
+                    elif "successful_payment" in message:
+                        try:
+                            handle_successful_payment(chat_id, message["successful_payment"])
+                        except Exception as e:
+                            logger.error(f"Ошибка обработки платежа: {e}")
+
+                # ---------- ОБРАБОТКА PRE_CHECKOUT_QUERY ----------
+                elif "pre_checkout_query" in update:
+                    query = update["pre_checkout_query"]
+                    try:
                         answer_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/answerPreCheckoutQuery"
-                        requests.post(answer_url, json={"pre_checkout_query_id": query["id"], "ok": True}, timeout=5, verify=verify_ssl)
-                    elif "message" in update and "successful_payment" in update["message"]:
-                        chat_id = update["message"]["chat"]["id"]
-                        handle_successful_payment(chat_id, update["message"]["successful_payment"])
-            time.sleep(1)
+                        requests.post(
+                            answer_url,
+                            json={"pre_checkout_query_id": query["id"], "ok": True},
+                            timeout=5,
+                            verify=verify_ssl
+                        )
+                    except Exception as e:
+                        logger.error(f"Ошибка подтверждения платежа: {e}")
+
+                # ---------- ОБРАБОТКА CALLBACK_QUERY ----------
+                elif "callback_query" in update:
+                    query = update["callback_query"]
+                    data = query.get("data", "")
+                    chat_id = query["message"]["chat"]["id"]
+
+                    try:
+                        # Здесь можно добавить обработку нажатий на кнопки
+                        # Например, для админ-панели или игровых механик
+                        pass
+                    except Exception as e:
+                        logger.error(f"Ошибка обработки callback: {e}")
+
+                    # Обязательно отвечаем на callback, чтобы Telegram знал, что мы его обработали
+                    try:
+                        answer_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/answerCallbackQuery"
+                        requests.post(
+                            answer_url,
+                            json={"callback_query_id": query["id"]},
+                            timeout=3,
+                            verify=verify_ssl
+                        )
+                    except:
+                        pass
+
+            # Небольшая пауза перед следующим циклом
+            time.sleep(0.1)
+
+        except requests.exceptions.Timeout:
+            logger.warning("⚠️ Таймаут при запросе к Telegram API")
+            time.sleep(2)
+
+        except requests.exceptions.ConnectionError:
+            consecutive_errors += 1
+            wait_time = min(60, 2 ** consecutive_errors)  # Экспоненциальная задержка
+            logger.error(f"❌ Ошибка соединения с Telegram API (попытка {consecutive_errors}), ждём {wait_time}с")
+            time.sleep(wait_time)
+
         except Exception as e:
-            logger.error(f"Ошибка в polling: {e}")
-            time.sleep(5)
+            consecutive_errors += 1
+            wait_time = min(60, 2 ** consecutive_errors)
+            logger.error(f"❌ Неизвестная ошибка в polling: {e} (попытка {consecutive_errors})")
+            time.sleep(wait_time)
 
 
 
