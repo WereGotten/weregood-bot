@@ -562,7 +562,6 @@ ALLOWED_UPDATE_FIELDS = {
     'tutorial_completed', 'ton_wallet', 'banned_until', 'ban_reason', 'banned_by',
     'completed_achievements', 'daily_clicks',  # ← ЗАПЯТАЯ ДОБАВЛЕНА
     'fortune_bets_count', 'fortune_wins_count', 'fortune_total_bet_amount'
-    'payday_bonus_1', 'payday_bonus_2', 'payday_bonus_3'
 }
 
 MAX_USER_CACHE = 5000
