@@ -5408,27 +5408,31 @@ def api_admin_contest_stats():
                     u.avatar_url,
                     u.role,
                     COUNT(r.id) as total_referrals,
-                    SUM(CASE WHEN r.created_at >= ? THEN 1 ELSE 0 END) as new_referrals
+                    SUM(CASE WHEN r.created_at >= ? THEN 1 ELSE 0 END) as new_referrals,
+                    SUM(CASE WHEN r.created_at >= ? AND u2.total_clicks >= 300 THEN 1 ELSE 0 END) as completed_referrals
                 FROM users u
                 LEFT JOIN referrals r ON r.referrer_id = u.user_id
+                LEFT JOIN users u2 ON r.referred_id = u2.user_id
                 GROUP BY u.user_id
                 HAVING new_referrals > 0
-                ORDER BY new_referrals DESC, total_referrals DESC
+                ORDER BY completed_referrals DESC, new_referrals DESC
                 LIMIT 50
-            ''', (contest_start,))
+            ''', (contest_start, contest_start))
             top_rows = cursor.fetchall()
 
             top = []
             for idx, row in enumerate(top_rows, 1):
                 name = row['username'] or row['first_name'] or f"Player_{row['user_id']}"
-                tickets = row['new_referrals'] // 3
+                completed = row['completed_referrals'] or 0
+                tickets = completed // 3  # ← ТОЛЬКО ВЫПОЛНИВШИЕ!
                 top.append({
                     "rank": idx,
                     "user_id": row['user_id'],
                     "username": name,
                     "new_referrals": row['new_referrals'],
+                    "completed_referrals": completed,
                     "tickets": tickets,
-                    "is_qualified": row['new_referrals'] >= 3
+                    "is_qualified": completed >= 3
                 })
 
             # Игроки с билетами
