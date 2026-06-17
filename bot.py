@@ -5902,11 +5902,9 @@ def api_sync():
 def api_contest_leaderboard():
     """Возвращает топ участников конкурса"""
     try:
-        # 14 июня 2026, 17:00 МСК = 14:00 UTC
         contest_start_date = "2026-06-14 14:00:00"
 
         with db.get_cursor() as cursor:
-            # Получаем топ игроков по новым рефералам (без datetime(), просто строковое сравнение)
             cursor.execute('''
                 SELECT 
                     u.user_id,
@@ -5927,13 +5925,8 @@ def api_contest_leaderboard():
             ''', (contest_start_date, contest_start_date))
             rows = cursor.fetchall()
 
-            print(f"📊 Конкурс топ: найдено {len(rows)} участников")
-            for row in rows:
-                print(f"   - {row['username'] or row['first_name']}: {row['new_referrals']} новых рефералов")
-
             leaderboard = []
             for idx, row in enumerate(rows, 1):
-                # Формируем имя
                 if row['username'] and row['username'] != '':
                     display_name = '@' + row['username']
                 elif row['first_name'] and row['first_name'] != '':
@@ -5941,8 +5934,8 @@ def api_contest_leaderboard():
                 else:
                     display_name = f"Player_{row['user_id']}"
 
-                # Считаем билеты (за каждые 3 новых реферала)
-                tickets = row['new_referrals'] // 3
+                completed = row['completed_referrals'] or 0
+                tickets = completed // 3
 
                 leaderboard.append({
                     "rank": idx,
@@ -5951,8 +5944,9 @@ def api_contest_leaderboard():
                     "avatar_url": row['avatar_url'] or '',
                     "role": row['role'] or 'player',
                     "new_referrals": row['new_referrals'],
+                    "completed_referrals": completed,
                     "tickets": tickets,
-                    "is_qualified": row['new_referrals'] >= 3
+                    "is_qualified": completed >= 3
                 })
 
             return jsonify({"success": True, "leaderboard": leaderboard})
