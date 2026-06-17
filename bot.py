@@ -1227,6 +1227,28 @@ def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+
+        # ========== PAYDAY БОНУС ==========
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS payday_bonus (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                multiplier REAL DEFAULT 1.0,
+                start_time TIMESTAMP,
+                end_time TIMESTAMP,
+                is_active BOOLEAN DEFAULT 0,
+                updated_by INTEGER DEFAULT 0,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
+        # Добавляем запись если её нет
+        cursor.execute("SELECT id FROM payday_bonus WHERE id = 1")
+        if not cursor.fetchone():
+            cursor.execute('''
+                INSERT INTO payday_bonus (id, multiplier, is_active)
+                VALUES (1, 1.0, 0)
+            ''')
+
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_fortune_bets_round ON fortune_bets(round_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_fortune_bets_user ON fortune_bets(user_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_fortune_rounds_id ON fortune_rounds(round_id)')
@@ -3282,6 +3304,152 @@ def api_fortune_stats():
             }
         })
 
+
+# ========== PAYDAY API ==========
+
+@app.route('/api/admin/payday/status', methods=['GET'])
+@require_admin
+def api_payday_status():
+    """Получить текущий статус бонуса"""
+    with db.get_cursor() as cursor:
+        cursor.execute("SELECT * FROM payday_bonus WHERE id = 1")
+        row = cursor.fetchone()
+        if not row:
+            return jsonify({"success": False, "error": "Бонус не найден"}), 404
+
+        return jsonify({
+            "success": True,
+            "multiplier": row['multiplier'],
+            "is_active": bool(row['is_active']),
+            "start_time": row['start_time'],
+            "end_time": row['end_time'],
+            "time_remaining": get_payday_time_remaining(row)
+        })
+
+
+@app.route('/api/admin/payday/activate', methods=['POST'])
+@require_admin
+def api_payday_activate():
+    """Активировать бонус"""
+    data = request.json
+    multiplier = data.get('multiplier', 1.0)
+    duration_minutes = data.get('duration_minutes', 60)
+    admin_id = request.args.get('user_id', 'Admin')
+    admin_name = "Admin"
+
+    # Проверка множителя
+    if multiplier < 1.1 or multiplier > 5.0:
+        return jsonify({"success": False, "error": "Множитель должен быть от 1.1 до 5.0"}), 400
+
+    if duration_minutes < 1 or duration_minutes > 1440:  # максимум 24 часа
+        return jsonify({"success": False, "error": "Время должно быть от 1 до 1440 минут"}), 400
+
+    now = datetime.datetime.now()
+    end_time = now + datetime.timedelta(minutes=duration_minutes)
+
+    with db.get_cursor() as cursor:
+        cursor.execute('''
+            UPDATE payday_bonus 
+            SET multiplier = ?,
+                start_time = ?,
+                end_time = ?,
+                is_active = 1,
+                updated_by = ?,
+                updated_at = ?
+            WHERE id = 1
+        ''', (multiplier, now.isoformat(), end_time.isoformat(), admin_id, now.isoformat()))
+
+    add_admin_log(
+        f"🔥 PAYDAY АКТИВИРОВАН! Множитель: {multiplier}x на {duration_minutes} минут",
+        admin_id, admin_name
+    )
+
+    # Отправляем уведомление всем игрокам
+    notify_all_players_payday_activated(multiplier, duration_minutes)
+
+    return jsonify({
+        "success": True,
+        "message": f"✅ PayDay активирован! Множитель {multiplier}x на {duration_minutes} минут",
+        "end_time": end_time.isoformat()
+    })
+
+
+@app.route('/api/admin/payday/deactivate', methods=['POST'])
+@require_admin
+def api_payday_deactivate():
+    """Деактивировать бонус досрочно"""
+    admin_id = request.args.get('user_id', 'Admin')
+    admin_name = "Admin"
+
+    with db.get_cursor() as cursor:
+        cursor.execute('''
+            UPDATE payday_bonus 
+            SET is_active = 0,
+                updated_at = ?
+            WHERE id = 1
+        ''', (datetime.datetime.now().isoformat(),))
+
+    add_admin_log(f"⏹️ PAYDAY ДЕАКТИВИРОВАН досрочно", admin_id, admin_name)
+
+    return jsonify({"success": True, "message": "PayDay деактивирован"})
+
+
+def get_payday_time_remaining(row):
+    """Возвращает оставшееся время в секундах"""
+    if not row or not row['is_active'] or not row['end_time']:
+        return 0
+
+    end_time = datetime.datetime.fromisoformat(row['end_time'])
+    remaining = (end_time - datetime.datetime.now()).total_seconds()
+    return max(0, int(remaining))
+
+
+def notify_all_players_payday_activated(multiplier, duration_minutes):
+    """Уведомить всех игроков о старте PayDay"""
+    with db.get_cursor() as cursor:
+        cursor.execute("SELECT user_id FROM users WHERE user_id > 0")
+        users = cursor.fetchall()
+
+    message = f"""🔥 **PAYDAY АКТИВИРОВАН!** 🔥
+
+💰 Множитель: **{multiplier}x** на **{duration_minutes} минут**
+
+✅ ВСЁ УДВАИВАЕТСЯ:
+• Доход за клик
+• Шанс выпадения LP
+• Энергия за рекламу
+• Лимит энергии
+• Бонус за улучшения
+• Клики в топе
+
+🏃‍♂️ НЕ УПУСТИ ШАНС!"""
+
+    for user in users:
+        try:
+            send_telegram_message(user['user_id'], message)
+        except:
+            pass
+
+
+def get_payday_multiplier():
+    """Получить текущий множитель бонуса"""
+    with db.get_cursor() as cursor:
+        cursor.execute("SELECT multiplier, is_active, end_time FROM payday_bonus WHERE id = 1")
+        row = cursor.fetchone()
+
+        if not row or not row['is_active']:
+            return 1.0
+
+        # Проверяем, не истекло ли время
+        if row['end_time']:
+            end_time = datetime.datetime.fromisoformat(row['end_time'])
+            if datetime.datetime.now() > end_time:
+                # Автоматически деактивируем
+                cursor.execute("UPDATE payday_bonus SET is_active = 0 WHERE id = 1")
+                return 1.0
+
+        return row['multiplier']
+
 # ========== ОСНОВНЫЕ API (СОКРАЩЕННО ДЛЯ ЭКОНОМИИ МЕСТА, НО РАБОТАЮТ) ==========
 @app.route('/api/log_game_entry', methods=['POST'])
 def api_log_game_entry():
@@ -3452,10 +3620,16 @@ def api_click():
             "lp": user["lp"]
         })
     earning = get_total_earning(user["upgrade_counts"])
+    # Применяем множитель PayDay
+    payday_multiplier = get_payday_multiplier()
+    earning = earning * payday_multiplier
     old_wg = user["wg"]
     new_wg = old_wg + earning
+    payday_multiplier = get_payday_multiplier()
+    click_count = int(payday_multiplier)  # Целое число для кликов
+
     with click_buffer_lock:
-        click_buffer[user_id] = click_buffer.get(user_id, 0) + 1
+        click_buffer[user_id] = click_buffer.get(user_id, 0) + click_count
     safe_update_user(user_id, wg=new_wg)
     referrer_id = user.get('referrer_id', 0)
     if referrer_id > 0:
@@ -3481,9 +3655,15 @@ def api_click():
     threading.Thread(target=async_click_tasks, args=(user_id, user, earning, old_wg, new_wg, today)).start()
     new_lp_value = user["lp"]
     lp_reward = False
-    if random.random() < 0.0025:
+    # Шанс выпадения LP с множителем
+    base_chance = 0.0025
+    payday_multiplier = get_payday_multiplier()
+    lp_chance = base_chance * payday_multiplier
+
+    if random.random() < lp_chance:
         lp_reward = True
-        new_lp_value = user["lp"] + 0.5
+        lp_amount = 0.5 * payday_multiplier
+        new_lp_value = user["lp"] + lp_amount
         safe_update_user(user_id, lp=new_lp_value)
         threading.Thread(target=add_log,
                          args=(f"🎲 Редкий дроп! +0.5 LP", user_id, user['username'], user["lp"], new_lp_value,
@@ -3527,6 +3707,7 @@ def api_status():
                     "max_energy": user["max_energy"], "energy_upgrades": user["energy_upgrades"],
                     "regen_text": regen_text})
 
+
 @app.route('/api/buy_upgrade', methods=['POST'])
 def api_buy_upgrade():
     data = request.json
@@ -3541,30 +3722,58 @@ def api_buy_upgrade():
     banned, ban_info = is_banned(user_id)
     if banned:
         return jsonify({"success": False, "msg": f"Вы забанены! {ban_info['reason']}"})
+
     upgrade_id = data.get('upgrade_id')
     if upgrade_id not in [1, 2, 3]:
         return jsonify({"success": False, "msg": "Неверный ID улучшения"})
+
     user = get_user(user_id)
     current_count = user["upgrade_counts"].get(upgrade_id, 0)
     cost = get_upgrade_cost(upgrade_id, current_count)
+
     if user["wg"] < cost:
         return jsonify({"success": False, "msg": f"Не хватает WG! Нужно {cost:.2f} WG"})
+
     old_wg = user["wg"]
     new_wg = old_wg - cost
     new_count = current_count + 1
     user["upgrade_counts"][upgrade_id] = new_count
-    safe_update_user(user_id, wg=new_wg, upgrade_counts=user["upgrade_counts"])
+
+    # ========== PAYDAY: умножаем бонус за улучшение ==========
+    payday_multiplier = get_payday_multiplier()
+
+    # Получаем базовый бонус улучшения
+    base_bonus = UPGRADE_CONFIG[upgrade_id]["bonus"]
+    boosted_bonus = base_bonus * payday_multiplier
+
+    # Сохраняем множитель для этого улучшения (чтобы потом при пересчёте дохода учитывать)
+    # Добавляем поле в upgrade_counts с пометкой о множителе
+    upgrade_data = user["upgrade_counts"]
+    upgrade_data[f"bonus_multiplier_{upgrade_id}"] = payday_multiplier
+
+    safe_update_user(user_id, wg=new_wg, upgrade_counts=upgrade_data)
+
+    # ========== Логируем покупку с учётом PayDay ==========
+    payday_text = f" (x{payday_multiplier} PayDay!)" if payday_multiplier > 1.0 else ""
+
     update_achievement_progress(user_id, 'investor', 1)
     update_achievement_progress(user_id, 'spender', int(cost))
+
     if current_count == 0:
-        add_log(f"🆕⭐ ПЕРВАЯ ПОКУПКА улучшения! {UPGRADE_CONFIG[upgrade_id]['name']} за {cost:.2f} WG", user_id,
-                user['username'], old_value=old_wg, new_value=new_wg, currency="wg")
+        add_log(f"🆕⭐ ПЕРВАЯ ПОКУПКА улучшения! {UPGRADE_CONFIG[upgrade_id]['name']} за {cost:.2f} WG{payday_text}",
+                user_id, user['username'], old_value=old_wg, new_value=new_wg, currency="wg")
     else:
-        add_log(f"💰 Купил {UPGRADE_CONFIG[upgrade_id]['name']} #{new_count} за {cost:.2f} WG", user_id,
-                user['username'], old_value=old_wg, new_value=new_wg, currency="wg")
-    return jsonify(
-        {"success": True, "msg": f"{UPGRADE_CONFIG[upgrade_id]['name']} #{new_count} куплено!", "new_count": new_count,
-         "next_cost": get_upgrade_cost(upgrade_id, new_count)})
+        add_log(f"💰 Купил {UPGRADE_CONFIG[upgrade_id]['name']} #{new_count} за {cost:.2f} WG{payday_text}",
+                user_id, user['username'], old_value=old_wg, new_value=new_wg, currency="wg")
+
+    return jsonify({
+        "success": True,
+        "msg": f"{UPGRADE_CONFIG[upgrade_id]['name']} #{new_count} куплено!{payday_text}",
+        "new_count": new_count,
+        "next_cost": get_upgrade_cost(upgrade_id, new_count),
+        "payday_multiplier": payday_multiplier,
+        "boosted_bonus": boosted_bonus
+    })
 
 @app.route('/api/watch_ad', methods=['POST'])
 def api_watch_ad():
@@ -3585,7 +3794,9 @@ def api_watch_ad():
     current_energy, _ = calculate_energy(user)
     max_energy = user.get("max_energy", 500)
     old_energy = current_energy
-    new_energy = min(max_energy, current_energy + 150)
+    payday_multiplier = get_payday_multiplier()
+    energy_boost = int(150 * payday_multiplier)
+    new_energy = min(max_energy, current_energy + energy_boost)
     update_energy_in_db(user_id, user, new_energy)
     record_ad_watch(user_id, "energy_200")
     update_achievement_progress(user_id, 'ad_lover', 1)
@@ -3639,7 +3850,9 @@ def api_watch_ad_limit():
     if current_upgrades >= 300:
         return jsonify({"success": False, "msg": "Вы достигли максимального лимита улучшений! (300/300)"})
     old_max_energy = user['max_energy']
-    new_max_energy = old_max_energy + 1
+    payday_multiplier = get_payday_multiplier()
+    energy_limit_boost = int(1 * payday_multiplier)
+    new_max_energy = old_max_energy + energy_limit_boost
     new_upgrades = current_upgrades + 1
     safe_update_user(user_id, max_energy=new_max_energy, energy_limit_upgrades=new_upgrades)
     record_ad_watch(user_id, "energy_limit")

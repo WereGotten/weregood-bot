@@ -18,22 +18,27 @@
         </div>
     </div>
 
-    <div class="game-container">
-    <div class="joystick-corner-left" onclick="openContestPage()">
-    <div class="joystick-small-left">
-        <img src="/static/invite.png" alt="Конкурс" style="width: 28px; height: 28px;">
+    <!-- ========== PAYDAY ИНДИКАТОР ========== -->
+    <div id="paydayIndicator" style="display: none; background: linear-gradient(135deg, #FF6B00, #FF4500); padding: 8px 16px; border-radius: 30px; font-weight: 700; color: white; animation: pulse 1.5s infinite; margin: 10px 0; text-align: center;">
+        🔥 PAYDAY ACTIVE! Множитель: <span id="paydayMultiplierIndicator">2.0</span>x
     </div>
-</div>
-    <div class="coin-wrapper">
-        <div class="coin" id="coin">
-            <div class="coin-inner"></div>
-            <div class="click-plus" id="clickPlus">+<span id="clickAmount">0.01</span></div>
+
+    <div class="game-container">
+        <div class="joystick-corner-left" onclick="openContestPage()">
+            <div class="joystick-small-left">
+                <img src="/static/invite.png" alt="Конкурс" style="width: 28px; height: 28px;">
+            </div>
+        </div>
+        <div class="coin-wrapper">
+            <div class="coin" id="coin">
+                <div class="coin-inner"></div>
+                <div class="click-plus" id="clickPlus">+<span id="clickAmount">0.01</span></div>
+            </div>
+        </div>
+        <div class="joystick-corner-right" onclick="openGamepad()">
+            <div class="joystick-small-right">🎮</div>
         </div>
     </div>
-    <div class="joystick-corner-right" onclick="openGamepad()">
-        <div class="joystick-small-right">🎮</div>
-    </div>
-</div>
 
     <div class="earnings-info">
         <span><img src="/static/wallet.png" alt="WG" style="width: 20px; height: 20px;"> Заработок: <strong id="earningPerClick">0.01</strong> WG</span>

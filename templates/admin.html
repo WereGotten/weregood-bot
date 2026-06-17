@@ -31,6 +31,7 @@
             position: fixed;
             height: 100vh;
             overflow-y: auto;
+            z-index: 100;
         }
 
         .sidebar-header {
@@ -209,6 +210,12 @@
             background: rgba(244,67,54,0.2);
             color: #f44336;
             border: 1px solid rgba(244,67,54,0.3);
+        }
+
+        .btn-success {
+            background: rgba(34,197,94,0.2);
+            color: #22c55e;
+            border: 1px solid rgba(34,197,94,0.3);
         }
 
         .btn-sm {
@@ -797,7 +804,41 @@
             transition: width 0.3s;
         }
 
-        /* Стили для админки конкурса */
+        /* ========== PAYDAY СТИЛИ ========== */
+        .payday-status-card {
+            background: rgba(255,215,0,0.08);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid rgba(255,215,0,0.15);
+            margin-bottom: 20px;
+        }
+
+        .payday-status-card.active {
+            border-color: #FF6B00;
+            background: rgba(255,107,0,0.08);
+        }
+
+        .payday-timer {
+            font-size: 2rem;
+            font-weight: 700;
+            font-family: monospace;
+            color: #FF6B00;
+        }
+
+        .payday-multiplier {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #FFD700;
+        }
+
+        .payday-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        /* ========== СТИЛИ КОНКУРСА ========== */
         .contest-stats-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -875,6 +916,58 @@
         .winner-row {
             background: rgba(255,215,0,0.05);
         }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        @keyframes paydayPulse {
+            0% { box-shadow: 0 0 0 0 rgba(255,107,0,0.4); }
+            70% { box-shadow: 0 0 0 15px rgba(255,107,0,0); }
+            100% { box-shadow: 0 0 0 0 rgba(255,107,0,0); }
+        }
+
+        .payday-active {
+            animation: paydayPulse 2s infinite;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 200px;
+            }
+            .main-content {
+                margin-left: 200px;
+                padding: 16px;
+            }
+            .payday-controls {
+                grid-template-columns: 1fr;
+            }
+            .contest-stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .sidebar {
+                width: 60px;
+            }
+            .sidebar-header h1 { font-size: 0; }
+            .sidebar-header p { display: none; }
+            .nav-label { display: none; }
+            .nav-item { justify-content: center; padding: 12px; }
+            .nav-icon { font-size: 1.5rem; width: auto; }
+            .main-content {
+                margin-left: 60px;
+                padding: 12px;
+            }
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            .contest-stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
     </style>
 </head>
 <body>
@@ -896,6 +989,10 @@
             <div class="nav-item" data-page="contest">
                 <span class="nav-icon">🏆</span>
                 <span class="nav-label">Реферальный конкурс</span>
+            </div>
+            <div class="nav-item" data-page="payday">
+                <span class="nav-icon">🔥</span>
+                <span class="nav-label">PayDay</span>
             </div>
             <div class="nav-item" data-page="lottery">
                 <span class="nav-icon">🎲</span>
@@ -1046,6 +1143,79 @@
                                     <tr><td colspan="7" style="text-align: center;">Загрузка...</td></tr>
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========== СТРАНИЦА PAYDAY ========== -->
+            <div id="page-payday" class="page-content" style="display: none;">
+                <div class="chart-card">
+                    <h2>🔥 Управление PayDay</h2>
+
+                    <!-- Текущий статус -->
+                    <div id="paydayStatus" class="payday-status-card">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                            <div>
+                                <div style="font-size: 0.7rem; opacity: 0.6; text-transform: uppercase; letter-spacing: 1px;">Статус</div>
+                                <div style="font-size: 1.3rem; font-weight: 700;" id="paydayActiveStatus">⏸️ Неактивен</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.7rem; opacity: 0.6; text-transform: uppercase; letter-spacing: 1px;">Множитель</div>
+                                <div class="payday-multiplier" id="paydayMultiplierDisplay">1.0x</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.7rem; opacity: 0.6; text-transform: uppercase; letter-spacing: 1px;">Осталось</div>
+                                <div class="payday-timer" id="paydayTimeDisplay">--:--:--</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Настройки -->
+                    <div class="payday-controls">
+                        <div class="form-group">
+                            <label>🎯 Множитель (1.1x - 5.0x)</label>
+                            <input type="number" class="form-input" id="paydayMultiplier" value="2.0" step="0.1" min="1.1" max="5.0">
+                            <small style="opacity: 0.5; display: block; margin-top: 4px;">Выберите от 1.1 до 5.0</small>
+                        </div>
+                        <div class="form-group">
+                            <label>⏱️ Длительность (минуты)</label>
+                            <input type="number" class="form-input" id="paydayDuration" value="60" min="1" max="1440">
+                            <small style="opacity: 0.5; display: block; margin-top: 4px;">От 1 до 1440 минут (24 часа)</small>
+                        </div>
+                    </div>
+
+                    <!-- Кнопки управления -->
+                    <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px;">
+                        <button class="btn" id="paydayActivateBtn" style="flex: 2; background: linear-gradient(135deg, #FF6B00, #FF4500);">
+                            🔥 Активировать PayDay
+                        </button>
+                        <button class="btn btn-danger" id="paydayDeactivateBtn" style="flex: 1;">
+                            ⏹️ Деактивировать
+                        </button>
+                        <button class="btn btn-secondary" onclick="refreshPaydayStatus()" style="flex: 1;">
+                            🔄 Обновить
+                        </button>
+                    </div>
+
+                    <!-- Информация -->
+                    <div style="padding: 16px; background: rgba(255,215,0,0.05); border-radius: 12px; border: 1px solid rgba(255,215,0,0.1);">
+                        <div style="font-weight: 600; margin-bottom: 8px;">📋 Что умножается:</div>
+                        <ul style="font-size: 0.8rem; opacity: 0.7; list-style: none; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px;">
+                            <li>💰 Доход за клик</li>
+                            <li>🎲 Шанс выпадения LP</li>
+                            <li>⚡ Энергия за рекламу</li>
+                            <li>📈 Лимит энергии за рекламу</li>
+                            <li>⭐ Бонус за покупку улучшений</li>
+                            <li>🏆 Клики в топе (умножаются)</li>
+                        </ul>
+                    </div>
+
+                    <!-- История активаций -->
+                    <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid rgba(255,215,0,0.1);">
+                        <div style="font-weight: 600; margin-bottom: 12px;">📋 История активаций</div>
+                        <div id="paydayHistory" style="max-height: 150px; overflow-y: auto;">
+                            <div class="loading" style="padding: 10px;">Загрузка истории...</div>
                         </div>
                     </div>
                 </div>
@@ -1451,6 +1621,7 @@
         let currentLogTotal = 0;
         const LOGS_PER_PAGE = 100;
         let contestUpdateInterval = null;
+        let paydayTimerInterval = null;
 
         // ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
         function formatNumber(num) {
@@ -1469,7 +1640,7 @@
         }
 
         function copyToClipboard(text) {
-            navigator.clipboard.writeText(text).then(() => alert('✅ Адрес скопирован'));
+            navigator.clipboard.writeText(text).then(() => showToast('✅ Адрес скопирован', 'success'));
         }
 
         async function apiRequest(endpoint, options = {}) {
@@ -1490,6 +1661,36 @@
                 console.error('API Error:', e);
                 return { success: false, error: e.message };
             }
+        }
+
+        function showToast(msg, type) {
+            const toast = document.createElement('div');
+            const colors = {
+                success: '#4CAF50',
+                error: '#f44336',
+                info: '#2196F3'
+            };
+            toast.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                background: ${colors[type] || '#333'};
+                color: white;
+                padding: 12px 24px;
+                border-radius: 8px;
+                z-index: 10000;
+                font-size: 0.85rem;
+                animation: fadeIn 0.3s ease;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                max-width: 400px;
+            `;
+            toast.innerText = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
         }
 
         // ========== СТАТИСТИКА ==========
@@ -1591,13 +1792,11 @@
                     return;
                 }
 
-                // Статистика
                 document.getElementById('adminContestParticipants').innerText = data.stats.participants || 0;
                 document.getElementById('adminContestTotalReferrals').innerText = data.stats.new_referrals || 0;
                 document.getElementById('adminContestTotalTickets').innerText = data.stats.total_tickets || 0;
                 document.getElementById('adminContestTimeLeft').innerHTML = data.stats.time_left || '--';
 
-                // Топ участников
                 let topHtml = '';
                 for (let i = 0; i < data.top.length; i++) {
                     const p = data.top[i];
@@ -1617,7 +1816,6 @@
                 }
                 document.getElementById('adminContestTopTable').innerHTML = topHtml || '<tr><td colspan="6" class="loading">Нет данных</td></tr>';
 
-                // Игроки с билетами
                 let ticketsHtml = '';
                 for (const p of data.ticket_holders) {
                     ticketsHtml += `
@@ -1632,7 +1830,6 @@
                 }
                 document.getElementById('adminContestTicketsTable').innerHTML = ticketsHtml || '<tr><td colspan="5" class="loading">Нет игроков с билетами</td></tr>';
 
-                // Все рефералы конкурса
                 let referralsHtml = '';
                 for (const ref of data.referrals) {
                     const statusClass = ref.is_completed ? 'status-qualified' : 'status-not-qualified';
@@ -1740,22 +1937,125 @@
             }
         }
 
-        function showToast(msg, type) {
-            const toast = document.createElement('div');
-            toast.style.cssText = `
-                position: fixed;
-                bottom: 20px;
-                right: 20px;
-                background: ${type === 'success' ? '#4CAF50' : (type === 'error' ? '#f44336' : '#2196F3')};
-                color: white;
-                padding: 12px 24px;
-                border-radius: 8px;
-                z-index: 10000;
-                animation: fadeInOut 3s ease;
-            `;
-            toast.innerText = msg;
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
+        // ========== PAYDAY ==========
+        async function loadPaydayStatus() {
+            try {
+                const res = await fetch('/api/admin/payday/status?key=' + adminKey);
+                const data = await res.json();
+
+                if (!data.success) {
+                    console.error('PayDay status error:', data.error);
+                    return;
+                }
+
+                const statusCard = document.getElementById('paydayStatus');
+                const statusEl = document.getElementById('paydayActiveStatus');
+                const multEl = document.getElementById('paydayMultiplierDisplay');
+                const timeEl = document.getElementById('paydayTimeDisplay');
+
+                if (data.is_active) {
+                    statusEl.innerHTML = '🔥 АКТИВЕН';
+                    statusEl.style.color = '#FF6B00';
+                    if (statusCard) statusCard.classList.add('active');
+                } else {
+                    statusEl.innerHTML = '⏸️ Неактивен';
+                    statusEl.style.color = '#888';
+                    if (statusCard) statusCard.classList.remove('active');
+                }
+
+                if (multEl) {
+                    multEl.innerText = data.multiplier + 'x';
+                }
+
+                if (timeEl) {
+                    if (data.is_active && data.time_remaining > 0) {
+                        const hours = Math.floor(data.time_remaining / 3600);
+                        const minutes = Math.floor((data.time_remaining % 3600) / 60);
+                        const seconds = data.time_remaining % 60;
+                        timeEl.innerText = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                        timeEl.style.color = '#FF6B00';
+                    } else {
+                        timeEl.innerText = '--:--:--';
+                        timeEl.style.color = '#888';
+                    }
+                }
+
+            } catch(e) {
+                console.error('PayDay load error:', e);
+            }
+        }
+
+        async function activatePayday() {
+            const multiplier = parseFloat(document.getElementById('paydayMultiplier').value);
+            const duration = parseInt(document.getElementById('paydayDuration').value);
+
+            if (multiplier < 1.1 || multiplier > 5.0) {
+                showToast('Множитель должен быть от 1.1 до 5.0', 'error');
+                return;
+            }
+
+            if (duration < 1 || duration > 1440) {
+                showToast('Длительность должна быть от 1 до 1440 минут', 'error');
+                return;
+            }
+
+            if (!confirm(`🔥 Активировать PayDay?\n\nМножитель: ${multiplier}x\nДлительность: ${duration} минут\n\nВсе игроки получат уведомление!`)) {
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/admin/payday/activate?key=' + adminKey, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ multiplier, duration_minutes: duration })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    showToast('✅ ' + data.message, 'success');
+                    loadPaydayStatus();
+                    startPaydayTimer();
+                } else {
+                    showToast('❌ ' + data.error, 'error');
+                }
+            } catch(e) {
+                showToast('❌ Ошибка: ' + e.message, 'error');
+            }
+        }
+
+        async function deactivatePayday() {
+            if (!confirm('⏹️ Деактивировать PayDay досрочно?')) return;
+
+            try {
+                const res = await fetch('/api/admin/payday/deactivate?key=' + adminKey, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    showToast('✅ ' + data.message, 'success');
+                    loadPaydayStatus();
+                    if (paydayTimerInterval) {
+                        clearInterval(paydayTimerInterval);
+                        paydayTimerInterval = null;
+                    }
+                } else {
+                    showToast('❌ ' + data.error, 'error');
+                }
+            } catch(e) {
+                showToast('❌ Ошибка: ' + e.message, 'error');
+            }
+        }
+
+        function startPaydayTimer() {
+            if (paydayTimerInterval) clearInterval(paydayTimerInterval);
+            paydayTimerInterval = setInterval(loadPaydayStatus, 1000);
+        }
+
+        function refreshPaydayStatus() {
+            loadPaydayStatus();
+            showToast('🔄 Статус PayDay обновлён', 'info');
         }
 
         // ========== ЛОТЕРЕЯ ==========
@@ -1803,14 +2103,14 @@
         async function forceDraw() {
             if (!confirm('Запустить розыгрыш?')) return;
             await apiRequest('lottery_action', { method: 'POST', body: JSON.stringify({ action: 'force_draw' }) });
-            alert('Розыгрыш запущен');
+            showToast('✅ Розыгрыш запущен', 'success');
             loadLotteryStats();
         }
 
         async function resetLottery() {
             if (!confirm('Сбросить лотерею?')) return;
             await apiRequest('lottery_action', { method: 'POST', body: JSON.stringify({ action: 'reset_lottery' }) });
-            alert('Лотерея сброшена');
+            showToast('✅ Лотерея сброшена', 'success');
             loadLotteryStats();
         }
 
@@ -1819,8 +2119,14 @@
             try {
                 const res = await fetch('/api/admin/reset_daily_clicks?key=' + adminKey, { method: 'POST' });
                 const result = await res.json();
-                alert(result.success ? `✅ ${result.message}` : `❌ ${result.error}`);
-            } catch(e) { alert('❌ Ошибка'); }
+                if (result.success) {
+                    showToast('✅ ' + result.message, 'success');
+                } else {
+                    showToast('❌ ' + result.error, 'error');
+                }
+            } catch(e) {
+                showToast('❌ Ошибка', 'error');
+            }
         }
 
         async function resetAllAdLimits() {
@@ -1828,8 +2134,14 @@
             try {
                 const res = await fetch('/api/admin/reset_ad_limits?key=' + adminKey, { method: 'POST' });
                 const result = await res.json();
-                alert(result.success ? `✅ ${result.message}` : `❌ ${result.error}`);
-            } catch(e) { alert('❌ Ошибка'); }
+                if (result.success) {
+                    showToast('✅ ' + result.message, 'success');
+                } else {
+                    showToast('❌ ' + result.error, 'error');
+                }
+            } catch(e) {
+                showToast('❌ Ошибка', 'error');
+            }
         }
 
         function openPoolModal() {
@@ -1842,9 +2154,12 @@
 
         async function setLotteryPool() {
             const amount = parseFloat(document.getElementById('newPoolAmount')?.value || '0');
-            if (isNaN(amount)) { alert('Введите сумму'); return; }
+            if (isNaN(amount)) {
+                showToast('Введите сумму', 'error');
+                return;
+            }
             await apiRequest('lottery_action', { method: 'POST', body: JSON.stringify({ action: 'set_pool', amount: amount }) });
-            alert(`Фонд изменён на ${amount} USDT`);
+            showToast(`✅ Фонд изменён на ${amount} USDT`, 'success');
             closePoolModal();
             loadStats();
             loadLotteryStats();
@@ -1853,7 +2168,11 @@
         async function clearAllWallets() {
             if (!confirm('⚠️ Удалить ВСЕ TON кошельки?')) return;
             const result = await apiRequest('clear_wallets', { method: 'POST' });
-            alert(result.success ? `✅ Удалено ${result.count} кошельков` : '❌ Ошибка');
+            if (result.success) {
+                showToast(`✅ Удалено ${result.count} кошельков`, 'success');
+            } else {
+                showToast('❌ Ошибка', 'error');
+            }
         }
 
         async function refreshLotteryData() {
@@ -1867,13 +2186,13 @@
                     document.getElementById('lotteryPool').innerText = result.prize_pool.toFixed(2);
                     window.lotteryPool = result.prize_pool;
                     await loadLotteryStats();
-                    alert(`✅ Данные лотереи обновлены!\n\n💰 Призовой фонд: ${result.prize_pool || 0} USDT\n🎫 Билетов: ${result.total_tickets || 0}\n👥 Участников: ${result.participants_count || 0}`);
+                    showToast(`✅ Данные лотереи обновлены!\n💰 Призовой фонд: ${result.prize_pool || 0} USDT`, 'success');
                 } else {
-                    alert('❌ Ошибка: ' + (result.error || 'Не удалось обновить данные'));
+                    showToast('❌ ' + (result.error || 'Не удалось обновить данные'), 'error');
                 }
             } catch(e) {
                 console.error('Refresh error:', e);
-                alert('❌ Ошибка при обновлении: ' + e.message);
+                showToast('❌ Ошибка при обновлении: ' + e.message, 'error');
             }
         }
 
@@ -1951,11 +2270,13 @@
             if (!confirm(`Подтвердить ${status === 'completed' ? 'принятие' : 'отклонение'}?`)) return;
             const result = await apiRequest('update_user', { method: 'POST', body: JSON.stringify({ user_id: 1, action_type: 'process_withdrawal', withdrawal_id: id, status: status }) });
             if (result.success) {
-                alert(`✅ Заявка ${status === 'completed' ? 'принята' : 'отклонена'}`);
+                showToast(`✅ Заявка ${status === 'completed' ? 'принята' : 'отклонена'}`, 'success');
                 loadWithdrawals();
                 loadStats();
                 closeWithdrawalDetailModal();
-            } else alert('❌ Ошибка');
+            } else {
+                showToast('❌ Ошибка', 'error');
+            }
         }
 
         async function processWithdrawalAndClose(id, status) {
@@ -2041,7 +2362,7 @@
             const days_remaining = parseInt(document.getElementById('taskDaysRemaining').value);
             const is_active = document.getElementById('taskIsActive').value === 'true';
             if (!title || !channel_link || !channel_username) {
-                alert('Заполните обязательные поля');
+                showToast('Заполните обязательные поля', 'error');
                 return;
             }
             const taskId = document.getElementById('taskEditId').value;
@@ -2066,19 +2387,23 @@
                 });
             }
             if (result.success) {
-                alert(taskId ? '✅ Задание обновлено!' : '✅ Задание создано!');
+                showToast(taskId ? '✅ Задание обновлено!' : '✅ Задание создано!', 'success');
                 closeTaskModal();
                 loadTasks();
-            } else alert('❌ Ошибка');
+            } else {
+                showToast('❌ Ошибка', 'error');
+            }
         }
 
         async function deleteTask(taskId) {
             if (!confirm('Удалить задание?')) return;
             const result = await apiRequest('delete_task', { method: 'POST', body: JSON.stringify({ task_id: taskId }) });
             if (result.success) {
-                alert('✅ Задание удалено');
+                showToast('✅ Задание удалено', 'success');
                 loadTasks();
-            } else alert('❌ Ошибка');
+            } else {
+                showToast('❌ Ошибка', 'error');
+            }
         }
 
         // ========== ПРОМОКОДЫ ==========
@@ -2164,7 +2489,7 @@
             const max_uses = parseInt(document.getElementById('promoMaxUses').value);
             const password = document.getElementById('promoPassword').value.trim();
             if (!code || reward_amount <= 0 || max_uses <= 0) {
-                alert('Заполните все поля');
+                showToast('Заполните все поля', 'error');
                 return;
             }
             const body = { code, reward_type, reward_amount, max_uses };
@@ -2177,14 +2502,14 @@
                 });
                 const result = await response.json();
                 if (result.success) {
-                    alert(`✅ Промокод ${result.code} создан!\nСсылка: ${result.promo_url}`);
+                    showToast(`✅ Промокод ${result.code} создан!`, 'success');
                     closePromoModal();
                     loadPromoCodes();
                 } else {
-                    alert('❌ Ошибка');
+                    showToast('❌ Ошибка', 'error');
                 }
             } catch(e) {
-                alert('❌ Ошибка');
+                showToast('❌ Ошибка', 'error');
             }
         }
 
@@ -2192,10 +2517,10 @@
             if (!confirm(`Удалить промокод ${code}?`)) return;
             const result = await apiRequest('delete_promo', { method: 'POST', body: JSON.stringify({ promo_id: id }) });
             if (result.success) {
-                alert('✅ Промокод удалён');
+                showToast('✅ Промокод удалён', 'success');
                 loadPromoCodes();
             } else {
-                alert('❌ Ошибка');
+                showToast('❌ Ошибка', 'error');
             }
         }
 
@@ -2268,7 +2593,7 @@
         async function searchPlayers() {
             const query = document.getElementById('playerSearch')?.value || '';
             if (!query.trim()) {
-                alert('Введите ID или имя');
+                showToast('Введите ID или имя', 'error');
                 return;
             }
             const data = await apiRequest('search_users', { method: 'POST', body: JSON.stringify({ query: query }) });
@@ -2315,7 +2640,7 @@
         async function saveEdit() {
             const newValue = parseFloat(document.getElementById('editValue')?.value || '0');
             if (isNaN(newValue)) {
-                alert('Введите число');
+                showToast('Введите число', 'error');
                 return;
             }
             const { userId, field, currentValue } = currentEditField;
@@ -2338,9 +2663,9 @@
                 closeEditModal();
                 searchPlayers();
                 loadStats();
-                alert('✅ Обновлено!');
+                showToast('✅ Обновлено!', 'success');
             } else {
-                alert('❌ Ошибка');
+                showToast('❌ Ошибка', 'error');
             }
         }
 
@@ -2372,9 +2697,9 @@
                 closeBanModal();
                 searchPlayers();
                 loadStats();
-                alert('✅ Игрок заблокирован!');
+                showToast('✅ Игрок заблокирован!', 'success');
             } else {
-                alert('❌ Ошибка');
+                showToast('❌ Ошибка', 'error');
             }
         }
 
@@ -2382,11 +2707,11 @@
             if (!confirm('🗑️ Отвязать TON кошелёк?')) return;
             const result = await apiRequest('clear_user_wallet', { method: 'POST', body: JSON.stringify({ user_id: userId }) });
             if (result.success) {
-                alert('✅ Кошелёк отвязан');
+                showToast('✅ Кошелёк отвязан', 'success');
                 openPlayerProfile(userId);
                 loadStats();
             } else {
-                alert('❌ Ошибка');
+                showToast('❌ Ошибка', 'error');
             }
         }
 
@@ -2439,19 +2764,19 @@
         async function confirmDeleteUser() {
             const confirmText = document.getElementById('deleteConfirmText')?.value.trim();
             if (confirmText !== "УДАЛИТЬ") {
-                alert('❌ Введите "УДАЛИТЬ" для подтверждения');
+                showToast('❌ Введите "УДАЛИТЬ" для подтверждения', 'error');
                 return;
             }
             if (!currentUserData) return;
             const result = await apiRequest('delete_user', { method: 'POST', body: JSON.stringify({ user_id: currentUserData.user_id, confirm: true }) });
             if (result.success) {
-                alert(`✅ ${result.message}`);
+                showToast(`✅ ${result.message}`, 'success');
                 closeDeleteUserModal();
                 closePlayerModal();
                 searchPlayers();
                 loadStats();
             } else {
-                alert(`❌ Ошибка: ${result.error}`);
+                showToast(`❌ Ошибка: ${result.error}`, 'error');
             }
         }
 
@@ -2459,7 +2784,7 @@
         async function openPlayerProfile(userId) {
             const data = await apiRequest('get_user', { method: 'POST', body: JSON.stringify({ user_id: userId }) });
             if (!data.success) {
-                alert('Ошибка загрузки профиля');
+                showToast('Ошибка загрузки профиля', 'error');
                 return;
             }
             currentUserData = data.user;
@@ -2673,11 +2998,11 @@
 
         async function manageEnergyUpgrades(action, amount, giveReward) {
             if (!currentUserData) {
-                alert('Сначала выберите игрока');
+                showToast('Сначала выберите игрока', 'error');
                 return;
             }
             if (amount <= 0 || isNaN(amount)) {
-                alert('Введите корректное количество');
+                showToast('Введите корректное количество', 'error');
                 return;
             }
             let confirmMsg = '';
@@ -2702,14 +3027,14 @@
                 });
                 const result = await response.json();
                 if (result.success) {
-                    alert(`✅ ${result.message}`);
+                    showToast(`✅ ${result.message}`, 'success');
                     await openPlayerProfile(currentUserData.user_id);
                     if (typeof loadStats === 'function') loadStats();
                 } else {
-                    alert(`❌ Ошибка: ${result.error}`);
+                    showToast(`❌ Ошибка: ${result.error}`, 'error');
                 }
             } catch(e) {
-                alert('❌ Ошибка');
+                showToast('❌ Ошибка', 'error');
             }
         }
 
@@ -2771,7 +3096,7 @@
                  actionType === 'add_usdt' || actionType === 'remove_usdt' || actionType === 'add_stars' || actionType === 'remove_stars' ||
                  actionType === 'add_energy' || actionType === 'remove_energy' || actionType === 'add_max_energy' || actionType === 'add_clicks') &&
                  amount <= 0 && actionType !== 'unban') {
-                alert('Введите корректное количество');
+                showToast('Введите корректное количество', 'error');
                 return;
             }
 
@@ -2780,12 +3105,12 @@
             if (role) body.role = role;
             const result = await apiRequest('update_user', { method: 'POST', body: JSON.stringify(body) });
             if (result.success) {
-                alert('✅ Готово!');
+                showToast('✅ Готово!', 'success');
                 openPlayerProfile(userId);
                 loadStats();
                 searchPlayers();
             } else {
-                alert('❌ Ошибка');
+                showToast('❌ Ошибка', 'error');
             }
         }
 
@@ -2813,13 +3138,13 @@
             const buttonUrl = document.getElementById('broadcastButtonUrl')?.value || '';
 
             if (!message.trim()) {
-                alert('Введите сообщение для рассылки');
+                showToast('Введите сообщение для рассылки', 'error');
                 return;
             }
 
             if (isTest) {
                 if (!testUserId) {
-                    alert('Введите ID пользователя для теста');
+                    showToast('Введите ID пользователя для теста', 'error');
                     return;
                 }
                 if (!confirm(`Отправить тестовое сообщение пользователю ${testUserId}?`)) return;
@@ -2870,16 +3195,16 @@
                     if (progressText) progressText.innerText = `1 / 1`;
 
                     if (isTest) {
-                        alert('✅ Тестовое сообщение отправлено!');
+                        showToast('✅ Тестовое сообщение отправлено!', 'success');
                     } else {
-                        alert(`✅ Рассылка завершена!\nОтправлено: ${data.sent}\nОшибок: ${data.errors || 0}`);
+                        showToast(`✅ Рассылка завершена!\nОтправлено: ${data.sent}\nОшибок: ${data.errors || 0}`, 'success');
                     }
                 } else {
-                    alert(`❌ Ошибка: ${data.error}`);
+                    showToast(`❌ Ошибка: ${data.error}`, 'error');
                 }
             } catch(e) {
                 console.error('Broadcast error:', e);
-                alert('❌ Ошибка при отправке рассылки: ' + e.message);
+                showToast('❌ Ошибка при отправке рассылки: ' + e.message, 'error');
             } finally {
                 startBtn.disabled = false;
                 setTimeout(() => {
@@ -2920,13 +3245,23 @@
                         try {
                             const response = await fetch(`/api/admin/broadcast/cancel?key=${adminKey}`, { method: 'POST' });
                             const data = await response.json();
-                            alert(data.success ? '✅ Рассылка остановлена' : '❌ Ошибка: ' + data.error);
+                            if (data.success) {
+                                showToast('✅ Рассылка остановлена', 'success');
+                            } else {
+                                showToast('❌ Ошибка: ' + data.error, 'error');
+                            }
                         } catch(e) {
-                            alert('❌ Ошибка');
+                            showToast('❌ Ошибка', 'error');
                         }
                     }
                 });
             }
+
+            // PayDay кнопки
+            const paydayActivateBtn = document.getElementById('paydayActivateBtn');
+            const paydayDeactivateBtn = document.getElementById('paydayDeactivateBtn');
+            if (paydayActivateBtn) paydayActivateBtn.addEventListener('click', activatePayday);
+            if (paydayDeactivateBtn) paydayDeactivateBtn.addEventListener('click', deactivatePayday);
 
             // Модальные окна
             const setPoolBtn = document.getElementById('setPoolBtn');
@@ -2968,6 +3303,7 @@
                         dashboard: '📊 Статистика сервера',
                         charts: '📈 Графики и аналитика',
                         contest: '🏆 Реферальный конкурс',
+                        payday: '🔥 Управление PayDay',
                         lottery: '🎲 Управление лотереей',
                         tasks: '📋 Управление заданиями',
                         promocodes: '🎫 Управление промокодами',
@@ -2985,6 +3321,15 @@
                     } else {
                         if (contestUpdateInterval) clearInterval(contestUpdateInterval);
                     }
+                    if (page === 'payday') {
+                        loadPaydayStatus();
+                        startPaydayTimer();
+                    } else {
+                        if (paydayTimerInterval) {
+                            clearInterval(paydayTimerInterval);
+                            paydayTimerInterval = null;
+                        }
+                    }
                     if (page === 'lottery') loadLotteryStats();
                     if (page === 'tasks') loadTasks();
                     if (page === 'logs') loadLogs(1);
@@ -3000,6 +3345,7 @@
             loadChart();
             loadTasks();
             loadUsersCount();
+            loadPaydayStatus();
 
             // Автообновление каждые 30 секунд
             setInterval(loadStats, 30000);
@@ -3014,6 +3360,14 @@
                 if (promoCodesPage && promoCodesPage.style.display !== 'none') loadPromoCodes();
                 if (tasksPage && tasksPage.style.display !== 'none') loadTasks();
             }, 10000);
+
+            // Проверка PayDay каждые 30 секунд даже если на другой вкладке
+            setInterval(() => {
+                const paydayPage = document.getElementById('page-payday');
+                if (paydayPage && paydayPage.style.display !== 'none') {
+                    loadPaydayStatus();
+                }
+            }, 30000);
         });
     </script>
 </body>
