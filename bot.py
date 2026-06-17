@@ -1893,19 +1893,34 @@ def get_upgrade_cost(upgrade_id, current_count):
 
 
 def get_total_earning(upgrade_counts):
+    """Возвращает доход с учётом множителей PayDay для каждого улучшения"""
     base = 0.01
     total_bonus = 0
-    payday_multiplier = get_payday_multiplier()
 
-    for uid, count in upgrade_counts.items():
+    # Текущий множитель PayDay (для новых покупок)
+    current_payday_multiplier = get_payday_multiplier()
+
+    for key, value in upgrade_counts.items():
+        # Проверяем, является ли ключ ID улучшения (1, 2, 3)
         try:
-            uid_int = int(uid) if isinstance(uid, str) else uid
-            if uid_int in UPGRADE_CONFIG:
+            uid = int(key)
+            if uid in UPGRADE_CONFIG:
                 # Базовый бонус улучшения
-                bonus = UPGRADE_CONFIG[uid_int]["bonus"]
-                # Умножаем на множитель PayDay
-                total_bonus += bonus * count * payday_multiplier
+                bonus = UPGRADE_CONFIG[uid]["bonus"]
+
+                # Проверяем, был ли это улучшение куплено во время PayDay
+                bonus_key = f"payday_bonus_{uid}"
+                if bonus_key in upgrade_counts:
+                    # Используем сохранённый множитель для этого улучшения
+                    multiplier = upgrade_counts[bonus_key]
+                else:
+                    # Если улучшение куплено без PayDay, используем текущий множитель
+                    # (но только если PayDay активен сейчас)
+                    multiplier = current_payday_multiplier if current_payday_multiplier > 1 else 1
+
+                total_bonus += bonus * value * multiplier
         except (ValueError, TypeError):
+            # Пропускаем служебные поля (например, payday_bonus_1)
             continue
 
     return base + total_bonus
@@ -3807,23 +3822,24 @@ def api_buy_upgrade():
     new_count = current_count + 1
     user["upgrade_counts"][upgrade_id] = new_count
 
-    # ========== PAYDAY: умножаем бонус за улучшение ==========
+    # ========== PAYDAY: СОХРАНЯЕМ МНОЖИТЕЛЬ ДЛЯ ЭТОГО УЛУЧШЕНИЯ ==========
     payday_multiplier = get_payday_multiplier()
-    base_bonus = UPGRADE_CONFIG[upgrade_id]["bonus"]
-    boosted_bonus = base_bonus * payday_multiplier
 
-    # ✅ СОХРАНЯЕМ МНОЖИТЕЛЬ В ОТДЕЛЬНОЙ ТАБЛИЦЕ (безопасно)
-    try:
-        with db.get_cursor() as cursor:
-            cursor.execute('''
-                INSERT INTO user_upgrade_bonuses (user_id, upgrade_id, purchase_count, payday_multiplier)
-                VALUES (?, ?, ?, ?)
-            ''', (user_id, upgrade_id, new_count, payday_multiplier))
-    except:
-        # Если таблицы нет — просто логируем
-        logger.warning(f"Таблица user_upgrade_bonuses не найдена, пропускаем сохранение множителя")
+    # Сохраняем множитель в upgrade_counts (в отдельное поле)
+    # Формат: "payday_bonus_1": 2.0, "payday_bonus_2": 1.0 и т.д.
+    bonus_key = f"payday_bonus_{upgrade_id}"
 
-    # Обновляем upgrade_counts (без лишних полей)
+    # Если улучшение уже покупалось, проверяем был ли у него множитель
+    if bonus_key in user["upgrade_counts"]:
+        # Если множитель уже есть, обновляем его (если текущий множитель больше)
+        existing_multiplier = user["upgrade_counts"][bonus_key]
+        if payday_multiplier > existing_multiplier:
+            user["upgrade_counts"][bonus_key] = payday_multiplier
+    else:
+        # Если множителя нет, сохраняем текущий
+        user["upgrade_counts"][bonus_key] = payday_multiplier
+
+    # Обновляем upgrade_counts в БД
     safe_update_user(user_id, wg=new_wg, upgrade_counts=user["upgrade_counts"])
 
     # ========== Логируем покупку с учётом PayDay ==========
@@ -3844,8 +3860,7 @@ def api_buy_upgrade():
         "msg": f"{UPGRADE_CONFIG[upgrade_id]['name']} #{new_count} куплено!{payday_text}",
         "new_count": new_count,
         "next_cost": get_upgrade_cost(upgrade_id, new_count),
-        "payday_multiplier": payday_multiplier,
-        "boosted_bonus": boosted_bonus
+        "payday_multiplier": payday_multiplier
     })
 
 
