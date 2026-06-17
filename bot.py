@@ -5949,9 +5949,8 @@ def api_contest_leaderboard():
                     "avatar_url": row['avatar_url'] or '',
                     "role": row['role'] or 'player',
                     "new_referrals": row['new_referrals'],
-                    "completed_referrals": row['completed_referrals'] or 0,  # ← ДОБАВЛЕНО
-                    "tickets": (row['completed_referrals'] or 0) // 3,  # ← БИЛЕТЫ ОТ ВЫПОЛНИВШИХ
-                    "is_qualified": (row['completed_referrals'] or 0) >= 3  # ← КВАЛИФИКАЦИЯ ОТ ВЫПОЛНИВШИХ
+                    "tickets": tickets,
+                    "is_qualified": row['new_referrals'] >= 3
                 })
 
             return jsonify({"success": True, "leaderboard": leaderboard})
