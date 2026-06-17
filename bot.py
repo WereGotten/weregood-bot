@@ -5915,14 +5915,16 @@ def api_contest_leaderboard():
                     u.avatar_url,
                     u.role,
                     COUNT(r.id) as total_referrals,
-                    SUM(CASE WHEN r.created_at >= ? THEN 1 ELSE 0 END) as new_referrals
+                    SUM(CASE WHEN r.created_at >= ? THEN 1 ELSE 0 END) as new_referrals,
+                    SUM(CASE WHEN r.created_at >= ? AND u2.total_clicks >= 300 THEN 1 ELSE 0 END) as completed_referrals
                 FROM users u
                 LEFT JOIN referrals r ON r.referrer_id = u.user_id
+                LEFT JOIN users u2 ON r.referred_id = u2.user_id
                 GROUP BY u.user_id
-                HAVING new_referrals > 0
-                ORDER BY new_referrals DESC, total_referrals DESC
+                HAVING completed_referrals > 0
+                ORDER BY completed_referrals DESC, new_referrals DESC
                 LIMIT 100
-            ''', (contest_start_date,))
+            ''', (contest_start_date, contest_start_date))
             rows = cursor.fetchall()
 
             print(f"📊 Конкурс топ: найдено {len(rows)} участников")
