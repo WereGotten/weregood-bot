@@ -3677,11 +3677,8 @@ def api_click():
     # ========== ПОЛУЧАЕМ МНОЖИТЕЛЬ PAYDAY ==========
     payday_multiplier = get_payday_multiplier()
 
-    # ========== БАЗОВЫЙ ДОХОД БЕЗ МНОЖИТЕЛЯ ==========
-    base_earning = get_total_earning(user["upgrade_counts"])
-
-    # ========== ДОХОД С МНОЖИТЕЛЕМ ==========
-    earning = base_earning * payday_multiplier
+    # ========== ДОХОД ЗА КЛИК (УЖЕ С МНОЖИТЕЛЕМ!) ==========
+    earning = get_total_earning(user["upgrade_counts"])
 
     old_wg = user["wg"]
     new_wg = old_wg + earning
@@ -3736,10 +3733,7 @@ def api_click():
                                new_lp_value,
                                "lp")).start()
 
-    # ========== ТЕКУЩИЙ ДОХОД ДЛЯ ОТОБРАЖЕНИЯ ==========
-    current_earning = get_total_earning(user["upgrade_counts"])
-    current_earning_with_payday = current_earning * payday_multiplier
-
+    # ========== ОТВЕТ ==========
     return jsonify({
         "energy": new_energy,
         "wg": new_wg,
@@ -3747,8 +3741,7 @@ def api_click():
         "total_clicks": user["total_clicks"] + 1,
         "earned": earning,
         "lp_reward": lp_reward,
-        "earning_per_click": current_earning,
-        "earning_per_click_with_payday": current_earning_with_payday,
+        "earning_per_click": earning,  # ← УЖЕ С МНОЖИТЕЛЕМ
         "payday_multiplier": payday_multiplier,
         "is_payday_active": payday_multiplier > 1
     })
