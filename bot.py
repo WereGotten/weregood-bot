@@ -3810,49 +3810,41 @@ def api_buy_upgrade():
     new_wg = old_wg - cost
     new_count = current_count + 1
 
-    # ========== РАБОТАЕМ С upgrade_counts ==========
+    # ========== ЧИСТИМ upgrade_counts ОТ ВСЕГО МУСОРА ==========
     upgrade_counts = user["upgrade_counts"]
+    clean_counts = {}
+    for key, value in upgrade_counts.items():
+        # Оставляем ТОЛЬКО числовые ключи (1, 2, 3)
+        try:
+            if isinstance(key, str) and key.isdigit():
+                clean_counts[int(key)] = value
+            elif isinstance(key, int):
+                clean_counts[key] = value
+        except:
+            pass
 
     # Обновляем количество улучшений
-    upgrade_counts[upgrade_id] = new_count
+    clean_counts[upgrade_id] = new_count
 
-    # ========== PAYDAY: СОХРАНЯЕМ МНОЖИТЕЛЬ ==========
-    payday_multiplier = get_payday_multiplier()
-
-    # Если PayDay активен (множитель > 1) — сохраняем множитель для этого улучшения
-    if payday_multiplier > 1.0:
-        bonus_key = f"payday_bonus_{upgrade_id}"
-        # Проверяем, был ли уже множитель для этого улучшения
-        if bonus_key in upgrade_counts:
-            # Если был, обновляем только если новый множитель больше
-            if payday_multiplier > upgrade_counts[bonus_key]:
-                upgrade_counts[bonus_key] = payday_multiplier
-        else:
-            # Если не было, сохраняем текущий
-            upgrade_counts[bonus_key] = payday_multiplier
-
-    # Сохраняем в БД
-    safe_update_user(user_id, wg=new_wg, upgrade_counts=upgrade_counts)
+    # Сохраняем ТОЛЬКО чистые данные
+    safe_update_user(user_id, wg=new_wg, upgrade_counts=clean_counts)
 
     # ========== Логируем покупку ==========
-    payday_text = f" (x{payday_multiplier} PayDay!)" if payday_multiplier > 1.0 else ""
-
     update_achievement_progress(user_id, 'investor', 1)
     update_achievement_progress(user_id, 'spender', int(cost))
 
     if current_count == 0:
-        add_log(f"🆕⭐ ПЕРВАЯ ПОКУПКА улучшения! {UPGRADE_CONFIG[upgrade_id]['name']} за {cost:.2f} WG{payday_text}",
+        add_log(f"🆕⭐ ПЕРВАЯ ПОКУПКА улучшения! {UPGRADE_CONFIG[upgrade_id]['name']} за {cost:.2f} WG",
                 user_id, user['username'], old_value=old_wg, new_value=new_wg, currency="wg")
     else:
-        add_log(f"💰 Купил {UPGRADE_CONFIG[upgrade_id]['name']} #{new_count} за {cost:.2f} WG{payday_text}",
+        add_log(f"💰 Купил {UPGRADE_CONFIG[upgrade_id]['name']} #{new_count} за {cost:.2f} WG",
                 user_id, user['username'], old_value=old_wg, new_value=new_wg, currency="wg")
 
     return jsonify({
         "success": True,
-        "msg": f"{UPGRADE_CONFIG[upgrade_id]['name']} #{new_count} куплено!{payday_text}",
+        "msg": f"{UPGRADE_CONFIG[upgrade_id]['name']} #{new_count} куплено!",
         "new_count": new_count,
-        "next_cost": get_upgrade_cost(upgrade_id, new_count),
-        "payday_multiplier": payday_multiplier
+        "next_cost": get_upgrade_cost(upgrade_id, new_count)
     })
 
 
