@@ -5472,4 +5472,124 @@ setInterval(() => {
     }
 }, 30000);
 
+    // ========== PAYDAY UI ==========
+async function checkPaydayStatus() {
+    try {
+        const res = await fetch('/api/payday/status');
+        const data = await res.json();
+
+        const indicator = document.getElementById('paydayIndicator');
+        const multiplierEl = document.getElementById('paydayMultiplierIndicator');
+        const earningsInfo = document.querySelector('.earnings-info');
+        const energyAdCards = document.querySelectorAll('.ad-card');
+        const upgradeCards = document.querySelectorAll('.upgrade-card');
+
+        if (data.is_active && data.multiplier > 1.0) {
+            // Показываем индикатор
+            if (indicator) {
+                indicator.style.display = 'block';
+                if (multiplierEl) multiplierEl.innerText = data.multiplier;
+            }
+
+            // Меняем цвет заработка
+            if (earningsInfo) {
+                earningsInfo.style.border = '2px solid #FF6B00';
+                earningsInfo.style.background = 'rgba(255,107,0,0.15)';
+                const earningSpan = earningsInfo.querySelector('strong');
+                if (earningSpan) {
+                    earningSpan.style.color = '#FF6B00';
+                    earningSpan.style.fontSize = '1.2em';
+                }
+            }
+
+            // Добавляем бейдж на рекламные карточки
+            energyAdCards.forEach(card => {
+                const adBtn = card.querySelector('.ad-btn');
+                if (adBtn && !card.dataset.paydayApplied) {
+                    const boostText = document.createElement('span');
+                    boostText.style.cssText = 'color: #FF6B00; font-weight: 700; margin-left: 8px;';
+                    boostText.innerText = `🔥 x${data.multiplier}`;
+                    adBtn.appendChild(boostText);
+                    card.dataset.paydayApplied = 'true';
+                }
+                card.style.border = '2px solid #FF6B00';
+                card.style.background = 'rgba(255,107,0,0.08)';
+            });
+
+            // Добавляем бейдж на карточки улучшений
+            upgradeCards.forEach(card => {
+                if (!card.dataset.paydayApplied) {
+                    const priceDiv = card.querySelector('.upgrade-price');
+                    if (priceDiv) {
+                        const boostBadge = document.createElement('span');
+                        boostBadge.style.cssText = 'color: #FF6B00; font-weight: 700; margin-left: 8px; font-size: 0.7rem;';
+                        boostBadge.innerText = `🔥 x${data.multiplier}`;
+                        priceDiv.appendChild(boostBadge);
+                    }
+                    card.dataset.paydayApplied = 'true';
+                }
+                card.style.border = '2px solid #FF6B00';
+                card.style.background = 'rgba(255,107,0,0.08)';
+            });
+
+            // Обновляем энергию в хедере
+            const energyHeader = document.querySelector('.stat-badge');
+            if (energyHeader) {
+                energyHeader.style.border = '2px solid #FF6B00';
+                energyHeader.style.background = 'rgba(255,107,0,0.15)';
+            }
+
+        } else {
+            // Скрываем индикатор
+            if (indicator) indicator.style.display = 'none';
+
+            // Возвращаем обычный вид
+            if (earningsInfo) {
+                earningsInfo.style.border = 'none';
+                earningsInfo.style.background = 'rgba(255,215,0,0.08)';
+                const earningSpan = earningsInfo.querySelector('strong');
+                if (earningSpan) {
+                    earningSpan.style.color = '';
+                    earningSpan.style.fontSize = '';
+                }
+            }
+
+            // Убираем бейджи с рекламных карточек
+            energyAdCards.forEach(card => {
+                card.style.border = 'none';
+                card.style.background = '';
+                const boostText = card.querySelector('.ad-btn span:last-child');
+                if (boostText && boostText.innerText.includes('🔥')) {
+                    boostText.remove();
+                }
+                card.dataset.paydayApplied = '';
+            });
+
+            // Убираем бейджи с улучшений
+            upgradeCards.forEach(card => {
+                card.style.border = 'none';
+                card.style.background = '';
+                const boostBadge = card.querySelector('.upgrade-price span:last-child');
+                if (boostBadge && boostBadge.innerText.includes('🔥')) {
+                    boostBadge.remove();
+                }
+                card.dataset.paydayApplied = '';
+            });
+
+            // Возвращаем обычный вид энергии
+            const energyHeader = document.querySelector('.stat-badge');
+            if (energyHeader) {
+                energyHeader.style.border = 'none';
+                energyHeader.style.background = '';
+            }
+        }
+    } catch(e) {
+        console.error('PayDay check error:', e);
+    }
+}
+
+// Проверяем каждые 10 секунд
+setInterval(checkPaydayStatus, 10000);
+checkPaydayStatus();
+
 </script>

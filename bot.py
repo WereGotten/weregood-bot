@@ -1249,6 +1249,19 @@ def init_db():
                 VALUES (1, 1.0, 0)
             ''')
 
+            # Добавь в init_db():
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS user_upgrade_bonuses (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    upgrade_id INTEGER NOT NULL,
+                    purchase_count INTEGER DEFAULT 0,
+                    payday_multiplier REAL DEFAULT 1.0,
+                    purchased_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(user_id, upgrade_id, purchase_count)
+                )
+            ''')
+
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_fortune_bets_round ON fortune_bets(round_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_fortune_bets_user ON fortune_bets(user_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_fortune_rounds_id ON fortune_rounds(round_id)')
@@ -3450,6 +3463,33 @@ def get_payday_multiplier():
 
         return row['multiplier']
 
+
+@app.route('/api/payday/status', methods=['GET'])
+def api_payday_status_public():
+    """Публичный статус PayDay для игроков"""
+    with db.get_cursor() as cursor:
+        cursor.execute("SELECT multiplier, is_active, end_time FROM payday_bonus WHERE id = 1")
+        row = cursor.fetchone()
+
+        if not row or not row['is_active']:
+            return jsonify({"success": True, "is_active": False, "multiplier": 1.0})
+
+        # Проверяем, не истекло ли время
+        if row['end_time']:
+            end_time = datetime.datetime.fromisoformat(row['end_time'])
+            if datetime.datetime.now() > end_time:
+                cursor.execute("UPDATE payday_bonus SET is_active = 0 WHERE id = 1")
+                return jsonify({"success": True, "is_active": False, "multiplier": 1.0})
+
+        remaining = (end_time - datetime.datetime.now()).total_seconds()
+
+        return jsonify({
+            "success": True,
+            "is_active": True,
+            "multiplier": row['multiplier'],
+            "time_remaining": max(0, int(remaining))
+        })
+
 # ========== ОСНОВНЫЕ API (СОКРАЩЕННО ДЛЯ ЭКОНОМИИ МЕСТА, НО РАБОТАЮТ) ==========
 @app.route('/api/log_game_entry', methods=['POST'])
 def api_log_game_entry():
@@ -3741,17 +3781,22 @@ def api_buy_upgrade():
 
     # ========== PAYDAY: умножаем бонус за улучшение ==========
     payday_multiplier = get_payday_multiplier()
-
-    # Получаем базовый бонус улучшения
     base_bonus = UPGRADE_CONFIG[upgrade_id]["bonus"]
     boosted_bonus = base_bonus * payday_multiplier
 
-    # Сохраняем множитель для этого улучшения (чтобы потом при пересчёте дохода учитывать)
-    # Добавляем поле в upgrade_counts с пометкой о множителе
-    upgrade_data = user["upgrade_counts"]
-    upgrade_data[f"bonus_multiplier_{upgrade_id}"] = payday_multiplier
+    # ✅ СОХРАНЯЕМ МНОЖИТЕЛЬ В ОТДЕЛЬНОЙ ТАБЛИЦЕ (безопасно)
+    try:
+        with db.get_cursor() as cursor:
+            cursor.execute('''
+                INSERT INTO user_upgrade_bonuses (user_id, upgrade_id, purchase_count, payday_multiplier)
+                VALUES (?, ?, ?, ?)
+            ''', (user_id, upgrade_id, new_count, payday_multiplier))
+    except:
+        # Если таблицы нет — просто логируем
+        logger.warning(f"Таблица user_upgrade_bonuses не найдена, пропускаем сохранение множителя")
 
-    safe_update_user(user_id, wg=new_wg, upgrade_counts=upgrade_data)
+    # Обновляем upgrade_counts (без лишних полей)
+    safe_update_user(user_id, wg=new_wg, upgrade_counts=user["upgrade_counts"])
 
     # ========== Логируем покупку с учётом PayDay ==========
     payday_text = f" (x{payday_multiplier} PayDay!)" if payday_multiplier > 1.0 else ""
@@ -3774,6 +3819,7 @@ def api_buy_upgrade():
         "payday_multiplier": payday_multiplier,
         "boosted_bonus": boosted_bonus
     })
+
 
 @app.route('/api/watch_ad', methods=['POST'])
 def api_watch_ad():
