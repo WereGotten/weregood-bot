@@ -5675,8 +5675,6 @@ def api_admin_send_broadcast():
         return jsonify({"success": False, "error": "Сообщение не может быть пустым"}), 400
 
     broadcast_cancel = False
-
-    # Сбрасываем кэш на всякий случай
     broadcast_active = True
 
     def broadcast_worker():
@@ -5704,7 +5702,6 @@ def api_admin_send_broadcast():
             errors = 0
 
             for user in users:
-                # ========== ПРОВЕРКА НА ОСТАНОВКУ ==========
                 if broadcast_cancel:
                     add_admin_log(f"🛑 РАССЫЛКА ОСТАНОВЛЕНА. Отправлено: {sent}, ошибок: {errors}",
                                   admin_id, admin_name)
@@ -5718,7 +5715,7 @@ def api_admin_send_broadcast():
                 except Exception as e:
                     errors += 1
                     logger.error(f"Broadcast error to {user['user_id']}: {e}")
-                time.sleep(0.05)  # 20 сообщений в секунду
+                time.sleep(0.05)
 
             add_admin_log(f"📢 РАССЫЛКА: отправлено {sent}, ошибок {errors}",
                           admin_id, admin_name)
@@ -5734,8 +5731,7 @@ def api_admin_send_broadcast():
 
     return jsonify({
         "success": True,
-        "message": "Рассылка запущена в фоновом режиме",
-        "total": len(users) if users else 0  # ← Добавляем общее количество
+        "message": "Рассылка запущена в фоновом режиме"
     })
 
 
