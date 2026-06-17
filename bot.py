@@ -1888,8 +1888,11 @@ def get_total_earning(upgrade_counts):
     current_payday_multiplier = get_payday_multiplier()
 
     for key, value in upgrade_counts.items():
-        # Проверяем, является ли ключ ID улучшения (1, 2, 3)
+        # ========== ПРОВЕРЯЕМ, ЯВЛЯЕТСЯ ЛИ КЛЮЧ ЧИСЛОМ ==========
         try:
+            # Пропускаем все ключи, которые не являются числами
+            if isinstance(key, str) and not key.isdigit():
+                continue
             uid = int(key)
             if uid in UPGRADE_CONFIG:
                 # Базовый бонус улучшения
