@@ -2528,6 +2528,65 @@ def terms_page():
 def privacy_page():
     return '<!DOCTYPE html><html><head><title>Политика конфиденциальности</title></head><body style="background:#0a0a1a; color:white; padding:20px; font-family:system-ui;"><h1>Политика конфиденциальности WereGood</h1><p>Мы собираем только ваш Telegram ID и данные профиля для работы игры.</p><p>Данные не передаются третьим лицам.</p><p>Вы можете удалить свои данные, обратившись к администратору.</p></body></html>'
 
+
+@app.route(f'/webhook/{TELEGRAM_TOKEN}', methods=['POST'])
+def webhook():
+    """Обработка вебхука от Telegram"""
+    try:
+        update = request.get_json()
+        if not update:
+            return "ok", 200
+
+        # Обрабатываем обновление (та же логика, что и в polling)
+        threading.Thread(target=process_telegram_update, args=(update,)).start()
+        return "ok", 200
+    except Exception as e:
+        logger.error(f"Webhook error: {e}")
+        return "ok", 200  # Всегда возвращаем 200, чтобы Telegram не пересылал заново
+
+
+def process_telegram_update(update):
+    """Обработка одного обновления от Telegram"""
+    try:
+        if "message" in update:
+            message = update["message"]
+            chat_type = message["chat"]["type"]
+            chat_id = message["chat"]["id"]
+
+            if chat_type != "private":
+                return
+
+            if "text" in message:
+                text = message["text"]
+                username = sanitize_string(message["chat"].get("username", ""))
+                first_name = sanitize_string(message["chat"].get("first_name", ""))
+                last_name = sanitize_string(message["chat"].get("last_name", ""))
+
+                if text.startswith("/start"):
+                    # ... обработка /start ...
+                    pass
+                elif text.startswith("/help"):
+                    # ... обработка /help ...
+                    pass
+                elif text.startswith("/admin"):
+                    # ... обработка /admin ...
+                    pass
+
+            elif "successful_payment" in message:
+                handle_successful_payment(chat_id, message["successful_payment"])
+
+        elif "pre_checkout_query" in update:
+            query = update["pre_checkout_query"]
+            answer_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/answerPreCheckoutQuery"
+            requests.post(answer_url, json={"pre_checkout_query_id": query["id"], "ok": True}, timeout=5)
+
+        elif "callback_query" in update:
+            # ... обработка кнопок ...
+            pass
+
+    except Exception as e:
+        logger.error(f"Process update error: {e}")
+
 # ========== TON API ==========
 @app.route('/api/ton/save_wallet', methods=['POST'])
 def api_ton_save_wallet():
@@ -6482,8 +6541,19 @@ restore_fortune_from_db()
 start_fortune_timer_thread()
 
 if __name__ == '__main__':
-    # Запускаем polling для Telegram
-    threading.Thread(target=handle_telegram_updates, daemon=True).start()
+    # Устанавливаем вебхук
+    try:
+        webhook_url = f"{WEBHOOK_URL}/webhook/{TELEGRAM_TOKEN}"
+        response = requests.post(
+            f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/setWebhook",
+            json={"url": webhook_url}
+        )
+        if response.json().get("ok"):
+            print(f"✅ Webhook установлен: {webhook_url}")
+        else:
+            print(f"❌ Ошибка установки вебхука: {response.text}")
+    except Exception as e:
+        print(f"❌ Ошибка: {e}")
 
     # Запускаем Фортуну
     restore_fortune_from_db()
