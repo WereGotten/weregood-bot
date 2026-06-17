@@ -562,6 +562,7 @@ ALLOWED_UPDATE_FIELDS = {
     'tutorial_completed', 'ton_wallet', 'banned_until', 'ban_reason', 'banned_by',
     'completed_achievements', 'daily_clicks',  # ← ЗАПЯТАЯ ДОБАВЛЕНА
     'fortune_bets_count', 'fortune_wins_count', 'fortune_total_bet_amount'
+    'payday_bonus_1', 'payday_bonus_2', 'payday_bonus_3'
 }
 
 MAX_USER_CACHE = 5000
@@ -1250,19 +1251,6 @@ def init_db():
             cursor.execute('''
                 INSERT INTO payday_bonus (id, multiplier, is_active)
                 VALUES (1, 1.0, 0)
-            ''')
-
-            # Добавь в init_db():
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS user_upgrade_bonuses (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER NOT NULL,
-                    upgrade_id INTEGER NOT NULL,
-                    purchase_count INTEGER DEFAULT 0,
-                    payday_multiplier REAL DEFAULT 1.0,
-                    purchased_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    UNIQUE(user_id, upgrade_id, purchase_count)
-                )
             ''')
 
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_fortune_bets_round ON fortune_bets(round_id)')
@@ -3826,7 +3814,6 @@ def api_buy_upgrade():
     payday_multiplier = get_payday_multiplier()
 
     # Сохраняем множитель в upgrade_counts (в отдельное поле)
-    # Формат: "payday_bonus_1": 2.0, "payday_bonus_2": 1.0 и т.д.
     bonus_key = f"payday_bonus_{upgrade_id}"
 
     # Если улучшение уже покупалось, проверяем был ли у него множитель
