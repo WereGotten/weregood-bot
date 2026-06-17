@@ -5659,31 +5659,40 @@ def api_admin_users_list():
 @app.route('/api/admin/send_broadcast', methods=['POST'])
 @require_admin
 def api_admin_send_broadcast():
-    """Массовая рассылка сообщений всем пользователям (асинхронно)"""
-    data = request.json
-    if not data:
-        return jsonify({"success": False, "error": "No data"}), 400
+    global broadcast_cancel, broadcast_active
 
+    data = request.json
     message = data.get('message', '').strip()
     is_test = data.get('is_test', False)
     test_user_id = data.get('test_user_id')
     has_button = data.get('has_button', False)
     button_text = data.get('button_text', '')
     button_url = data.get('button_url', '')
+    admin_id = request.args.get('user_id', 'Admin')
+    admin_name = "Admin"
 
     if not message:
         return jsonify({"success": False, "error": "Сообщение не может быть пустым"}), 400
 
-    # Запускаем рассылку в фоновом потоке
+    broadcast_cancel = False
+
+    # Сбрасываем кэш на всякий случай
+    broadcast_active = True
+
     def broadcast_worker():
+        global broadcast_cancel, broadcast_active
         try:
-            # Получаем пользователей
             with db.get_cursor() as cursor:
                 if is_test and test_user_id:
-                    cursor.execute("SELECT user_id FROM users WHERE user_id = ?", (test_user_id,))
+                    cursor.execute("SELECT user_id FROM users WHERE user_id = ? AND user_id > 0", (test_user_id,))
                 else:
                     cursor.execute("SELECT user_id FROM users WHERE user_id > 0 AND user_id != 12345678")
                 users = cursor.fetchall()
+
+            if not users:
+                add_admin_log("⚠️ РАССЫЛКА: нет пользователей для отправки", admin_id, admin_name)
+                broadcast_active = False
+                return
 
             keyboard = None
             if has_button and button_text and button_url:
@@ -5693,7 +5702,16 @@ def api_admin_send_broadcast():
 
             sent = 0
             errors = 0
+
             for user in users:
+                # ========== ПРОВЕРКА НА ОСТАНОВКУ ==========
+                if broadcast_cancel:
+                    add_admin_log(f"🛑 РАССЫЛКА ОСТАНОВЛЕНА. Отправлено: {sent}, ошибок: {errors}",
+                                  admin_id, admin_name)
+                    broadcast_cancel = False
+                    broadcast_active = False
+                    return
+
                 try:
                     send_telegram_message(user['user_id'], message, keyboard)
                     sent += 1
@@ -5703,14 +5721,22 @@ def api_admin_send_broadcast():
                 time.sleep(0.05)  # 20 сообщений в секунду
 
             add_admin_log(f"📢 РАССЫЛКА: отправлено {sent}, ошибок {errors}",
-                          request.args.get('user_id', 'Admin'), "Admin")
+                          admin_id, admin_name)
         except Exception as e:
             logger.error(f"Broadcast worker error: {e}")
+            add_admin_log(f"❌ ОШИБКА РАССЫЛКИ: {str(e)}", admin_id, admin_name)
+        finally:
+            broadcast_active = False
+            broadcast_cancel = False
 
     thread = threading.Thread(target=broadcast_worker, daemon=True)
     thread.start()
 
-    return jsonify({"success": True, "message": "Рассылка запущена в фоновом режиме"})
+    return jsonify({
+        "success": True,
+        "message": "Рассылка запущена в фоновом режиме",
+        "total": len(users) if users else 0  # ← Добавляем общее количество
+    })
 
 
 @app.route('/api/admin/broadcast/cancel', methods=['POST'])
