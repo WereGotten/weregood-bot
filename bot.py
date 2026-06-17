@@ -180,7 +180,6 @@ click_buffer_lock = threading.Lock()
 BUFFER_FLUSH_INTERVAL = 5
 
 def flush_click_buffer():
-    """Сбрасывает буфер кликов в базу данных с учётом множителя PayDay"""
     while True:
         time.sleep(BUFFER_FLUSH_INTERVAL)
         with click_buffer_lock:
@@ -192,21 +191,16 @@ def flush_click_buffer():
         for user_id, total_clicks in to_update:
             try:
                 with db.get_cursor() as cursor:
-                    # Обновляем total_clicks (суммарные клики в профиле)
+                    # Обновляем только total_clicks (суммарные клики в профиле)
                     cursor.execute(
                         "UPDATE users SET total_clicks = total_clicks + ? WHERE user_id = ?",
                         (total_clicks, user_id)
                     )
-                    # ========== НОВОЕ: ОБНОВЛЯЕМ daily_clicks ДЛЯ ТОПА ДНЯ ==========
-                    # Так как буфер уже содержит умноженные клики, обновляем и daily_clicks
-                    cursor.execute(
-                        "UPDATE users SET daily_clicks = daily_clicks + ? WHERE user_id = ?",
-                        (total_clicks, user_id)
-                    )
+                    # ========== daily_clicks УЖЕ обновлён в api_click! ==========
+                    # Поэтому НЕ обновляем его здесь!
                     invalidate_cache(user_id)
             except Exception as e:
                 logger.error(f"Flush buffer error for user {user_id}: {e}")
-                # Возвращаем клики обратно в буфер при ошибке
                 with click_buffer_lock:
                     click_buffer[user_id] = click_buffer.get(user_id, 0) + total_clicks
 
