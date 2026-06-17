@@ -2457,7 +2457,7 @@ def api_ton_create_payment():
     if not proj_wallet:
         logger.critical("🚨 КРИТИЧЕСКАЯ ОШИБКА: PROJECT_WALLET_ADDRESS отсутствует в переменных сервера!")
         return jsonify({"success": False, "error": "Ошибка конфигурации платежного шлюза на сервере"}), 500
-    payment_amount_ton = 0.18
+    payment_amount_ton = 0.20
     payment_amount_nano = int(payment_amount_ton * 1e9)
     return jsonify({
         "success": True,
@@ -2585,7 +2585,7 @@ def api_ton_create_lp_boost_payment():
     if not proj_wallet:
         logger.critical("🚨 PROJECT_WALLET_ADDRESS отсутствует!")
         return jsonify({"success": False, "error": "Ошибка конфигурации платежного шлюза"}), 500
-    payment_amount_ton = 0.20
+    payment_amount_ton = 0.18
     payment_amount_nano = int(payment_amount_ton * 1e9)
     return jsonify({
         "success": True,
