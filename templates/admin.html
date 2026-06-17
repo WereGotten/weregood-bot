@@ -1622,6 +1622,8 @@
         const LOGS_PER_PAGE = 100;
         let contestUpdateInterval = null;
         let paydayTimerInterval = null;
+        window.paydayMultiplier = 1;
+        window.isPaydayActive = false;
 
         // ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
         function formatNumber(num) {

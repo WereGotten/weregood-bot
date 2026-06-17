@@ -252,107 +252,147 @@
     }
 
     function updateUI() {
-        upgradeCosts[1] = getUpgradeCost(1, upgradeCounts[1] || 0);
-        upgradeCosts[2] = getUpgradeCost(2, upgradeCounts[2] || 0);
-        upgradeCosts[3] = getUpgradeCost(3, upgradeCounts[3] || 0);
+    upgradeCosts[1] = getUpgradeCost(1, upgradeCounts[1] || 0);
+    upgradeCosts[2] = getUpgradeCost(2, upgradeCounts[2] || 0);
+    upgradeCosts[3] = getUpgradeCost(3, upgradeCounts[3] || 0);
 
-        const wgEl = document.getElementById('wgBalance');
-        if (wgEl) wgEl.innerText = localWG.toFixed(2);
-        const lpEl = document.getElementById('lpBalance');
-        if (lpEl) lpEl.innerText = localLP;
-        const energyEl = document.getElementById('energyValue');
-        if (energyEl) energyEl.innerText = localEnergy;
-        const maxEnergyEl = document.getElementById('maxEnergyValue');
-        if (maxEnergyEl) maxEnergyEl.innerText = localMaxEnergy;
-        const energyHeaderEl = document.getElementById('energyHeader');
-        if (energyHeaderEl) energyHeaderEl.innerText = localEnergy;
+    const wgEl = document.getElementById('wgBalance');
+    if (wgEl) wgEl.innerText = localWG.toFixed(2);
+    const lpEl = document.getElementById('lpBalance');
+    if (lpEl) lpEl.innerText = localLP;
+    const energyEl = document.getElementById('energyValue');
+    if (energyEl) energyEl.innerText = localEnergy;
+    const maxEnergyEl = document.getElementById('maxEnergyValue');
+    if (maxEnergyEl) maxEnergyEl.innerText = localMaxEnergy;
+    const energyHeaderEl = document.getElementById('energyHeader');
+    if (energyHeaderEl) energyHeaderEl.innerText = localEnergy;
 
-        let percent = (localEnergy / localMaxEnergy) * 100;
-        const energyBar = document.getElementById('energyBar');
-        if (energyBar) energyBar.style.width = percent + '%';
+    let percent = (localEnergy / localMaxEnergy) * 100;
+    const energyBar = document.getElementById('energyBar');
+    if (energyBar) energyBar.style.width = percent + '%';
 
-        const totalWG = document.getElementById('totalWG');
-        if (totalWG) totalWG.innerText = localWG.toFixed(2);
-        const totalLP = document.getElementById('totalLP');
-        if (totalLP) totalLP.innerText = localLP;
-        const totalWGmini = document.getElementById('totalWGmini');
-        if (totalWGmini) totalWGmini.innerText = localWG.toFixed(2);
-        const lotteryLPBalance = document.getElementById('lotteryLPBalance');
-        if (lotteryLPBalance) lotteryLPBalance.innerText = localLP;
-        const totalClicksMini = document.getElementById('totalClicksMini');
-        if (totalClicksMini) totalClicksMini.innerText = localClicks;
-        const profileClicks = document.getElementById('profileClicks');
-        if (profileClicks) profileClicks.innerText = localClicks;
-        const profileUSDT = document.getElementById('profileUSDT');
-        if (profileUSDT) profileUSDT.innerText = localUSDT.toFixed(2);
-        const profileWins = document.getElementById('profileWins');
-        if (profileWins) profileWins.innerText = localWins;
-        const earningPerClick = document.getElementById('earningPerClick');
-        if (earningPerClick) earningPerClick.innerText = localEarning.toFixed(2);
-        const clickAmount = document.getElementById('clickAmount');
-        if (clickAmount) clickAmount.innerText = localEarning.toFixed(2);
+    const totalWG = document.getElementById('totalWG');
+    if (totalWG) totalWG.innerText = localWG.toFixed(2);
+    const totalLP = document.getElementById('totalLP');
+    if (totalLP) totalLP.innerText = localLP;
+    const totalWGmini = document.getElementById('totalWGmini');
+    if (totalWGmini) totalWGmini.innerText = localWG.toFixed(2);
+    const lotteryLPBalance = document.getElementById('lotteryLPBalance');
+    if (lotteryLPBalance) lotteryLPBalance.innerText = localLP;
+    const totalClicksMini = document.getElementById('totalClicksMini');
+    if (totalClicksMini) totalClicksMini.innerText = localClicks;
+    const profileClicks = document.getElementById('profileClicks');
+    if (profileClicks) profileClicks.innerText = localClicks;
+    const profileUSDT = document.getElementById('profileUSDT');
+    if (profileUSDT) profileUSDT.innerText = localUSDT.toFixed(2);
+    const profileWins = document.getElementById('profileWins');
+    if (profileWins) profileWins.innerText = localWins;
 
-        const totalTickets = document.getElementById('totalTickets');
-        if (totalTickets) totalTickets.innerText = currentTickets.length;
-        const totalTicketsMini = document.getElementById('totalTicketsMini');
-        if (totalTicketsMini) totalTicketsMini.innerText = currentTickets.length;
+    // ========== ОБНОВЛЕНИЕ ДОХОДА С УЧЁТОМ PAYDAY ==========
+    const earningPerClick = document.getElementById('earningPerClick');
+    const clickAmount = document.getElementById('clickAmount');
 
-        const upgradeCount1 = document.getElementById('upgradeCount1');
-        if (upgradeCount1) upgradeCount1.innerText = upgradeCounts[1];
-        const upgradeCount2 = document.getElementById('upgradeCount2');
-        if (upgradeCount2) upgradeCount2.innerText = upgradeCounts[2];
-        const upgradeCount3 = document.getElementById('upgradeCount3');
-        if (upgradeCount3) upgradeCount3.innerText = upgradeCounts[3];
-        const upgradeCost1 = document.getElementById('upgradeCost1');
-        if (upgradeCost1) upgradeCost1.innerHTML = upgradeCosts[1].toFixed(2);
-        const upgradeCost2 = document.getElementById('upgradeCost2');
-        if (upgradeCost2) upgradeCost2.innerHTML = upgradeCosts[2].toFixed(2);
-        const upgradeCost3 = document.getElementById('upgradeCost3');
-        if (upgradeCost3) upgradeCost3.innerHTML = upgradeCosts[3].toFixed(2);
+    // Проверяем, активен ли PayDay (используем глобальную переменную или localStorage)
+    const paydayMultiplier = window.paydayMultiplier || 1;
+    const isPaydayActive = paydayMultiplier > 1;
 
-        const starsBalance = document.getElementById('starsBalance');
-        if (starsBalance) starsBalance.innerText = localStars;
-        const currentMaxEnergy = document.getElementById('currentMaxEnergy');
-        if (currentMaxEnergy) currentMaxEnergy.innerText = localMaxEnergy;
-        const energyUpgradeCount = document.getElementById('energyUpgradeCount');
-        if (energyUpgradeCount) energyUpgradeCount.innerText = localEnergyUpgrades;
-        const energyUpgradeCountProgress = document.getElementById('energyUpgradeCountProgress');
-        if (energyUpgradeCountProgress) energyUpgradeCountProgress.innerText = localEnergyUpgrades;
+    // Отображаемый доход (с множителем или без)
+    let displayEarning = isPaydayActive ? localEarning * paydayMultiplier : localEarning;
 
-        let upgradesLeft = Math.max(0, 15 - localEnergyUpgrades);
-        const energyUpgradesLeft = document.getElementById('energyUpgradesLeft');
-        if (energyUpgradesLeft) energyUpgradesLeft.innerText = upgradesLeft;
-
-        let progressPercent = (localEnergyUpgrades / 15) * 100;
-        const energyUpgradeProgressFill = document.getElementById('energyUpgradeProgressFill');
-        if (energyUpgradeProgressFill) energyUpgradeProgressFill.style.width = progressPercent + '%';
-
-        let upgradeBtn = document.getElementById('energyUpgradeBtn');
-        let upgradeCard = document.getElementById('energyUpgradeCard');
-        if (upgradeBtn && upgradeCard) {
-            if (localEnergyUpgrades >= 15) {
-                upgradeBtn.innerText = '✅ Максимум достигнут';
-                upgradeBtn.disabled = true;
-                upgradeBtn.classList.add('disabled');
-                upgradeCard.classList.add('disabled');
-            } else {
-                upgradeBtn.innerHTML = '<img src="/static/star_small.png" alt="Stars" style="width: 16px; height: 16px;"> Купить за 27 звёзд';
-                upgradeBtn.disabled = false;
-                upgradeBtn.classList.remove('disabled');
-                upgradeCard.classList.remove('disabled');
+    if (earningPerClick) {
+        earningPerClick.innerText = displayEarning.toFixed(2);
+        if (isPaydayActive) {
+            earningPerClick.style.color = '#FF6B00';
+            earningPerClick.style.fontWeight = '800';
+            // Добавляем бейдж с множителем
+            let badge = earningPerClick.parentElement?.querySelector('.payday-badge');
+            if (!badge && earningPerClick.parentElement) {
+                badge = document.createElement('span');
+                badge.className = 'payday-badge';
+                badge.style.cssText = 'background: #FF6B00; color: white; padding: 2px 8px; border-radius: 20px; font-size: 0.6rem; margin-left: 6px;';
+                earningPerClick.parentElement.appendChild(badge);
             }
-        }
-
-        const badgesContainer = document.getElementById('profileBadges');
-        if (badgesContainer) {
-            let badgesHtml = '';
-            if (localRole === 'founder') badgesHtml += '<span class="role-badge founder">👑 ОСНОВАТЕЛЬ</span>';
-            else if (localRole === 'legend') badgesHtml += '<span class="role-badge legend">👑 ЛЕГЕНДА</span>';
-            else if (localRole === 'pioneer') badgesHtml += '<span class="role-badge pioneer">⭐ ПЕРВООТКРЫВАТЕЛЬ</span>';
-            else badgesHtml += '<span class="role-badge player">🎮 Игрок</span>';
-            badgesContainer.innerHTML = badgesHtml;
+            if (badge) badge.innerText = `🔥 x${paydayMultiplier}`;
+        } else {
+            earningPerClick.style.color = '';
+            earningPerClick.style.fontWeight = '';
+            const badge = earningPerClick.parentElement?.querySelector('.payday-badge');
+            if (badge) badge.remove();
         }
     }
+
+    if (clickAmount) {
+        clickAmount.innerText = displayEarning.toFixed(2);
+        if (isPaydayActive) {
+            clickAmount.style.color = '#FF6B00';
+            clickAmount.style.fontWeight = '800';
+        } else {
+            clickAmount.style.color = '';
+            clickAmount.style.fontWeight = '';
+        }
+    }
+
+    const totalTickets = document.getElementById('totalTickets');
+    if (totalTickets) totalTickets.innerText = currentTickets.length;
+    const totalTicketsMini = document.getElementById('totalTicketsMini');
+    if (totalTicketsMini) totalTicketsMini.innerText = currentTickets.length;
+
+    const upgradeCount1 = document.getElementById('upgradeCount1');
+    if (upgradeCount1) upgradeCount1.innerText = upgradeCounts[1];
+    const upgradeCount2 = document.getElementById('upgradeCount2');
+    if (upgradeCount2) upgradeCount2.innerText = upgradeCounts[2];
+    const upgradeCount3 = document.getElementById('upgradeCount3');
+    if (upgradeCount3) upgradeCount3.innerText = upgradeCounts[3];
+    const upgradeCost1 = document.getElementById('upgradeCost1');
+    if (upgradeCost1) upgradeCost1.innerHTML = upgradeCosts[1].toFixed(2);
+    const upgradeCost2 = document.getElementById('upgradeCost2');
+    if (upgradeCost2) upgradeCost2.innerHTML = upgradeCosts[2].toFixed(2);
+    const upgradeCost3 = document.getElementById('upgradeCost3');
+    if (upgradeCost3) upgradeCost3.innerHTML = upgradeCosts[3].toFixed(2);
+
+    const starsBalance = document.getElementById('starsBalance');
+    if (starsBalance) starsBalance.innerText = localStars;
+    const currentMaxEnergy = document.getElementById('currentMaxEnergy');
+    if (currentMaxEnergy) currentMaxEnergy.innerText = localMaxEnergy;
+    const energyUpgradeCount = document.getElementById('energyUpgradeCount');
+    if (energyUpgradeCount) energyUpgradeCount.innerText = localEnergyUpgrades;
+    const energyUpgradeCountProgress = document.getElementById('energyUpgradeCountProgress');
+    if (energyUpgradeCountProgress) energyUpgradeCountProgress.innerText = localEnergyUpgrades;
+
+    let upgradesLeft = Math.max(0, 15 - localEnergyUpgrades);
+    const energyUpgradesLeft = document.getElementById('energyUpgradesLeft');
+    if (energyUpgradesLeft) energyUpgradesLeft.innerText = upgradesLeft;
+
+    let progressPercent = (localEnergyUpgrades / 15) * 100;
+    const energyUpgradeProgressFill = document.getElementById('energyUpgradeProgressFill');
+    if (energyUpgradeProgressFill) energyUpgradeProgressFill.style.width = progressPercent + '%';
+
+    let upgradeBtn = document.getElementById('energyUpgradeBtn');
+    let upgradeCard = document.getElementById('energyUpgradeCard');
+    if (upgradeBtn && upgradeCard) {
+        if (localEnergyUpgrades >= 15) {
+            upgradeBtn.innerText = '✅ Максимум достигнут';
+            upgradeBtn.disabled = true;
+            upgradeBtn.classList.add('disabled');
+            upgradeCard.classList.add('disabled');
+        } else {
+            upgradeBtn.innerHTML = '<img src="/static/star_small.png" alt="Stars" style="width: 16px; height: 16px;"> Купить за 27 звёзд';
+            upgradeBtn.disabled = false;
+            upgradeBtn.classList.remove('disabled');
+            upgradeCard.classList.remove('disabled');
+        }
+    }
+
+    const badgesContainer = document.getElementById('profileBadges');
+    if (badgesContainer) {
+        let badgesHtml = '';
+        if (localRole === 'founder') badgesHtml += '<span class="role-badge founder">👑 ОСНОВАТЕЛЬ</span>';
+        else if (localRole === 'legend') badgesHtml += '<span class="role-badge legend">👑 ЛЕГЕНДА</span>';
+        else if (localRole === 'pioneer') badgesHtml += '<span class="role-badge pioneer">⭐ ПЕРВООТКРЫВАТЕЛЬ</span>';
+        else badgesHtml += '<span class="role-badge player">🎮 Игрок</span>';
+        badgesContainer.innerHTML = badgesHtml;
+    }
+}
 
     function updateModalBadges(role) {
         const badgesContainer = document.getElementById('playerModalBadges');
@@ -5478,11 +5518,15 @@ async function checkPaydayStatus() {
         const res = await fetch('/api/payday/status');
         const data = await res.json();
 
+        window.paydayMultiplier = data.is_active ? data.multiplier : 1;
+        window.isPaydayActive = data.is_active;
+
         const indicator = document.getElementById('paydayIndicator');
         const multiplierEl = document.getElementById('paydayMultiplierIndicator');
         const earningsInfo = document.querySelector('.earnings-info');
         const energyAdCards = document.querySelectorAll('.ad-card');
         const upgradeCards = document.querySelectorAll('.upgrade-card');
+        const lotteryLPBalance = document.getElementById('lotteryLPBalance');
 
         if (data.is_active && data.multiplier > 1.0) {
             // Показываем индикатор
@@ -5502,9 +5546,12 @@ async function checkPaydayStatus() {
                 }
             }
 
-            // Добавляем бейдж на рекламные карточки
+            // ========== ОБНОВЛЯЕМ РЕКЛАМНЫЕ КАРТОЧКИ ==========
             energyAdCards.forEach(card => {
                 const adBtn = card.querySelector('.ad-btn');
+                const desc = card.querySelector('.ad-desc');
+
+                // Добавляем бейдж с множителем
                 if (adBtn && !card.dataset.paydayApplied) {
                     const boostText = document.createElement('span');
                     boostText.style.cssText = 'color: #FF6B00; font-weight: 700; margin-left: 8px;';
@@ -5512,6 +5559,28 @@ async function checkPaydayStatus() {
                     adBtn.appendChild(boostText);
                     card.dataset.paydayApplied = 'true';
                 }
+
+                // Добавляем информацию о сокращённом кулдауне
+                if (desc && !card.dataset.cooldownApplied) {
+                    // Определяем тип рекламы по тексту
+                    const descText = desc.innerText || '';
+                    let cooldownText = '';
+
+                    if (descText.includes('+150 энергии')) {
+                        cooldownText = '⏱️ Кулдаун: 2 мин (было 5)';
+                    } else if (descText.includes('+1 к макс. энергии')) {
+                        cooldownText = '⏱️ Кулдаун: 2 мин (было 10)';
+                    }
+
+                    if (cooldownText) {
+                        const cooldownInfo = document.createElement('div');
+                        cooldownInfo.style.cssText = 'color: #22c55e; font-size: 0.6rem; margin-top: 2px; font-weight: 600;';
+                        cooldownInfo.innerText = cooldownText;
+                        desc.appendChild(cooldownInfo);
+                        card.dataset.cooldownApplied = 'true';
+                    }
+                }
+
                 card.style.border = '2px solid #FF6B00';
                 card.style.background = 'rgba(255,107,0,0.08)';
             });
@@ -5531,6 +5600,12 @@ async function checkPaydayStatus() {
                 card.style.border = '2px solid #FF6B00';
                 card.style.background = 'rgba(255,107,0,0.08)';
             });
+
+            // Обновляем LP баланс в лотерее (если есть)
+            if (lotteryLPBalance) {
+                lotteryLPBalance.style.color = '#FF6B00';
+                lotteryLPBalance.style.fontWeight = '800';
+            }
 
             // Обновляем энергию в хедере
             const energyHeader = document.querySelector('.stat-badge');
@@ -5554,15 +5629,25 @@ async function checkPaydayStatus() {
                 }
             }
 
-            // Убираем бейджи с рекламных карточек
+            // Убираем бейджи и информацию о кулдауне с рекламных карточек
             energyAdCards.forEach(card => {
                 card.style.border = 'none';
                 card.style.background = '';
+
+                // Убираем бейдж множителя
                 const boostText = card.querySelector('.ad-btn span:last-child');
                 if (boostText && boostText.innerText.includes('🔥')) {
                     boostText.remove();
                 }
+
+                // Убираем информацию о кулдауне
+                const cooldownInfo = card.querySelector('.ad-desc div:last-child');
+                if (cooldownInfo && cooldownInfo.innerText.includes('Кулдаун')) {
+                    cooldownInfo.remove();
+                }
+
                 card.dataset.paydayApplied = '';
+                card.dataset.cooldownApplied = '';
             });
 
             // Убираем бейджи с улучшений
@@ -5575,6 +5660,12 @@ async function checkPaydayStatus() {
                 }
                 card.dataset.paydayApplied = '';
             });
+
+            // Возвращаем обычный вид LP баланса
+            if (lotteryLPBalance) {
+                lotteryLPBalance.style.color = '';
+                lotteryLPBalance.style.fontWeight = '';
+            }
 
             // Возвращаем обычный вид энергии
             const energyHeader = document.querySelector('.stat-badge');

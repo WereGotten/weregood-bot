@@ -180,6 +180,7 @@ click_buffer_lock = threading.Lock()
 BUFFER_FLUSH_INTERVAL = 5
 
 def flush_click_buffer():
+    """Сбрасывает буфер кликов в базу данных с учётом множителя PayDay"""
     while True:
         time.sleep(BUFFER_FLUSH_INTERVAL)
         with click_buffer_lock:
@@ -191,13 +192,21 @@ def flush_click_buffer():
         for user_id, total_clicks in to_update:
             try:
                 with db.get_cursor() as cursor:
+                    # Обновляем total_clicks (суммарные клики в профиле)
                     cursor.execute(
                         "UPDATE users SET total_clicks = total_clicks + ? WHERE user_id = ?",
                         (total_clicks, user_id)
                     )
+                    # ========== НОВОЕ: ОБНОВЛЯЕМ daily_clicks ДЛЯ ТОПА ДНЯ ==========
+                    # Так как буфер уже содержит умноженные клики, обновляем и daily_clicks
+                    cursor.execute(
+                        "UPDATE users SET daily_clicks = daily_clicks + ? WHERE user_id = ?",
+                        (total_clicks, user_id)
+                    )
                     invalidate_cache(user_id)
             except Exception as e:
-                logger.error(f"Flush buffer error: {e}")
+                logger.error(f"Flush buffer error for user {user_id}: {e}")
+                # Возвращаем клики обратно в буфер при ошибке
                 with click_buffer_lock:
                     click_buffer[user_id] = click_buffer.get(user_id, 0) + total_clicks
 
@@ -1888,13 +1897,23 @@ def get_upgrade_cost(upgrade_id, current_count):
         return base_cost
     return base_cost * (1.65 ** current_count)
 
+
 def get_total_earning(upgrade_counts):
     base = 0.01
     total_bonus = 0
+    payday_multiplier = get_payday_multiplier()
+
     for uid, count in upgrade_counts.items():
-        uid_int = int(uid) if isinstance(uid, str) else uid
-        if uid_int in UPGRADE_CONFIG:
-            total_bonus += UPGRADE_CONFIG[uid_int]["bonus"] * count
+        try:
+            uid_int = int(uid) if isinstance(uid, str) else uid
+            if uid_int in UPGRADE_CONFIG:
+                # Базовый бонус улучшения
+                bonus = UPGRADE_CONFIG[uid_int]["bonus"]
+                # Умножаем на множитель PayDay
+                total_bonus += bonus * count * payday_multiplier
+        except (ValueError, TypeError):
+            continue
+
     return base + total_bonus
 
 def generate_ticket_numbers():
@@ -3633,6 +3652,7 @@ def api_debug_user():
             })
     return jsonify({"error": "User not found"}), 404
 
+
 @app.route('/api/click', methods=['POST'])
 def api_click():
     data = request.json
@@ -3659,18 +3679,27 @@ def api_click():
             "wg": user["wg"],
             "lp": user["lp"]
         })
-    earning = get_total_earning(user["upgrade_counts"])
-    # Применяем множитель PayDay
+
+    # ========== ПОЛУЧАЕМ МНОЖИТЕЛЬ PAYDAY ==========
     payday_multiplier = get_payday_multiplier()
-    earning = earning * payday_multiplier
+
+    # ========== БАЗОВЫЙ ДОХОД БЕЗ МНОЖИТЕЛЯ ==========
+    base_earning = get_total_earning(user["upgrade_counts"])
+
+    # ========== ДОХОД С МНОЖИТЕЛЕМ ==========
+    earning = base_earning * payday_multiplier
+
     old_wg = user["wg"]
     new_wg = old_wg + earning
-    payday_multiplier = get_payday_multiplier()
-    click_count = int(payday_multiplier)  # Целое число для кликов
+
+    # ========== КЛИКИ ДЛЯ ТОПА (С МНОЖИТЕЛЕМ) ==========
+    click_count = int(payday_multiplier) if payday_multiplier > 1 else 1
 
     with click_buffer_lock:
         click_buffer[user_id] = click_buffer.get(user_id, 0) + click_count
     safe_update_user(user_id, wg=new_wg)
+
+    # ========== РЕФЕРАЛЬНАЯ СИСТЕМА ==========
     referrer_id = user.get('referrer_id', 0)
     if referrer_id > 0:
         referrer_earning = earning * 0.1
@@ -3688,16 +3717,19 @@ def api_click():
             add_log(f"👥 Получил 10% от WG реферала (+{referrer_earning:.4f} WG)", referrer_id,
                     referrer.get('username') or f"User_{referrer_id}",
                     old_value=old_referrer_wg, new_value=new_referrer_wg, currency="wg")
+
+    # ========== ОБНОВЛЯЕМ daily_clicks С МНОЖИТЕЛЕМ ==========
     with db.get_cursor() as cursor:
-        cursor.execute("UPDATE users SET daily_clicks = daily_clicks + 1 WHERE user_id = ?", (user_id,))
+        cursor.execute("UPDATE users SET daily_clicks = daily_clicks + ? WHERE user_id = ?", (click_count, user_id))
+
     invalidate_cache(user_id)
     today = datetime.datetime.now().strftime("%Y-%m-%d")
     threading.Thread(target=async_click_tasks, args=(user_id, user, earning, old_wg, new_wg, today)).start()
+
+    # ========== ШАНС ВЫПАДЕНИЯ LP ==========
     new_lp_value = user["lp"]
     lp_reward = False
-    # Шанс выпадения LP с множителем
     base_chance = 0.0025
-    payday_multiplier = get_payday_multiplier()
     lp_chance = base_chance * payday_multiplier
 
     if random.random() < lp_chance:
@@ -3706,8 +3738,14 @@ def api_click():
         new_lp_value = user["lp"] + lp_amount
         safe_update_user(user_id, lp=new_lp_value)
         threading.Thread(target=add_log,
-                         args=(f"🎲 Редкий дроп! +0.5 LP", user_id, user['username'], user["lp"], new_lp_value,
+                         args=(f"🎲 Редкий дроп! +{lp_amount:.2f} LP", user_id, user['username'], user["lp"],
+                               new_lp_value,
                                "lp")).start()
+
+    # ========== ТЕКУЩИЙ ДОХОД ДЛЯ ОТОБРАЖЕНИЯ ==========
+    current_earning = get_total_earning(user["upgrade_counts"])
+    current_earning_with_payday = current_earning * payday_multiplier
+
     return jsonify({
         "energy": new_energy,
         "wg": new_wg,
@@ -3715,7 +3753,10 @@ def api_click():
         "total_clicks": user["total_clicks"] + 1,
         "earned": earning,
         "lp_reward": lp_reward,
-        "earning_per_click": earning
+        "earning_per_click": current_earning,
+        "earning_per_click_with_payday": current_earning_with_payday,
+        "payday_multiplier": payday_multiplier,
+        "is_payday_active": payday_multiplier > 1
     })
 
 @app.route('/api/status', methods=['POST'])
@@ -3918,10 +3959,16 @@ def api_can_watch_ad():
     if not is_valid:
         return jsonify({"can": False, "message": "Invalid user_id"}), 400
     if ad_type == 'energy_200':
-        can_watch, msg = check_ad_cooldown(user_id, "energy_200", 5, 40)
+        # Если PayDay активен - кулдаун 2 минуты, иначе 5 минут
+        payday_multiplier = get_payday_multiplier()
+        cooldown_minutes = 2 if payday_multiplier > 1 else 5
+        can_watch, msg = check_ad_cooldown(user_id, "energy_200", cooldown_minutes, 40)
         return jsonify({"can": can_watch, "message": msg if not can_watch else ""})
     elif ad_type == 'energy_limit':
-        can_watch, msg = check_ad_cooldown(user_id, "energy_limit", 10, 15)
+        # Если PayDay активен - кулдаун 2 минуты, иначе 10 минут
+        payday_multiplier = get_payday_multiplier()
+        cooldown_minutes = 2 if payday_multiplier > 1 else 10
+        can_watch, msg = check_ad_cooldown(user_id, "energy_limit", cooldown_minutes, 15)
         return jsonify({"can": can_watch, "message": msg if not can_watch else ""})
     else:
         return jsonify({"can": False, "message": "Unknown ad type"})
