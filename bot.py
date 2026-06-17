@@ -1888,22 +1888,24 @@ def get_total_earning(upgrade_counts):
     current_payday_multiplier = get_payday_multiplier()
 
     for key, value in upgrade_counts.items():
-        # Проверяем, является ли ключ ID улучшения (1, 2, 3)
+        # ========== ПРОВЕРЯЕМ, ЧТО КЛЮЧ — ЭТО ЧИСЛО ==========
         try:
-            # Пропускаем всё, что не является числом
-            if isinstance(key, str) and not key.isdigit():
-                continue
+            # Если ключ — строка, проверяем, состоит ли она из цифр
+            if isinstance(key, str):
+                if not key.isdigit():
+                    continue  # ← ПРОПУСКАЕМ payday_bonus_X!
+                key = int(key)
+            else:
+                key = int(key)
 
-            uid = int(key)
-            if uid in UPGRADE_CONFIG:
-                bonus = UPGRADE_CONFIG[uid]["bonus"]
+            if key in UPGRADE_CONFIG:
+                bonus = UPGRADE_CONFIG[key]["bonus"]
 
-                # Проверяем, есть ли сохранённый множитель для этого улучшения
-                bonus_key = f"payday_bonus_{uid}"
+                # Проверяем, был ли это улучшение куплено во время PayDay
+                bonus_key = f"payday_bonus_{key}"
                 if bonus_key in upgrade_counts:
                     multiplier = upgrade_counts[bonus_key]
                 else:
-                    # Если улучшение куплено без PayDay, используем текущий множитель
                     multiplier = current_payday_multiplier if current_payday_multiplier > 1 else 1
 
                 total_bonus += bonus * value * multiplier
