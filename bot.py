@@ -301,8 +301,10 @@ def check_rate_limit(key: str, limit: int = 30, window_seconds: int = 10) -> boo
     rate_limits[key].append(now)
     return True
 
+
 def check_ad_cooldown(user_id: int, ad_type: str, cooldown_minutes: int, daily_limit: int) -> Tuple[bool, str]:
     with db.get_cursor() as cursor:
+        # Проверяем дневной лимит
         cursor.execute('''
             SELECT COUNT(*) FROM ad_watch_history 
             WHERE user_id = ? AND ad_type = ? 
@@ -311,6 +313,8 @@ def check_ad_cooldown(user_id: int, ad_type: str, cooldown_minutes: int, daily_l
         daily_count = cursor.fetchone()[0]
         if daily_count >= daily_limit:
             return False, f"Дневной лимит ({daily_limit} раз) исчерпан"
+
+        # Проверяем последний просмотр
         cursor.execute('''
             SELECT watched_at FROM ad_watch_history 
             WHERE user_id = ? AND ad_type = ? 
@@ -323,6 +327,7 @@ def check_ad_cooldown(user_id: int, ad_type: str, cooldown_minutes: int, daily_l
             if time_passed < cooldown_minutes:
                 remaining = int(cooldown_minutes - time_passed)
                 return False, f"Подождите {remaining} минут перед следующим просмотром"
+
         return True, "OK"
 
 def record_ad_watch(user_id: int, ad_type: str):
@@ -564,7 +569,7 @@ ALLOWED_UPDATE_FIELDS = {
     'fortune_bets_count', 'fortune_wins_count', 'fortune_total_bet_amount'
 }
 
-MAX_USER_CACHE = 5000
+MAX_USER_CACHE = 20000
 
 def invalidate_cache(user_id):
     if user_id in user_cache:
@@ -3924,27 +3929,56 @@ def api_watch_ad():
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid:
         return jsonify({"success": False, "msg": "Invalid user_id"}), 400
-    can_watch, msg = check_ad_cooldown(user_id, "energy_200", 5, 40)
+
+    # ========== ПОЛУЧАЕМ МНОЖИТЕЛЬ PAYDAY ==========
+    payday_multiplier = get_payday_multiplier()
+    is_payday_active = payday_multiplier > 1
+
+    # ========== КУЛДАУН ЗАВИСИТ ОТ PAYDAY ==========
+    cooldown_minutes = 2 if is_payday_active else 5
+
+    can_watch, msg = check_ad_cooldown(user_id, "energy_200", cooldown_minutes, 40)
     if not can_watch:
         return jsonify({"success": False, "msg": msg}), 429
+
     banned, ban_info = is_banned(user_id)
     if banned:
         return jsonify({"success": False, "msg": f"Вы забанены! {ban_info['reason']}"})
+
     user = get_user(user_id)
     current_energy, _ = calculate_energy(user)
     max_energy = user.get("max_energy", 500)
     old_energy = current_energy
-    payday_multiplier = get_payday_multiplier()
-    energy_boost = int(150 * payday_multiplier)
+
+    # ========== НАГРАДА ЗАВИСИТ ОТ PAYDAY ==========
+    base_energy = 150
+    if is_payday_active:
+        energy_boost = int(base_energy * payday_multiplier)
+    else:
+        energy_boost = base_energy
+
     new_energy = min(max_energy, current_energy + energy_boost)
     update_energy_in_db(user_id, user, new_energy)
+
+    # ========== СОХРАНЯЕМ ИСТОРИЮ ПРОСМОТРА ==========
     record_ad_watch(user_id, "energy_200")
+
     update_achievement_progress(user_id, 'ad_lover', 1)
     today = datetime.datetime.now().strftime("%Y-%m-%d")
     update_stats_history(today, ad_views=1)
-    add_log(f"🎬 Просмотрел рекламу (+150 энергии)", user_id, user['username'], old_value=old_energy,
-            new_value=new_energy, currency="energy")
-    return jsonify({"success": True, "energy": 150})
+
+    add_log(
+        f"🎬 Просмотрел рекламу (+{energy_boost} энергии)" + (
+            f" (PayDay x{payday_multiplier})" if is_payday_active else ""),
+        user_id, user['username'], old_value=old_energy, new_value=new_energy, currency="energy"
+    )
+
+    return jsonify({
+        "success": True,
+        "energy": energy_boost,
+        "is_payday": is_payday_active,
+        "payday_multiplier": payday_multiplier
+    })
 
 @app.route('/api/watch_ad_fallback', methods=['POST'])
 def api_watch_ad_fallback():
@@ -3970,6 +4004,7 @@ def api_watch_ad_fallback():
             new_value=new_energy, currency="energy")
     return jsonify({"success": True, "energy": 50})
 
+
 @app.route('/api/watch_ad_limit', methods=['POST'])
 def api_watch_ad_limit():
     data = request.json
@@ -3979,27 +4014,57 @@ def api_watch_ad_limit():
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid:
         return jsonify({"success": False, "msg": "Invalid user_id"}), 400
-    can_watch, msg = check_ad_cooldown(user_id, "energy_limit", 10, 15)
+
+    # ========== ПОЛУЧАЕМ МНОЖИТЕЛЬ PAYDAY ==========
+    payday_multiplier = get_payday_multiplier()
+    is_payday_active = payday_multiplier > 1
+
+    # ========== КУЛДАУН ЗАВИСИТ ОТ PAYDAY ==========
+    cooldown_minutes = 2 if is_payday_active else 10
+
+    can_watch, msg = check_ad_cooldown(user_id, "energy_limit", cooldown_minutes, 15)
     if not can_watch:
         return jsonify({"success": False, "msg": msg}), 429
+
     banned, ban_info = is_banned(user_id)
     if banned:
         return jsonify({"success": False, "msg": f"Вы забанены! {ban_info['reason']}"})
+
     user = get_user(user_id)
     current_upgrades = user.get('energy_limit_upgrades', 0)
     if current_upgrades >= 300:
         return jsonify({"success": False, "msg": "Вы достигли максимального лимита улучшений! (300/300)"})
+
     old_max_energy = user['max_energy']
-    payday_multiplier = get_payday_multiplier()
-    energy_limit_boost = int(1 * payday_multiplier)
+
+    # ========== НАГРАДА ЗАВИСИТ ОТ PAYDAY ==========
+    base_boost = 1
+    if is_payday_active:
+        energy_limit_boost = int(base_boost * payday_multiplier)
+    else:
+        energy_limit_boost = base_boost
+
     new_max_energy = old_max_energy + energy_limit_boost
     new_upgrades = current_upgrades + 1
+
     safe_update_user(user_id, max_energy=new_max_energy, energy_limit_upgrades=new_upgrades)
     record_ad_watch(user_id, "energy_limit")
     update_achievement_progress(user_id, 'ad_lover', 1)
-    add_log(f"🎬 Просмотрел рекламу (+1 к макс. энергии, теперь {new_max_energy})", user_id, user['username'],
-            old_value=old_max_energy, new_value=new_max_energy, currency="energy")
-    return jsonify({"success": True, "max_energy": new_max_energy, "upgrades": new_upgrades})
+
+    add_log(
+        f"🎬 Просмотрел рекламу (+{energy_limit_boost} к макс. энергии, теперь {new_max_energy})" + (
+            f" (PayDay x{payday_multiplier})" if is_payday_active else ""),
+        user_id, user['username'], old_value=old_max_energy, new_value=new_max_energy, currency="energy"
+    )
+
+    return jsonify({
+        "success": True,
+        "max_energy": new_max_energy,
+        "upgrades": new_upgrades,
+        "is_payday": is_payday_active,
+        "payday_multiplier": payday_multiplier
+    })
+
 
 @app.route('/api/can_watch_ad', methods=['POST'])
 def api_can_watch_ad():
@@ -4011,18 +4076,29 @@ def api_can_watch_ad():
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid:
         return jsonify({"can": False, "message": "Invalid user_id"}), 400
+
+    # ========== ПОЛУЧАЕМ МНОЖИТЕЛЬ PAYDAY ==========
+    payday_multiplier = get_payday_multiplier()
+    is_payday_active = payday_multiplier > 1
+
     if ad_type == 'energy_200':
-        # Если PayDay активен - кулдаун 2 минуты, иначе 5 минут
-        payday_multiplier = get_payday_multiplier()
-        cooldown_minutes = 2 if payday_multiplier > 1 else 5
+        cooldown_minutes = 2 if is_payday_active else 5
         can_watch, msg = check_ad_cooldown(user_id, "energy_200", cooldown_minutes, 40)
-        return jsonify({"can": can_watch, "message": msg if not can_watch else ""})
+        return jsonify({
+            "can": can_watch,
+            "message": msg if not can_watch else "",
+            "is_payday": is_payday_active,
+            "payday_multiplier": payday_multiplier
+        })
     elif ad_type == 'energy_limit':
-        # Если PayDay активен - кулдаун 2 минуты, иначе 10 минут
-        payday_multiplier = get_payday_multiplier()
-        cooldown_minutes = 2 if payday_multiplier > 1 else 10
+        cooldown_minutes = 2 if is_payday_active else 10
         can_watch, msg = check_ad_cooldown(user_id, "energy_limit", cooldown_minutes, 15)
-        return jsonify({"can": can_watch, "message": msg if not can_watch else ""})
+        return jsonify({
+            "can": can_watch,
+            "message": msg if not can_watch else "",
+            "is_payday": is_payday_active,
+            "payday_multiplier": payday_multiplier
+        })
     else:
         return jsonify({"can": False, "message": "Unknown ad type"})
 
