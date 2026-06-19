@@ -1939,9 +1939,13 @@ def save_lottery():
 
 load_lottery()
 
-UPGRADE_CONFIG = {1: {"base_cost": 1.5, "bonus": 0.01, "name": "Новичок"},
-                  2: {"base_cost": 10, "bonus": 0.03, "name": "Профессионал"},
-                  3: {"base_cost": 70, "bonus": 0.07, "name": "Мастер"}}
+UPGRADE_CONFIG = {
+    1: {"base_cost": 1.5, "bonus": 0.01, "name": "Новичок"},
+    2: {"base_cost": 10, "bonus": 0.03, "name": "Профессионал"},
+    3: {"base_cost": 40, "bonus": 0.05, "name": "Мастер"},
+    4: {"base_cost": 70, "bonus": 0.07, "name": "Ас"},
+    5: {"base_cost": 150, "bonus": 0.10, "name": "Легенда"},
+}
 
 def get_upgrade_cost(upgrade_id, current_count):
     config = UPGRADE_CONFIG[upgrade_id]
@@ -3868,7 +3872,7 @@ def api_buy_upgrade():
         return jsonify({"success": False, "msg": f"Вы забанены! {ban_info['reason']}"})
 
     upgrade_id = data.get('upgrade_id')
-    if upgrade_id not in [1, 2, 3]:
+    if upgrade_id not in [1, 2, 3, 4, 5]:
         return jsonify({"success": False, "msg": "Неверный ID улучшения"})
 
     user = get_user(user_id)
