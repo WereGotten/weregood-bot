@@ -241,15 +241,18 @@
     }
 
     function getUpgradeCost(upgradeId, currentCount) {
-        const config = {
-            1: { baseCost: 1.5, bonus: 0.01, name: "Новичок" },
-            2: { baseCost: 10, bonus: 0.03, name: "Профессионал" },
-            3: { baseCost: 70, bonus: 0.07, name: "Мастер" }
-        };
-        const baseCost = config[upgradeId].baseCost;
-        if (currentCount === 0) return baseCost;
-        return baseCost * Math.pow(1.65, currentCount);
-    }
+    const configs = {
+        1: { baseCost: 1.5 },
+        2: { baseCost: 10 },
+        3: { baseCost: 40 },
+        4: { baseCost: 70 },
+        5: { baseCost: 150 }
+    };
+    const config = configs[upgradeId];
+    if (!config) return 0;
+    if (currentCount === 0) return config.baseCost;
+    return config.baseCost * Math.pow(1.65, currentCount);
+}
 
     function updateUI() {
     upgradeCosts[1] = getUpgradeCost(1, upgradeCounts[1] || 0);
