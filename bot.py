@@ -1941,9 +1941,9 @@ load_lottery()
 
 UPGRADE_CONFIG = {
     1: {"base_cost": 1.5, "bonus": 0.01, "name": "Новичок"},
-    2: {"base_cost": 10, "bonus": 0.03, "name": "Профессионал"},
-    3: {"base_cost": 40, "bonus": 0.05, "name": "Мастер"},
-    4: {"base_cost": 70, "bonus": 0.07, "name": "Ас"},
+    2: {"base_cost": 10, "bonus": 0.03, "name": "Опытный"},
+    3: {"base_cost": 40, "bonus": 0.05, "name": "Профессионал"},
+    4: {"base_cost": 70, "bonus": 0.07, "name": "Мастер"},
     5: {"base_cost": 150, "bonus": 0.10, "name": "Легенда"},
 }
 
