@@ -6048,46 +6048,4 @@ async function checkPaydayStatus() {
 // Проверяем каждые 10 секунд
 setInterval(checkPaydayStatus, 10000);
 checkPaydayStatus();
-
-    // ========== ПРЕДЗАГРУЗКА ВСЕХ ВКЛАДОК ==========
-function preloadAllTabs() {
-    console.log('🔄 Предзагрузка всех вкладок...');
-
-    // Список всех вкладок, которые нужно предзагрузить
-    const tabs = ['home', 'shop', 'lottery', 'profile'];
-
-    tabs.forEach(tab => {
-        const pane = document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
-        if (pane) {
-            // Принудительно показываем и скрываем для инициализации DOM
-            pane.style.display = 'block';
-            // Заставляем браузер пересчитать стили
-            void pane.offsetHeight;
-            pane.style.display = '';
-        }
-    });
-
-    // Особо важные элементы, которые точно должны быть
-    const criticalElements = [
-        'shopStars', 'shopNormal', 'lotteryLPBalance',
-        'prizePool', 'ticketsCount', 'energyUpgradeCard',
-        'lpBoostCard', 'megaBoostCard'
-    ];
-
-    criticalElements.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-            // Принудительно инициализируем
-            void el.offsetHeight;
-        }
-    });
-
-    console.log('✅ Предзагрузка завершена');
-}
-
-// Запускаем после загрузки страницы
-document.addEventListener('DOMContentLoaded', function() {
-    // Сначала предзагружаем всё
-    setTimeout(preloadAllTabs, 100);
-});
 </script>
