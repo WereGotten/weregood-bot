@@ -2653,55 +2653,25 @@ for (let userItem of data) {
     } else if (userItem.role === 'pioneer' && !userItem.hide_from_top) {
         roleBadge = '<span class="leaderboard-pioneer-badge">⭐</span>';
     }
-
-    // ========== КРАСИВОЕ ОТОБРАЖЕНИЕ НАГРАД ==========
     let rewardHtml = '';
     if (userItem.reward) {
-        // Разбиваем награду на части для красивого отображения
-        const rewardText = userItem.reward;
-        let emoji = '';
-        let lpText = '';
-        let wgText = '';
-
-        if (rewardText.includes('LP') && rewardText.includes('WG')) {
-            // Извлекаем числа
-            const lpMatch = rewardText.match(/(\d+)\s*LP/);
-            const wgMatch = rewardText.match(/(\d+)\s*WG/);
-
-            if (lpMatch) lpText = `${lpMatch[1]} LP`;
-            if (wgMatch) wgText = `${wgMatch[1]} WG`;
-
-            // Определяем эмодзи по месту
-            if (rewardText.includes('🏆')) emoji = '🏆';
-            else if (rewardText.includes('🥈')) emoji = '🥈';
-            else if (rewardText.includes('🥉')) emoji = '🥉';
-            else if (rewardText.includes('🎖️')) emoji = '🎖️';
-        }
-
-        rewardHtml = `
-            <div class="reward-block">
-                ${emoji ? `<span class="reward-emoji">${emoji}</span>` : ''}
-                <span class="reward-text">
-                    ${lpText ? `<span class="reward-lp"> ${lpText}</span>` : ''}
-                    ${wgText ? `<span class="reward-wg"> ${wgText}</span>` : ''}
-                </span>
-            </div>
-        `;
+        rewardHtml = `<span class="reward">${userItem.reward}</span>`;
     }
-
     html += `
         <div class="leaderboard-item" onclick="openPlayerProfile(${userItem.user_id}, ${userItem.rank})">
             <div class="rank">${userItem.rank}</div>
             <div class="avatar">${avatar}</div>
             <div class="info">
                 <div class="name">${escapeHtml(userName)}${roleBadge}</div>
-                <div class="clicks"> ${clicksCount.toLocaleString()} ${clicksLabel}</div>
+                <div class="clicks">${clicksCount.toLocaleString()} ${clicksLabel}</div>
             </div>
             ${rewardHtml}
         </div>
     `;
 }
 listDiv.innerHTML = html;
+}
+}
 
     const leaderboardTabs = document.querySelectorAll('.leaderboard-tab');
     leaderboardTabs.forEach(tab => {
