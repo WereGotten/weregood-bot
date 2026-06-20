@@ -2918,6 +2918,16 @@ def api_claim_mega_boost():
         return jsonify({"success": False, "error": "Invalid user_id"}), 400
 
     try:
+        # Проверяем лимит
+        with db.get_cursor() as cursor:
+            cursor.execute(
+                "SELECT COUNT(*) as count FROM successful_payments WHERE user_id = ? AND payload = 'mega_boost'",
+                (user_id,)
+            )
+            row = cursor.fetchone()
+            if row and row['count'] >= 2:
+                return jsonify({"success": False, "message": "Вы уже купили Мега-бустер 2 раза!"}), 400
+
         user = get_user(user_id)
 
         # +100 LP
@@ -2940,8 +2950,15 @@ def api_claim_mega_boost():
         upgrade_counts[4] = upgrade_counts.get(4, 0) + 2
         safe_update_user(user_id, upgrade_counts=upgrade_counts)
 
+        # Записываем покупку
+        with db.get_cursor() as cursor:
+            cursor.execute(
+                "INSERT INTO successful_payments (user_id, telegram_payment_charge_id, payload, amount) VALUES (?, ?, ?, ?)",
+                (user_id, f"mega_boost_{int(time.time())}", "mega_boost", 50)
+            )
+
         add_admin_log(
-            f"🔥 Активировал Мега-бустер (Stars) | +100 LP, +1500 WG, +2 Легенды, +2 Мастера",
+            f"🔥 Активировал Мега-бустер | +100 LP, +1500 WG, +2 Легенды, +2 Мастера",
             user_id,
             user.get('username') or f"User_{user_id}"
         )
@@ -2964,6 +2981,26 @@ def api_claim_mega_boost():
     except Exception as e:
         logger.error(f"Ошибка в claim_mega_boost: {e}", exc_info=True)
         return jsonify({"success": False, "error": str(e)}), 500
+
+
+# ========== МЕГА-БУСТЕР - ПРОВЕРКА ЛИМИТА ==========
+@app.route('/api/get_mega_boost_count', methods=['POST'])
+def api_get_mega_boost_count():
+    data = request.json or {}
+    user_id = data.get('user_id')
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"success": False, "error": "Invalid user_id"}), 400
+
+    with db.get_cursor() as cursor:
+        cursor.execute(
+            "SELECT COUNT(*) as count FROM successful_payments WHERE user_id = ? AND payload = 'mega_boost'",
+            (user_id,)
+        )
+        row = cursor.fetchone()
+        count = row['count'] if row else 0
+
+    return jsonify({"success": True, "count": count})
 
 # ========== ФОРТУНА API (РУЧНОЕ УПРАВЛЕНИЕ - БЕЗ АВТОЗАВЕРШЕНИЯ) ==========
 

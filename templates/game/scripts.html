@@ -1324,6 +1324,19 @@ window.buyMegaBoostTon = async function() {
 // Получение награды
 async function claimMegaBoostReward() {
     try {
+        // Проверяем, сколько раз уже купили
+        const countResponse = await fetch('/api/get_mega_boost_count', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId })
+        });
+        const countData = await countResponse.json();
+
+        if (countData.count >= 2) {
+            showToast('❌ Вы уже купили Мега-бустер 2 раза!', 'error');
+            return;
+        }
+
         const response = await fetch('/api/claim_mega_boost', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1334,6 +1347,9 @@ async function claimMegaBoostReward() {
 
         if (data.success) {
             showToast('🎉 Мега-бустер активирован!', 'success');
+            // Обновляем счётчик покупок
+            updateMegaBoostCount();
+
             if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.showPopup) {
                 window.Telegram.WebApp.showPopup({
                     title: '🎉 АКЦИЯ АКТИВИРОВАНА!',
@@ -1351,6 +1367,34 @@ async function claimMegaBoostReward() {
     } catch (e) {
         console.error('Claim mega boost error:', e);
         showToast('Ошибка получения награды', 'error');
+    }
+}
+
+// Функция обновления счётчика покупок
+async function updateMegaBoostCount() {
+    try {
+        const response = await fetch('/api/get_mega_boost_count', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId })
+        });
+        const data = await response.json();
+        if (data.success) {
+            const remaining = Math.max(0, 2 - data.count);
+            const countEl = document.getElementById('megaBoostPurchaseCount');
+            if (countEl) {
+                countEl.innerText = `Осталось: ${remaining}/2`;
+                if (remaining <= 0) {
+                    countEl.style.color = '#f44336';
+                    document.getElementById('megaBoostStarsBtn')?.classList.add('disabled');
+                    document.getElementById('megaBoostStarsBtn')?.setAttribute('disabled', 'true');
+                    document.getElementById('megaBoostTonBtn')?.classList.add('disabled');
+                    document.getElementById('megaBoostTonBtn')?.setAttribute('disabled', 'true');
+                }
+            }
+        }
+    } catch(e) {
+        console.error('Error updating mega boost count:', e);
     }
 }
 
@@ -1394,6 +1438,7 @@ function startMegaBoostPaymentCheck(expectedAmount) {
 // Запускаем таймер при загрузке
 document.addEventListener('DOMContentLoaded', function() {
     startMegaBoostTimer();
+    updateMegaBoostCount();
 });
 
     const shopTabs = document.querySelectorAll('.shop-tab');
