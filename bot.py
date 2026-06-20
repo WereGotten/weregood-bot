@@ -6274,8 +6274,13 @@ def calculate_daily_top():
             cursor.execute("UPDATE users SET daily_clicks = 0")
             add_admin_log("🏆 ТОП ДНЯ: нет данных для награждения, но daily_clicks обнулён", 0, "System")
             return []
-        rewards = {1: {"lp": 70, "wg": 200}, 2: {"lp": 50, "wg": 150}, 3: {"lp": 35, "wg": 120},
-                   4: {"lp": 25, "wg": 100}, 5: {"lp": 15, "wg": 75}}
+        rewards = {
+            1: {"lp": 70, "wg": 5000},
+            2: {"lp": 50, "wg": 3000},
+            3: {"lp": 35, "wg": 1500},
+            4: {"lp": 25, "wg": 1000},
+            5: {"lp": 15, "wg": 500}
+        }
         awarded_count = 0
         for i, row in enumerate(rows, 1):
             if i in rewards and row['daily_clicks'] > 0:
