@@ -2670,8 +2670,11 @@ for (let userItem of data) {
     `;
 }
 listDiv.innerHTML = html;
-}
-}
+        } catch(e) {
+            console.error('Leaderboard error:', e);
+            listDiv.innerHTML = '<div class="empty-state">❌ Ошибка загрузки</div>';
+        }
+    }
 
     const leaderboardTabs = document.querySelectorAll('.leaderboard-tab');
     leaderboardTabs.forEach(tab => {
