@@ -5846,3 +5846,60 @@ body.light-theme .star-upgrade-card {
     100% { transform: scale(1); opacity: 1; }
 }
 
+/* ========== КРАСИВЫЙ ТОП ДНЯ ========== */
+.leaderboard-item .reward-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    background: rgba(255,215,0,0.08);
+    padding: 4px 10px;
+    border-radius: 12px;
+    min-width: 60px;
+    border: 1px solid rgba(255,215,0,0.15);
+    flex-shrink: 0;
+}
+
+.leaderboard-item .reward-emoji {
+    font-size: 1.1rem;
+}
+
+.leaderboard-item .reward-text {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+}
+
+.leaderboard-item .reward-lp {
+    font-size: 0.6rem;
+    font-weight: 600;
+    color: #00E5FF;
+}
+
+.leaderboard-item .reward-wg {
+    font-size: 0.6rem;
+    font-weight: 600;
+    color: #FFD700;
+}
+
+/* Для первых трёх мест - подсветка */
+.leaderboard-item .rank:first-child {
+    color: #FFD700;
+    text-shadow: 0 0 10px rgba(255,215,0,0.3);
+}
+
+/* Адаптация для мобильных */
+@media (max-width: 480px) {
+    .leaderboard-item .reward-block {
+        padding: 3px 6px;
+        min-width: 45px;
+    }
+    .leaderboard-item .reward-lp,
+    .leaderboard-item .reward-wg {
+        font-size: 0.5rem;
+    }
+    .leaderboard-item .reward-emoji {
+        font-size: 0.9rem;
+    }
+}
