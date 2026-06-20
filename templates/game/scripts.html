@@ -123,7 +123,7 @@
     let localEnergyUpgrades = 0;
     let localHideFromTop = false;
     let upgradeCounts = {1: 0, 2: 0, 3: 0};
-    let upgradeCosts = {1: 1.5, 2: 10, 3: 70};
+    let upgradeCosts = {1: 1.5, 2: 10, 3: 40, 4: 70, 5: 150};
     let scratchProgress = new Map();
     let availablePrefixes = [];
     let dailyData = null;
@@ -348,55 +348,66 @@ if (clickAmount) {
     }
 
     const totalTickets = document.getElementById('totalTickets');
-    if (totalTickets) totalTickets.innerText = currentTickets.length;
-    const totalTicketsMini = document.getElementById('totalTicketsMini');
-    if (totalTicketsMini) totalTicketsMini.innerText = currentTickets.length;
+if (totalTickets) totalTickets.innerText = currentTickets.length;
+const totalTicketsMini = document.getElementById('totalTicketsMini');
+if (totalTicketsMini) totalTicketsMini.innerText = currentTickets.length;
 
-    const upgradeCount1 = document.getElementById('upgradeCount1');
-    if (upgradeCount1) upgradeCount1.innerText = upgradeCounts[1];
-    const upgradeCount2 = document.getElementById('upgradeCount2');
-    if (upgradeCount2) upgradeCount2.innerText = upgradeCounts[2];
-    const upgradeCount3 = document.getElementById('upgradeCount3');
-    if (upgradeCount3) upgradeCount3.innerText = upgradeCounts[3];
-    const upgradeCost1 = document.getElementById('upgradeCost1');
-    if (upgradeCost1) upgradeCost1.innerHTML = upgradeCosts[1].toFixed(2);
-    const upgradeCost2 = document.getElementById('upgradeCost2');
-    if (upgradeCost2) upgradeCost2.innerHTML = upgradeCosts[2].toFixed(2);
-    const upgradeCost3 = document.getElementById('upgradeCost3');
-    if (upgradeCost3) upgradeCost3.innerHTML = upgradeCosts[3].toFixed(2);
+// ========== ОБНОВЛЕНИЕ УЛУЧШЕНИЙ (ВСЕ 5) ==========
+const upgradeCount1 = document.getElementById('upgradeCount1');
+if (upgradeCount1) upgradeCount1.innerText = upgradeCounts[1] || 0;
+const upgradeCount2 = document.getElementById('upgradeCount2');
+if (upgradeCount2) upgradeCount2.innerText = upgradeCounts[2] || 0;
+const upgradeCount3 = document.getElementById('upgradeCount3');
+if (upgradeCount3) upgradeCount3.innerText = upgradeCounts[3] || 0;
+const upgradeCount4 = document.getElementById('upgradeCount4');
+if (upgradeCount4) upgradeCount4.innerText = upgradeCounts[4] || 0;
+const upgradeCount5 = document.getElementById('upgradeCount5');
+if (upgradeCount5) upgradeCount5.innerText = upgradeCounts[5] || 0;
 
-    const starsBalance = document.getElementById('starsBalance');
-    if (starsBalance) starsBalance.innerText = localStars;
-    const currentMaxEnergy = document.getElementById('currentMaxEnergy');
-    if (currentMaxEnergy) currentMaxEnergy.innerText = localMaxEnergy;
-    const energyUpgradeCount = document.getElementById('energyUpgradeCount');
-    if (energyUpgradeCount) energyUpgradeCount.innerText = localEnergyUpgrades;
-    const energyUpgradeCountProgress = document.getElementById('energyUpgradeCountProgress');
-    if (energyUpgradeCountProgress) energyUpgradeCountProgress.innerText = localEnergyUpgrades;
+const upgradeCost1 = document.getElementById('upgradeCost1');
+if (upgradeCost1) upgradeCost1.innerHTML = (upgradeCosts[1] || 0).toFixed(2);
+const upgradeCost2 = document.getElementById('upgradeCost2');
+if (upgradeCost2) upgradeCost2.innerHTML = (upgradeCosts[2] || 0).toFixed(2);
+const upgradeCost3 = document.getElementById('upgradeCost3');
+if (upgradeCost3) upgradeCost3.innerHTML = (upgradeCosts[3] || 0).toFixed(2);
+const upgradeCost4 = document.getElementById('upgradeCost4');
+if (upgradeCost4) upgradeCost4.innerHTML = (upgradeCosts[4] || 0).toFixed(2);
+const upgradeCost5 = document.getElementById('upgradeCost5');
+if (upgradeCost5) upgradeCost5.innerHTML = (upgradeCosts[5] || 0).toFixed(2);
 
-    let upgradesLeft = Math.max(0, 15 - localEnergyUpgrades);
-    const energyUpgradesLeft = document.getElementById('energyUpgradesLeft');
-    if (energyUpgradesLeft) energyUpgradesLeft.innerText = upgradesLeft;
+// ========== ЗВЁЗДНЫЙ МАГАЗИН ==========
+const starsBalance = document.getElementById('starsBalance');
+if (starsBalance) starsBalance.innerText = localStars;
+const currentMaxEnergy = document.getElementById('currentMaxEnergy');
+if (currentMaxEnergy) currentMaxEnergy.innerText = localMaxEnergy;
+const energyUpgradeCount = document.getElementById('energyUpgradeCount');
+if (energyUpgradeCount) energyUpgradeCount.innerText = localEnergyUpgrades;
+const energyUpgradeCountProgress = document.getElementById('energyUpgradeCountProgress');
+if (energyUpgradeCountProgress) energyUpgradeCountProgress.innerText = localEnergyUpgrades;
 
-    let progressPercent = (localEnergyUpgrades / 15) * 100;
-    const energyUpgradeProgressFill = document.getElementById('energyUpgradeProgressFill');
-    if (energyUpgradeProgressFill) energyUpgradeProgressFill.style.width = progressPercent + '%';
+let upgradesLeft = Math.max(0, 15 - localEnergyUpgrades);
+const energyUpgradesLeft = document.getElementById('energyUpgradesLeft');
+if (energyUpgradesLeft) energyUpgradesLeft.innerText = upgradesLeft;
 
-    let upgradeBtn = document.getElementById('energyUpgradeBtn');
-    let upgradeCard = document.getElementById('energyUpgradeCard');
-    if (upgradeBtn && upgradeCard) {
-        if (localEnergyUpgrades >= 15) {
-            upgradeBtn.innerText = '✅ Максимум достигнут';
-            upgradeBtn.disabled = true;
-            upgradeBtn.classList.add('disabled');
-            upgradeCard.classList.add('disabled');
-        } else {
-            upgradeBtn.innerHTML = '<img src="/static/star_small.png" alt="Stars" style="width: 16px; height: 16px;"> Купить за 27 звёзд';
-            upgradeBtn.disabled = false;
-            upgradeBtn.classList.remove('disabled');
-            upgradeCard.classList.remove('disabled');
-        }
+let progressPercent = (localEnergyUpgrades / 15) * 100;
+const energyUpgradeProgressFill = document.getElementById('energyUpgradeProgressFill');
+if (energyUpgradeProgressFill) energyUpgradeProgressFill.style.width = progressPercent + '%';
+
+let upgradeBtn = document.getElementById('energyUpgradeBtn');
+let upgradeCard = document.getElementById('energyUpgradeCard');
+if (upgradeBtn && upgradeCard) {
+    if (localEnergyUpgrades >= 15) {
+        upgradeBtn.innerText = '✅ Максимум достигнут';
+        upgradeBtn.disabled = true;
+        upgradeBtn.classList.add('disabled');
+        upgradeCard.classList.add('disabled');
+    } else {
+        upgradeBtn.innerHTML = '<img src="/static/star_small.png" alt="Stars" style="width: 16px; height: 16px;"> Купить за 27 звёзд';
+        upgradeBtn.disabled = false;
+        upgradeBtn.classList.remove('disabled');
+        upgradeCard.classList.remove('disabled');
     }
+}
 
     const badgesContainer = document.getElementById('profileBadges');
     if (badgesContainer) {
@@ -472,11 +483,11 @@ if (clickAmount) {
             localEnergyUpgrades = status.energy_upgrades || 0;
 
             if (status.upgrade_counts) {
-                upgradeCounts = status.upgrade_counts;
-                for (let i = 1; i <= 3; i++) {
-                    upgradeCosts[i] = getUpgradeCost(i, upgradeCounts[i] || 0);
-                }
-            }
+    upgradeCounts = status.upgrade_counts;
+    for (let i = 1; i <= 5; i++) {
+        upgradeCosts[i] = getUpgradeCost(i, upgradeCounts[i] || 0);
+    }
+}
 
             // ========== КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: обновляем лотерею из data.lottery ==========
             if (data.lottery) {
