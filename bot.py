@@ -2782,19 +2782,30 @@ def api_create_mega_boost_invoice():
     data = request.json
     if not data:
         return jsonify({"success": False, "msg": "No data"}), 400
+
     user_id = data.get('user_id')
     chat_id = data.get('chat_id', user_id)
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid:
         return jsonify({"success": False, "msg": "Invalid user_id"}), 400
 
+    # Проверяем, сколько раз уже купили
+    with db.get_cursor() as cursor:
+        cursor.execute(
+            "SELECT COUNT(*) as count FROM successful_payments WHERE user_id = ? AND payload = 'mega_boost'",
+            (user_id,)
+        )
+        count = cursor.fetchone()['count']
+        if count >= 2:
+            return jsonify({"success": False, "msg": "Вы уже купили Мега бустер 2 раза!"}), 400
+
     try:
-        title = "🔥 Мега-бустер (Акция)"
-        description = "100 LP + 2 Легенды + 2 Мастера + 1500 WG!"
+        title = "🔥 Мега бустер"
+        description = "Мощное усиление! +80 макс. энергии, +100 LP, +200 WG!"
         payload = json.dumps({"user_id": user_id, "type": "mega_boost"})
         provider_token = ""
         currency = "XTR"
-        prices = [{"label": "Мега-бустер", "amount": 50}]
+        prices = [{"label": "Мега бустер", "amount": 50}]
         url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/createInvoiceLink"
         data = {
             "title": title,
@@ -2823,19 +2834,29 @@ def api_ton_create_mega_boost_payment():
     if not is_valid:
         return jsonify({"success": False, "error": "Неавторизованный запрос"}), 400
 
+    with db.get_cursor() as cursor:
+        cursor.execute(
+            "SELECT COUNT(*) as count FROM successful_payments WHERE user_id = ? AND payload = 'mega_boost'",
+            (user_id,)
+        )
+        count = cursor.fetchone()['count']
+        if count >= 2:
+            return jsonify({"success": False, "error": "Вы уже купили Мега бустер 2 раза!"}), 400
+
     proj_wallet = globals().get('PROJECT_WALLET_ADDRESS') or os.getenv('PROJECT_WALLET_ADDRESS')
     if not proj_wallet:
         logger.critical("🚨 PROJECT_WALLET_ADDRESS отсутствует!")
         return jsonify({"success": False, "error": "Ошибка конфигурации платежного шлюза"}), 500
 
-    payment_amount_ton = 0.40
+    payment_amount_ton = 0.35
     payment_amount_nano = int(payment_amount_ton * 1e9)
+
     return jsonify({
         "success": True,
         "wallet_address": proj_wallet,
         "amount": payment_amount_ton,
         "amount_nano": payment_amount_nano,
-        "comment": f"WereGood_MEGA:{user_id}"
+        "comment": f"WereGood_Mega:{user_id}"
     })
 
 
@@ -2854,31 +2875,30 @@ def check_mega_boost_payment():
         confirmed, amount_paid, tx_hash = check_ton_transaction(sender_wallet, expected_amount, user_id)
 
         if confirmed:
-            # Выдаём награду
+            # Проверяем лимит
+            with db.get_cursor() as cursor:
+                cursor.execute(
+                    "SELECT COUNT(*) as count FROM successful_payments WHERE user_id = ? AND payload = 'mega_boost'",
+                    (user_id,)
+                )
+                count = cursor.fetchone()['count']
+                if count >= 2:
+                    return jsonify({'confirmed': False, 'error': 'Лимит достигнут'}), 400
+
+            # Начисляем бонусы
             user = get_user(user_id)
 
+            # +80 макс. энергии
+            new_max_energy = user['max_energy'] + 80
             # +100 LP
-            old_lp = user['lp']
-            new_lp = old_lp + 100
-            safe_update_user(user_id, lp=new_lp)
+            new_lp = user['lp'] + 100
+            # +200 WG
+            new_wg = user['wg'] + 200
 
-            # +1500 WG
-            old_wg = user['wg']
-            new_wg = old_wg + 1500
-            safe_update_user(user_id, wg=new_wg)
-
-            # +2 Легенды (id: 5)
-            upgrade_counts = user['upgrade_counts']
-            upgrade_counts[5] = upgrade_counts.get(5, 0) + 2
-            safe_update_user(user_id, upgrade_counts=upgrade_counts)
-
-            # +2 Мастера (id: 4)
-            upgrade_counts = user['upgrade_counts']
-            upgrade_counts[4] = upgrade_counts.get(4, 0) + 2
-            safe_update_user(user_id, upgrade_counts=upgrade_counts)
+            safe_update_user(user_id, max_energy=new_max_energy, lp=new_lp, wg=new_wg)
 
             add_admin_log(
-                f"🔥 Активировал Мега-бустер (TON) | +100 LP, +1500 WG, +2 Легенды, +2 Мастера",
+                f"🔥 Купил Мега бустер за TON ({expected_amount} TON) | +80 макс. энергии, +100 LP, +200 WG",
                 user_id,
                 user.get('username') or f"User_{user_id}",
                 details=f"Хэш транзакции: {tx_hash}"
@@ -2887,83 +2907,40 @@ def check_mega_boost_payment():
             if 'send_telegram_message' in globals():
                 try:
                     send_telegram_message(user_id,
-                        f"🔥 **МЕГА-БУСТЕР АКТИВИРОВАН!**\n\n"
-                        f"💎 +100 LP\n"
-                        f"👑 +2 Легенды (улучшения)\n"
-                        f"🦅 +2 Мастера (улучшения)\n"
-                        f"💰 +1500 WG\n\n"
-                        f"🎉 Спасибо за покупку!"
-                    )
+                                          f"🔥 **МЕГА БУСТЕР АКТИВИРОВАН!**\n\n"
+                                          f"⚡️ +80 к максимальной энергии\n"
+                                          f"💎 +100 LP на баланс\n"
+                                          f"💰 +200 WG на баланс\n\n"
+                                          f"🔥 Спасибо за поддержку проекта!"
+                                          )
                 except Exception as tg_err:
                     logger.error(f"⚠️ Не удалось отправить ТГ-сообщение: {tg_err}")
 
             return jsonify({'confirmed': True, 'tx_hash': tx_hash})
 
         return jsonify({'confirmed': False})
-
     except Exception as e:
         logger.error(f"Ошибка в check_mega_boost_payment: {e}", exc_info=True)
         return jsonify({'confirmed': False, 'error': str(e)}), 500
 
 
-@app.route('/api/claim_mega_boost', methods=['POST'])
-def api_claim_mega_boost():
-    data = request.json
-    if not data:
-        return jsonify({"success": False, "error": "No data"}), 400
-
+@app.route('/api/get_mega_boost_count', methods=['POST'])
+def api_get_mega_boost_count():
+    data = request.json or {}
     user_id = data.get('user_id')
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid:
         return jsonify({"success": False, "error": "Invalid user_id"}), 400
 
-    try:
-        user = get_user(user_id)
-
-        # +100 LP
-        old_lp = user['lp']
-        new_lp = old_lp + 100
-        safe_update_user(user_id, lp=new_lp)
-
-        # +1500 WG
-        old_wg = user['wg']
-        new_wg = old_wg + 1500
-        safe_update_user(user_id, wg=new_wg)
-
-        # +2 Легенды (id: 5)
-        upgrade_counts = user['upgrade_counts']
-        upgrade_counts[5] = upgrade_counts.get(5, 0) + 2
-        safe_update_user(user_id, upgrade_counts=upgrade_counts)
-
-        # +2 Мастера (id: 4)
-        upgrade_counts = user['upgrade_counts']
-        upgrade_counts[4] = upgrade_counts.get(4, 0) + 2
-        safe_update_user(user_id, upgrade_counts=upgrade_counts)
-
-        add_admin_log(
-            f"🔥 Активировал Мега-бустер (Stars) | +100 LP, +1500 WG, +2 Легенды, +2 Мастера",
-            user_id,
-            user.get('username') or f"User_{user_id}"
+    with db.get_cursor() as cursor:
+        cursor.execute(
+            "SELECT COUNT(*) as count FROM successful_payments WHERE user_id = ? AND payload = 'mega_boost'",
+            (user_id,)
         )
+        row = cursor.fetchone()
+        count = row['count'] if row else 0
 
-        if 'send_telegram_message' in globals():
-            try:
-                send_telegram_message(user_id,
-                    f"🔥 **МЕГА-БУСТЕР АКТИВИРОВАН!**\n\n"
-                    f"💎 +100 LP\n"
-                    f"👑 +2 Легенды (улучшения)\n"
-                    f"🦅 +2 Мастера (улучшения)\n"
-                    f"💰 +1500 WG\n\n"
-                    f"🎉 Спасибо за покупку!"
-                )
-            except Exception as tg_err:
-                logger.error(f"⚠️ Не удалось отправить ТГ-сообщение: {tg_err}")
-
-        return jsonify({"success": True, "message": "Мега-бустер активирован!"})
-
-    except Exception as e:
-        logger.error(f"Ошибка в claim_mega_boost: {e}", exc_info=True)
-        return jsonify({"success": False, "error": str(e)}), 500
+    return jsonify({"success": True, "count": count})
 
 # ========== ФОРТУНА API (РУЧНОЕ УПРАВЛЕНИЕ - БЕЗ АВТОЗАВЕРШЕНИЯ) ==========
 
