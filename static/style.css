@@ -5846,19 +5846,92 @@ body.light-theme .star-upgrade-card {
     100% { transform: scale(1); opacity: 1; }
 }
 
-/* Немного увеличиваем карточки улучшений */
+/* ========== УЛУЧШЕНИЯ - ЕДИНЫЙ СТИЛЬ ========== */
 .upgrade-card {
-    padding: 16px 18px;
-    min-height: 76px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, rgba(255,215,0,0.08), rgba(255,165,0,0.04));
+    border-radius: 16px;
+    border: 1px solid rgba(255,215,0,0.12);
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    min-height: 72px;
+}
+
+.upgrade-card:active {
+    transform: scale(0.98);
+    background: rgba(255,215,0,0.12);
 }
 
 .upgrade-icon {
-    width: 50px;
-    height: 50px;
-    min-width: 50px;
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,215,0,0.08);
+    border-radius: 12px;
+    flex-shrink: 0;
 }
 
 .upgrade-icon img {
-    width: 38px;
-    height: 38px;
+    width: 34px;
+    height: 34px;
+    display: block;
+    object-fit: contain;
+}
+
+.upgrade-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.upgrade-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #fff;
+    line-height: 1.2;
+    margin-bottom: 2px;
+}
+
+.upgrade-desc {
+    font-size: 0.7rem;
+    color: rgba(255,255,255,0.5);
+    line-height: 1.2;
+}
+
+.upgrade-count {
+    font-size: 0.65rem;
+    color: #FFD700;
+    margin-top: 3px;
+    line-height: 1.2;
+}
+
+.upgrade-price {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #FFD700;
+    background: rgba(255,215,0,0.12);
+    padding: 5px 14px;
+    border-radius: 20px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* Light theme support */
+body.light-theme .upgrade-title {
+    color: #1a1a2e;
+}
+
+body.light-theme .upgrade-card {
+    background: rgba(0,0,0,0.04);
+    border-color: rgba(0,0,0,0.08);
+}
+
+body.light-theme .upgrade-price {
+    background: rgba(255,215,0,0.15);
 }
