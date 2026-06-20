@@ -1489,63 +1489,28 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(() => updateDonateCarousel(), 100);
     }
 
-    // ========== ОПТИМИЗИРОВАННОЕ ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК ==========
-let isTabSwitching = false;
-
-const navItems = document.querySelectorAll('.nav-item');
-navItems.forEach(item => {
-    const oldOnClick = item.onclick;
-    item.onclick = (e) => {
-        if (isTabSwitching) return; // Защита от двойного клика
-
-        playNavSound();
-        const tab = item.dataset.tab;
-
-        // Быстро переключаем вкладку
-        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        item.classList.add('active');
-        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-        const tabPane = document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
-        if (tabPane) {
-            // Показываем вкладку мгновенно
-            tabPane.style.display = 'block';
-            tabPane.classList.add('active');
-        }
-
-        const mainContent = document.querySelector('.main-content');
-        if (mainContent) mainContent.scrollTop = 0;
-
-        // Асинхронно загружаем данные (чтобы не блокировать UI)
-        isTabSwitching = true;
-        requestAnimationFrame(() => {
+    const navItems = document.querySelectorAll('.nav-item');
+    navItems.forEach(item => {
+        const oldOnClick = item.onclick;
+        item.onclick = (e) => {
+            playNavSound();
+            const tab = item.dataset.tab;
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            item.classList.add('active');
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+            const tabPane = document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
+            if (tabPane) tabPane.classList.add('active');
+            const mainContent = document.querySelector('.main-content');
+            if (mainContent) mainContent.scrollTop = 0;
             if (tab === 'lottery') {
                 updateLottery();
                 loadRecentPlayers();
             }
-            if (tab === 'profile' || tab === 'shop' || tab === 'home') {
-                updateStatus();
-            }
-            if (tab === 'home') {
-                updateLeaderboard();
-            }
-            if (tab === 'shop') {
-                // Предзагружаем звёздный магазин в фоне
-                setTimeout(() => {
-                    const starsPane = document.getElementById('shopStars');
-                    if (starsPane && !starsPane._loaded) {
-                        starsPane._loaded = true;
-                        // Принудительно инициализируем карусель
-                        if (typeof updateDonateCarousel === 'function') {
-                            setTimeout(updateDonateCarousel, 50);
-                        }
-                    }
-                }, 50);
-            }
+            if (tab === 'profile' || tab === 'shop' || tab === 'home') updateStatus();
+            if (tab === 'home') updateLeaderboard();
             if (oldOnClick) oldOnClick(e);
-            isTabSwitching = false;
-        });
-    };
-});
+        };
+    });
 
     // ==================== ЛОТЕРЕЯ ====================
     const ticketBtn = document.getElementById('ticketBtn');
@@ -6048,4 +6013,5 @@ async function checkPaydayStatus() {
 // Проверяем каждые 10 секунд
 setInterval(checkPaydayStatus, 10000);
 checkPaydayStatus();
+
 </script>
