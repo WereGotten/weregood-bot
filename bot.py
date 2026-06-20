@@ -4364,8 +4364,13 @@ def api_daily_leaderboard():
             LIMIT 50
         ''')
         rows = cursor.fetchall()
-        rewards = {1: "🏆 70 LP + 200 WG", 2: "🥈 50 LP + 150 WG", 3: "🥉 35 LP + 120 WG",
-                   4: "🎖️ 25 LP + 100 WG", 5: "🎖️ 15 LP + 75 WG"}
+        rewards = {
+            1: "🏆 70 LP + 5000 WG",
+            2: "🥈 50 LP + 3000 WG",
+            3: "🥉 35 LP + 1500 WG",
+            4: "🎖️ 25 LP + 1000 WG",
+            5: "🎖️ 15 LP + 500 WG"
+        }
         result = []
         for i, row in enumerate(rows, 1):
             hide_from_top = False
