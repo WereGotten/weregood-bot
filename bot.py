@@ -1236,6 +1236,17 @@ def init_db():
             )
         ''')
 
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS task_miniapp_clicks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                task_id INTEGER,
+                clicked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(user_id, task_id)
+            )
+        ''')
+        print("✅ Создана таблица task_miniapp_clicks")
+
         # ========== PAYDAY БОНУС ==========
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS payday_bonus (
@@ -1344,6 +1355,19 @@ def init_db():
             try:
                 cursor.execute("ALTER TABLE users ADD COLUMN fortune_total_bet_amount REAL DEFAULT 0")
                 print("✅ Добавлена колонка fortune_total_bet_amount")
+            except:
+                pass
+
+            # После создания таблицы tasks
+            try:
+                cursor.execute("ALTER TABLE tasks ADD COLUMN task_type TEXT DEFAULT 'channel'")
+                print("✅ Добавлена колонка task_type в tasks")
+            except:
+                pass
+
+            try:
+                cursor.execute("ALTER TABLE tasks ADD COLUMN miniapp_url TEXT DEFAULT ''")
+                print("✅ Добавлена колонка miniapp_url в tasks")
             except:
                 pass
         # ========== ЗАПОЛНЕНИЕ ДОСТИЖЕНИЙ ==========
@@ -5023,6 +5047,7 @@ def api_get_tasks():
             })
         return jsonify({'success': True, 'tasks': tasks})
 
+
 @app.route('/api/check_task_subscription', methods=['POST'])
 def api_check_task_subscription():
     data = request.json
@@ -5033,69 +5058,119 @@ def api_check_task_subscription():
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid:
         return jsonify({'success': False, 'error': 'Invalid user_id'}), 400
+
     with db.get_cursor() as cursor:
         cursor.execute('SELECT * FROM tasks WHERE id = ? AND is_active = 1', (task_id,))
         task = cursor.fetchone()
         if not task:
             return jsonify({'success': False, 'error': 'Задание не найдено'}), 404
+
         if task['completed_count'] >= task['total_limit']:
             return jsonify({'success': False, 'error': 'Задание больше недоступно'})
+
         cursor.execute('SELECT * FROM user_tasks WHERE user_id = ? AND task_id = ?', (user_id, task_id))
         if cursor.fetchone():
             return jsonify({'success': False, 'error': 'Вы уже получили награду за это задание'})
-        channel_username = task['channel_username'].replace('@', '')
-        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/getChatMember"
-        try:
-            response = requests.get(url, params={
-                'chat_id': f'@{channel_username}',
-                'user_id': user_id
-            }, timeout=10)
-            data = response.json()
-            if data.get('ok'):
-                status = data.get('result', {}).get('status', '')
-                if status in ['member', 'administrator', 'creator']:
-                    user = get_user(user_id)
-                    old_value = None
-                    new_value = None
-                    if task['reward_type'] == 'wg':
-                        old_value = user['wg']
-                        new_value = old_value + task['reward_amount']
-                        safe_update_user(user_id, wg=new_value)
-                        add_log(f"📋 Выполнил задание '{task['title']}' | +{task['reward_amount']} WG", user_id,
-                                user['username'])
-                    elif task['reward_type'] == 'lp':
-                        old_value = user['lp']
-                        new_value = old_value + task['reward_amount']
-                        safe_update_user(user_id, lp=new_value)
-                        add_log(f"📋 Выполнил задание '{task['title']}' | +{task['reward_amount']} LP", user_id,
-                                user['username'])
-                    elif task['reward_type'] == 'usdt':
-                        old_value = user['usdt']
-                        new_value = old_value + task['reward_amount']
-                        safe_update_user(user_id, usdt=new_value)
-                        add_log(f"📋 Выполнил задание '{task['title']}' | +{task['reward_amount']} USDT", user_id,
-                                user['username'])
-                    elif task['reward_type'] == 'energy':
-                        current_energy, _ = calculate_energy(user)
-                        new_energy = min(user['max_energy'], current_energy + task['reward_amount'])
-                        update_energy_in_db(user_id, user, new_energy)
-                        add_log(f"📋 Выполнил задание '{task['title']}' | +{task['reward_amount']} энергии", user_id,
-                                user['username'])
-                    cursor.execute('INSERT INTO user_tasks (user_id, task_id) VALUES (?, ?)', (user_id, task_id))
-                    cursor.execute('UPDATE tasks SET completed_count = completed_count + 1 WHERE id = ?', (task_id,))
-                    update_achievement_progress(user_id, 'task_master', 1)
-                    return jsonify({
-                        'success': True,
-                        'message': f'✅ Вы получили +{task["reward_amount"]} {task["reward_type"].upper()}!',
-                        'reward': {'type': task['reward_type'], 'amount': task['reward_amount']}
-                    })
+
+        # ========== ПРОВЕРКА В ЗАВИСИМОСТИ ОТ ТИПА ЗАДАНИЯ ==========
+        task_type = task.get('task_type', 'channel')
+
+        if task_type == 'channel':
+            # ---- ПРОВЕРКА ПОДПИСКИ НА КАНАЛ ----
+            channel_username = task['channel_username'].replace('@', '')
+            url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/getChatMember"
+            try:
+                response = requests.get(url, params={
+                    'chat_id': f'@{channel_username}',
+                    'user_id': user_id
+                }, timeout=10)
+                data = response.json()
+                if data.get('ok'):
+                    status = data.get('result', {}).get('status', '')
+                    if status not in ['member', 'administrator', 'creator']:
+                        return jsonify({'success': False, 'error': 'Вы не подписаны на канал'})
                 else:
-                    return jsonify({'success': False, 'error': 'Вы не подписаны на канал'})
-            else:
-                return jsonify({'success': False, 'error': 'Не удалось проверить подписку'})
-        except Exception as e:
-            logger.error(f"Ошибка проверки подписки: {e}")
-            return jsonify({'success': False, 'error': 'Ошибка при проверке'}), 500
+                    return jsonify({'success': False, 'error': 'Не удалось проверить подписку'})
+            except Exception as e:
+                logger.error(f"Ошибка проверки подписки: {e}")
+                return jsonify({'success': False, 'error': 'Ошибка при проверке'}), 500
+
+        elif task_type == 'miniapp':
+            # ---- ПРОВЕРКА ОТКРЫТИЯ MINI APP ----
+            # Проверяем, есть ли запись о клике за последние 5 минут
+            cursor.execute('''
+                SELECT * FROM task_miniapp_clicks 
+                WHERE user_id = ? AND task_id = ? 
+                AND clicked_at > datetime('now', '-5 minutes')
+            ''', (user_id, task_id))
+            click = cursor.fetchone()
+
+            if not click:
+                return jsonify({'success': False, 'error': 'Откройте Mini App по ссылке и вернитесь'})
+
+        # ========== ВЫДАЁМ НАГРАДУ ==========
+        user = get_user(user_id)
+        old_value = None
+        new_value = None
+
+        if task['reward_type'] == 'wg':
+            old_value = user['wg']
+            new_value = old_value + task['reward_amount']
+            safe_update_user(user_id, wg=new_value)
+            add_log(f"📋 Выполнил задание '{task['title']}' | +{task['reward_amount']} WG", user_id, user['username'])
+        elif task['reward_type'] == 'lp':
+            old_value = user['lp']
+            new_value = old_value + task['reward_amount']
+            safe_update_user(user_id, lp=new_value)
+            add_log(f"📋 Выполнил задание '{task['title']}' | +{task['reward_amount']} LP", user_id, user['username'])
+        elif task['reward_type'] == 'usdt':
+            old_value = user['usdt']
+            new_value = old_value + task['reward_amount']
+            safe_update_user(user_id, usdt=new_value)
+            add_log(f"📋 Выполнил задание '{task['title']}' | +{task['reward_amount']} USDT", user_id, user['username'])
+        elif task['reward_type'] == 'energy':
+            current_energy, _ = calculate_energy(user)
+            new_energy = min(user['max_energy'], current_energy + task['reward_amount'])
+            update_energy_in_db(user_id, user, new_energy)
+            add_log(f"📋 Выполнил задание '{task['title']}' | +{task['reward_amount']} энергии", user_id,
+                    user['username'])
+
+        cursor.execute('INSERT INTO user_tasks (user_id, task_id) VALUES (?, ?)', (user_id, task_id))
+        cursor.execute('UPDATE tasks SET completed_count = completed_count + 1 WHERE id = ?', (task_id,))
+        update_achievement_progress(user_id, 'task_master', 1)
+
+        return jsonify({
+            'success': True,
+            'message': f'✅ Вы получили +{task["reward_amount"]} {task["reward_type"].upper()}!',
+            'reward': {'type': task['reward_type'], 'amount': task['reward_amount']}
+        })
+
+
+@app.route('/api/log_miniapp_click', methods=['POST'])
+def api_log_miniapp_click():
+    data = request.json
+    if not data:
+        return jsonify({'success': False, 'error': 'No data'}), 400
+
+    user_id = data.get('user_id')
+    task_id = data.get('task_id')
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({'success': False, 'error': 'Invalid user_id'}), 400
+
+    with db.get_cursor() as cursor:
+        # Проверяем, существует ли задание
+        cursor.execute('SELECT id FROM tasks WHERE id = ? AND is_active = 1', (task_id,))
+        if not cursor.fetchone():
+            return jsonify({'success': False, 'error': 'Задание не найдено'}), 404
+
+        # Записываем клик
+        cursor.execute('''
+            INSERT OR IGNORE INTO task_miniapp_clicks (user_id, task_id)
+            VALUES (?, ?)
+        ''', (user_id, task_id))
+
+    return jsonify({'success': True, 'message': 'Клик зафиксирован'})
 
 # ========== ДОСТИЖЕНИЯ API ==========
 @app.route('/api/achievements/list', methods=['POST'])
@@ -5609,6 +5684,7 @@ def api_admin_get_tasks():
             })
         return jsonify({'success': True, 'tasks': tasks})
 
+
 @app.route('/api/admin/create_task', methods=['POST'])
 @require_admin
 def api_admin_create_task():
@@ -5622,21 +5698,32 @@ def api_admin_create_task():
     daily_limit = int(data.get('daily_limit', 1))
     total_limit = int(data.get('total_limit', 100))
     days_remaining = int(data.get('days_remaining', 7))
+    task_type = data.get('task_type', 'channel')  # ← НОВОЕ
+    miniapp_url = data.get('miniapp_url', '').strip()  # ← НОВОЕ
+
     if not title or not channel_link or not channel_username:
         return jsonify({'success': False, 'error': 'Заполните все поля'}), 400
+
     if reward_amount <= 0:
         return jsonify({'success': False, 'error': 'Сумма награды должна быть больше 0'}), 400
+
     admin_id = request.args.get('user_id', 'Admin')
     admin_name = "Admin"
+
     with db.get_cursor() as cursor:
         cursor.execute('''
-            INSERT INTO tasks (title, channel_link, channel_username, channel_avatar, 
-                              reward_amount, reward_type, daily_limit, total_limit, days_remaining)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO tasks (
+                title, channel_link, channel_username, channel_avatar, 
+                reward_amount, reward_type, daily_limit, total_limit, 
+                days_remaining, task_type, miniapp_url
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (title, channel_link, channel_username, channel_avatar,
-              reward_amount, reward_type, daily_limit, total_limit, days_remaining))
+              reward_amount, reward_type, daily_limit, total_limit,
+              days_remaining, task_type, miniapp_url))
         task_id = cursor.lastrowid
-    add_admin_log(f"📋 Создал задание '{title}' (ID: {task_id})", admin_id, admin_name)
+
+    add_admin_log(f"📋 Создал задание '{title}' (ID: {task_id}, тип: {task_type})", admin_id, admin_name)
     return jsonify({'success': True, 'task_id': task_id})
 
 @app.route('/api/admin/update_task', methods=['POST'])

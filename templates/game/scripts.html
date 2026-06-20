@@ -3300,31 +3300,39 @@ listDiv.innerHTML = html;
     }
 
     function renderTasksList() {
-        const container = document.getElementById('tasksList');
-        if (!container) return;
-        if (currentTasks.length === 0) {
-            container.innerHTML = '<div class="empty-state">📭 Пока нет доступных заданий</div>';
-            return;
-        }
-        let html = '';
-        for (const task of currentTasks) {
-            const statusClass = task.is_completed ? 'completed' : '';
-            const statusText = task.is_completed ? '✅ Выполнено' : '🟢 Доступно';
-            const rewardIcon = task.reward_type === 'wg' ? '💰' : (task.reward_type === 'lp' ? '💎' : (task.reward_type === 'usdt' ? '💵' : '⚡'));
-            html += `
-                <div class="task-card ${statusClass}" onclick="openTaskDetail(${task.id})">
-                    <div class="task-avatar">${getAvatarUrl(task.channel_avatar)}</div>
-                    <div class="task-info">
-                        <div class="task-channel">${escapeHtml(task.channel_username)}</div>
-                        <div class="task-title">${escapeHtml(task.title)}</div>
-                    </div>
-                    <div class="task-status">${statusText}</div>
-                    <div class="task-reward">${rewardIcon} ${task.reward_amount}</div>
-                </div>
-            `;
-        }
-        container.innerHTML = html;
+    const container = document.getElementById('tasksList');
+    if (!container) return;
+    if (currentTasks.length === 0) {
+        container.innerHTML = '<div class="empty-state">📭 Пока нет доступных заданий</div>';
+        return;
     }
+    let html = '';
+    for (const task of currentTasks) {
+        const statusClass = task.is_completed ? 'completed' : '';
+        const statusText = task.is_completed ? '✅ Выполнено' : '🟢 Доступно';
+        const rewardIcon = task.reward_type === 'wg' ? '💰' : (task.reward_type === 'lp' ? '💎' : (task.reward_type === 'usdt' ? '💵' : '⚡'));
+
+        // Определяем тип задания
+        const taskType = task.task_type || 'channel';
+        const typeIcon = taskType === 'miniapp' ? '📱' : '📢';
+
+        // Показываем тип задания в карточке
+        const typeLabel = taskType === 'miniapp' ? 'Mini App' : 'Канал';
+
+        html += `
+            <div class="task-card ${statusClass}" onclick="openTaskDetail(${task.id})">
+                <div class="task-avatar">${getAvatarUrl(task.channel_avatar)}</div>
+                <div class="task-info">
+                    <div class="task-channel">${typeIcon} ${escapeHtml(task.channel_username)} <span style="font-size:0.55rem; opacity:0.5; margin-left:4px;">(${typeLabel})</span></div>
+                    <div class="task-title">${escapeHtml(task.title)}</div>
+                </div>
+                <div class="task-status">${statusText}</div>
+                <div class="task-reward">${rewardIcon} ${task.reward_amount}</div>
+            </div>
+        `;
+    }
+    container.innerHTML = html;
+}
 
     function openTasksModal() {
         loadTasks();
@@ -3340,32 +3348,76 @@ listDiv.innerHTML = html;
     }
 
     function openTaskDetail(taskId) {
-        selectedTask = currentTasks.find(t => t.id === taskId);
-        if (!selectedTask) return;
-        let rewardIcon = '';
-        if (selectedTask.reward_type === 'wg') rewardIcon = '💰';
-        else if (selectedTask.reward_type === 'lp') rewardIcon = '💎';
-        else if (selectedTask.reward_type === 'usdt') rewardIcon = '💵';
-        else rewardIcon = '⚡';
-        const taskDetailTitle = document.getElementById('taskDetailTitle');
-        const taskDetailReward = document.getElementById('taskDetailReward');
-        const taskDetailRemaining = document.getElementById('taskDetailRemaining');
-        const taskDetailAvatar = document.getElementById('taskDetailAvatar');
-        if (taskDetailTitle) taskDetailTitle.innerText = selectedTask.title;
-        if (taskDetailReward) taskDetailReward.innerHTML = `${rewardIcon} ${selectedTask.reward_amount} ${selectedTask.reward_type.toUpperCase()}`;
-        if (taskDetailRemaining) taskDetailRemaining.innerHTML = `${selectedTask.completed_count}/${selectedTask.total_limit}`;
-        if (taskDetailAvatar) taskDetailAvatar.innerHTML = getAvatarUrl(selectedTask.channel_avatar);
-        const buttonsContainer = document.querySelector('#taskDetailModal .task-detail-buttons');
-        if (buttonsContainer) {
-            if (selectedTask.is_completed) {
-                buttonsContainer.innerHTML = `<div style="text-align: center; padding: 12px; background: rgba(34,197,94,0.15); border-radius: 40px; width: 100%;">✅ Задание выполнено! Награда получена.</div>`;
+    selectedTask = currentTasks.find(t => t.id === taskId);
+    if (!selectedTask) return;
+
+    let rewardIcon = '';
+    if (selectedTask.reward_type === 'wg') rewardIcon = '💰';
+    else if (selectedTask.reward_type === 'lp') rewardIcon = '💎';
+    else if (selectedTask.reward_type === 'usdt') rewardIcon = '💵';
+    else rewardIcon = '⚡';
+
+    const taskDetailTitle = document.getElementById('taskDetailTitle');
+    const taskDetailReward = document.getElementById('taskDetailReward');
+    const taskDetailRemaining = document.getElementById('taskDetailRemaining');
+    const taskDetailAvatar = document.getElementById('taskDetailAvatar');
+
+    if (taskDetailTitle) taskDetailTitle.innerText = selectedTask.title;
+    if (taskDetailReward) taskDetailReward.innerHTML = `${rewardIcon} ${selectedTask.reward_amount} ${selectedTask.reward_type.toUpperCase()}`;
+    if (taskDetailRemaining) taskDetailRemaining.innerHTML = `${selectedTask.completed_count}/${selectedTask.total_limit}`;
+    if (taskDetailAvatar) taskDetailAvatar.innerHTML = getAvatarUrl(selectedTask.channel_avatar);
+
+    const buttonsContainer = document.querySelector('#taskDetailModal .task-detail-buttons');
+    if (buttonsContainer) {
+        if (selectedTask.is_completed) {
+            buttonsContainer.innerHTML = `<div style="text-align: center; padding: 12px; background: rgba(34,197,94,0.15); border-radius: 40px; width: 100%;">✅ Задание выполнено! Награда получена.</div>`;
+        } else {
+            // Определяем тип задания
+            const taskType = selectedTask.task_type || 'channel';
+
+            if (taskType === 'miniapp') {
+                // Для Mini App заданий
+                buttonsContainer.innerHTML = `
+                    <button class="task-detail-btn task-link-btn" onclick="openTaskMiniapp()">📱 Открыть Mini App</button>
+                    <button class="task-detail-btn task-check-btn" id="taskCheckBtn" onclick="checkTaskCompletion()">✅ Проверить выполнение</button>
+                `;
             } else {
-                buttonsContainer.innerHTML = `<button class="task-detail-btn task-link-btn" onclick="openTaskChannel()">🔗 Перейти по ссылке</button><button class="task-detail-btn task-check-btn" id="taskCheckBtn" onclick="checkTaskCompletion()">✅ Проверить выполнение</button>`;
+                // Для обычных каналов
+                buttonsContainer.innerHTML = `
+                    <button class="task-detail-btn task-link-btn" onclick="openTaskChannel()">🔗 Перейти по ссылке</button>
+                    <button class="task-detail-btn task-check-btn" id="taskCheckBtn" onclick="checkTaskCompletion()">✅ Проверить выполнение</button>
+                `;
             }
         }
-        const taskDetailModal = document.getElementById('taskDetailModal');
-        if (taskDetailModal) taskDetailModal.classList.add('active');
     }
+
+    const taskDetailModal = document.getElementById('taskDetailModal');
+    if (taskDetailModal) taskDetailModal.classList.add('active');
+}
+function openTaskMiniapp() {
+    if (!selectedTask) return;
+
+    // Получаем ссылку на Mini App (используем channel_link или отдельное поле miniapp_url)
+    const miniappUrl = selectedTask.miniapp_url || selectedTask.channel_link;
+
+    if (miniappUrl) {
+        window.open(miniappUrl, '_blank');
+
+        // Логируем клик по Mini App
+        fetch('/api/log_miniapp_click', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id: userId,
+                task_id: selectedTask.id
+            })
+        }).catch(e => console.error('Miniapp log error:', e));
+
+        showToast('📱 Mini App открыт! Вернитесь и нажмите "Проверить"', 'info');
+    } else {
+        showToast('❌ Ссылка на Mini App не найдена', 'error');
+    }
+}
 
     function closeTaskDetailModal() {
         const taskDetailModal = document.getElementById('taskDetailModal');
