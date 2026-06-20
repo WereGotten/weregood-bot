@@ -1,4 +1,5 @@
 <div id="tabShop" class="tab-pane">
+    <!-- Вкладки магазина -->
     <div class="shop-tabs">
         <div class="shop-tab active" data-shop-tab="normal">
             <img src="/static/shop_icon.png" alt="Магазин" style="width: 18px; height: 18px;">
@@ -10,82 +11,85 @@
         </div>
     </div>
 
+    <!-- ==================== ОБЫЧНЫЙ МАГАЗИН ==================== -->
     <div id="shopNormal" class="shop-pane active">
         <h2 class="section-title">
             <img src="/static/shop_icon.png" alt="Магазин" style="width: 30px; height: 30px;">
             Магазин
         </h2>
 
+        <!-- УЛУЧШЕНИЯ -->
         <h3 class="subsection-title">
             <img src="/static/chart.png" alt="Улучшения" style="width: 30px; height: 30px;">
             <span>Улучшения</span>
         </h3>
 
-        <!-- Новичок -->
-<div class="upgrade-card" onclick="buyUpgrade(1)">
-    <div class="upgrade-icon">
-        <img src="/static/star_icon.png" alt="Новичок" style="width: 41px; height: 41px;">
-    </div>
-    <div class="upgrade-info">
-        <div class="upgrade-title">Новичок</div>
-        <div class="upgrade-desc">+0.01 WG к заработку</div>
-        <div class="upgrade-count">Куплено: <span id="upgradeCount1">0</span></div>
-    </div>
-    <div class="upgrade-price"><span id="upgradeCost1">1.5</span> WG</div>
-</div>
+        <!-- 1. Новичок -->
+        <div class="upgrade-card" onclick="buyUpgrade(1)">
+            <div class="upgrade-icon">
+                <img src="/static/star_icon.png" alt="Новичок" style="width: 41px; height: 41px;">
+            </div>
+            <div class="upgrade-info">
+                <div class="upgrade-title">Новичок</div>
+                <div class="upgrade-desc">+0.01 WG к заработку</div>
+                <div class="upgrade-count">Куплено: <span id="upgradeCount1">0</span></div>
+            </div>
+            <div class="upgrade-price"><span id="upgradeCost1">1.5</span> WG</div>
+        </div>
 
-<!-- Опытный -->
-<div class="upgrade-card" onclick="buyUpgrade(2)">
-    <div class="upgrade-icon">
-        <img src="/static/diamond_icon.png" alt="Опытный" style="width: 41px; height: 41px;">
-    </div>
-    <div class="upgrade-info">
-        <div class="upgrade-title">Опытный</div>
-        <div class="upgrade-desc">+0.03 WG к заработку</div>
-        <div class="upgrade-count">Куплено: <span id="upgradeCount2">0</span></div>
-    </div>
-    <div class="upgrade-price"><span id="upgradeCost2">10</span> WG</div>
-</div>
+        <!-- 2. Опытный -->
+        <div class="upgrade-card" onclick="buyUpgrade(2)">
+            <div class="upgrade-icon">
+                <img src="/static/diamond_icon.png" alt="Опытный" style="width: 41px; height: 41px;">
+            </div>
+            <div class="upgrade-info">
+                <div class="upgrade-title">Опытный</div>
+                <div class="upgrade-desc">+0.03 WG к заработку</div>
+                <div class="upgrade-count">Куплено: <span id="upgradeCount2">0</span></div>
+            </div>
+            <div class="upgrade-price"><span id="upgradeCost2">10</span> WG</div>
+        </div>
 
-<!-- Профессионал -->
-<div class="upgrade-card" onclick="buyUpgrade(3)">
-    <div class="upgrade-icon">
-        <img src="/static/master_icon.png" alt="Профессионал" style="width: 41px; height: 41px;">
-    </div>
-    <div class="upgrade-info">
-        <div class="upgrade-title">Профессионал</div>
-        <div class="upgrade-desc">+0.05 WG к заработку</div>
-        <div class="upgrade-count">Куплено: <span id="upgradeCount3">0</span></div>
-    </div>
-    <div class="upgrade-price"><span id="upgradeCost3">40</span> WG</div>
-</div>
+        <!-- 3. Профессионал -->
+        <div class="upgrade-card" onclick="buyUpgrade(3)">
+            <div class="upgrade-icon">
+                <img src="/static/master_icon.png" alt="Профессионал" style="width: 41px; height: 41px;">
+            </div>
+            <div class="upgrade-info">
+                <div class="upgrade-title">Профессионал</div>
+                <div class="upgrade-desc">+0.05 WG к заработку</div>
+                <div class="upgrade-count">Куплено: <span id="upgradeCount3">0</span></div>
+            </div>
+            <div class="upgrade-price"><span id="upgradeCost3">40</span> WG</div>
+        </div>
 
-<!-- Мастер -->
-<div class="upgrade-card" onclick="buyUpgrade(4)">
-    <div class="upgrade-icon">
-        <img src="/static/crown_icon.png" alt="Мастер" style="width: 41px; height: 41px;">
-    </div>
-    <div class="upgrade-info">
-        <div class="upgrade-title">Мастер</div>
-        <div class="upgrade-desc">+0.07 WG к заработку</div>
-        <div class="upgrade-count">Куплено: <span id="upgradeCount4">0</span></div>
-    </div>
-    <div class="upgrade-price"><span id="upgradeCost4">70</span> WG</div>
-</div>
+        <!-- 4. Мастер -->
+        <div class="upgrade-card" onclick="buyUpgrade(4)">
+            <div class="upgrade-icon">
+                <img src="/static/crown_icon.png" alt="Мастер" style="width: 41px; height: 41px;">
+            </div>
+            <div class="upgrade-info">
+                <div class="upgrade-title">Мастер</div>
+                <div class="upgrade-desc">+0.07 WG к заработку</div>
+                <div class="upgrade-count">Куплено: <span id="upgradeCount4">0</span></div>
+            </div>
+            <div class="upgrade-price"><span id="upgradeCost4">70</span> WG</div>
+        </div>
 
-<!-- Легенда -->
-<div class="upgrade-card" onclick="buyUpgrade(5)">
-    <div class="upgrade-icon">
-        <img src="/static/crown_gold.png" alt="Легенда" style="width: 41px; height: 41px;">
-    </div>
-    <div class="upgrade-info">
-        <div class="upgrade-title">Легенда</div>
-        <div class="upgrade-desc">+0.10 WG к заработку</div>
-        <div class="upgrade-count">Куплено: <span id="upgradeCount5">0</span></div>
-    </div>
-    <div class="upgrade-price"><span id="upgradeCost5">150</span> WG</div>
-</div>
+        <!-- 5. Легенда -->
+        <div class="upgrade-card" onclick="buyUpgrade(5)">
+            <div class="upgrade-icon">
+                <img src="/static/crown_gold.png" alt="Легенда" style="width: 41px; height: 41px;">
+            </div>
+            <div class="upgrade-info">
+                <div class="upgrade-title">Легенда</div>
+                <div class="upgrade-desc">+0.10 WG к заработку</div>
+                <div class="upgrade-count">Куплено: <span id="upgradeCount5">0</span></div>
+            </div>
+            <div class="upgrade-price"><span id="upgradeCost5">150</span> WG</div>
+        </div>
 
+        <!-- РЕКЛАМА -->
         <h3 class="subsection-title">
             <img src="/static/tv.png" alt="За энергией" style="width: 41px; height: 41px;">
             <span>За энергией</span>
@@ -121,7 +125,9 @@
         </div>
     </div>
 
+    <!-- ==================== ЗВЁЗДНЫЙ МАГАЗИН ==================== -->
     <div id="shopStars" class="shop-pane">
+        <!-- Баланс звёзд -->
         <div class="stars-balance-card">
             <div class="stars-balance-row">
                 <span class="stars-label">
@@ -147,12 +153,15 @@
             </div>
         </div>
 
+        <!-- Карусель донатных карточек -->
         <div style="position: relative; margin-bottom: 20px;">
             <button class="carousel-prev" id="donateCarouselPrev">←</button>
             <button class="carousel-next" id="donateCarouselNext">→</button>
 
             <div class="donate-carousel-container">
                 <div class="donate-carousel-track" id="donateCarouselTrack">
+
+                    <!-- ===== КАРТОЧКА 1: ЭНЕРГЕТИЧЕСКИЙ УСИЛИТЕЛЬ ===== -->
                     <div class="star-upgrade-card" id="energyUpgradeCard">
                         <div class="star-upgrade-header">
                             <div class="star-upgrade-icon">
@@ -177,7 +186,7 @@
                             </div>
                             <div class="star-upgrade-desc-item">
                                 <div class="desc-icon">
-                                    <img src="/static/diamond.png" alt="LP" style="width: 30px; height: 30px">
+                                    <img src="/static/diamond.png" alt="LP" style="width: 30px; height: 30px;">
                                 </div>
                                 <div class="desc-text">+50 LP</div>
                                 <div class="desc-value">на баланс</div>
@@ -189,7 +198,7 @@
                                 <span>Следующий: +40 ⚡ +50 LP</span>
                             </div>
                             <div class="progress-bar-bg">
-                                <div class="progress-bar-fill" id="energyUpgradeProgressFill" style="width: 0%"></div>
+                                <div class="progress-bar-fill" id="energyUpgradeProgressFill" style="width: 0%;"></div>
                             </div>
                         </div>
                         <button class="star-upgrade-btn btn-stars" id="energyUpgradeBtn" onclick="buyEnergyUpgrade()">
@@ -201,6 +210,7 @@
                         </button>
                     </div>
 
+                    <!-- ===== КАРТОЧКА 2: LP БУСТЕР ===== -->
                     <div class="star-upgrade-card" id="lpBoostCard">
                         <div class="star-upgrade-header">
                             <div class="star-upgrade-icon">
@@ -233,7 +243,7 @@
                         </div>
                         <div class="star-upgrade-progress">
                             <div class="progress-info">
-                                <span> Куплено: <span id="lpBoostPurchaseCount">0</span> раз</span>
+                                <span>Куплено: <span id="lpBoostPurchaseCount">0</span> раз</span>
                                 <span>⚡ Мгновенное зачисление</span>
                             </div>
                             <div class="progress-bar-bg">
@@ -248,10 +258,90 @@
                             💎 Купить за 0.18 TON
                         </button>
                     </div>
-                </div>
-            </div>
-        </div>
 
+                    <!-- ===== КАРТОЧКА 3: МЕГА-БУСТЕР (АКЦИЯ) ===== -->
+                    <div class="star-upgrade-card" id="megaBoostCard">
+                        <div class="star-upgrade-header">
+                            <div class="star-upgrade-icon">
+                                <img src="/static/mega_boost.png" alt="Мега-бустер" style="width: 44px; height: 44px;">
+                            </div>
+                            <div class="star-upgrade-title">
+                                <h3>🔥 Мега-бустер</h3>
+                                <p>Акция! Огромный набор наград</p>
+                            </div>
+                        </div>
+
+                        <!-- Таймер акции -->
+                        <div class="promo-timer" id="megaBoostTimer" style="
+                            background: linear-gradient(135deg, rgba(255,0,0,0.15), rgba(255,100,0,0.08));
+                            border-radius: 16px;
+                            padding: 10px 14px;
+                            margin-bottom: 14px;
+                            text-align: center;
+                            border: 1px solid rgba(255,0,0,0.25);
+                        ">
+                            <div style="font-size: 0.55rem; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.5); margin-bottom: 4px;">
+                                ⏰ ДО КОНЦА АКЦИИ
+                            </div>
+                            <div class="promo-timer-value" id="megaBoostTimerValue" style="
+                                font-size: 1.2rem;
+                                font-weight: 800;
+                                font-family: 'Courier New', monospace;
+                                color: #FF4500;
+                                letter-spacing: 3px;
+                            ">48:00:00</div>
+                        </div>
+
+                        <div class="star-upgrade-price">
+                            <img src="/static/star_small.png" alt="Stars" style="width: 16px; height: 16px;">
+                            50 Stars
+                        </div>
+                        <div class="star-upgrade-desc">
+                            <div class="star-upgrade-desc-item">
+                                <div class="desc-icon">
+                                    <img src="/static/diamond.png" alt="LP" style="width: 36px; height: 36px;">
+                                </div>
+                                <div class="desc-text">+100 LP</div>
+                                <div class="desc-value">на баланс</div>
+                            </div>
+                            <div class="star-upgrade-desc-item">
+                                <div class="desc-icon">
+                                    <img src="/static/crown_gold.png" alt="Улучшения" style="width: 36px; height: 36px;">
+                                </div>
+                                <div class="desc-text">+2 Легенды +2 Мастера</div>
+                                <div class="desc-value">улучшения бесплатно</div>
+                            </div>
+                            <div class="star-upgrade-desc-item">
+                                <div class="desc-icon">
+                                    <img src="/static/wallet.png" alt="WG" style="width: 36px; height: 36px;">
+                                </div>
+                                <div class="desc-text">+1500 WG</div>
+                                <div class="desc-value">на баланс</div>
+                            </div>
+                        </div>
+                        <div class="star-upgrade-progress">
+                            <div class="progress-info">
+                                <span>🔥 Ограниченное предложение</span>
+                                <span>⚡ Только сейчас!</span>
+                            </div>
+                            <div class="progress-bar-bg">
+                                <div class="progress-bar-fill" style="width: 100%; background: linear-gradient(90deg, #FF4500, #FF6B00);"></div>
+                            </div>
+                        </div>
+                        <button class="star-upgrade-btn btn-stars" id="megaBoostStarsBtn" onclick="buyMegaBoostStars()">
+                            <img src="/static/star_small.png" alt="Stars" style="width: 16px; height: 16px;">
+                            Купить за 50 звёзд
+                        </button>
+                        <button class="star-upgrade-btn btn-ton" id="megaBoostTonBtn" onclick="buyMegaBoostTon()">
+                            💎 Купить за 0.40 TON
+                        </button>
+                    </div>
+
+                </div> <!-- donate-carousel-track -->
+            </div> <!-- donate-carousel-container -->
+        </div> <!-- position: relative -->
+
+        <!-- ИНФОРМАЦИОННЫЕ КАРТОЧКИ -->
         <div class="info-card">
             <div class="info-icon">⭐</div>
             <div class="info-text">
@@ -267,5 +357,5 @@
                 <p>Нажмите "Купить за TON" → подключите кошелёк → подтвердите платеж → бонус зачислится автоматически!</p>
             </div>
         </div>
-    </div>
-</div>
+    </div> <!-- shopStars -->
+</div> <!-- tabShop -->

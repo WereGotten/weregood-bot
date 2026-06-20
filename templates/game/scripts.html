@@ -1136,6 +1136,266 @@ if (upgradeBtn && upgradeCard) {
         }, 5000);
     }
 
+// ==================== МЕГА-БУСТЕР (АКЦИЯ) ====================
+let megaBoostTimerInterval = null;
+const MEGA_BOOST_DURATION = 48 * 60 * 60; // 48 часов в секундах
+
+function startMegaBoostTimer() {
+    // Проверяем, есть ли сохранённое время окончания
+    let endTime = localStorage.getItem('megaBoostEndTime');
+    const now = Date.now();
+
+    if (!endTime) {
+        // Если нет — устанавливаем 48 часов от сейчас
+        endTime = now + MEGA_BOOST_DURATION * 1000;
+        localStorage.setItem('megaBoostEndTime', endTime);
+    }
+
+    endTime = parseInt(endTime);
+    const timeLeft = Math.max(0, Math.floor((endTime - now) / 1000));
+
+    // Если время вышло — показываем, что акция закончилась
+    if (timeLeft <= 0) {
+        const timerEl = document.getElementById('megaBoostTimerValue');
+        if (timerEl) {
+            timerEl.innerText = 'АКЦИЯ ЗАВЕРШЕНА';
+            timerEl.style.color = '#888';
+            timerEl.style.fontSize = '0.8rem';
+        }
+        // Блокируем кнопки
+        document.getElementById('megaBoostStarsBtn')?.classList.add('disabled');
+        document.getElementById('megaBoostStarsBtn')?.setAttribute('disabled', 'true');
+        document.getElementById('megaBoostTonBtn')?.classList.add('disabled');
+        document.getElementById('megaBoostTonBtn')?.setAttribute('disabled', 'true');
+        return;
+    }
+
+    // Обновляем таймер каждую секунду
+    if (megaBoostTimerInterval) clearInterval(megaBoostTimerInterval);
+
+    function updateTimer() {
+        const now2 = Date.now();
+        const remaining = Math.max(0, Math.floor((endTime - now2) / 1000));
+
+        if (remaining <= 0) {
+            clearInterval(megaBoostTimerInterval);
+            const timerEl = document.getElementById('megaBoostTimerValue');
+            if (timerEl) {
+                timerEl.innerText = 'АКЦИЯ ЗАВЕРШЕНА';
+                timerEl.style.color = '#888';
+                timerEl.style.fontSize = '0.8rem';
+            }
+            document.getElementById('megaBoostStarsBtn')?.classList.add('disabled');
+            document.getElementById('megaBoostStarsBtn')?.setAttribute('disabled', 'true');
+            document.getElementById('megaBoostTonBtn')?.classList.add('disabled');
+            document.getElementById('megaBoostTonBtn')?.setAttribute('disabled', 'true');
+            return;
+        }
+
+        const hours = Math.floor(remaining / 3600);
+        const minutes = Math.floor((remaining % 3600) / 60);
+        const seconds = remaining % 60;
+
+        const timerEl = document.getElementById('megaBoostTimerValue');
+        if (timerEl) {
+            timerEl.innerText =
+                `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+    }
+
+    updateTimer();
+    megaBoostTimerInterval = setInterval(updateTimer, 1000);
+}
+
+// Покупка за Stars
+window.buyMegaBoostStars = async function() {
+    // Проверяем, не истекла ли акция
+    const endTime = parseInt(localStorage.getItem('megaBoostEndTime'));
+    if (endTime && Date.now() > endTime) {
+        showToast('❌ Акция завершена!', 'error');
+        return;
+    }
+
+    showToast('💰 Создаём счёт для оплаты...', 'info');
+
+    try {
+        // Создаём счёт для оплаты
+        const response = await fetch('/api/create_mega_boost_invoice', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId, chat_id: chatId })
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+            showToast(data.msg || 'Ошибка создания счёта', 'error');
+            return;
+        }
+
+        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openInvoice) {
+            window.Telegram.WebApp.openInvoice(data.invoice_link, async (status) => {
+                if (status === 'paid') {
+                    // Получаем награду
+                    await claimMegaBoostReward();
+                } else if (status === 'failed' || status === 'cancelled') {
+                    showToast('❌ Оплата отменена или не удалась', 'error');
+                }
+            });
+        } else {
+            window.open(data.invoice_link, '_blank');
+            showToast('🔗 Оплатите по ссылке в новом окне', 'info');
+        }
+    } catch (e) {
+        console.error('Mega Boost error:', e);
+        showToast('Ошибка при создании платежа', 'error');
+    }
+};
+
+// Покупка за TON
+window.buyMegaBoostTon = async function() {
+    // Проверяем, не истекла ли акция
+    const endTime = parseInt(localStorage.getItem('megaBoostEndTime'));
+    if (endTime && Date.now() > endTime) {
+        showToast('❌ Акция завершена!', 'error');
+        return;
+    }
+
+    if (!tonConnectUI) {
+        showToast('🔄 Система оплаты загружается...', 'info');
+        await initTonConnect();
+        if (!tonConnectUI) {
+            showToast('❌ Система оплаты недоступна', 'error');
+            return;
+        }
+    }
+
+    if (!tonConnectUI.wallet) {
+        showToast('🔗 Подключите TON кошелёк для оплаты', 'info');
+        try {
+            await tonConnectUI.openModal();
+        } catch (e) {
+            showToast('❌ Не удалось открыть список кошельков', 'error');
+        }
+        return;
+    }
+
+    let paymentData = null;
+    try {
+        showToast('💎 Создаём платёж на сервере...', 'info');
+        const response = await fetch('/api/ton/create_mega_boost_payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId })
+        });
+        paymentData = await response.json();
+
+        if (!paymentData || !paymentData.success) {
+            showToast(paymentData?.error || 'Ошибка создания платежа', 'error');
+            return;
+        }
+    } catch (err) {
+        showToast('❌ Сервер не ответил на запрос платежа', 'error');
+        return;
+    }
+
+    const transaction = {
+        validUntil: Math.floor(Date.now() / 1000) + 300,
+        messages: [{
+            address: paymentData.wallet_address,
+            amount: paymentData.amount_nano.toString(),
+            comment: paymentData.comment
+        }]
+    };
+
+    try {
+        await tonConnectUI.sendTransaction(transaction);
+    } catch (e) {
+        if (String(e.message).includes('canceled')) {
+            showToast('❌ Транзакция отменена', 'error');
+            return;
+        }
+    }
+
+    showToast('💰 Проверяем зачисление транзакции...', 'info');
+    startMegaBoostPaymentCheck(paymentData.amount);
+};
+
+// Получение награды
+async function claimMegaBoostReward() {
+    try {
+        const response = await fetch('/api/claim_mega_boost', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showToast('🎉 Мега-бустер активирован!', 'success');
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.showPopup) {
+                window.Telegram.WebApp.showPopup({
+                    title: '🎉 АКЦИЯ АКТИВИРОВАНА!',
+                    message: '🔥 Вы получили:\n💎 +100 LP\n👑 +2 Легенды\n🦅 +2 Мастера\n💰 +1500 WG',
+                    buttons: [{ type: 'ok' }]
+                });
+            }
+            setTimeout(() => {
+                syncData(true);
+                updateUI();
+            }, 500);
+        } else {
+            showToast(data.message || 'Ошибка получения награды', 'error');
+        }
+    } catch (e) {
+        console.error('Claim mega boost error:', e);
+        showToast('Ошибка получения награды', 'error');
+    }
+}
+
+// Проверка TON платежа для Мега-бустера
+function startMegaBoostPaymentCheck(expectedAmount) {
+    let attempts = 0;
+    const maxAttempts = 36;
+    let userWalletAddress = tonConnectUI?.wallet?.account?.address || '';
+
+    if (window.megaBoostCheckInterval) clearInterval(window.megaBoostCheckInterval);
+
+    window.megaBoostCheckInterval = setInterval(async () => {
+        attempts++;
+        try {
+            const res = await fetch('/api/ton/check_mega_boost_payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: userId,
+                    expected_amount: expectedAmount,
+                    sender_wallet: userWalletAddress
+                })
+            });
+            const data = await res.json();
+
+            if (data && data.confirmed) {
+                clearInterval(window.megaBoostCheckInterval);
+                window.megaBoostCheckInterval = null;
+                await claimMegaBoostReward();
+            } else if (attempts >= maxAttempts) {
+                clearInterval(window.megaBoostCheckInterval);
+                window.megaBoostCheckInterval = null;
+                showToast('⚠️ Не удалось подтвердить платеж, обратитесь в поддержку', 'error');
+            }
+        } catch (e) {
+            console.error('Mega boost payment check error:', e);
+        }
+    }, 5000);
+}
+
+// Запускаем таймер при загрузке
+document.addEventListener('DOMContentLoaded', function() {
+    startMegaBoostTimer();
+});
+
     const shopTabs = document.querySelectorAll('.shop-tab');
     shopTabs.forEach(tab => {
         tab.onclick = () => {
