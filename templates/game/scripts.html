@@ -6987,10 +6987,45 @@ const TRANSLATIONS = {
 let currentLanguage = 'ru';
 
 // ===== ЗАГРУЗКА ЯЗЫКА =====
-// ===== ЗАГРУЗКА ЯЗЫКА =====
 async function loadLanguageSettings() {
     try {
-        // 1️⃣ Сначала проверяем, есть ли сохранённый язык в настройках
+        // 1️⃣ СНАЧАЛА пробуем взять язык из Telegram
+        let tgLang = null;
+
+        if (window.Telegram && window.Telegram.WebApp) {
+            // Пробуем из initDataUnsafe
+            const user = window.Telegram.WebApp.initDataUnsafe?.user;
+            if (user && user.language_code) {
+                tgLang = user.language_code.startsWith('en') ? 'en' : 'ru';
+                console.log('🌍 Язык из Telegram (user):', tgLang);
+            }
+            // Или из WebApp
+            else if (window.Telegram.WebApp.language_code) {
+                tgLang = window.Telegram.WebApp.language_code.startsWith('en') ? 'en' : 'ru';
+                console.log('🌍 Язык из Telegram (WebApp):', tgLang);
+            }
+        }
+
+        // 2️⃣ Если язык из Telegram есть — используем его И СОХРАНЯЕМ
+        if (tgLang) {
+            currentLanguage = tgLang;
+            applyLanguage(tgLang);
+
+            // Сохраняем в настройки (чтобы синхронизировать)
+            await fetch('/api/update_settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: userId,
+                    setting: 'language',
+                    value: tgLang
+                })
+            });
+            console.log('🌍 Язык применён из Telegram и сохранён:', tgLang);
+            return;
+        }
+
+        // 3️⃣ Если из Telegram не получилось — проверяем сохранённые настройки
         const res = await fetch('/api/get_settings', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -6998,7 +7033,6 @@ async function loadLanguageSettings() {
         });
         const settings = await res.json();
 
-        // 2️⃣ Если язык уже сохранён в настройках — используем его
         if (settings.language) {
             currentLanguage = settings.language;
             applyLanguage(settings.language);
@@ -7006,43 +7040,12 @@ async function loadLanguageSettings() {
             return;
         }
 
-        // 3️⃣ Если язык НЕ сохранён — пробуем взять из Telegram
-        let tgLang = 'ru'; // по умолчанию русский
-
-        // Пытаемся получить язык из Telegram WebApp
-        if (window.Telegram && window.Telegram.WebApp) {
-            // Вариант 1: из initDataUnsafe
-            const user = window.Telegram.WebApp.initDataUnsafe?.user;
-            if (user && user.language_code) {
-                tgLang = user.language_code.startsWith('en') ? 'en' : 'ru';
-                console.log('🌍 Язык из Telegram (user):', tgLang);
-            }
-            // Вариант 2: из WebApp (если есть)
-            else if (window.Telegram.WebApp.language_code) {
-                tgLang = window.Telegram.WebApp.language_code.startsWith('en') ? 'en' : 'ru';
-                console.log('🌍 Язык из Telegram (WebApp):', tgLang);
-            }
-        }
-
-        // 4️⃣ Применяем язык из Telegram
-        currentLanguage = tgLang;
-        applyLanguage(tgLang);
-
-        // 5️⃣ Сохраняем язык в настройки (чтобы в следующий раз не спрашивать)
-        await fetch('/api/update_settings', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                user_id: userId,
-                setting: 'language',
-                value: tgLang
-            })
-        });
-        console.log('🌍 Язык из Telegram сохранён в настройки:', tgLang);
+        // 4️⃣ Если ничего нет — ставим русский по умолчанию
+        console.log('🌍 Язык не найден, ставим русский по умолчанию');
+        applyLanguage('ru');
 
     } catch(e) {
         console.error('Error loading language:', e);
-        // Если ошибка — ставим русский по умолчанию
         applyLanguage('ru');
     }
 }
