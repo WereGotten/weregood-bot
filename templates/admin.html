@@ -2403,8 +2403,29 @@
     const days_remaining = parseInt(document.getElementById('taskDaysRemaining').value);
     const is_active = document.getElementById('taskIsActive').value === 'true';
 
-    if (!title || !channel_link || !channel_username) {
-        showToast('Заполните обязательные поля', 'error');
+    // ========== ВАЛИДАЦИЯ В ЗАВИСИМОСТИ ОТ ТИПА ==========
+    if (!title) {
+        showToast('Название задания обязательно', 'error');
+        return;
+    }
+
+    if (taskType === 'channel') {
+        if (!channel_link || !channel_username) {
+            showToast('Для задания "Канал" нужны ссылка и username', 'error');
+            return;
+        }
+    } else if (taskType === 'miniapp') {
+        if (!miniappUrl) {
+            showToast('Для задания "Mini App" нужна ссылка', 'error');
+            return;
+        }
+    } else {
+        showToast('Неизвестный тип задания', 'error');
+        return;
+    }
+
+    if (reward_amount <= 0) {
+        showToast('Сумма награды должна быть больше 0', 'error');
         return;
     }
 
@@ -2416,21 +2437,36 @@
             method: 'POST',
             body: JSON.stringify({
                 task_id: parseInt(taskId),
-                title, channel_link, channel_username, channel_avatar,
-                reward_amount, reward_type, daily_limit, total_limit,
-                days_remaining, is_active,
-                task_type: taskType,           // ← НОВОЕ
-                miniapp_url: miniappUrl        // ← НОВОЕ
+                title: title,
+                task_type: taskType,
+                miniapp_url: miniappUrl,
+                channel_link: channel_link,
+                channel_username: channel_username,
+                channel_avatar: channel_avatar,
+                reward_amount: reward_amount,
+                reward_type: reward_type,
+                daily_limit: daily_limit,
+                total_limit: total_limit,
+                days_remaining: days_remaining,
+                is_active: is_active
             })
         });
     } else {
         result = await apiRequest('create_task', {
             method: 'POST',
             body: JSON.stringify({
-                title, channel_link, channel_username, channel_avatar,
-                reward_amount, reward_type, daily_limit, total_limit, days_remaining,
-                task_type: taskType,           // ← НОВОЕ
-                miniapp_url: miniappUrl        // ← НОВОЕ
+                title: title,
+                task_type: taskType,
+                miniapp_url: miniappUrl,
+                channel_link: channel_link,
+                channel_username: channel_username,
+                channel_avatar: channel_avatar,
+                reward_amount: reward_amount,
+                reward_type: reward_type,
+                daily_limit: daily_limit,
+                total_limit: total_limit,
+                days_remaining: days_remaining,
+                is_active: is_active
             })
         });
     }
@@ -2440,7 +2476,7 @@
         closeTaskModal();
         loadTasks();
     } else {
-        showToast('❌ Ошибка', 'error');
+        showToast('❌ Ошибка: ' + (result.error || 'Неизвестная ошибка'), 'error');
     }
 }
 
