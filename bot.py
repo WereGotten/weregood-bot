@@ -565,8 +565,8 @@ ALLOWED_UPDATE_FIELDS = {
     'avatar_url', 'usdt', 'wins', 'role', 'stars', 'max_energy',
     'energy_upgrades', 'energy_limit_upgrades', 'unlocked_prefixes',
     'tutorial_completed', 'ton_wallet', 'banned_until', 'ban_reason', 'banned_by',
-    'completed_achievements', 'daily_clicks',  # ← ЗАПЯТАЯ ДОБАВЛЕНА
-    'fortune_bets_count', 'fortune_wins_count', 'fortune_total_bet_amount'
+    'completed_achievements', 'daily_clicks',
+    'fortune_bets_count', 'fortune_wins_count', 'fortune_total_bet_amount',
     'language'
 }
 
@@ -603,15 +603,15 @@ def get_user(user_id, force_refresh=False, username=None, first_name=None, last_
                         upgrade_counts, ticket_counter, referral_code, referrer_id, likes, dislikes, settings,
                         username, first_name, last_name, avatar_url, usdt, wins, role, stars,
                         max_energy, energy_upgrades, energy_limit_upgrades, unlocked_prefixes, tutorial_completed, ton_wallet,
-                        banned_until, ban_reason, banned_by, completed_achievements
+                        banned_until, ban_reason, banned_by, completed_achievements, language
                     ) VALUES (
                         ?, 0, 0, 500, ?, '[]', 0, '{"1":0,"2":0,"3":0}', 0, ?, ?, 0, 0,
-                        '{"theme":"dark"}', ?, ?, ?, ?, 0, 0, ?, 0, 500, 0, 0, ?, 0, '', 0, '', 0, 0
+                        '{"theme":"dark"}', ?, ?, ?, ?, 0, 0, ?, 0, 500, 0, 0, ?, 0, '', 0, '', 0, 0, ?
                     )
                 ''', (
                     user_id, now_time, ref_code, 0,
                     final_username, final_first_name, final_last_name, final_avatar_url,
-                    role, unlocked
+                    role, unlocked, "ru"
                 ))
                 cursor.execute("SELECT * FROM users WHERE user_id=?", (user_id,))
                 row = cursor.fetchone()
@@ -627,7 +627,7 @@ def get_user(user_id, force_refresh=False, username=None, first_name=None, last_
                 "likes": 0, "dislikes": 0, "settings": {"theme": "dark"}, "avatar_url": "", "usdt": 0, "wins": 0,
                 "role": "player", "stars": 0, "max_energy": 500, "energy_upgrades": 0, "energy_limit_upgrades": 0,
                 "unlocked_prefixes": ["player"], "ton_wallet": "", "banned_until": 0, "ban_reason": "", "banned_by": 0,
-                "completed_achievements": 0
+                "completed_achievements": 0, "language": "ru"
             }
             user_cache[user_id] = default_user
             user_cache_time[user_id] = now
