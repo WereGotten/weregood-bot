@@ -5021,6 +5021,12 @@ def api_get_tasks():
         return jsonify({'success': False, 'error': 'Invalid user_id'}), 400
 
     with db.get_cursor() as cursor:
+        # Проверяем, есть ли колонки task_type и miniapp_url
+        cursor.execute("PRAGMA table_info(tasks)")
+        columns = [col[1] for col in cursor.fetchall()]
+        has_task_type = 'task_type' in columns
+        has_miniapp_url = 'miniapp_url' in columns
+
         cursor.execute('''
             SELECT t.*, 
                    CASE WHEN ut.id IS NOT NULL THEN 1 ELSE 0 END as is_completed
@@ -5033,11 +5039,9 @@ def api_get_tasks():
 
         tasks = []
         for row in rows:
-            tasks.append({
+            task = {
                 'id': row['id'],
                 'title': row['title'],
-                'task_type': row.get('task_type', 'channel'),
-                'miniapp_url': row.get('miniapp_url') or '',
                 'channel_link': row['channel_link'] or '',
                 'channel_username': row['channel_username'] or '',
                 'channel_avatar': row['channel_avatar'] or '',
@@ -5048,7 +5052,21 @@ def api_get_tasks():
                 'completed_count': row['completed_count'],
                 'days_remaining': row['days_remaining'],
                 'is_completed': bool(row['is_completed'])
-            })
+            }
+
+            # ✅ ИСПРАВЛЕНО: используем индексы, а не .get()
+            if has_task_type:
+                task['task_type'] = row['task_type'] if row['task_type'] is not None else 'channel'
+            else:
+                task['task_type'] = 'channel'
+
+            if has_miniapp_url:
+                task['miniapp_url'] = row['miniapp_url'] or ''
+            else:
+                task['miniapp_url'] = ''
+
+            tasks.append(task)
+
         return jsonify({'success': True, 'tasks': tasks})
 
 
