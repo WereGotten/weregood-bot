@@ -3558,28 +3558,51 @@ function openTaskChannel() {
 
 async function checkTaskCompletion() {
     if (!selectedTask) {
-        showToast('❌ Ошибка: задание не выбрано', 'error');
+        showToast('Ошибка: задание не выбрано', 'error');
         return;
     }
-
     if (selectedTask.is_completed) {
-        showToast('✅ Вы уже выполнили это задание', 'info');
+        showToast('Вы уже выполнили это задание', 'error');
         return;
     }
 
-    // Находим кнопку проверки
-    const btn = document.getElementById('taskCheckBtn');
+    // ✅ Ищем кнопку по классу, а не по ID
+    const btn = document.querySelector('.task-check-btn');
     if (!btn) {
-        showToast('❌ Ошибка: кнопка проверки не найдена', 'error');
+        showToast('Ошибка: кнопка не найдена', 'error');
         return;
     }
 
-    // Блокируем кнопку
-    const originalText = btn.innerHTML;
+    const originalText = btn.textContent;
     btn.disabled = true;
-    btn.innerHTML = '⏳ Проверка...';
+    btn.textContent = '⏳ Проверка...';
 
     try {
+        // Проверяем, есть ли у задания тип
+        const taskType = selectedTask.task_type || 'channel';
+
+        // Для Mini App задач — сначала проверяем клик
+        if (taskType === 'miniapp') {
+            // Проверяем, был ли клик по Mini App за последние 5 минут
+            const checkRes = await fetch('/api/check_miniapp_click', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: userId,
+                    task_id: selectedTask.id
+                })
+            });
+            const checkData = await checkRes.json();
+
+            if (!checkData.success) {
+                showToast(checkData.error || '❌ Сначала откройте Mini App по ссылке!', 'error');
+                btn.disabled = false;
+                btn.textContent = originalText;
+                return;
+            }
+        }
+
+        // Основная проверка выполнения
         const res = await fetch('/api/check_task_subscription', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -3594,18 +3617,35 @@ async function checkTaskCompletion() {
         if (data.success) {
             showToast(data.message || '✅ Задание выполнено!', 'success');
             selectedTask.is_completed = true;
-            renderTasksList();
+
+            // Обновляем список заданий
+            await loadTasks();
+
+            // Закрываем модалку с деталями
             closeTaskDetailModal();
-            updateStatus();
+
+            // Обновляем статус игрока (баланс)
+            await updateStatus();
+
+            // Если есть награда, показываем её
+            if (data.reward) {
+                const rewardNames = {
+                    'wg': 'WG',
+                    'lp': 'LP',
+                    'usdt': 'USDT',
+                    'energy': 'энергии'
+                };
+                showToast(`🎁 Получено: +${data.reward.amount} ${rewardNames[data.reward.type] || data.reward.type}`, 'success');
+            }
         } else {
-            showToast(data.error || '❌ Ошибка проверки', 'error');
+            showToast(data.error || '❌ Условия не выполнены, попробуйте ещё раз', 'error');
         }
     } catch(e) {
         console.error('Error checking task:', e);
-        showToast('❌ Ошибка соединения с сервером', 'error');
+        showToast('❌ Ошибка при проверке, попробуйте позже', 'error');
     } finally {
         btn.disabled = false;
-        btn.innerHTML = originalText;
+        btn.textContent = originalText;
     }
 }
 

@@ -5234,6 +5234,33 @@ def api_achievements_top():
     top = get_achievements_top(limit)
     return jsonify({"success": True, "top": top})
 
+
+@app.route('/api/check_miniapp_click', methods=['POST'])
+def api_check_miniapp_click():
+    data = request.json
+    if not data:
+        return jsonify({'success': False, 'error': 'No data'}), 400
+
+    user_id = data.get('user_id')
+    task_id = data.get('task_id')
+
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({'success': False, 'error': 'Invalid user_id'}), 400
+
+    with db.get_cursor() as cursor:
+        cursor.execute('''
+            SELECT * FROM task_miniapp_clicks 
+            WHERE user_id = ? AND task_id = ? 
+            AND clicked_at > datetime('now', '-5 minutes')
+        ''', (user_id, task_id))
+        click = cursor.fetchone()
+
+        if click:
+            return jsonify({'success': True, 'message': 'Mini App открыт'})
+        else:
+            return jsonify({'success': False, 'error': 'Откройте Mini App по ссылке и вернитесь через 2-3 секунды'})
+
 # ========== АДМИН-ЭНДПОИНТЫ ==========
 @app.route('/api/admin/stats', methods=['GET'])
 @require_admin
