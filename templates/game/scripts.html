@@ -6987,31 +6987,53 @@ const TRANSLATIONS = {
 let currentLanguage = 'ru';
 
 // ===== ЗАГРУЗКА ЯЗЫКА =====
+// ===== ЗАГРУЗКА ЯЗЫКА =====
 async function loadLanguageSettings() {
     try {
-        // 1️⃣ СНАЧАЛА пробуем взять язык из Telegram
+        console.log('🔍 Загрузка языка...');
+
+        // 1️⃣ СНАЧАЛА проверяем, есть ли сохранённый язык в БД
+        const res = await fetch('/api/get_settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId })
+        });
+        const settings = await res.json();
+
+        // 2️⃣ ЕСЛИ язык уже сохранён в БД — ИСПОЛЬЗУЕМ ЕГО (игрок сам выбрал)
+        if (settings.language) {
+            console.log('📂 Загружаем язык из настроек (выбор игрока):', settings.language);
+            currentLanguage = settings.language;
+            applyLanguage(settings.language);
+
+            // Обновляем кнопки
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.lang === settings.language);
+            });
+            return;
+        }
+
+        // 3️⃣ ЕСЛИ в БД НЕТ языка — пробуем взять из Telegram (первый заход)
         let tgLang = null;
 
         if (window.Telegram && window.Telegram.WebApp) {
-            // Пробуем из initDataUnsafe
             const user = window.Telegram.WebApp.initDataUnsafe?.user;
             if (user && user.language_code) {
                 tgLang = user.language_code.startsWith('en') ? 'en' : 'ru';
-                console.log('🌍 Язык из Telegram (user):', tgLang);
-            }
-            // Или из WebApp
-            else if (window.Telegram.WebApp.language_code) {
+                console.log('🌍 Язык из Telegram (первый заход):', tgLang);
+            } else if (window.Telegram.WebApp.language_code) {
                 tgLang = window.Telegram.WebApp.language_code.startsWith('en') ? 'en' : 'ru';
-                console.log('🌍 Язык из Telegram (WebApp):', tgLang);
+                console.log('🌍 Язык из Telegram (первый заход):', tgLang);
             }
         }
 
-        // 2️⃣ Если язык из Telegram есть — используем его И СОХРАНЯЕМ
+        // 4️⃣ Если язык из Telegram есть — используем его и СОХРАНЯЕМ в БД
         if (tgLang) {
+            console.log('✅ Используем язык из Telegram и сохраняем в БД:', tgLang);
             currentLanguage = tgLang;
             applyLanguage(tgLang);
 
-            // Сохраняем в настройки (чтобы синхронизировать)
+            // Сохраняем в БД
             await fetch('/api/update_settings', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -7021,31 +7043,32 @@ async function loadLanguageSettings() {
                     value: tgLang
                 })
             });
-            console.log('🌍 Язык применён из Telegram и сохранён:', tgLang);
+            console.log('💾 Язык сохранён в БД:', tgLang);
+
+            // Обновляем кнопки
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.lang === tgLang);
+            });
             return;
         }
 
-        // 3️⃣ Если из Telegram не получилось — проверяем сохранённые настройки
-        const res = await fetch('/api/get_settings', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId })
-        });
-        const settings = await res.json();
-
-        if (settings.language) {
-            currentLanguage = settings.language;
-            applyLanguage(settings.language);
-            console.log('🌍 Язык загружен из настроек:', settings.language);
-            return;
-        }
-
-        // 4️⃣ Если ничего нет — ставим русский по умолчанию
+        // 5️⃣ Если ничего нет — ставим русский по умолчанию
         console.log('🌍 Язык не найден, ставим русский по умолчанию');
         applyLanguage('ru');
 
+        // Сохраняем русский в БД
+        await fetch('/api/update_settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id: userId,
+                setting: 'language',
+                value: 'ru'
+            })
+        });
+
     } catch(e) {
-        console.error('Error loading language:', e);
+        console.error('❌ Error loading language:', e);
         applyLanguage('ru');
     }
 }
@@ -7096,10 +7119,11 @@ function applyLanguage(lang) {
 async function setLanguage(lang) {
     if (lang === currentLanguage) return;
 
+    console.log('🔄 Игрок переключил язык на:', lang);
     currentLanguage = lang;
     applyLanguage(lang);
 
-    // Сохраняем в настройках
+    // Сохраняем в БД (игрок выбрал сам)
     try {
         await fetch('/api/update_settings', {
             method: 'POST',
@@ -7110,6 +7134,7 @@ async function setLanguage(lang) {
                 value: lang
             })
         });
+        console.log('💾 Язык сохранён в БД (выбор игрока):', lang);
         showToast(lang === 'ru' ? '✅ Язык изменён на Русский' : '✅ Language changed to English', 'success');
     } catch(e) {
         console.error('Error saving language:', e);
