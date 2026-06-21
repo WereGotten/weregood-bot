@@ -5097,8 +5097,16 @@ def api_check_task_subscription():
             if cursor.fetchone():
                 return jsonify({'success': False, 'error': 'Вы уже получили награду за это задание'}), 400
 
-            # ========== ПРОВЕРКА В ЗАВИСИМОСТИ ОТ ТИПА ЗАДАНИЯ ==========
-            task_type = task.get('task_type', 'channel')
+            # ========== ПРОВЕРЯЕМ НАЛИЧИЕ КОЛОНОК ==========
+            cursor.execute("PRAGMA table_info(tasks)")
+            columns = [col[1] for col in cursor.fetchall()]
+            has_task_type = 'task_type' in columns
+
+            # ✅ ИСПРАВЛЕНО: используем прямой доступ к колонкам, а не .get()
+            if has_task_type:
+                task_type = task['task_type'] if task['task_type'] is not None else 'channel'
+            else:
+                task_type = 'channel'
 
             if task_type == 'channel':
                 # Проверка подписки на канал
@@ -5156,10 +5164,8 @@ def api_check_task_subscription():
                 new_value = old_value + task['reward_amount']
                 safe_update_user(user_id, usdt=new_value)
             elif task['reward_type'] == 'energy':
-                # ========== ИСПРАВЛЕНО: безопасное обновление энергии ==========
                 current_energy, _ = calculate_energy(user)
-                max_energy = user.get('max_energy', 500)
-                new_energy = min(max_energy, current_energy + task['reward_amount'])
+                new_energy = min(user['max_energy'], current_energy + task['reward_amount'])
                 update_energy_in_db(user_id, user, new_energy)
 
             # Записываем выполнение
