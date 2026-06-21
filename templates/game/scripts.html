@@ -3,6 +3,29 @@
     let tg = window.Telegram?.WebApp;
     let user = tg?.initDataUnsafe?.user;
 
+    // ========== ОТЛАДКА ИЗ БРАУЗЕРА ==========
+if (!user || !user.id) {
+    console.warn('⚠️ Режим отладки: использую тестового пользователя');
+    user = {
+        id: 5264622363,  // ← ЗАМЕНИ НА СВОЙ ID
+        first_name: 'Admin',
+        username: 'admin',
+        photo_url: ''
+    };
+    // Создаём фейковый WebApp
+    if (!window.Telegram) window.Telegram = {};
+    if (!window.Telegram.WebApp) {
+        window.Telegram.WebApp = {
+            initDataUnsafe: { user: user },
+            ready: function() {},
+            expand: function() {},
+            openInvoice: function() {},
+            showPopup: function() {}
+        };
+    }
+    tg = window.Telegram.WebApp;
+}
+
     let savedUserId = sessionStorage.getItem('weregood_user_id');
     let userId = null;
     let isAuthError = false;
