@@ -1482,80 +1482,86 @@
             </div>
 
             <!-- ========== ТИП ЗАДАНИЯ ========== -->
-            <div class="form-group">
-                <label>Тип задания</label>
-                <select class="form-select" id="taskType" onchange="toggleTaskTypeFields()">
-                    <option value="channel">📢 Подписка на канал</option>
-                    <option value="miniapp">📱 Открыть Mini App</option>
-                </select>
-            </div>
+<div class="form-group">
+    <label>Тип задания</label>
+    <select class="form-select" id="taskType" onchange="toggleTaskTypeFields()">
+        <option value="channel">📢 Подписка на канал</option>
+        <option value="miniapp">📱 Открыть Mini App</option>
+    </select>
+</div>
 
-            <!-- ========== ПОЛЯ ДЛЯ КАНАЛА ========== -->
-            <div id="channelFields">
-                <div class="form-group">
-                    <label>Ссылка на канал *</label>
-                    <input type="text" class="form-input" id="taskChannelLink" placeholder="https://t.me/example">
-                </div>
-                <div class="form-group">
-                    <label>Username канала *</label>
-                    <input type="text" class="form-input" id="taskChannelUsername" placeholder="@example (без @)">
-                </div>
-                <div class="form-group">
-                    <label>URL аватарки канала</label>
-                    <input type="text" class="form-input" id="taskChannelAvatar" placeholder="https://... или /static/task_avatars/photo.png">
-                </div>
-            </div>
+<!-- ========== ПОЛЯ ДЛЯ КАНАЛА ========== -->
+<div id="channelFields">
+    <div class="form-group">
+        <label>Ссылка на канал *</label>
+        <input type="text" class="form-input" id="taskChannelLink" placeholder="https://t.me/example">
+    </div>
+    <div class="form-group">
+        <label>Username канала *</label>
+        <input type="text" class="form-input" id="taskChannelUsername" placeholder="@example (без @)">
+    </div>
+    <div class="form-group">
+        <label>URL аватарки канала</label>
+        <input type="text" class="form-input" id="taskChannelAvatar" placeholder="https://... или /static/task_avatars/photo.png">
+        <small style="opacity: 0.5;">Оставьте пустым для стандартной иконки 📢</small>
+    </div>
+</div>
 
-            <!-- ========== ПОЛЯ ДЛЯ MINI APP ========== -->
-            <div id="miniappFields" style="display: none;">
-                <div class="form-group">
-                    <label>Ссылка на Mini App *</label>
-                    <input type="text" class="form-input" id="taskMiniappUrl" placeholder="https://t.me/WereGooodbot/WereGood">
-                    <small style="opacity: 0.5;">Игрок перейдёт по этой ссылке, чтобы выполнить задание</small>
-                </div>
-            </div>
+<!-- ========== ПОЛЯ ДЛЯ MINI APP ========== -->
+<div id="miniappFields" style="display: none;">
+    <div class="form-group">
+        <label>Ссылка на Mini App *</label>
+        <input type="text" class="form-input" id="taskMiniappUrl" placeholder="https://t.me/WereGooodbot/WereGood">
+        <small style="opacity: 0.5;">Игрок перейдёт по этой ссылке, чтобы выполнить задание</small>
+    </div>
+    <div class="form-group">
+        <label>Аватарка Mini App</label>
+        <input type="text" class="form-input" id="taskMiniappAvatar" placeholder="https://... или /static/miniapp_icon.png">
+        <small style="opacity: 0.5;">Оставьте пустым для стандартной иконки 📱</small>
+    </div>
+</div>
 
-            <div class="form-grid-2">
-                <div class="form-group">
-                    <label>Сумма награды</label>
-                    <input type="number" class="form-input" id="taskRewardAmount" value="10" min="1">
-                </div>
-                <div class="form-group">
-                    <label>Тип награды</label>
-                    <select class="form-select" id="taskRewardType">
-                        <option value="wg">💰 WG Coin</option>
-                        <option value="lp">💎 LP Coin</option>
-                        <option value="usdt">💵 USDT</option>
-                        <option value="energy">⚡ Энергия</option>
-                    </select>
-                </div>
-            </div>
+<div class="form-grid-2">
+    <div class="form-group">
+        <label>Сумма награды</label>
+        <input type="number" class="form-input" id="taskRewardAmount" value="10" min="1">
+    </div>
+    <div class="form-group">
+        <label>Тип награды</label>
+        <select class="form-select" id="taskRewardType">
+            <option value="wg">💰 WG Coin</option>
+            <option value="lp">💎 LP Coin</option>
+            <option value="usdt">💵 USDT</option>
+            <option value="energy">⚡ Энергия</option>
+        </select>
+    </div>
+</div>
 
-            <div class="form-grid-2">
-                <div class="form-group">
-                    <label>Дневной лимит</label>
-                    <input type="number" class="form-input" id="taskDailyLimit" value="1" min="1">
-                </div>
-                <div class="form-group">
-                    <label>Общий лимит</label>
-                    <input type="number" class="form-input" id="taskTotalLimit" value="100" min="1">
-                </div>
-            </div>
+<div class="form-grid-2">
+    <div class="form-group">
+        <label>Дневной лимит</label>
+        <input type="number" class="form-input" id="taskDailyLimit" value="1" min="1">
+    </div>
+    <div class="form-group">
+        <label>Общий лимит</label>
+        <input type="number" class="form-input" id="taskTotalLimit" value="100" min="1">
+    </div>
+</div>
 
-            <div class="form-group">
-                <label>Дней до окончания</label>
-                <input type="number" class="form-input" id="taskDaysRemaining" value="7" min="1">
-            </div>
+<div class="form-group">
+    <label>Дней до окончания</label>
+    <input type="number" class="form-input" id="taskDaysRemaining" value="7" min="1">
+</div>
 
-            <div class="form-group">
-                <label>Статус</label>
-                <select class="form-select" id="taskIsActive">
-                    <option value="true">✅ Активно</option>
-                    <option value="false">❌ Неактивно</option>
-                </select>
-            </div>
+<div class="form-group">
+    <label>Статус</label>
+    <select class="form-select" id="taskIsActive">
+        <option value="true">✅ Активно</option>
+        <option value="false">❌ Неактивно</option>
+    </select>
+</div>
 
-            <button class="btn" style="width: 100%; margin-top: 10px;" onclick="saveTask()">💾 Сохранить</button>
+<button class="btn" style="width: 100%; margin-top: 10px;" onclick="saveTask()">💾 Сохранить</button>
         </div>
     </div>
 
@@ -2419,170 +2425,172 @@
         }
 
         function openCreateTaskModal() {
-            document.getElementById('taskModalTitle').innerText = '➕ Создать задание';
-            document.getElementById('taskEditId').value = '';
-            document.getElementById('taskTitle').value = '';
-            document.getElementById('taskType').value = 'channel';
-            document.getElementById('taskMiniappUrl').value = '';
-            document.getElementById('taskChannelLink').value = '';
-            document.getElementById('taskChannelUsername').value = '';
-            document.getElementById('taskChannelAvatar').value = '';
-            document.getElementById('taskRewardAmount').value = '10';
-            document.getElementById('taskRewardType').value = 'wg';
-            document.getElementById('taskDailyLimit').value = '1';
-            document.getElementById('taskTotalLimit').value = '100';
-            document.getElementById('taskDaysRemaining').value = '7';
-            document.getElementById('taskIsActive').value = 'true';
+    document.getElementById('taskModalTitle').innerText = '➕ Создать задание';
+    document.getElementById('taskEditId').value = '';
+    document.getElementById('taskTitle').value = '';
+    document.getElementById('taskType').value = 'channel';
+    document.getElementById('taskMiniappUrl').value = '';
+    document.getElementById('taskMiniappAvatar').value = '';  // ← НОВОЕ
+    document.getElementById('taskChannelLink').value = '';
+    document.getElementById('taskChannelUsername').value = '';
+    document.getElementById('taskChannelAvatar').value = '';
+    document.getElementById('taskRewardAmount').value = '10';
+    document.getElementById('taskRewardType').value = 'wg';
+    document.getElementById('taskDailyLimit').value = '1';
+    document.getElementById('taskTotalLimit').value = '100';
+    document.getElementById('taskDaysRemaining').value = '7';
+    document.getElementById('taskIsActive').value = 'true';
 
-            // Показываем поля для канала по умолчанию
-            document.getElementById('channelFields').style.display = 'block';
-            document.getElementById('miniappFields').style.display = 'none';
+    // Показываем поля для канала по умолчанию
+    document.getElementById('channelFields').style.display = 'block';
+    document.getElementById('miniappFields').style.display = 'none';
 
-            document.getElementById('taskModal').classList.add('active');
-        }
+    document.getElementById('taskModal').classList.add('active');
+}
 
         function editTask(task) {
-            document.getElementById('taskModalTitle').innerText = '✏️ Редактировать задание';
-            document.getElementById('taskEditId').value = task.id;
-            document.getElementById('taskTitle').value = task.title;
-            document.getElementById('taskType').value = task.task_type || 'channel';
-            document.getElementById('taskMiniappUrl').value = task.miniapp_url || '';
-            document.getElementById('taskChannelLink').value = task.channel_link || '';
-            document.getElementById('taskChannelUsername').value = task.channel_username || '';
-            document.getElementById('taskChannelAvatar').value = task.channel_avatar || '';
-            document.getElementById('taskRewardAmount').value = task.reward_amount;
-            document.getElementById('taskRewardType').value = task.reward_type;
-            document.getElementById('taskDailyLimit').value = task.daily_limit;
-            document.getElementById('taskTotalLimit').value = task.total_limit;
-            document.getElementById('taskDaysRemaining').value = task.days_remaining;
-            document.getElementById('taskIsActive').value = task.is_active ? 'true' : 'false';
+    document.getElementById('taskModalTitle').innerText = '✏️ Редактировать задание';
+    document.getElementById('taskEditId').value = task.id;
+    document.getElementById('taskTitle').value = task.title;
+    document.getElementById('taskType').value = task.task_type || 'channel';
+    document.getElementById('taskMiniappUrl').value = task.miniapp_url || '';
+    document.getElementById('taskMiniappAvatar').value = task.channel_avatar || '';  // ← НОВОЕ
+    document.getElementById('taskChannelLink').value = task.channel_link || '';
+    document.getElementById('taskChannelUsername').value = task.channel_username || '';
+    document.getElementById('taskChannelAvatar').value = task.channel_avatar || '';
+    document.getElementById('taskRewardAmount').value = task.reward_amount;
+    document.getElementById('taskRewardType').value = task.reward_type;
+    document.getElementById('taskDailyLimit').value = task.daily_limit;
+    document.getElementById('taskTotalLimit').value = task.total_limit;
+    document.getElementById('taskDaysRemaining').value = task.days_remaining;
+    document.getElementById('taskIsActive').value = task.is_active ? 'true' : 'false';
 
-            // Показываем правильные поля
-            toggleTaskTypeFields();
+    // Показываем правильные поля
+    toggleTaskTypeFields();
 
-            document.getElementById('taskModal').classList.add('active');
-        }
+    document.getElementById('taskModal').classList.add('active');
+}
 
         function closeTaskModal() {
             document.getElementById('taskModal').classList.remove('active');
         }
 
         async function saveTask() {
-            const title = document.getElementById('taskTitle').value.trim();
-            const taskType = document.getElementById('taskType').value;
-            const miniappUrl = document.getElementById('taskMiniappUrl').value.trim();
-            const channel_link = document.getElementById('taskChannelLink').value.trim();
-            const channel_username = document.getElementById('taskChannelUsername').value.trim();
-            const channel_avatar = document.getElementById('taskChannelAvatar').value.trim();
-            const reward_amount = parseInt(document.getElementById('taskRewardAmount').value);
-            const reward_type = document.getElementById('taskRewardType').value;
-            const daily_limit = parseInt(document.getElementById('taskDailyLimit').value);
-            const total_limit = parseInt(document.getElementById('taskTotalLimit').value);
-            const days_remaining = parseInt(document.getElementById('taskDaysRemaining').value);
-            const is_active = document.getElementById('taskIsActive').value === 'true';
+    const title = document.getElementById('taskTitle').value.trim();
+    const taskType = document.getElementById('taskType').value;
+    const miniappUrl = document.getElementById('taskMiniappUrl').value.trim();
+    const miniappAvatar = document.getElementById('taskMiniappAvatar').value.trim();  // ← НОВОЕ
+    const channel_link = document.getElementById('taskChannelLink').value.trim();
+    const channel_username = document.getElementById('taskChannelUsername').value.trim();
+    const channel_avatar = document.getElementById('taskChannelAvatar').value.trim();
+    const reward_amount = parseInt(document.getElementById('taskRewardAmount').value);
+    const reward_type = document.getElementById('taskRewardType').value;
+    const daily_limit = parseInt(document.getElementById('taskDailyLimit').value);
+    const total_limit = parseInt(document.getElementById('taskTotalLimit').value);
+    const days_remaining = parseInt(document.getElementById('taskDaysRemaining').value);
+    const is_active = document.getElementById('taskIsActive').value === 'true';
 
-            // ========== ВАЛИДАЦИЯ В ЗАВИСИМОСТИ ОТ ТИПА ==========
-            if (!title) {
-                showToast('❌ Название задания обязательно', 'error');
-                return;
-            }
+    // ========== ВАЛИДАЦИЯ ==========
+    if (!title) {
+        showToast('Название задания обязательно', 'error');
+        return;
+    }
 
-            if (taskType === 'channel') {
-                if (!channel_link || !channel_username) {
-                    showToast('❌ Для задания "Канал" нужны ссылка и username', 'error');
-                    return;
-                }
-            } else if (taskType === 'miniapp') {
-                if (!miniappUrl) {
-                    showToast('❌ Для задания "Mini App" нужна ссылка', 'error');
-                    return;
-                }
-                // Очищаем поля канала для Mini App
-                document.getElementById('taskChannelLink').value = '';
-                document.getElementById('taskChannelUsername').value = '';
-                document.getElementById('taskChannelAvatar').value = '';
-            } else {
-                showToast('❌ Неизвестный тип задания', 'error');
-                return;
-            }
+    if (taskType === 'channel') {
+        if (!channel_link || !channel_username) {
+            showToast('Для задания "Канал" нужны ссылка и username', 'error');
+            return;
+        }
+    } else if (taskType === 'miniapp') {
+        if (!miniappUrl) {
+            showToast('Для задания "Mini App" нужна ссылка', 'error');
+            return;
+        }
+    } else {
+        showToast('Неизвестный тип задания', 'error');
+        return;
+    }
 
-            if (reward_amount <= 0) {
-                showToast('❌ Сумма награды должна быть больше 0', 'error');
-                return;
-            }
+    if (reward_amount <= 0) {
+        showToast('Сумма награды должна быть больше 0', 'error');
+        return;
+    }
 
-            const taskId = document.getElementById('taskEditId').value;
-            let result;
+    const taskId = document.getElementById('taskEditId').value;
+    let result;
 
-            // Собираем данные для отправки
-            const taskData = {
+    // Для Mini App используем miniappAvatar как channel_avatar
+    const avatarToSave = taskType === 'miniapp' ? miniappAvatar : channel_avatar;
+
+    if (taskId) {
+        result = await apiRequest('update_task', {
+            method: 'POST',
+            body: JSON.stringify({
+                task_id: parseInt(taskId),
                 title: title,
                 task_type: taskType,
                 miniapp_url: miniappUrl,
                 channel_link: channel_link,
                 channel_username: channel_username,
-                channel_avatar: channel_avatar,
+                channel_avatar: avatarToSave,
                 reward_amount: reward_amount,
                 reward_type: reward_type,
                 daily_limit: daily_limit,
                 total_limit: total_limit,
                 days_remaining: days_remaining,
                 is_active: is_active
-            };
+            })
+        });
+    } else {
+        result = await apiRequest('create_task', {
+            method: 'POST',
+            body: JSON.stringify({
+                title: title,
+                task_type: taskType,
+                miniapp_url: miniappUrl,
+                channel_link: channel_link,
+                channel_username: channel_username,
+                channel_avatar: avatarToSave,
+                reward_amount: reward_amount,
+                reward_type: reward_type,
+                daily_limit: daily_limit,
+                total_limit: total_limit,
+                days_remaining: days_remaining,
+                is_active: is_active
+            })
+        });
+    }
 
-            if (taskId) {
-                taskData.task_id = parseInt(taskId);
-                result = await apiRequest('update_task', {
-                    method: 'POST',
-                    body: JSON.stringify(taskData)
-                });
-            } else {
-                result = await apiRequest('create_task', {
-                    method: 'POST',
-                    body: JSON.stringify(taskData)
-                });
-            }
-
-            if (result.success) {
-                showToast(taskId ? '✅ Задание обновлено!' : '✅ Задание создано!', 'success');
-                closeTaskModal();
-                loadTasks();
-            } else {
-                showToast('❌ Ошибка: ' + (result.error || 'Неизвестная ошибка'), 'error');
-            }
-        }
-
-        async function deleteTask(taskId) {
-            if (!confirm('🗑️ Удалить задание?')) return;
-            const result = await apiRequest('delete_task', { method: 'POST', body: JSON.stringify({ task_id: taskId }) });
-            if (result.success) {
-                showToast('✅ Задание удалено', 'success');
-                loadTasks();
-            } else {
-                showToast('❌ Ошибка', 'error');
-            }
-        }
+    if (result.success) {
+        showToast(taskId ? '✅ Задание обновлено!' : '✅ Задание создано!', 'success');
+        closeTaskModal();
+        loadTasks();
+    } else {
+        showToast('❌ Ошибка: ' + (result.error || 'Неизвестная ошибка'), 'error');
+    }
+}
 
         // ========== ПЕРЕКЛЮЧЕНИЕ ПОЛЕЙ В ЗАВИСИМОСТИ ОТ ТИПА ЗАДАНИЯ ==========
         function toggleTaskTypeFields() {
-            const taskType = document.getElementById('taskType').value;
-            const channelFields = document.getElementById('channelFields');
-            const miniappFields = document.getElementById('miniappFields');
+    const taskType = document.getElementById('taskType').value;
+    const channelFields = document.getElementById('channelFields');
+    const miniappFields = document.getElementById('miniappFields');
 
-            if (taskType === 'miniapp') {
-                channelFields.style.display = 'none';
-                miniappFields.style.display = 'block';
-                // Очищаем поля канала, чтобы не мешали
-                document.getElementById('taskChannelLink').value = '';
-                document.getElementById('taskChannelUsername').value = '';
-                document.getElementById('taskChannelAvatar').value = '';
-            } else {
-                channelFields.style.display = 'block';
-                miniappFields.style.display = 'none';
-                // Очищаем поле Mini App
-                document.getElementById('taskMiniappUrl').value = '';
-            }
-        }
+    if (taskType === 'miniapp') {
+        channelFields.style.display = 'none';
+        miniappFields.style.display = 'block';
+        // Очищаем поля канала, чтобы не мешали
+        document.getElementById('taskChannelLink').value = '';
+        document.getElementById('taskChannelUsername').value = '';
+        document.getElementById('taskChannelAvatar').value = '';
+    } else {
+        channelFields.style.display = 'block';
+        miniappFields.style.display = 'none';
+        // Очищаем поля Mini App
+        document.getElementById('taskMiniappUrl').value = '';
+        document.getElementById('taskMiniappAvatar').value = '';
+    }
+}
 
         // ========== ПРОМОКОДЫ ==========
         async function loadPromoCodes() {

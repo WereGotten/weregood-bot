@@ -3331,11 +3331,15 @@ async function loadTasks() {
 }
 
 function getAvatarUrl(avatar) {
-    if (!avatar) return '📢';
-    if (avatar.startsWith('/static/') || avatar.startsWith('http')) {
-        return `<img src="${avatar}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML='📢';">`;
+    if (!avatar) return '📢';  // По умолчанию для канала
+
+    // Если это ссылка на картинку или статический файл
+    if (avatar.startsWith('/static/') || avatar.startsWith('http://') || avatar.startsWith('https://')) {
+        return `<img src="${avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.parentElement.innerHTML='📢';">`;
     }
-    return '📢';
+
+    // Если это эмодзи или текст
+    return avatar;
 }
 
 function renderTasksList() {
@@ -3352,25 +3356,28 @@ function renderTasksList() {
         const statusClass = task.is_completed ? 'completed' : '';
         const statusText = task.is_completed ? '✅ Выполнено' : '🟢 Доступно';
 
-        // Иконка награды
         const rewardIcon = task.reward_type === 'wg' ? '💰' :
                           (task.reward_type === 'lp' ? '💎' :
                           (task.reward_type === 'usdt' ? '💵' : '⚡'));
 
-        // Определяем тип задания
         const taskType = task.task_type || 'channel';
         const typeIcon = taskType === 'miniapp' ? '📱' : '📢';
         const typeLabel = taskType === 'miniapp' ? 'Mini App' : 'Канал';
 
-        // ========== ❌ УБИРАЕМ ССЫЛКУ ИЗ КАРТОЧКИ ==========
-        // Вместо ссылки показываем только тип задания
-
-        // Аватарка
+        // ========== АВАТАРКА ==========
         let avatarHtml = '';
         if (taskType === 'miniapp') {
-            avatarHtml = '📱';
+            // Для Mini App — используем кастомную аватарку или эмодзи
+            if (task.channel_avatar) {
+                avatarHtml = `<img src="${task.channel_avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.parentElement.innerHTML='📱';">`;
+            } else {
+                avatarHtml = '📱';
+            }
         } else {
-            avatarHtml = getAvatarUrl(task.channel_avatar);
+            // Для канала — используем аватарку канала
+            avatarHtml = task.channel_avatar ?
+                `<img src="${task.channel_avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.parentElement.innerHTML='📢';">` :
+                '📢';
         }
 
         html += `
@@ -3379,7 +3386,6 @@ function renderTasksList() {
                 <div class="task-info">
                     <div class="task-channel">
                         ${typeIcon} ${typeLabel}
-                        <span style="font-size:0.55rem; opacity:0.5; margin-left:4px;"></span>
                     </div>
                     <div class="task-title">${escapeHtml(task.title)}</div>
                 </div>
