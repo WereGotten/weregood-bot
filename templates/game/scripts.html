@@ -3415,13 +3415,8 @@ function closeTasksModal() {
 }
 
 function openTaskDetail(taskId) {
-    // Находим задание
     selectedTask = currentTasks.find(t => t.id === taskId);
-
-    if (!selectedTask) {
-        showToast('❌ Задание не найдено', 'error');
-        return;
-    }
+    if (!selectedTask) return;
 
     let rewardIcon = '';
     if (selectedTask.reward_type === 'wg') rewardIcon = '💰';
@@ -3440,21 +3435,34 @@ function openTaskDetail(taskId) {
     if (taskDetailReward) taskDetailReward.innerHTML = `${rewardIcon} ${selectedTask.reward_amount} ${selectedTask.reward_type.toUpperCase()}`;
     if (taskDetailRemaining) taskDetailRemaining.innerHTML = `${selectedTask.completed_count}/${selectedTask.total_limit}`;
 
+    // ========== АВАТАРКА В МОДАЛКЕ ==========
     if (taskDetailAvatar) {
-        if (selectedTask.task_type === 'miniapp') {
-            taskDetailAvatar.innerHTML = '📱';
+        const taskType = selectedTask.task_type || 'channel';
+
+        if (taskType === 'miniapp') {
+            // Для Mini App — показываем кастомную аватарку или 📱
+            if (selectedTask.channel_avatar) {
+                taskDetailAvatar.innerHTML = `<img src="${selectedTask.channel_avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.parentElement.innerHTML='📱';">`;
+            } else {
+                taskDetailAvatar.innerHTML = '📱';
+            }
         } else {
-            taskDetailAvatar.innerHTML = getAvatarUrl(selectedTask.channel_avatar);
+            // Для канала — показываем аватарку канала или 📢
+            if (selectedTask.channel_avatar) {
+                taskDetailAvatar.innerHTML = `<img src="${selectedTask.channel_avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.parentElement.innerHTML='📢';">`;
+            } else {
+                taskDetailAvatar.innerHTML = '📢';
+            }
         }
     }
 
-    // Показываем тип
+    // ========== ПОКАЗЫВАЕМ ТИП ==========
     if (taskDetailType) {
         const typeLabel = selectedTask.task_type === 'miniapp' ? '📱 Mini App' : '📢 Канал';
         taskDetailType.innerText = `Тип: ${typeLabel}`;
     }
 
-    // Показываем ссылку
+    // ========== ПОКАЗЫВАЕМ ССЫЛКУ ==========
     if (taskDetailLinkValue) {
         const link = selectedTask.task_type === 'miniapp'
             ? (selectedTask.miniapp_url || selectedTask.channel_link || 'Ссылка не указана')
@@ -3473,13 +3481,13 @@ function openTaskDetail(taskId) {
         } else {
             if (selectedTask.task_type === 'miniapp') {
                 buttonsContainer.innerHTML = `
-                    <button class="task-detail-btn task-link-btn" onclick="openTaskMiniapp()" id="taskLinkBtn">📱 Открыть Mini App</button>
-                    <button class="task-detail-btn task-check-btn" onclick="checkTaskCompletion()" id="taskCheckBtn">✅ Проверить выполнение</button>
+                    <button class="task-detail-btn task-link-btn" onclick="openTaskMiniapp()">📱 Открыть Mini App</button>
+                    <button class="task-detail-btn task-check-btn" onclick="checkTaskCompletion()">✅ Проверить выполнение</button>
                 `;
             } else {
                 buttonsContainer.innerHTML = `
-                    <button class="task-detail-btn task-link-btn" onclick="openTaskChannel()" id="taskLinkBtn">🔗 Перейти по ссылке</button>
-                    <button class="task-detail-btn task-check-btn" onclick="checkTaskCompletion()" id="taskCheckBtn">✅ Проверить выполнение</button>
+                    <button class="task-detail-btn task-link-btn" onclick="openTaskChannel()">🔗 Перейти по ссылке</button>
+                    <button class="task-detail-btn task-check-btn" onclick="checkTaskCompletion()">✅ Проверить выполнение</button>
                 `;
             }
         }
