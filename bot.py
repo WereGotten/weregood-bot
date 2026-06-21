@@ -5715,12 +5715,13 @@ def api_admin_get_tasks():
             rows = cursor.fetchall()
             tasks = []
             for row in rows:
+                # ✅ Преобразуем Row в словарь безопасно
                 task = {
                     'id': row['id'],
-                    'title': row['title'],
-                    'channel_link': row['channel_link'],
-                    'channel_username': row['channel_username'],
-                    'channel_avatar': row['channel_avatar'],
+                    'title': row['title'] or '',
+                    'channel_link': row['channel_link'] or '',
+                    'channel_username': row['channel_username'] or '',
+                    'channel_avatar': row['channel_avatar'] or '',
                     'reward_amount': row['reward_amount'],
                     'reward_type': row['reward_type'],
                     'daily_limit': row['daily_limit'],
@@ -5729,22 +5730,24 @@ def api_admin_get_tasks():
                     'days_remaining': row['days_remaining'],
                     'is_active': bool(row['is_active'])
                 }
-                # Добавляем новые поля только если они есть
+
+                # ✅ Безопасно добавляем новые поля
                 if has_task_type:
-                    task['task_type'] = row.get('task_type', 'channel')
+                    task['task_type'] = row['task_type'] if row['task_type'] is not None else 'channel'
                 else:
                     task['task_type'] = 'channel'
 
                 if has_miniapp_url:
-                    task['miniapp_url'] = row.get('miniapp_url') or ''
+                    task['miniapp_url'] = row['miniapp_url'] or ''
                 else:
                     task['miniapp_url'] = ''
 
                 tasks.append(task)
+
             return jsonify({'success': True, 'tasks': tasks})
+
     except Exception as e:
-        import traceback
-        logger.error(f"❌ Ошибка в api_admin_get_tasks: {traceback.format_exc()}")
+        logger.error(f"Ошибка в api_admin_get_tasks: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
