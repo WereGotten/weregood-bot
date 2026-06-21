@@ -410,26 +410,27 @@ if (upgradeBtn && upgradeCard) {
 }
 
     const badgesContainer = document.getElementById('profileBadges');
-    if (badgesContainer) {
-        let badgesHtml = '';
-        if (localRole === 'founder') badgesHtml += '<span class="role-badge founder">👑 ОСНОВАТЕЛЬ</span>';
-        else if (localRole === 'legend') badgesHtml += '<span class="role-badge legend">👑 ЛЕГЕНДА</span>';
-        else if (localRole === 'pioneer') badgesHtml += '<span class="role-badge pioneer">⭐ ПЕРВООТКРЫВАТЕЛЬ</span>';
-        else badgesHtml += '<span class="role-badge player">🎮 Игрок</span>';
-        badgesContainer.innerHTML = badgesHtml;
-    }
+if (badgesContainer) {
+    const t = TRANSLATIONS[currentLanguage] || TRANSLATIONS.ru;
+    let badgesHtml = '';
+    if (localRole === 'founder') badgesHtml += `<span class="role-badge founder">👑 ${t.role_founder || 'ОСНОВАТЕЛЬ'}</span>`;
+    else if (localRole === 'legend') badgesHtml += `<span class="role-badge legend">👑 ${t.role_legend || 'ЛЕГЕНДА'}</span>`;
+    else if (localRole === 'pioneer') badgesHtml += `<span class="role-badge pioneer">⭐ ${t.role_pioneer || 'ПЕРВООТКРЫВАТЕЛЬ'}</span>`;
+    else badgesHtml += `<span class="role-badge player">🎮 ${t.role_player || 'Игрок'}</span>`;
+    badgesContainer.innerHTML = badgesHtml;
 }
 
-    function updateModalBadges(role) {
-        const badgesContainer = document.getElementById('playerModalBadges');
-        if (!badgesContainer) return;
-        let badgesHtml = '';
-        if (role === 'founder') badgesHtml += '<span class="role-badge founder">👑 ОСНОВАТЕЛЬ</span>';
-        else if (role === 'pioneer') badgesHtml += '<span class="role-badge pioneer">⭐ ПЕРВООТКРЫВАТЕЛЬ</span>';
-        else if (role === 'legend') badgesHtml += '<span class="role-badge legend">👑 ЛЕГЕНДА</span>';
-        else badgesHtml += '<span class="role-badge player">🎮 Игрок</span>';
-        badgesContainer.innerHTML = badgesHtml;
-    }
+function updateModalBadges(role) {
+    const badgesContainer = document.getElementById('playerModalBadges');
+    if (!badgesContainer) return;
+    const t = TRANSLATIONS[currentLanguage] || TRANSLATIONS.ru;
+    let badgesHtml = '';
+    if (role === 'founder') badgesHtml += `<span class="role-badge founder">👑 ${t.role_founder || 'ОСНОВАТЕЛЬ'}</span>`;
+    else if (role === 'pioneer') badgesHtml += `<span class="role-badge pioneer">⭐ ${t.role_pioneer || 'ПЕРВООТКРЫВАТЕЛЬ'}</span>`;
+    else if (role === 'legend') badgesHtml += `<span class="role-badge legend">👑 ${t.role_legend || 'ЛЕГЕНДА'}</span>`;
+    else badgesHtml += `<span class="role-badge player">🎮 ${t.role_player || 'Игрок'}</span>`;
+    badgesContainer.innerHTML = badgesHtml;
+}
 
     function animateClick() {
         let coin = document.getElementById('coin');
@@ -3688,35 +3689,78 @@ async function checkTaskCompletion() {
     }
 
     function renderAchievementsList(achievements) {
-        const container = document.getElementById('achievementsList');
-        if (!container) return;
-        if (achievements.length === 0) {
-            container.innerHTML = '<div class="empty-state">Нет достижений</div>';
-            return;
-        }
-        let html = '';
-        for (const ach of achievements) {
-            const percent = (ach.current_count / ach.target_count) * 100;
-            const isCompleted = ach.is_completed;
-            const statusClass = isCompleted ? 'completed' : '';
-            html += `
-                <div class="achievement-card ${statusClass}">
-                    <div class="achievement-icon">${ach.icon}</div>
-                    <div class="achievement-info">
-                        <div class="achievement-name">${ach.display_name}</div>
-                        <div class="achievement-desc">${ach.description}</div>
-                        <div class="achievement-progress">
-                            <div class="achievement-progress-bar">
-                                <div class="achievement-progress-fill" style="width: ${percent}%"></div>
-                            </div>
-                            <div class="achievement-progress-text">${ach.current_count} / ${ach.target_count}</div>
+    const container = document.getElementById('achievementsList');
+    if (!container) return;
+
+    const t = TRANSLATIONS[currentLanguage] || TRANSLATIONS.ru;
+
+    // Словарь переводов для достижений
+    const achNames = {
+        'Автокликер': t.ach_autoclicker || 'Автокликер',
+        'Инвестор': t.ach_investor || 'Инвестор',
+        'Общительный': t.ach_social || 'Общительный',
+        'Азартный': t.ach_gambler || 'Азартный',
+        'Счастливчик': t.ach_lucky || 'Счастливчик',
+        'Подписчик': t.ach_liker || 'Подписчик',
+        'Хейтер': t.ach_hater || 'Хейтер',
+        'Любитель TV': t.ach_ad_lover || 'Любитель TV',
+        'Транжира': t.ach_spender || 'Транжира',
+        'Выполнитель': t.ach_task_master || 'Выполнитель',
+        'Бесстрашный': t.ach_brave || 'Бесстрашный',
+        'Везучий': t.ach_lucky_fortune || 'Везучий',
+        'Лудоман': t.ach_gambler_fortune || 'Лудоман',
+        'Сумасшедший': t.ach_crazy || 'Сумасшедший',
+    };
+
+    const achDescs = {
+        'Сделать 50 000 кликов по монете': t.ach_desc_autoclicker || 'Сделать 50 000 кликов по монете',
+        'Купить 30 улучшений в магазине': t.ach_desc_investor || 'Купить 30 улучшений в магазине',
+        'Пригласить 10 рефералов': t.ach_desc_social || 'Пригласить 10 рефералов',
+        'Купить 100 билетов в Вызове': t.ach_desc_gambler || 'Купить 100 билетов в Вызове',
+        'Выиграть Вызов 5 раз': t.ach_desc_lucky || 'Выиграть Вызов 5 раз',
+        'Поставить 200 лайков': t.ach_desc_liker || 'Поставить 200 лайков',
+        'Поставить 200 дизлайков': t.ach_desc_hater || 'Поставить 200 дизлайков',
+        'Просмотреть 100 реклам': t.ach_desc_ad_lover || 'Просмотреть 100 реклам',
+        'Потратить 50 000 WG Coin': t.ach_desc_spender || 'Потратить 50 000 WG Coin',
+        'Выполнить 10 заданий': t.ach_desc_task_master || 'Выполнить 10 заданий',
+        'Сделать 100 ставок в Командной Фортуне': t.ach_desc_brave || 'Сделать 100 ставок в Командной Фортуне',
+        'Выиграть 100 раз в Командной Фортуне': t.ach_desc_lucky_fortune || 'Выиграть 100 раз в Командной Фортуне',
+        'Поставить 200 000 WG в Командной Фортуне': t.ach_desc_gambler_fortune || 'Поставить 200 000 WG в Командной Фортуне',
+        'Сделать 1000 ставок в Командной Фортуне': t.ach_desc_crazy || 'Сделать 1000 ставок в Командной Фортуне',
+    };
+
+    if (achievements.length === 0) {
+        container.innerHTML = `<div class="empty-state">${t.no_achievements || 'Нет достижений'}</div>`;
+        return;
+    }
+
+    let html = '';
+    for (const ach of achievements) {
+        const percent = (ach.current_count / ach.target_count) * 100;
+        const isCompleted = ach.is_completed;
+        const statusClass = isCompleted ? 'completed' : '';
+
+        const displayName = achNames[ach.display_name] || ach.display_name;
+        const displayDesc = achDescs[ach.description] || ach.description;
+
+        html += `
+            <div class="achievement-card ${statusClass}">
+                <div class="achievement-icon">${ach.icon}</div>
+                <div class="achievement-info">
+                    <div class="achievement-name">${displayName}</div>
+                    <div class="achievement-desc">${displayDesc}</div>
+                    <div class="achievement-progress">
+                        <div class="achievement-progress-bar">
+                            <div class="achievement-progress-fill" style="width: ${percent}%"></div>
                         </div>
+                        <div class="achievement-progress-text">${ach.current_count} / ${ach.target_count}</div>
                     </div>
                 </div>
-            `;
-        }
-        container.innerHTML = html;
+            </div>
+        `;
     }
+    container.innerHTML = html;
+}
 
     async function loadAchievementsTop() {
         try {
@@ -6300,7 +6344,6 @@ const TRANSLATIONS = {
         'increase_energy_limit': 'Увеличить лимит энергии',
         'energy_limit_desc': '+1 к макс. энергии (макс. 300 раз)',
         'support_project': 'Поддержать проект →',
-        // ===== НОВЫЕ КЛЮЧИ ДЛЯ SHOP =====
         'for_energy': 'За энергией',
         'watch': 'Смотреть →',
         'max_300': '(макс. 300 раз)',
@@ -6351,6 +6394,12 @@ const TRANSLATIONS = {
         'waiting_draw': 'Ожидание розыгрыша в 21:00',
         'how_it_works': 'Как это работает?',
         'how_it_works_desc': 'Участвуй за 100 LP → В 21:00 появится выигрышная комбинация → У тебя есть 3 часа, чтобы стереть билет → Победитель получает весь фонд в USDT!',
+        'recent_participants': '📋 Последние участники',
+        'top_matches': '🏆 ТОП СОВПАДЕНИЙ',
+        'no_tickets': '😢 У вас пока нет билетов',
+        'draw_started': '🎉 РОЗЫГРЫШ СОСТОЯЛСЯ! 🎉',
+        'draw_instruction': 'Водите пальцем по клеткам, чтобы стереть защитный слой! У вас 3 часа!',
+        'draw_in_progress': 'Идёт розыгрыш...',
 
         // ===== PROFILE =====
         'profile': 'Профиль',
@@ -6371,15 +6420,64 @@ const TRANSLATIONS = {
         'ton_wallet': 'TON Кошелёк',
         'disconnect_wallet': 'Отвязать TON кошелёк',
         'language': 'Язык / Language',
+        'wins': 'Побед',
+        'clicks': 'Кликов',
+        'role_founder': 'ОСНОВАТЕЛЬ',
+        'role_legend': 'ЛЕГЕНДА',
+        'role_pioneer': 'ПЕРВООТКРЫВАТЕЛЬ',
+        'role_player': 'Игрок',
+
+        // ===== STAR SHOP =====
+        'your_stars': 'Ваши Telegram Stars',
+        'buy_upgrades_for_stars': 'Покупайте улучшения за звёзды!',
+        'max_energy': 'Макс. энергия',
+        'upgrades_count': 'Улучшений',
+        'remaining': 'Осталось',
+        'energy_booster': 'Энергетический усилитель',
+        'energy_booster_desc': 'Увеличивает лимит энергии',
+        'energy_booster_reward': '+40 к макс. энергии навсегда',
+        'lp_boost': 'LP Бустер',
+        'lp_boost_desc': 'Пополняет баланс LP',
+        'lp_boost_reward': '+50 LP на баланс',
+        'mega_boost': 'Мега-бустер',
+        'mega_boost_desc': 'Акция! Огромный набор наград',
+        'mega_boost_reward': 'Ограниченное предложение',
+        'how_to_pay_stars': 'Как оплатить звёздами?',
+        'how_to_pay_stars_desc': 'Нажмите "Купить", подтвердите оплату в окне Telegram. После успешной оплаты улучшение зачислится автоматически!',
+        'how_to_pay_ton': 'Как оплатить TON?',
+        'how_to_pay_ton_desc': 'Нажмите "Купить за TON" → подключите кошелёк → подтвердите платеж → бонус зачислится автоматически!',
 
         // ===== MODALS =====
-        'my_tickets_title': 'Мои билеты',
-        'no_tickets': '😢 У вас пока нет билетов',
+        'my_tickets_title': '🎫 Мои билеты',
         'ticket': 'Билет',
         'purchase': 'Покупка',
         'winning_combo': 'ВЫИГРЫШНАЯ КОМБИНАЦИЯ',
         'reveal_all_cells': '🔓 Открыть все клетки этого билета',
         'matches': 'Совпадений',
+        'leaderboard_title': '🏆 Таблица лидеров',
+        'daily_timer_label': 'До окончания дня и раздачи наград:',
+        'top_day': '🏆 Топ дня',
+        'top_week': '📅 Топ недели',
+        'top_month': '📆 Топ месяца',
+        'coming_soon_title': 'Скоро появится!',
+        'coming_soon_text': 'Топ недели и месяца будут добавлены в ближайшие дни',
+        'withdraw': '💸 Вывод USDT',
+        'new_withdrawal': '📤 Новый вывод',
+        'withdrawal_history': '📋 История',
+        'your_balance_usdt': 'Ваш баланс USDT',
+        'withdrawal_amount': '💰 Сумма вывода',
+        'min_2_usdt': 'Минимум 2 USDT',
+        'wallet_address': '🏦 Адрес кошелька',
+        'network': '🌐 Сеть',
+        'send_request': '📤 Отправить заявку',
+        'no_withdrawals': 'История пуста',
+        'activate_promo': '🎫 Активация промокода',
+        'enter_promo': 'Введите промокод',
+        'activate': '🎁 Активировать',
+        'select_prefix': '🏷️ Выберите префикс',
+        'all_referrals': '👥 Все приглашённые рефералы',
+        'next': 'Далее →',
+        'skip': 'Пропустить',
 
         // ===== DAILY REWARDS =====
         'daily_rewards': 'Ежедневные награды',
@@ -6410,146 +6508,38 @@ const TRANSLATIONS = {
         'achievements_title': 'Достижения',
         'completed_of': 'выполнено из',
         'achievements_list': 'Список достижений',
-        'top_players': 'Топ игроков',
         'no_achievements': 'Нет достижений',
         'no_players': 'Нет игроков с достижениями',
         'achievement_unlocked': '🏆 ПОЗДРАВЛЯЕМ! Вы выполнили достижение!',
+        'ach_autoclicker': 'Автокликер',
+        'ach_investor': 'Инвестор',
+        'ach_social': 'Общительный',
+        'ach_gambler': 'Азартный',
+        'ach_lucky': 'Счастливчик',
+        'ach_liker': 'Подписчик',
+        'ach_hater': 'Хейтер',
+        'ach_ad_lover': 'Любитель TV',
+        'ach_spender': 'Транжира',
+        'ach_task_master': 'Выполнитель',
+        'ach_brave': 'Бесстрашный',
+        'ach_lucky_fortune': 'Везучий',
+        'ach_gambler_fortune': 'Лудоман',
+        'ach_crazy': 'Сумасшедший',
+        'ach_desc_autoclicker': 'Сделать 50 000 кликов по монете',
+        'ach_desc_investor': 'Купить 30 улучшений в магазине',
+        'ach_desc_social': 'Пригласить 10 рефералов',
+        'ach_desc_gambler': 'Купить 100 билетов в Вызове',
+        'ach_desc_lucky': 'Выиграть Вызов 5 раз',
+        'ach_desc_liker': 'Поставить 200 лайков',
+        'ach_desc_hater': 'Поставить 200 дизлайков',
+        'ach_desc_ad_lover': 'Просмотреть 100 реклам',
+        'ach_desc_spender': 'Потратить 50 000 WG Coin',
+        'ach_desc_task_master': 'Выполнить 10 заданий',
+        'ach_desc_brave': 'Сделать 100 ставок в Командной Фортуне',
+        'ach_desc_lucky_fortune': 'Выиграть 100 раз в Командной Фортуне',
+        'ach_desc_gambler_fortune': 'Поставить 200 000 WG в Командной Фортуне',
+        'ach_desc_crazy': 'Сделать 1000 ставок в Командной Фортуне',
 
-        // ===== FORTUNE =====
-        'fortune': 'Командная Фортуна',
-        'fortune_play': 'Играть',
-        'fortune_history': 'Моя история',
-        'round_ends': 'ДО КОНЦА РАУНДА',
-        'your_balance_wg': 'Ваш баланс WG',
-        'team_yellow': 'Команда Жёлтых',
-        'team_red': 'Команда Красных',
-        'total_pool': 'Общий счёт',
-        'bet_yellow': '💰 Сделать ставку на Жёлтых',
-        'bet_red': '💰 Сделать ставку на Красных',
-        'no_bets': '🤝 Пока никто не поставил',
-        'place_bet': '💰 Сделать ставку',
-        'bet_amount': 'Сумма ставки (мин. 10 WG)',
-        'confirm_bet': '🎲 Подтвердить ставку',
-        'no_history': '📭 У вас пока нет истории игр',
-        'win': 'ПОБЕДА',
-        'lose': 'ПРОИГРЫШ',
-
-        // ===== WITHDRAWAL =====
-        'withdraw': 'Вывод USDT',
-        'new_withdrawal': 'Новый вывод',
-        'withdrawal_history': 'История',
-        'your_balance_usdt': 'Ваш баланс USDT',
-        'withdrawal_amount': 'Сумма вывода',
-        'min_2_usdt': 'Минимум 2 USDT',
-        'wallet_address': 'Адрес кошелька',
-        'network': 'Сеть',
-        'send_request': '📤 Отправить заявку',
-        'no_withdrawals': 'История пуста',
-
-        // ===== CONTEST =====
-        'contest': 'Реферальный конкурс',
-        'contest_prize': 'ПРИЗОВОЙ ФОНД',
-        'contest_winners': 'победителей',
-        'contest_tickets': 'билетов',
-        'contest_rules': 'ПРАВИЛА КОНКУРСА',
-        'contest_rules_1': 'Конкурс начался 14 июня 2026, 19:00 МСК',
-        'contest_rules_2': 'Пригласи новых друзей за время конкурса',
-        'contest_rules_3': 'Каждый друг должен набрать 300 кликов по монете',
-        'contest_rules_4': 'За каждые 3 выполненных реферала → 1 билет',
-        'contest_rules_5': 'Чем больше билетов — тем выше шанс выиграть 2 000 LP',
-        'share_link': '📤 Поделиться ссылкой',
-        'copy_link': 'Копировать',
-        'new_referrals': 'НОВЫЕ РЕФЕРАЛЫ',
-        'no_new_referrals': '😢 Пока нет новых приглашённых',
-        'show_all': '📋 Показать всех',
-        'contest_progress': 'до след. билета',
-        // ===== НОВЫЕ КЛЮЧИ ДЛЯ КОНКУРСА =====
-        'contest_loading': 'Загрузка...',
-        'contest_no_participants': '😢 Пока нет участников конкурса',
-        'contest_error': '❌ Ошибка загрузки топа',
-        'contest_link_copied': '🔗 Ссылка скопирована!',
-        'contest_share_message': '🏆 Участвуй в реферальном конкурсе WereGood!\n\nПриглашай друзей и выигрывай 2 000 LP!\n\n',
-        'contest_tickets_count': 'билетов',
-        'contest_referrals_count': 'рефералов',
-        'contest_qualified': 'Участник',
-        'contest_not_qualified': '{count}/3',
-
-        // ===== PAYDAY =====
-        'payday_active': '🔥 PAYDAY ACTIVE! Множитель:',
-        'payday_x': 'x',
-        'payday_cooldown_energy': '⏱️ Кулдаун: 2 мин (было 5)',
-        'payday_cooldown_limit': '⏱️ Кулдаун: 2 мин (было 10)',
-
-        // ===== COMMON =====
-        'loading': 'Загрузка...',
-        'error': 'Ошибка',
-        'success': 'Успешно',
-        'close': 'Закрыть',
-        'back': 'Назад',
-        'save': 'Сохранить',
-        'cancel': 'Отмена',
-        'confirm': 'Подтвердить',
-        'copy': 'Копировать',
-        'copied': 'Скопировано!',
-        'share': 'Поделиться',
-        'minute': 'мин',
-        'hours': 'ч',
-        'days': 'дн',
-        'seconds': 'сек',
-        'ago': 'назад',
-        'online': 'Онлайн',
-        'players': 'игроков',
-
-        // ===== LOTTERY =====
-        'lottery': 'Вызов',
-        'daily_challenge': 'Ежедневный вызов',
-        'main_pool': 'ГЛАВНЫЙ ФОНД',
-        'your_lp_balance': 'ВАШ БАЛАНС LP',
-        'tickets': 'билетов',
-        'max_10': 'Макс. 10',
-        'participate': 'Принять участие за 100 LP',
-        'my_tickets': 'Мои билеты',
-        'waiting_draw': 'Ожидание розыгрыша в 21:00',
-        'how_it_works': 'Как это работает?',
-        'how_it_works_desc': 'Участвуй за 100 LP → В 21:00 появится выигрышная комбинация → У тебя есть 3 часа, чтобы стереть билет → Победитель получает весь фонд в USDT!',
-        'recent_participants': '📋 Последние участники',
-        'top_matches': '🏆 ТОП СОВПАДЕНИЙ',
-        'no_tickets': '😢 У вас пока нет билетов',
-        'draw_started': '🎉 РОЗЫГРЫШ СОСТОЯЛСЯ! 🎉',
-        'draw_instruction': 'Водите пальцем по клеткам, чтобы стереть защитный слой! У вас 3 часа!',
-        'draw_in_progress': 'Идёт розыгрыш...',
-        // ===== MODALS =====
-        'my_tickets_title': '🎫 Мои билеты',
-        'no_tickets': '😢 У вас пока нет билетов',
-        'ticket': 'Билет',
-        'purchase': 'Покупка',
-        'winning_combo': 'ВЫИГРЫШНАЯ КОМБИНАЦИЯ',
-        'reveal_all_cells': '🔓 Открыть все клетки этого билета',
-        'matches': 'Совпадений',
-        'leaderboard_title': '🏆 Таблица лидеров',
-        'daily_timer_label': 'До окончания дня и раздачи наград:',
-        'top_day': '🏆 Топ дня',
-        'top_week': '📅 Топ недели',
-        'top_month': '📆 Топ месяца',
-        'coming_soon_title': 'Скоро появится!',
-        'coming_soon_text': 'Топ недели и месяца будут добавлены в ближайшие дни',
-        'withdraw': '💸 Вывод USDT',
-        'new_withdrawal': '📤 Новый вывод',
-        'withdrawal_history': '📋 История',
-        'your_balance_usdt': 'Ваш баланс USDT',
-        'withdrawal_amount': '💰 Сумма вывода',
-        'min_2_usdt': 'Минимум 2 USDT',
-        'wallet_address': '🏦 Адрес кошелька',
-        'network': '🌐 Сеть',
-        'send_request': '📤 Отправить заявку',
-        'no_withdrawals': 'История пуста',
-        'activate_promo': '🎫 Активация промокода',
-        'enter_promo': 'Введите промокод',
-        'activate': '🎁 Активировать',
-        'select_prefix': '🏷️ Выберите префикс',
-        'all_referrals': '👥 Все приглашённые рефералы',
-        'next': 'Далее →',
-        'skip': 'Пропустить',
         // ===== FORTUNE =====
         'fortune': 'Командная Фортуна',
         'fortune_play': 'Играть',
@@ -6574,15 +6564,76 @@ const TRANSLATIONS = {
         'win': 'ПОБЕДА',
         'lose': 'ПРОИГРЫШ',
         'your_balance': '💰 Ваш баланс:',
+
         // ===== WHEEL =====
         'wheel_title': '🎡 КОЛЕСО ФОРТУНЫ 🎡',
         'wheel_claim': '💰 Забрать награду →',
+
         // ===== GAMEPAD =====
         'game_center': '🎮 Игровой центр',
         'fortune_desc': 'Играй с друзьями и выигрывай!',
         'soon': 'Скоро...',
         'new_game_coming': 'Новая игра в разработке',
         'new_games_here': '✨ Новые игры будут появляться здесь',
+
+        // ===== CONTEST =====
+        'contest': 'Реферальный конкурс',
+        'contest_prize': 'ПРИЗОВОЙ ФОНД',
+        'contest_winners': 'победителей',
+        'contest_tickets': 'билетов',
+        'contest_rules': 'ПРАВИЛА КОНКУРСА',
+        'contest_rules_1': 'Конкурс начался 14 июня 2026, 19:00 МСК',
+        'contest_rules_2': 'Пригласи новых друзей за время конкурса',
+        'contest_rules_3': 'Каждый друг должен набрать 300 кликов по монете',
+        'contest_rules_4': 'За каждые 3 выполненных реферала → 1 билет',
+        'contest_rules_5': 'Чем больше билетов — тем выше шанс выиграть 2 000 LP',
+        'share_link': '📤 Поделиться ссылкой',
+        'copy_link': 'Копировать',
+        'new_referrals': 'НОВЫЕ РЕФЕРАЛЫ',
+        'no_new_referrals': '😢 Пока нет новых приглашённых',
+        'show_all': '📋 Показать всех',
+        'contest_progress': 'до след. билета',
+        'contest_loading': 'Загрузка...',
+        'contest_no_participants': '😢 Пока нет участников конкурса',
+        'contest_error': '❌ Ошибка загрузки топа',
+        'contest_link_copied': '🔗 Ссылка скопирована!',
+        'contest_share_message': '🏆 Участвуй в реферальном конкурсе WereGood!\n\nПриглашай друзей и выигрывай 2 000 LP!\n\n',
+        'contest_tickets_count': 'билетов',
+        'contest_referrals_count': 'рефералов',
+        'contest_qualified': 'Участник',
+        'contest_not_qualified': '{count}/3',
+
+        // ===== PAYDAY =====
+        'payday_active': '🔥 PAYDAY ACTIVE! Множитель:',
+        'payday_x': 'x',
+        'payday_cooldown_energy': '⏱️ Кулдаун: 2 мин (было 5)',
+        'payday_cooldown_limit': '⏱️ Кулдаун: 2 мин (было 10)',
+
+        // ===== NAVIGATION =====
+        'nav_home': 'Главная',
+        'nav_shop': 'Магазин',
+        'nav_lottery': 'Вызов',
+        'nav_profile': 'Профиль',
+
+        // ===== COMMON =====
+        'loading': 'Загрузка...',
+        'error': 'Ошибка',
+        'success': 'Успешно',
+        'close': 'Закрыть',
+        'back': 'Назад',
+        'save': 'Сохранить',
+        'cancel': 'Отмена',
+        'confirm': 'Подтвердить',
+        'copy': 'Копировать',
+        'copied': 'Скопировано!',
+        'share': 'Поделиться',
+        'minute': 'мин',
+        'hours': 'ч',
+        'days': 'дн',
+        'seconds': 'сек',
+        'ago': 'назад',
+        'online': 'Онлайн',
+        'players': 'игроков',
     },
 
     en: {
@@ -6617,7 +6668,6 @@ const TRANSLATIONS = {
         'increase_energy_limit': 'Increase energy limit',
         'energy_limit_desc': '+1 to max energy (max 300 times)',
         'support_project': 'Support project →',
-        // ===== НОВЫЕ КЛЮЧИ ДЛЯ SHOP =====
         'for_energy': 'For energy',
         'watch': 'Watch →',
         'max_300': '(max 300 times)',
@@ -6668,6 +6718,12 @@ const TRANSLATIONS = {
         'waiting_draw': 'Waiting for draw at 21:00',
         'how_it_works': 'How it works?',
         'how_it_works_desc': 'Participate for 100 LP → At 21:00 winning combination appears → You have 3 hours to scratch your ticket → Winner gets the whole pool in USDT!',
+        'recent_participants': '📋 Recent participants',
+        'top_matches': '🏆 TOP MATCHES',
+        'no_tickets': '😢 You have no tickets yet',
+        'draw_started': '🎉 THE DRAW HAS HAPPENED! 🎉',
+        'draw_instruction': 'Swipe your finger across the cells to scratch off the protective layer! You have 3 hours!',
+        'draw_in_progress': 'Draw in progress...',
 
         // ===== PROFILE =====
         'profile': 'Profile',
@@ -6688,15 +6744,64 @@ const TRANSLATIONS = {
         'ton_wallet': 'TON Wallet',
         'disconnect_wallet': 'Disconnect TON wallet',
         'language': 'Language',
+        'wins': 'Wins',
+        'clicks': 'Clicks',
+        'role_founder': 'FOUNDER',
+        'role_legend': 'LEGEND',
+        'role_pioneer': 'PIONEER',
+        'role_player': 'Player',
+
+        // ===== STAR SHOP =====
+        'your_stars': 'Your Telegram Stars',
+        'buy_upgrades_for_stars': 'Buy upgrades with stars!',
+        'max_energy': 'Max energy',
+        'upgrades_count': 'Upgrades',
+        'remaining': 'Remaining',
+        'energy_booster': 'Energy booster',
+        'energy_booster_desc': 'Increases energy limit',
+        'energy_booster_reward': '+40 to max energy forever',
+        'lp_boost': 'LP Booster',
+        'lp_boost_desc': 'Top up LP balance',
+        'lp_boost_reward': '+50 LP to balance',
+        'mega_boost': 'Mega-booster',
+        'mega_boost_desc': 'Promo! Huge reward set',
+        'mega_boost_reward': 'Limited offer',
+        'how_to_pay_stars': 'How to pay with stars?',
+        'how_to_pay_stars_desc': 'Click "Buy", confirm payment in Telegram window. After successful payment, the upgrade will be credited automatically!',
+        'how_to_pay_ton': 'How to pay with TON?',
+        'how_to_pay_ton_desc': 'Click "Buy with TON" → connect wallet → confirm payment → bonus will be credited automatically!',
 
         // ===== MODALS =====
-        'my_tickets_title': 'My tickets',
-        'no_tickets': '😢 You have no tickets yet',
+        'my_tickets_title': '🎫 My tickets',
         'ticket': 'Ticket',
         'purchase': 'Purchase',
         'winning_combo': 'WINNING COMBINATION',
         'reveal_all_cells': '🔓 Reveal all cells of this ticket',
         'matches': 'Matches',
+        'leaderboard_title': '🏆 Leaderboard',
+        'daily_timer_label': 'Until the end of the day and reward distribution:',
+        'top_day': '🏆 Top of the day',
+        'top_week': '📅 Top of the week',
+        'top_month': '📆 Top of the month',
+        'coming_soon_title': 'Coming soon!',
+        'coming_soon_text': 'Weekly and monthly tops will be added in the coming days',
+        'withdraw': '💸 Withdraw USDT',
+        'new_withdrawal': '📤 New withdrawal',
+        'withdrawal_history': '📋 History',
+        'your_balance_usdt': 'Your USDT balance',
+        'withdrawal_amount': '💰 Withdrawal amount',
+        'min_2_usdt': 'Minimum 2 USDT',
+        'wallet_address': '🏦 Wallet address',
+        'network': '🌐 Network',
+        'send_request': '📤 Send request',
+        'no_withdrawals': 'History is empty',
+        'activate_promo': '🎫 Activate promo code',
+        'enter_promo': 'Enter promo code',
+        'activate': '🎁 Activate',
+        'select_prefix': '🏷️ Select prefix',
+        'all_referrals': '👥 All invited referrals',
+        'next': 'Next →',
+        'skip': 'Skip',
 
         // ===== DAILY REWARDS =====
         'daily_rewards': 'Daily rewards',
@@ -6727,146 +6832,38 @@ const TRANSLATIONS = {
         'achievements_title': 'Achievements',
         'completed_of': 'completed of',
         'achievements_list': 'Achievements list',
-        'top_players': 'Top players',
         'no_achievements': 'No achievements',
         'no_players': 'No players with achievements',
         'achievement_unlocked': '🏆 CONGRATULATIONS! You completed an achievement!',
+        'ach_autoclicker': 'Autoclicker',
+        'ach_investor': 'Investor',
+        'ach_social': 'Social',
+        'ach_gambler': 'Gambler',
+        'ach_lucky': 'Lucky',
+        'ach_liker': 'Liker',
+        'ach_hater': 'Hater',
+        'ach_ad_lover': 'TV Lover',
+        'ach_spender': 'Spender',
+        'ach_task_master': 'Task Master',
+        'ach_brave': 'Brave',
+        'ach_lucky_fortune': 'Lucky Fortune',
+        'ach_gambler_fortune': 'Gambler Fortune',
+        'ach_crazy': 'Crazy',
+        'ach_desc_autoclicker': 'Make 50,000 clicks on the coin',
+        'ach_desc_investor': 'Buy 30 upgrades in the shop',
+        'ach_desc_social': 'Invite 10 referrals',
+        'ach_desc_gambler': 'Buy 100 tickets in Challenge',
+        'ach_desc_lucky': 'Win Challenge 5 times',
+        'ach_desc_liker': 'Give 200 likes',
+        'ach_desc_hater': 'Give 200 dislikes',
+        'ach_desc_ad_lover': 'Watch 100 ads',
+        'ach_desc_spender': 'Spend 50,000 WG Coin',
+        'ach_desc_task_master': 'Complete 10 tasks',
+        'ach_desc_brave': 'Make 100 bets in Team Fortune',
+        'ach_desc_lucky_fortune': 'Win 100 times in Team Fortune',
+        'ach_desc_gambler_fortune': 'Bet 200,000 WG in Team Fortune',
+        'ach_desc_crazy': 'Make 1000 bets in Team Fortune',
 
-        // ===== FORTUNE =====
-        'fortune': 'Team Fortune',
-        'fortune_play': 'Play',
-        'fortune_history': 'My history',
-        'round_ends': 'ROUND ENDS IN',
-        'your_balance_wg': 'Your WG balance',
-        'team_yellow': 'Team Yellow',
-        'team_red': 'Team Red',
-        'total_pool': 'Total pool',
-        'bet_yellow': '💰 Bet on Yellow',
-        'bet_red': '💰 Bet on Red',
-        'no_bets': '🤝 No bets yet',
-        'place_bet': '💰 Place a bet',
-        'bet_amount': 'Bet amount (min 10 WG)',
-        'confirm_bet': '🎲 Confirm bet',
-        'no_history': '📭 No game history yet',
-        'win': 'WIN',
-        'lose': 'LOSE',
-
-        // ===== WITHDRAWAL =====
-        'withdraw': 'Withdraw USDT',
-        'new_withdrawal': 'New withdrawal',
-        'withdrawal_history': 'History',
-        'your_balance_usdt': 'Your USDT balance',
-        'withdrawal_amount': 'Withdrawal amount',
-        'min_2_usdt': 'Minimum 2 USDT',
-        'wallet_address': 'Wallet address',
-        'network': 'Network',
-        'send_request': '📤 Send request',
-        'no_withdrawals': 'History is empty',
-
-        // ===== CONTEST =====
-        'contest': 'Referral Contest',
-        'contest_prize': 'PRIZE POOL',
-        'contest_winners': 'winners',
-        'contest_tickets': 'tickets',
-        'contest_rules': 'CONTEST RULES',
-        'contest_rules_1': 'Contest started on June 14, 2026, 19:00 MSK',
-        'contest_rules_2': 'Invite new friends during the contest',
-        'contest_rules_3': 'Each friend must make 300 clicks on the coin',
-        'contest_rules_4': 'For every 3 completed referrals → 1 ticket',
-        'contest_rules_5': 'More tickets → higher chance to win 2 000 LP',
-        'share_link': '📤 Share link',
-        'copy_link': 'Copy',
-        'new_referrals': 'NEW REFERRALS',
-        'no_new_referrals': '😢 No new referrals yet',
-        'show_all': '📋 Show all',
-        'contest_progress': 'until next ticket',
-        // ===== НОВЫЕ КЛЮЧИ ДЛЯ КОНКУРСА =====
-        'contest_loading': 'Loading...',
-        'contest_no_participants': '😢 No contest participants yet',
-        'contest_error': '❌ Error loading leaderboard',
-        'contest_link_copied': '🔗 Link copied!',
-        'contest_share_message': '🏆 Join the WereGood referral contest!\n\nInvite friends and win 2 000 LP!\n\n',
-        'contest_tickets_count': 'tickets',
-        'contest_referrals_count': 'referrals',
-        'contest_qualified': 'Qualified',
-        'contest_not_qualified': '{count}/3',
-
-        // ===== PAYDAY =====
-        'payday_active': '🔥 PAYDAY ACTIVE! Multiplier:',
-        'payday_x': 'x',
-        'payday_cooldown_energy': '⏱️ Cooldown: 2 min (was 5)',
-        'payday_cooldown_limit': '⏱️ Cooldown: 2 min (was 10)',
-
-        // ===== COMMON =====
-        'loading': 'Loading...',
-        'error': 'Error',
-        'success': 'Success',
-        'close': 'Close',
-        'back': 'Back',
-        'save': 'Save',
-        'cancel': 'Cancel',
-        'confirm': 'Confirm',
-        'copy': 'Copy',
-        'copied': 'Copied!',
-        'share': 'Share',
-        'minute': 'min',
-        'hours': 'h',
-        'days': 'd',
-        'seconds': 's',
-        'ago': 'ago',
-        'online': 'Online',
-        'players': 'players',
-
-                 // ===== LOTTERY =====
-        'lottery': 'Challenge',
-        'daily_challenge': 'Daily Challenge',
-        'main_pool': 'MAIN POOL',
-        'your_lp_balance': 'YOUR LP BALANCE',
-        'tickets': 'tickets',
-        'max_10': 'Max 10',
-        'participate': 'Participate for 100 LP',
-        'my_tickets': 'My tickets',
-        'waiting_draw': 'Waiting for draw at 21:00',
-        'how_it_works': 'How it works?',
-        'how_it_works_desc': 'Participate for 100 LP → At 21:00 winning combination appears → You have 3 hours to scratch your ticket → Winner gets the whole pool in USDT!',
-        'recent_participants': '📋 Recent participants',
-        'top_matches': '🏆 TOP MATCHES',
-        'no_tickets': '😢 You have no tickets yet',
-        'draw_started': '🎉 THE DRAW HAS HAPPENED! 🎉',
-        'draw_instruction': 'Swipe your finger across the cells to scratch off the protective layer! You have 3 hours!',
-        'draw_in_progress': 'Draw in progress...',
-        // ===== MODALS =====
-        'my_tickets_title': '🎫 My tickets',
-        'no_tickets': '😢 You have no tickets yet',
-        'ticket': 'Ticket',
-        'purchase': 'Purchase',
-        'winning_combo': 'WINNING COMBINATION',
-        'reveal_all_cells': '🔓 Reveal all cells of this ticket',
-        'matches': 'Matches',
-        'leaderboard_title': '🏆 Leaderboard',
-        'daily_timer_label': 'Until the end of the day and reward distribution:',
-        'top_day': '🏆 Top of the day',
-        'top_week': '📅 Top of the week',
-        'top_month': '📆 Top of the month',
-        'coming_soon_title': 'Coming soon!',
-        'coming_soon_text': 'Weekly and monthly tops will be added in the coming days',
-        'withdraw': '💸 Withdraw USDT',
-        'new_withdrawal': '📤 New withdrawal',
-        'withdrawal_history': '📋 History',
-        'your_balance_usdt': 'Your USDT balance',
-        'withdrawal_amount': '💰 Withdrawal amount',
-        'min_2_usdt': 'Minimum 2 USDT',
-        'wallet_address': '🏦 Wallet address',
-        'network': '🌐 Network',
-        'send_request': '📤 Send request',
-        'no_withdrawals': 'History is empty',
-        'activate_promo': '🎫 Activate promo code',
-        'enter_promo': 'Enter promo code',
-        'activate': '🎁 Activate',
-        'select_prefix': '🏷️ Select prefix',
-        'all_referrals': '👥 All invited referrals',
-        'next': 'Next →',
-        'skip': 'Skip',
         // ===== FORTUNE =====
         'fortune': 'Team Fortune',
         'fortune_play': 'Play',
@@ -6891,15 +6888,76 @@ const TRANSLATIONS = {
         'win': 'WIN',
         'lose': 'LOSE',
         'your_balance': '💰 Your balance:',
+
         // ===== WHEEL =====
         'wheel_title': '🎡 FORTUNE WHEEL 🎡',
         'wheel_claim': '💰 Claim reward →',
+
         // ===== GAMEPAD =====
         'game_center': '🎮 Game Center',
         'fortune_desc': 'Play with friends and win!',
         'soon': 'Coming soon...',
         'new_game_coming': 'New game in development',
         'new_games_here': '✨ New games will appear here',
+
+        // ===== CONTEST =====
+        'contest': 'Referral Contest',
+        'contest_prize': 'PRIZE POOL',
+        'contest_winners': 'winners',
+        'contest_tickets': 'tickets',
+        'contest_rules': 'CONTEST RULES',
+        'contest_rules_1': 'Contest started on June 14, 2026, 19:00 MSK',
+        'contest_rules_2': 'Invite new friends during the contest',
+        'contest_rules_3': 'Each friend must make 300 clicks on the coin',
+        'contest_rules_4': 'For every 3 completed referrals → 1 ticket',
+        'contest_rules_5': 'More tickets → higher chance to win 2 000 LP',
+        'share_link': '📤 Share link',
+        'copy_link': 'Copy',
+        'new_referrals': 'NEW REFERRALS',
+        'no_new_referrals': '😢 No new referrals yet',
+        'show_all': '📋 Show all',
+        'contest_progress': 'until next ticket',
+        'contest_loading': 'Loading...',
+        'contest_no_participants': '😢 No contest participants yet',
+        'contest_error': '❌ Error loading leaderboard',
+        'contest_link_copied': '🔗 Link copied!',
+        'contest_share_message': '🏆 Join the WereGood referral contest!\n\nInvite friends and win 2 000 LP!\n\n',
+        'contest_tickets_count': 'tickets',
+        'contest_referrals_count': 'referrals',
+        'contest_qualified': 'Qualified',
+        'contest_not_qualified': '{count}/3',
+
+        // ===== PAYDAY =====
+        'payday_active': '🔥 PAYDAY ACTIVE! Multiplier:',
+        'payday_x': 'x',
+        'payday_cooldown_energy': '⏱️ Cooldown: 2 min (was 5)',
+        'payday_cooldown_limit': '⏱️ Cooldown: 2 min (was 10)',
+
+        // ===== NAVIGATION =====
+        'nav_home': 'Home',
+        'nav_shop': 'Shop',
+        'nav_lottery': 'Challenge',
+        'nav_profile': 'Profile',
+
+        // ===== COMMON =====
+        'loading': 'Loading...',
+        'error': 'Error',
+        'success': 'Success',
+        'close': 'Close',
+        'back': 'Back',
+        'save': 'Save',
+        'cancel': 'Cancel',
+        'confirm': 'Confirm',
+        'copy': 'Copy',
+        'copied': 'Copied!',
+        'share': 'Share',
+        'minute': 'min',
+        'hours': 'h',
+        'days': 'd',
+        'seconds': 's',
+        'ago': 'ago',
+        'online': 'Online',
+        'players': 'players',
     }
 };
 
