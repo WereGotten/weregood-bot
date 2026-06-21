@@ -5011,8 +5011,14 @@ def api_complete_tutorial():
 @app.route('/api/tasks', methods=['GET'])
 def api_get_tasks():
     user_id = request.args.get('user_id')
-    is_valid, user_id = validate_user_id(user_id)
-    if not is_valid:
+
+    # Проверяем валидность
+    if not user_id:
+        return jsonify({'success': False, 'error': 'user_id required'}), 400
+
+    try:
+        user_id = int(user_id)
+    except ValueError:
         return jsonify({'success': False, 'error': 'Invalid user_id'}), 400
 
     with db.get_cursor() as cursor:
@@ -5055,6 +5061,7 @@ def api_check_task_subscription():
 
     user_id = data.get('user_id')
     task_id = data.get('task_id')
+
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid:
         return jsonify({'success': False, 'error': 'Invalid user_id'}), 400
@@ -5076,7 +5083,7 @@ def api_check_task_subscription():
         task_type = task.get('task_type', 'channel')
 
         if task_type == 'channel':
-            # ---- ПРОВЕРКА ПОДПИСКИ НА КАНАЛ ----
+            # Проверка подписки на канал
             channel_username = task['channel_username'].replace('@', '')
             if not channel_username:
                 return jsonify({'success': False, 'error': 'Не указан канал'}), 400
@@ -5099,8 +5106,7 @@ def api_check_task_subscription():
                 return jsonify({'success': False, 'error': 'Ошибка при проверке'}), 500
 
         elif task_type == 'miniapp':
-            # ---- ПРОВЕРКА ОТКРЫТИЯ MINI APP ----
-            # Проверяем, есть ли запись о клике за последние 5 минут
+            # Проверка открытия Mini App (клик за последние 5 минут)
             cursor.execute('''
                 SELECT * FROM task_miniapp_clicks 
                 WHERE user_id = ? AND task_id = ? 

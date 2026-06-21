@@ -3275,35 +3275,74 @@ listDiv.innerHTML = html;
     }
 
     // ==================== ЗАДАНИЯ ====================
-    let currentTasks = [];
-    let selectedTask = null;
+let currentTasks = [];
+let selectedTask = null;
 
-    async function loadTasks() {
-        try {
-            const res = await fetch(`/api/tasks?user_id=${userId}`);
-            const data = await res.json();
-            if (data.success) {
-                currentTasks = data.tasks;
-                renderTasksList();
-            }
-        } catch(e) {
-            console.error('Error loading tasks:', e);
-        }
-    }
-
-    function getAvatarUrl(avatar) {
-        if (!avatar) return '📢';
-        if (avatar.startsWith('/static/') || avatar.startsWith('http')) {
-            return `<img src="${avatar}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML='📢';">`;
-        }
-        return '📢';
-    }
-
-    function renderTasksList() {
+async function loadTasks() {
     const container = document.getElementById('tasksList');
     if (!container) return;
 
-    if (currentTasks.length === 0) {
+    // Показываем загрузку с анимацией
+    container.innerHTML = `
+        <div style="text-align: center; padding: 40px; opacity: 0.6;">
+            <div style="display: inline-block; animation: spin 1s linear infinite; font-size: 2rem;">⏳</div>
+            <div style="margin-top: 12px; font-size: 0.85rem;">Загрузка заданий...</div>
+        </div>
+    `;
+
+    try {
+        const res = await fetch(`/api/tasks?user_id=${userId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Cache-Control': 'no-cache, no-store, must-revalidate'
+            }
+        });
+
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+
+        if (!data.success) {
+            console.error('Ошибка загрузки заданий:', data.error);
+            container.innerHTML = `<div class="empty-state">❌ ${data.error || 'Ошибка загрузки'}</div>`;
+            return;
+        }
+
+        if (!data.tasks || data.tasks.length === 0) {
+            container.innerHTML = '<div class="empty-state">📭 Пока нет доступных заданий</div>';
+            return;
+        }
+
+        currentTasks = data.tasks;
+        renderTasksList();
+
+    } catch(e) {
+        console.error('Error loading tasks:', e);
+        container.innerHTML = `
+            <div class="empty-state" style="color: #f44336;">
+                ❌ Ошибка соединения с сервером
+                <div style="font-size: 0.7rem; margin-top: 8px; opacity: 0.6;">Попробуйте обновить страницу</div>
+            </div>
+        `;
+    }
+}
+
+function getAvatarUrl(avatar) {
+    if (!avatar) return '📢';
+    if (avatar.startsWith('/static/') || avatar.startsWith('http')) {
+        return `<img src="${avatar}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML='📢';">`;
+    }
+    return '📢';
+}
+
+function renderTasksList() {
+    const container = document.getElementById('tasksList');
+    if (!container) return;
+
+    if (!currentTasks || currentTasks.length === 0) {
         container.innerHTML = '<div class="empty-state">📭 Пока нет доступных заданий</div>';
         return;
     }
@@ -3323,21 +3362,18 @@ listDiv.innerHTML = html;
         const typeIcon = taskType === 'miniapp' ? '📱' : '📢';
         const typeLabel = taskType === 'miniapp' ? 'Mini App' : 'Канал';
 
-        // ========== ГЛАВНОЕ: правильное отображение названия канала или Mini App ==========
+        // Правильное отображение названия канала или Mini App
         let channelDisplay = '';
         if (taskType === 'miniapp') {
-            // Для Mini App показываем ссылку или "Mini App"
             channelDisplay = task.miniapp_url || task.channel_link || 'Mini App';
-            // Обрезаем длинную ссылку
             if (channelDisplay.length > 30) {
                 channelDisplay = channelDisplay.substring(0, 27) + '...';
             }
         } else {
-            // Для канала показываем username
             channelDisplay = task.channel_username || 'Канал';
         }
 
-        // Аватарка: для Mini App используем специальную иконку
+        // Аватарка
         let avatarHtml = '';
         if (taskType === 'miniapp') {
             avatarHtml = '📱';
@@ -3363,22 +3399,31 @@ listDiv.innerHTML = html;
     container.innerHTML = html;
 }
 
-    function openTasksModal() {
-        loadTasks();
-        const tasksModal = document.getElementById('tasksModal');
-        if (tasksModal) tasksModal.classList.add('active');
-        document.body.style.overflow = 'hidden';
-    }
+function openTasksModal() {
+    const tasksModal = document.getElementById('tasksModal');
+    if (!tasksModal) return;
 
-    function closeTasksModal() {
-        const tasksModal = document.getElementById('tasksModal');
-        if (tasksModal) tasksModal.classList.remove('active');
-        document.body.style.overflow = '';
-    }
+    tasksModal.classList.add('active');
+    document.body.style.overflow = 'hidden';
 
-    function openTaskDetail(taskId) {
+    // Загружаем задания сразу при открытии
+    loadTasks();
+}
+
+function closeTasksModal() {
+    const tasksModal = document.getElementById('tasksModal');
+    if (tasksModal) tasksModal.classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+function openTaskDetail(taskId) {
+    // Находим задание
     selectedTask = currentTasks.find(t => t.id === taskId);
-    if (!selectedTask) return;
+
+    if (!selectedTask) {
+        showToast('❌ Задание не найдено', 'error');
+        return;
+    }
 
     let rewardIcon = '';
     if (selectedTask.reward_type === 'wg') rewardIcon = '💰';
@@ -3405,13 +3450,13 @@ listDiv.innerHTML = html;
         }
     }
 
-    // ========== ПОКАЗЫВАЕМ ТИП ==========
+    // Показываем тип
     if (taskDetailType) {
         const typeLabel = selectedTask.task_type === 'miniapp' ? '📱 Mini App' : '📢 Канал';
         taskDetailType.innerText = `Тип: ${typeLabel}`;
     }
 
-    // ========== ПОКАЗЫВАЕМ ССЫЛКУ ==========
+    // Показываем ссылку
     if (taskDetailLinkValue) {
         const link = selectedTask.task_type === 'miniapp'
             ? (selectedTask.miniapp_url || selectedTask.channel_link || 'Ссылка не указана')
@@ -3430,13 +3475,13 @@ listDiv.innerHTML = html;
         } else {
             if (selectedTask.task_type === 'miniapp') {
                 buttonsContainer.innerHTML = `
-                    <button class="task-detail-btn task-link-btn" onclick="openTaskMiniapp()">📱 Открыть Mini App</button>
-                    <button class="task-detail-btn task-check-btn" onclick="checkTaskCompletion()">✅ Проверить выполнение</button>
+                    <button class="task-detail-btn task-link-btn" onclick="openTaskMiniapp()" id="taskLinkBtn">📱 Открыть Mini App</button>
+                    <button class="task-detail-btn task-check-btn" onclick="checkTaskCompletion()" id="taskCheckBtn">✅ Проверить выполнение</button>
                 `;
             } else {
                 buttonsContainer.innerHTML = `
-                    <button class="task-detail-btn task-link-btn" onclick="openTaskChannel()">🔗 Перейти по ссылке</button>
-                    <button class="task-detail-btn task-check-btn" onclick="checkTaskCompletion()">✅ Проверить выполнение</button>
+                    <button class="task-detail-btn task-link-btn" onclick="openTaskChannel()" id="taskLinkBtn">🔗 Перейти по ссылке</button>
+                    <button class="task-detail-btn task-check-btn" onclick="checkTaskCompletion()" id="taskCheckBtn">✅ Проверить выполнение</button>
                 `;
             }
         }
@@ -3447,15 +3492,26 @@ listDiv.innerHTML = html;
 }
 
 function openTaskMiniapp() {
-    if (!selectedTask) return;
+    if (!selectedTask) {
+        showToast('❌ Ошибка: задание не выбрано', 'error');
+        return;
+    }
 
     const miniappUrl = selectedTask.miniapp_url || selectedTask.channel_link;
 
-    if (miniappUrl) {
-        // Открываем Mini App
-        window.open(miniappUrl, '_blank');
+    if (!miniappUrl) {
+        showToast('❌ Ссылка на Mini App не найдена', 'error');
+        return;
+    }
 
-        // Логируем клик по Mini App
+    // Открываем Mini App
+    window.open(miniappUrl, '_blank');
+
+    // Показываем уведомление
+    showToast('📱 Mini App открыт! Вернитесь и нажмите "Проверить"', 'info');
+
+    // Логируем клик по Mini App
+    try {
         fetch('/api/log_miniapp_click', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -3467,72 +3523,91 @@ function openTaskMiniapp() {
         .then(res => res.json())
         .then(data => {
             if (data.success) {
-                showToast('📱 Mini App открыт! Вернитесь и нажмите "Проверить"', 'info');
+                console.log('✅ Mini App клик зафиксирован');
             } else {
-                showToast('⚠️ ' + (data.error || 'Ошибка'), 'error');
+                console.warn('⚠️ Mini App клик не зафиксирован:', data.error);
             }
         })
         .catch(e => {
             console.error('Miniapp log error:', e);
-            showToast('📱 Mini App открыт! Вернитесь и нажмите "Проверить"', 'info');
         });
-    } else {
-        showToast('❌ Ссылка на Mini App не найдена', 'error');
+    } catch(e) {
+        console.error('Miniapp log error:', e);
     }
 }
 
+function closeTaskDetailModal() {
+    const taskDetailModal = document.getElementById('taskDetailModal');
+    if (taskDetailModal) taskDetailModal.classList.remove('active');
+    selectedTask = null;
+}
 
-
-    function closeTaskDetailModal() {
-        const taskDetailModal = document.getElementById('taskDetailModal');
-        if (taskDetailModal) taskDetailModal.classList.remove('active');
-        selectedTask = null;
+function openTaskChannel() {
+    if (!selectedTask) {
+        showToast('❌ Ошибка: задание не выбрано', 'error');
+        return;
     }
 
-    function openTaskChannel() {
-        if (selectedTask) {
-            window.open(selectedTask.channel_link, '_blank');
-        }
+    if (selectedTask.channel_link) {
+        window.open(selectedTask.channel_link, '_blank');
+        showToast('🔗 Канал открыт! Вернитесь и нажмите "Проверить"', 'info');
+    } else {
+        showToast('❌ Ссылка на канал не найдена', 'error');
+    }
+}
+
+async function checkTaskCompletion() {
+    if (!selectedTask) {
+        showToast('❌ Ошибка: задание не выбрано', 'error');
+        return;
     }
 
-    async function checkTaskCompletion() {
-        if (!selectedTask) {
-            showToast('Ошибка: задание не выбрано', 'error');
-            return;
-        }
-        if (selectedTask.is_completed) {
-            showToast('Вы уже выполнили это задание', 'error');
-            return;
-        }
-        const btn = document.getElementById('taskCheckBtn');
-        if (!btn) return;
-        const originalText = btn.textContent;
-        btn.disabled = true;
-        btn.textContent = '⏳ Проверка...';
-        try {
-            const res = await fetch('/api/check_task_subscription', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: userId, task_id: selectedTask.id })
-            });
-            const data = await res.json();
-            if (data.success) {
-                showToast(data.message, 'success');
-                selectedTask.is_completed = true;
-                renderTasksList();
-                closeTaskDetailModal();
-                updateStatus();
-            } else {
-                showToast(data.error, 'error');
-            }
-        } catch(e) {
-            console.error('Error checking task:', e);
-            showToast('Ошибка при проверке, попробуйте позже', 'error');
-        } finally {
-            btn.disabled = false;
-            btn.textContent = originalText;
-        }
+    if (selectedTask.is_completed) {
+        showToast('✅ Вы уже выполнили это задание', 'info');
+        return;
     }
+
+    // Находим кнопку проверки
+    const btn = document.getElementById('taskCheckBtn');
+    if (!btn) {
+        showToast('❌ Ошибка: кнопка проверки не найдена', 'error');
+        return;
+    }
+
+    // Блокируем кнопку
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Проверка...';
+
+    try {
+        const res = await fetch('/api/check_task_subscription', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id: userId,
+                task_id: selectedTask.id
+            })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            showToast(data.message || '✅ Задание выполнено!', 'success');
+            selectedTask.is_completed = true;
+            renderTasksList();
+            closeTaskDetailModal();
+            updateStatus();
+        } else {
+            showToast(data.error || '❌ Ошибка проверки', 'error');
+        }
+    } catch(e) {
+        console.error('Error checking task:', e);
+        showToast('❌ Ошибка соединения с сервером', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
 
     // ==================== ДОСТИЖЕНИЯ ====================
     async function loadAchievements() {

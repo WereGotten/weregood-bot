@@ -1,69 +1,69 @@
-<div id="tabLottery" class="tab-pane">
-    <div class="lottery-header">
-        <h2 class="section-title">
-            <img src="/static/fire.png" alt="Вызов">
-            <span>Ежедневный вызов</span>
-        </h2>
-        <div class="lottery-badge">21:00</div>
-    </div>
-
-    <div class="prize-card">
-        <div class="prize-info">
-            <div class="prize-label">🏆 ГЛАВНЫЙ ФОНД</div>
-            <div class="prize-value usdt">💰 <span id="prizePool">0</span> USDT</div>
+    <div id="tabLottery" class="tab-pane">
+        <div class="lottery-header">
+            <h2 class="section-title">
+                <img src="/static/fire.png" alt="Вызов">
+                <span>Ежедневный вызов</span>
+            </h2>
+            <div class="lottery-badge">21:00</div>
         </div>
-        <div class="prize-info">
-            <div class="prize-label">ВАШ БАЛАНС LP</div>
-            <div class="prize-value lp">
-                <img src="/static/diamond.png" alt="LP">
-                <span id="lotteryLPBalance">0</span> LP
+
+        <div class="prize-card">
+            <div class="prize-info">
+                <div class="prize-label">🏆 ГЛАВНЫЙ ФОНД</div>
+                <div class="prize-value usdt">💰 <span id="prizePool">0</span> USDT</div>
+            </div>
+            <div class="prize-info">
+                <div class="prize-label">ВАШ БАЛАНС LP</div>
+                <div class="prize-value lp">
+                    <img src="/static/diamond.png" alt="LP">
+                    <span id="lotteryLPBalance">0</span> LP
+                </div>
+            </div>
+        </div>
+
+        <div class="ticket-card">
+            <div class="ticket-stats">
+                <span>
+                    <img src="/static/ticket.png" alt="билет">
+                    <span id="ticketsCount">0</span> билетов
+                </span>
+                <span>Макс. 10</span>
+            </div>
+            <button class="buy-ticket-btn" id="ticketBtn">
+                <img src="/static/fire.png" alt="Принять участие">
+                Принять участие за 100 LP
+            </button>
+            <button class="my-tickets-btn" id="myTicketsBtn">
+                <img src="/static/ticket.png" alt="Мои билеты">
+                Мои билеты
+            </button>
+        </div>
+
+        <div id="drawStatus" class="draw-status">
+            <img src="/static/hourglass.png" alt="Ожидание" style="width: 18px; height: 18px;">
+            Ожидание розыгрыша в 21:00
+        </div>
+        <div id="drawTimer" class="draw-timer" style="display: none;"></div>
+
+        <div id="topPlayersBlock" class="top-players-section" style="display: none;">
+            <div class="top-players-header">🏆 ТОП СОВПАДЕНИЙ</div>
+            <div id="topPlayersList"></div>
+        </div>
+
+        <div class="recent-players-section" id="recentPlayersSection">
+            <div class="recent-header">
+                <span>📋 Последние участники</span>
+                <span class="recent-badge">5</span>
+            </div>
+            <div class="recent-players-list" id="recentPlayersList">
+            </div>
+        </div>
+
+        <div class="info-card">
+            <div class="info-icon">ℹ️</div>
+            <div class="info-text">
+                <h4>Как это работает?</h4>
+                <p>Участвуй за 100 LP → В 21:00 появится выигрышная комбинация → У тебя есть 3 часа, чтобы стереть билет → Победитель получает весь фонд в USDT!</p>
             </div>
         </div>
     </div>
-
-    <div class="ticket-card">
-        <div class="ticket-stats">
-            <span>
-                <img src="/static/ticket.png" alt="билет">
-                <span id="ticketsCount">0</span> билетов
-            </span>
-            <span>Макс. 10</span>
-        </div>
-        <button class="buy-ticket-btn" id="ticketBtn">
-            <img src="/static/fire.png" alt="Принять участие">
-            Принять участие за 100 LP
-        </button>
-        <button class="my-tickets-btn" id="myTicketsBtn">
-            <img src="/static/ticket.png" alt="Мои билеты">
-            Мои билеты
-        </button>
-    </div>
-
-    <div id="drawStatus" class="draw-status">
-        <img src="/static/hourglass.png" alt="Ожидание" style="width: 18px; height: 18px;">
-        Ожидание розыгрыша в 21:00
-    </div>
-    <div id="drawTimer" class="draw-timer" style="display: none;"></div>
-
-    <div id="topPlayersBlock" class="top-players-section" style="display: none;">
-        <div class="top-players-header">🏆 ТОП СОВПАДЕНИЙ</div>
-        <div id="topPlayersList"></div>
-    </div>
-
-    <div class="recent-players-section" id="recentPlayersSection">
-        <div class="recent-header">
-            <span>📋 Последние участники</span>
-            <span class="recent-badge">5</span>
-        </div>
-        <div class="recent-players-list" id="recentPlayersList">
-        </div>
-    </div>
-
-    <div class="info-card">
-        <div class="info-icon">ℹ️</div>
-        <div class="info-text">
-            <h4>Как это работает?</h4>
-            <p>Участвуй за 100 LP → В 21:00 появится выигрышная комбинация → У тебя есть 3 часа, чтобы стереть билет → Победитель получает весь фонд в USDT!</p>
-        </div>
-    </div>
-</div>
