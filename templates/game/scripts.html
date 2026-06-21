@@ -1563,16 +1563,23 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     const myTicketsBtn = document.getElementById('myTicketsBtn');
-    if (myTicketsBtn) {
-        myTicketsBtn.onclick = async () => {
-            await loadUserTickets();
-            const ticketsPage = document.getElementById('ticketsPage');
-            const bottomNav = document.getElementById('bottomNav');
-            if (ticketsPage) ticketsPage.classList.add('active');
-            if (bottomNav) bottomNav.style.display = 'none';
-            document.body.style.overflow = 'hidden';
-        };
-    }
+if (myTicketsBtn) {
+    myTicketsBtn.onclick = async () => {
+        await loadUserTickets();
+        const ticketsPage = document.getElementById('ticketsPage');
+        const bottomNav = document.getElementById('bottomNav');
+        if (ticketsPage) ticketsPage.classList.add('active');
+        if (bottomNav) bottomNav.style.display = 'none';
+        document.body.style.overflow = 'hidden';
+
+        // ========== ПЕРЕВОД ЗАГОЛОВКА "МОИ БИЛЕТЫ" ==========
+        const t = TRANSLATIONS[currentLanguage] || TRANSLATIONS.ru;
+        const titleEl = ticketsPage?.querySelector('h2');
+        if (titleEl) {
+            titleEl.textContent = t.my_tickets_title || '🎫 Мои билеты';
+        }
+    };
+}
 
     window.closeTicketsPage = function() {
         const ticketsPage = document.getElementById('ticketsPage');
@@ -2272,26 +2279,30 @@ document.addEventListener('DOMContentLoaded', function() {
         const recentSection = document.getElementById('recentPlayersSection');
         if (isDrawn && winningNumbers.length > 0) {
             if (statusDiv) {
-                statusDiv.innerHTML = '🎉 РОЗЫГРЫШ СОСТОЯЛСЯ! 🎉<br>⏳ Водите пальцем по клеткам, чтобы стереть защитный слой! У вас 3 часа!';
+                const t = TRANSLATIONS[currentLanguage] || TRANSLATIONS.ru;
+statusDiv.innerHTML = `${t.draw_started || '🎉 РОЗЫГРЫШ СОСТОЯЛСЯ! 🎉'}<br>⏳ ${t.draw_instruction || 'Водите пальцем по клеткам, чтобы стереть защитный слой! У вас 3 часа!'}`;
                 statusDiv.classList.add('active');
             }
             if (ticketBtn) {
                 ticketBtn.disabled = true;
                 ticketBtn.classList.add('disabled');
-                ticketBtn.textContent = '⏳ Идёт розыгрыш...';
+                const t = TRANSLATIONS[currentLanguage] || TRANSLATIONS.ru;
+ticketBtn.textContent = `⏳ ${t.draw_in_progress || 'Идёт розыгрыш...'}`;
             }
             if (topPlayersBlock) topPlayersBlock.style.display = 'block';
             if (recentSection) recentSection.style.display = 'none';
             updateTopPlayers();
         } else {
             if (statusDiv) {
-                statusDiv.innerHTML = '⏳ Ожидание розыгрыша в 21:00';
+                const t = TRANSLATIONS[currentLanguage] || TRANSLATIONS.ru;
+statusDiv.innerHTML = `⏳ ${t.waiting_draw || 'Ожидание розыгрыша в 21:00'}`;
                 statusDiv.classList.remove('active');
             }
             if (ticketBtn) {
                 ticketBtn.disabled = false;
                 ticketBtn.classList.remove('disabled');
-                ticketBtn.innerHTML = '<img src="/static/fire.png" alt="Принять участие" style="width: 20px; height: 20px;"> Принять участие за 100 LP';
+                const t = TRANSLATIONS[currentLanguage] || TRANSLATIONS.ru;
+ticketBtn.innerHTML = `<img src="/static/fire.png" alt="Принять участие" style="width: 20px; height: 20px;"> ${t.participate || 'Принять участие за 100 LP'}`;
             }
             if (topPlayersBlock) topPlayersBlock.style.display = 'none';
             if (recentSection) recentSection.style.display = 'block';
@@ -6503,6 +6514,10 @@ const TRANSLATIONS = {
         'how_it_works_desc': 'Участвуй за 100 LP → В 21:00 появится выигрышная комбинация → У тебя есть 3 часа, чтобы стереть билет → Победитель получает весь фонд в USDT!',
         'recent_participants': '📋 Последние участники',
         'top_matches': '🏆 ТОП СОВПАДЕНИЙ',
+        'no_tickets': '😢 У вас пока нет билетов',
+        'draw_started': '🎉 РОЗЫГРЫШ СОСТОЯЛСЯ! 🎉',
+        'draw_instruction': 'Водите пальцем по клеткам, чтобы стереть защитный слой! У вас 3 часа!',
+        'draw_in_progress': 'Идёт розыгрыш...',
     },
 
     en: {
@@ -6751,6 +6766,10 @@ const TRANSLATIONS = {
         'how_it_works_desc': 'Participate for 100 LP → At 21:00 winning combination appears → You have 3 hours to scratch your ticket → Winner gets the whole pool in USDT!',
         'recent_participants': '📋 Recent participants',
         'top_matches': '🏆 TOP MATCHES',
+        'no_tickets': '😢 You have no tickets yet',
+        'draw_started': '🎉 THE DRAW HAS HAPPENED! 🎉',
+        'draw_instruction': 'Swipe your finger across the cells to scratch off the protective layer! You have 3 hours!',
+        'draw_in_progress': 'Draw in progress...',
     }
 };
 
