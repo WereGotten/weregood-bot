@@ -5012,7 +5012,6 @@ def api_complete_tutorial():
 def api_get_tasks():
     user_id = request.args.get('user_id')
 
-    # Проверяем валидность
     if not user_id:
         return jsonify({'success': False, 'error': 'user_id required'}), 400
 
@@ -5038,7 +5037,7 @@ def api_get_tasks():
                 'id': row['id'],
                 'title': row['title'],
                 'task_type': row.get('task_type', 'channel'),
-                'miniapp_url': row.get('miniapp_url', ''),
+                'miniapp_url': row.get('miniapp_url') or '',
                 'channel_link': row['channel_link'] or '',
                 'channel_username': row['channel_username'] or '',
                 'channel_avatar': row['channel_avatar'] or '',
@@ -5693,6 +5692,8 @@ def api_admin_get_tasks():
             tasks.append({
                 'id': row['id'],
                 'title': row['title'],
+                'task_type': row.get('task_type', 'channel'),  # ← ДОБАВЬ
+                'miniapp_url': row.get('miniapp_url') or '',   # ← ДОБАВЬ
                 'channel_link': row['channel_link'],
                 'channel_username': row['channel_username'],
                 'channel_avatar': row['channel_avatar'],
