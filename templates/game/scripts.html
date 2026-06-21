@@ -3,29 +3,6 @@
     let tg = window.Telegram?.WebApp;
     let user = tg?.initDataUnsafe?.user;
 
-    // ========== ОТЛАДКА ИЗ БРАУЗЕРА ==========
-if (!user || !user.id) {
-    console.warn('⚠️ Режим отладки: использую тестового пользователя');
-    user = {
-        id: 5264622363,  // ← ЗАМЕНИ НА СВОЙ ID
-        first_name: 'Admin',
-        username: 'admin',
-        photo_url: ''
-    };
-    // Создаём фейковый WebApp
-    if (!window.Telegram) window.Telegram = {};
-    if (!window.Telegram.WebApp) {
-        window.Telegram.WebApp = {
-            initDataUnsafe: { user: user },
-            ready: function() {},
-            expand: function() {},
-            openInvoice: function() {},
-            showPopup: function() {}
-        };
-    }
-    tg = window.Telegram.WebApp;
-}
-
     let savedUserId = sessionStorage.getItem('weregood_user_id');
     let userId = null;
     let isAuthError = false;
@@ -3365,7 +3342,7 @@ function renderTasksList() {
     const container = document.getElementById('tasksList');
     if (!container) return;
 
-    if (!currentTasks || currentTasks.length === 0) {
+    if (currentTasks.length === 0) {
         container.innerHTML = '<div class="empty-state">📭 Пока нет доступных заданий</div>';
         return;
     }
@@ -3385,16 +3362,8 @@ function renderTasksList() {
         const typeIcon = taskType === 'miniapp' ? '📱' : '📢';
         const typeLabel = taskType === 'miniapp' ? 'Mini App' : 'Канал';
 
-        // Правильное отображение названия канала или Mini App
-        let channelDisplay = '';
-        if (taskType === 'miniapp') {
-            channelDisplay = task.miniapp_url || task.channel_link || 'Mini App';
-            if (channelDisplay.length > 30) {
-                channelDisplay = channelDisplay.substring(0, 27) + '...';
-            }
-        } else {
-            channelDisplay = task.channel_username || 'Канал';
-        }
+        // ========== ❌ УБИРАЕМ ССЫЛКУ ИЗ КАРТОЧКИ ==========
+        // Вместо ссылки показываем только тип задания
 
         // Аватарка
         let avatarHtml = '';
@@ -3409,8 +3378,8 @@ function renderTasksList() {
                 <div class="task-avatar">${avatarHtml}</div>
                 <div class="task-info">
                     <div class="task-channel">
-                        ${typeIcon} ${escapeHtml(channelDisplay)}
-                        <span style="font-size:0.55rem; opacity:0.5; margin-left:4px;">(${typeLabel})</span>
+                        ${typeIcon} ${typeLabel}
+                        <span style="font-size:0.55rem; opacity:0.5; margin-left:4px;"></span>
                     </div>
                     <div class="task-title">${escapeHtml(task.title)}</div>
                 </div>
