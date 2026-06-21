@@ -6154,3 +6154,52 @@ body.light-theme .star-upgrade-card {
         font-size: 0.9rem;
     }
 }
+/* ========== ПЕРЕКЛЮЧЕНИЕ ЯЗЫКА ========== */
+.language-setting {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.language-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.lang-btn {
+    background: rgba(255,255,255,0.06);
+    border: 2px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 6px 14px;
+    color: rgba(255,255,255,0.6);
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.lang-btn .flag {
+    font-size: 1rem;
+}
+
+.lang-btn:hover {
+    background: rgba(255,255,255,0.1);
+    border-color: rgba(255,215,0,0.3);
+    color: white;
+}
+
+.lang-btn.active {
+    background: rgba(255,215,0,0.15);
+    border-color: #FFD700;
+    color: #FFD700;
+    box-shadow: 0 0 20px rgba(255,215,0,0.1);
+}
+
+.lang-btn.active .flag {
+    filter: drop-shadow(0 0 4px rgba(255,215,0,0.3));
+}

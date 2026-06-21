@@ -14,12 +14,12 @@
         <div class="stat-card-glass">
             <div class="stat-card-icon"><img src="/static/wallet.png" alt="WG" style="width: 33px; height: 33px;"></div>
             <div class="stat-card-value" id="totalWG">0</div>
-            <div class="stat-card-label">WG Coin</div>
+            <div class="stat-card-label" data-lang="wg_coin">WG Coin</div>
         </div>
         <div class="stat-card-glass">
             <div class="stat-card-icon"><img src="/static/diamond.png" alt="LP" style="width: 42px; height: 42px;"></div>
             <div class="stat-card-value" id="totalLP">0</div>
-            <div class="stat-card-label">LP</div>
+            <div class="stat-card-label" data-lang="lp">LP</div>
         </div>
         <div class="stat-card-glass">
             <div class="stat-card-icon"><img src="/static/usdt_icon.png" alt="USDT" style="width: 24px; height: 24px;"></div>
@@ -29,48 +29,48 @@
         <div class="stat-card-glass">
             <div class="stat-card-icon"><img src="/static/trophy.png" alt="Побед" style="width: 28px; height: 28px;"></div>
             <div class="stat-card-value" id="profileWins">0</div>
-            <div class="stat-card-label">Побед</div>
+            <div class="stat-card-label" data-lang="wins">Побед</div>
         </div>
         <div class="stat-card-glass">
             <div class="stat-card-icon"><img src="/static/ticket.png" alt="билет" style="width: 30px; height: 30px;"></div>
             <div class="stat-card-value" id="totalTickets">0</div>
-            <div class="stat-card-label">Билетов</div>
+            <div class="stat-card-label" data-lang="tickets">Билетов</div>
         </div>
         <div class="stat-card-glass">
             <div class="stat-card-icon"><img src="/static/click.png" alt="Клики" style="width: 32px; height: 32px;"></div>
             <div class="stat-card-value" id="profileClicks">0</div>
-            <div class="stat-card-label">Кликов</div>
+            <div class="stat-card-label" data-lang="clicks">Кликов</div>
         </div>
     </div>
 
     <button class="withdrawal-btn" onclick="openWithdrawalModal()">
         <img src="/static/withdraw.png" alt="Вывести" style="width: 24px; height: 24px;">
-        Вывести USDT
+        <span data-lang="withdraw_usdt">Вывести USDT</span>
     </button>
     <button class="withdrawal-btn" onclick="openAchievementsModal()">
         <img src="/static/trophy.png" alt="Достижения" style="width: 24px; height: 24px;">
-        Достижения
+        <span data-lang="achievements">Достижения</span>
     </button>
 
     <div class="referral-section">
         <div class="referral-header">
             <div class="referral-header-icon"><img src="/static/invite.png" alt="invite" style="width: 24px; height: 24px;"></div>
             <div class="referral-header-info">
-                <div class="referral-title">Пригласи друга</div>
-                <div class="referral-subtitle">5% от трат LP + 10% от WG дохода друга → тебе</div>
+                <div class="referral-title" data-lang="invite_friend">Пригласи друга</div>
+                <div class="referral-subtitle" data-lang="referral_desc">5% от трат LP + 10% от WG дохода друга → тебе</div>
             </div>
         </div>
 
         <div style="display: flex; gap: 12px; margin-bottom: 20px;">
             <div style="flex: 1; background: rgba(255,215,0,0.08); border-radius: 16px; padding: 12px; text-align: center;">
-                <div style="font-size: 0.6rem; color: rgba(255,255,255,0.5); margin-bottom: 4px;">💰 Заработано WG</div>
+                <div style="font-size: 0.6rem; color: rgba(255,255,255,0.5); margin-bottom: 4px;" data-lang="earned_wg">💰 Заработано WG</div>
                 <div style="font-size: 1.3rem; font-weight: 700; color: #FFD700;" id="totalEarnedWG">0</div>
-                <div style="font-size: 0.55rem; color: rgba(255,255,255,0.4);">10% от кликов друга</div>
+                <div style="font-size: 0.55rem; color: rgba(255,255,255,0.4);" data-lang="referral_wg_desc">10% от кликов друга</div>
             </div>
             <div style="flex: 1; background: rgba(255,215,0,0.08); border-radius: 16px; padding: 12px; text-align: center;">
-                <div style="font-size: 0.6rem; color: rgba(255,255,255,0.5); margin-bottom: 4px;">💎 Заработано LP</div>
+                <div style="font-size: 0.6rem; color: rgba(255,255,255,0.5); margin-bottom: 4px;" data-lang="earned_lp">💎 Заработано LP</div>
                 <div style="font-size: 1.3rem; font-weight: 700; color: #00E5FF;" id="totalEarnedLP">0</div>
-                <div style="font-size: 0.55rem; color: rgba(255,255,255,0.4);">5% от трат LP друга</div>
+                <div style="font-size: 0.55rem; color: rgba(255,255,255,0.4);" data-lang="referral_lp_desc">5% от трат LP друга</div>
             </div>
         </div>
 
@@ -78,57 +78,71 @@
             <input type="text" id="referralLinkInput" readonly>
             <button class="referral-copy-btn" onclick="copyReferralLink()">
                 <img src="/static/copy.png" alt="copy" style="width: 14px; height: 14px;">
-                <span>Копировать</span>
+                <span data-lang="copy">Копировать</span>
             </button>
         </div>
 
         <button class="referral-share-btn-full" onclick="shareReferral()">
             <img src="/static/share.png" alt="share" style="width: 14px; height: 14px;">
-            <span>Поделиться ссылкой</span>
+            <span data-lang="share">Поделиться ссылкой</span>
         </button>
 
         <div class="referrals-list-header">
-            <span>👥 Рефералы</span>
+            <span data-lang="referrals">👥 Рефералы</span>
             <span class="referrals-count" id="referralsCount">0</span>
         </div>
 
         <div class="referrals-list" id="referralsList">
-            <div class="empty-referrals">😢 Пока нет друзей</div>
+            <div class="empty-referrals" data-lang="no_friends">😢 Пока нет друзей</div>
         </div>
     </div>
 
     <div class="settings-card">
         <div class="settings-header">
             <img src="/static/settings.png" alt="Настройки" style="width: 28px; height: 28px;">
-            Настройки
+            <span data-lang="settings">Настройки</span>
         </div>
         <div class="setting-item">
-            <span><img src="/static/notification.png" alt="Уведомления" style="width: 22px; height: 22px;"> Уведомления</span>
+            <span><img src="/static/notification.png" alt="Уведомления" style="width: 22px; height: 22px;"> <span data-lang="notifications">Уведомления</span></span>
             <label class="switch"><input type="checkbox" id="notificationsToggle"><span class="slider"></span></label>
         </div>
         <div class="setting-item">
-            <span><img src="/static/theme.png" alt="Тёмная тема" style="width: 22px; height: 22px;"> Тёмная тема</span>
+            <span><img src="/static/theme.png" alt="Тёмная тема" style="width: 22px; height: 22px;"> <span data-lang="dark_theme">Тёмная тема</span></span>
             <label class="switch"><input type="checkbox" id="themeToggle"><span class="slider"></span></label>
         </div>
         <div class="setting-item">
-            <span><img src="/static/sound.png" alt="Звуки" style="width: 25px; height: 25px;"> Звуки</span>
+            <span><img src="/static/sound.png" alt="Звуки" style="width: 25px; height: 25px;"> <span data-lang="sounds">Звуки</span></span>
             <label class="switch"><input type="checkbox" id="soundsToggle"><span class="slider"></span></label>
         </div>
         <div class="setting-item">
-            <span><img src="/static/vibration.png" alt="Вибрация" style="width: 25px; height: 25px;"> Вибрация</span>
+            <span><img src="/static/vibration.png" alt="Вибрация" style="width: 25px; height: 25px;"> <span data-lang="vibration">Вибрация</span></span>
             <label class="switch"><input type="checkbox" id="vibrationToggle"><span class="slider"></span></label>
         </div>
         <div class="setting-item">
-            <span><img src="/static/hide.png" alt="Скрыть из топа" style="width: 25px; height: 25px;"> Скрыть из топа</span>
+            <span><img src="/static/hide.png" alt="Скрыть из топа" style="width: 25px; height: 25px;"> <span data-lang="hide_from_top">Скрыть из топа</span></span>
             <label class="switch"><input type="checkbox" id="hideFromTopToggle"><span class="slider"></span></label>
         </div>
+
+        <!-- ===== ПЕРЕКЛЮЧАТЕЛЬ ЯЗЫКА ===== -->
+        <div class="setting-item language-setting">
+            <span><span style="font-size: 20px;">🌍</span> <span data-lang="language">Язык / Language</span></span>
+            <div class="language-buttons">
+                <button class="lang-btn" data-lang="ru" onclick="setLanguage('ru')">
+                    <span class="flag">🇷🇺</span> RU
+                </button>
+                <button class="lang-btn" data-lang="en" onclick="setLanguage('en')">
+                    <span class="flag">🇬🇧</span> EN
+                </button>
+            </div>
+        </div>
+
         <div class="setting-item">
-            <span><span style="font-size: 20px;">💎</span> TON Кошелёк</span>
-            <span id="tonWalletStatus" style="font-size:0.7rem; color:#FFD700;">Не подключён</span>
+            <span><span style="font-size: 20px;">💎</span> <span data-lang="ton_wallet">TON Кошелёк</span></span>
+            <span id="tonWalletStatus" style="font-size:0.7rem; color:#FFD700;" data-lang="not_connected">Не подключён</span>
         </div>
         <div class="setting-item">
-            <span><span style="font-size: 20px;">🔗</span> Отвязать TON кошелёк</span>
-            <button class="btn-sm" onclick="disconnectTonWallet()" style="background: rgba(244,67,54,0.2); color: #f44336; border: 1px solid rgba(244,67,54,0.3); border-radius: 20px; padding: 5px 12px;">Отвязать</button>
+            <span><span style="font-size: 20px;">🔗</span> <span data-lang="disconnect_wallet">Отвязать TON кошелёк</span></span>
+            <button class="btn-sm" onclick="disconnectTonWallet()" style="background: rgba(244,67,54,0.2); color: #f44336; border: 1px solid rgba(244,67,54,0.3); border-radius: 20px; padding: 5px 12px;" data-lang="disconnect">Отвязать</button>
         </div>
     </div>
 </div>
