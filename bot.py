@@ -5681,31 +5681,53 @@ def api_admin_chart_data():
     result = get_stats_history(period, metric)
     return jsonify({"success": True, "labels": result["labels"], "data": result["data"], "metric": metric, "period": period})
 
+
 @app.route('/api/admin/tasks', methods=['GET'])
 @require_admin
 def api_admin_get_tasks():
-    with db.get_cursor() as cursor:
-        cursor.execute('SELECT * FROM tasks ORDER BY created_at DESC')
-        rows = cursor.fetchall()
-        tasks = []
-        for row in rows:
-            tasks.append({
-                'id': row['id'],
-                'title': row['title'],
-                'task_type': row.get('task_type', 'channel'),  # ← ДОБАВЬ
-                'miniapp_url': row.get('miniapp_url') or '',   # ← ДОБАВЬ
-                'channel_link': row['channel_link'],
-                'channel_username': row['channel_username'],
-                'channel_avatar': row['channel_avatar'],
-                'reward_amount': row['reward_amount'],
-                'reward_type': row['reward_type'],
-                'daily_limit': row['daily_limit'],
-                'total_limit': row['total_limit'],
-                'completed_count': row['completed_count'],
-                'days_remaining': row['days_remaining'],
-                'is_active': bool(row['is_active'])
-            })
-        return jsonify({'success': True, 'tasks': tasks})
+    try:
+        with db.get_cursor() as cursor:
+            # Проверяем, есть ли колонка task_type
+            cursor.execute("PRAGMA table_info(tasks)")
+            columns = [col[1] for col in cursor.fetchall()]
+            has_task_type = 'task_type' in columns
+            has_miniapp_url = 'miniapp_url' in columns
+
+            cursor.execute('SELECT * FROM tasks ORDER BY created_at DESC')
+            rows = cursor.fetchall()
+            tasks = []
+            for row in rows:
+                task = {
+                    'id': row['id'],
+                    'title': row['title'],
+                    'channel_link': row['channel_link'],
+                    'channel_username': row['channel_username'],
+                    'channel_avatar': row['channel_avatar'],
+                    'reward_amount': row['reward_amount'],
+                    'reward_type': row['reward_type'],
+                    'daily_limit': row['daily_limit'],
+                    'total_limit': row['total_limit'],
+                    'completed_count': row['completed_count'],
+                    'days_remaining': row['days_remaining'],
+                    'is_active': bool(row['is_active'])
+                }
+                # Добавляем новые поля только если они есть
+                if has_task_type:
+                    task['task_type'] = row.get('task_type', 'channel')
+                else:
+                    task['task_type'] = 'channel'
+
+                if has_miniapp_url:
+                    task['miniapp_url'] = row.get('miniapp_url') or ''
+                else:
+                    task['miniapp_url'] = ''
+
+                tasks.append(task)
+            return jsonify({'success': True, 'tasks': tasks})
+    except Exception as e:
+        import traceback
+        logger.error(f"❌ Ошибка в api_admin_get_tasks: {traceback.format_exc()}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @app.route('/api/admin/create_task', methods=['POST'])
