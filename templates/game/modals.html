@@ -115,17 +115,39 @@
 <!-- ЗАДАНИЯ -->
 <div id="tasksModal" class="tasks-modal">
     <div class="tasks-modal-content">
-        <div class="tasks-modal-header"><h2>📋 Доступные задания</h2><button class="tasks-modal-close" onclick="closeTasksModal()">✕</button></div>
+        <div class="tasks-modal-header">
+            <h2>📋 Доступные задания</h2>
+            <button class="tasks-modal-close" onclick="closeTasksModal()">✕</button>
+        </div>
         <div class="tasks-list" id="tasksList"><div class="loading">Загрузка...</div></div>
     </div>
 </div>
 
-<!-- ДЕТАЛИ ЗАДАНИЯ -->
+<!-- ДЕТАЛИ ЗАДАНИЯ (ОБНОВЛЕНА ДЛЯ MINI APP) -->
 <div id="taskDetailModal" class="task-detail-modal">
     <div class="task-detail-modal-content">
-        <div class="task-detail-header"><div class="task-detail-avatar" id="taskDetailAvatar">📢</div><h3 id="taskDetailTitle"></h3></div>
-        <div class="task-detail-info"><div class="task-detail-reward"><span>🎁 Награда:</span><strong id="taskDetailReward"></strong></div><div class="task-detail-limit"><span>📊 Осталось:</span><span id="taskDetailRemaining"></span></div></div>
-        <div class="task-detail-buttons"><button class="task-detail-btn task-link-btn" id="taskLinkBtn" onclick="openTaskChannel()">🔗 Перейти по ссылке</button><button class="task-detail-btn task-check-btn" id="taskCheckBtn" onclick="checkTaskCompletion()">✅ Проверить выполнение</button></div>
+        <div class="task-detail-header">
+            <div class="task-detail-avatar" id="taskDetailAvatar">📢</div>
+            <h3 id="taskDetailTitle"></h3>
+            <div style="font-size:0.7rem; opacity:0.5; margin-top:4px;" id="taskDetailType"></div>
+        </div>
+        <div class="task-detail-info">
+            <div class="task-detail-reward">
+                <span>🎁 Награда:</span>
+                <strong id="taskDetailReward"></strong>
+            </div>
+            <div class="task-detail-limit">
+                <span>📊 Осталось:</span>
+                <span id="taskDetailRemaining"></span>
+            </div>
+            <div class="task-detail-link" id="taskDetailLink" style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.05);">
+                <span style="font-size:0.65rem; opacity:0.5;">🔗 Ссылка:</span>
+                <span id="taskDetailLinkValue" style="font-size:0.7rem; word-break:break-all; color:#FFD700;"></span>
+            </div>
+        </div>
+        <div class="task-detail-buttons" id="taskDetailButtons">
+            <!-- Кнопки генерируются в JS -->
+        </div>
         <button class="task-detail-close" onclick="closeTaskDetailModal()">Закрыть</button>
     </div>
 </div>

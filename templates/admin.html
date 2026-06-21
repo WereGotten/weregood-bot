@@ -1448,32 +1448,35 @@
         <!-- ========== ТИП ЗАДАНИЯ ========== -->
         <div class="form-group">
             <label>Тип задания</label>
-            <select class="form-select" id="taskType">
+            <select class="form-select" id="taskType" onchange="toggleTaskTypeFields()">
                 <option value="channel">📢 Подписка на канал</option>
                 <option value="miniapp">📱 Открыть Mini App</option>
             </select>
         </div>
 
-        <!-- ========== ССЫЛКА НА MINI APP (СКРЫТО ПО УМОЛЧАНИЮ) ========== -->
-        <div class="form-group" id="miniappUrlGroup" style="display: none;">
-            <label>Ссылка на Mini App</label>
-            <input type="text" class="form-input" id="taskMiniappUrl" placeholder="https://t.me/WereGooodbot/WereGood">
-            <small style="opacity: 0.5;">Игрок перейдёт по этой ссылке, чтобы выполнить задание</small>
+        <!-- ========== ПОЛЯ ДЛЯ КАНАЛА (СКРЫТЫ ПО УМОЛЧАНИЮ) ========== -->
+        <div id="channelFields">
+            <div class="form-group">
+                <label>Ссылка на канал *</label>
+                <input type="text" class="form-input" id="taskChannelLink" placeholder="https://t.me/example">
+            </div>
+            <div class="form-group">
+                <label>Username канала *</label>
+                <input type="text" class="form-input" id="taskChannelUsername" placeholder="@example (без @)">
+            </div>
+            <div class="form-group">
+                <label>URL аватарки канала</label>
+                <input type="text" class="form-input" id="taskChannelAvatar" placeholder="https://... или /static/task_avatars/photo.png">
+            </div>
         </div>
 
-        <div class="form-group">
-            <label>Ссылка на канал *</label>
-            <input type="text" class="form-input" id="taskChannelLink" placeholder="https://t.me/example">
-        </div>
-
-        <div class="form-group">
-            <label>Username канала *</label>
-            <input type="text" class="form-input" id="taskChannelUsername" placeholder="@example (без @)">
-        </div>
-
-        <div class="form-group">
-            <label>URL аватарки канала</label>
-            <input type="text" class="form-input" id="taskChannelAvatar" placeholder="https://... или /static/task_avatars/photo.png">
+        <!-- ========== ПОЛЯ ДЛЯ MINI APP ========== -->
+        <div id="miniappFields" style="display: none;">
+            <div class="form-group">
+                <label>Ссылка на Mini App *</label>
+                <input type="text" class="form-input" id="taskMiniappUrl" placeholder="https://t.me/WereGooodbot/WereGood">
+                <small style="opacity: 0.5;">Игрок перейдёт по этой ссылке, чтобы выполнить задание</small>
+            </div>
         </div>
 
         <div class="form-grid-2">
@@ -2357,8 +2360,9 @@
     document.getElementById('taskDaysRemaining').value = '7';
     document.getElementById('taskIsActive').value = 'true';
 
-    // Скрываем поле Mini App
-    document.getElementById('miniappUrlGroup').style.display = 'none';
+    // Показываем поля для канала по умолчанию
+    document.getElementById('channelFields').style.display = 'block';
+    document.getElementById('miniappFields').style.display = 'none';
 
     document.getElementById('taskModal').classList.add('active');
 }
@@ -2369,8 +2373,8 @@
     document.getElementById('taskTitle').value = task.title;
     document.getElementById('taskType').value = task.task_type || 'channel';
     document.getElementById('taskMiniappUrl').value = task.miniapp_url || '';
-    document.getElementById('taskChannelLink').value = task.channel_link;
-    document.getElementById('taskChannelUsername').value = task.channel_username;
+    document.getElementById('taskChannelLink').value = task.channel_link || '';
+    document.getElementById('taskChannelUsername').value = task.channel_username || '';
     document.getElementById('taskChannelAvatar').value = task.channel_avatar || '';
     document.getElementById('taskRewardAmount').value = task.reward_amount;
     document.getElementById('taskRewardType').value = task.reward_type;
@@ -2379,13 +2383,8 @@
     document.getElementById('taskDaysRemaining').value = task.days_remaining;
     document.getElementById('taskIsActive').value = task.is_active ? 'true' : 'false';
 
-    // Показываем/скрываем поле для Mini App
-    const miniappGroup = document.getElementById('miniappUrlGroup');
-    if (task.task_type === 'miniapp') {
-        miniappGroup.style.display = 'block';
-    } else {
-        miniappGroup.style.display = 'none';
-    }
+    // Показываем правильные поля
+    toggleTaskTypeFields();
 
     document.getElementById('taskModal').classList.add('active');
 }
@@ -3429,6 +3428,26 @@
             miniappGroup.style.display = 'none';
         }
     });
+        // ========== ПЕРЕКЛЮЧЕНИЕ ПОЛЕЙ В ЗАВИСИМОСТИ ОТ ТИПА ЗАДАНИЯ ==========
+function toggleTaskTypeFields() {
+    const taskType = document.getElementById('taskType').value;
+    const channelFields = document.getElementById('channelFields');
+    const miniappFields = document.getElementById('miniappFields');
+
+    if (taskType === 'miniapp') {
+        channelFields.style.display = 'none';
+        miniappFields.style.display = 'block';
+        // Очищаем поля канала, чтобы не мешали
+        document.getElementById('taskChannelLink').value = '';
+        document.getElementById('taskChannelUsername').value = '';
+        document.getElementById('taskChannelAvatar').value = '';
+    } else {
+        channelFields.style.display = 'block';
+        miniappFields.style.display = 'none';
+        // Очищаем поле Mini App
+        document.getElementById('taskMiniappUrl').value = '';
+    }
+}
     </script>
 </body>
 </html>

@@ -962,444 +962,439 @@ def update_fortune_achievements(user_id, bet_amount=None, is_win=False, is_new_r
     except Exception as e:
         logger.error(f"Ошибка обновления достижений Фортуны: {e}")
 
-# ========== ИНИЦИАЛИЗАЦИЯ БД ==========
-def init_db():
-    with db.get_cursor() as cursor:
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS users (
-                user_id INTEGER PRIMARY KEY,
-                wg REAL DEFAULT 0,
-                lp INTEGER DEFAULT 0,
-                energy INTEGER DEFAULT 500,
-                last_energy_update REAL,
-                tickets TEXT DEFAULT '[]',
-                total_clicks INTEGER DEFAULT 0,
-                upgrade_counts TEXT DEFAULT '{"1":0,"2":0,"3":0}',
-                username TEXT DEFAULT '',
-                first_name TEXT DEFAULT '',
-                last_name TEXT DEFAULT '',
-                ticket_counter INTEGER DEFAULT 0,
-                referral_code TEXT DEFAULT '',
-                referrer_id INTEGER DEFAULT 0,
-                likes INTEGER DEFAULT 0,
-                dislikes INTEGER DEFAULT 0,
-                settings TEXT DEFAULT '{"theme":"dark"}',
-                avatar_url TEXT DEFAULT '',
-                usdt REAL DEFAULT 0,
-                wins INTEGER DEFAULT 0,
-                role TEXT DEFAULT 'player',
-                stars INTEGER DEFAULT 0,
-                max_energy INTEGER DEFAULT 500,
-                energy_upgrades INTEGER DEFAULT 0,
-                energy_limit_upgrades INTEGER DEFAULT 0,
-                unlocked_prefixes TEXT DEFAULT '["player"]',
-                tutorial_completed INTEGER DEFAULT 0,
-                ton_wallet TEXT DEFAULT '',
-                banned_until REAL DEFAULT 0,
-                ban_reason TEXT DEFAULT '',
-                banned_by INTEGER DEFAULT 0,
-                completed_achievements INTEGER DEFAULT 0,
-                daily_clicks INTEGER DEFAULT 0
-            )
-        ''')
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS lottery (
-                id INTEGER PRIMARY KEY,
-                prize_pool REAL DEFAULT 0,
-                tickets TEXT DEFAULT '[]',
-                winning_numbers TEXT DEFAULT '',
-                last_draw TIMESTAMP,
-                global_ticket_counter INTEGER DEFAULT 0,
-                is_drawn BOOLEAN DEFAULT 0,
-                draw_time TIMESTAMP,
-                lottery_phase TEXT DEFAULT 'buy'
-            )
-        ''')
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS referrals (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                referrer_id INTEGER,
-                referred_id INTEGER,
-                username TEXT,
-                first_name TEXT,
-                total_spent_lp INTEGER DEFAULT 0,
-                total_earned_wg REAL DEFAULT 0,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS votes (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                voter_id INTEGER,
-                target_id INTEGER,
-                vote_type TEXT,
-                last_vote_time TEXT,
-                UNIQUE(voter_id, target_id)
-            )
-        ''')
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS lottery_tickets_history (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER,
-                ticket_number INTEGER,
-                username TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS successful_payments (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER,
-                telegram_payment_charge_id TEXT UNIQUE,
-                payload TEXT,
-                amount INTEGER,
-                granted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS used_ton_transactions (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                tx_hash TEXT UNIQUE,
-                user_id INTEGER,
-                used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS system_logs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                timestamp TEXT,
-                action TEXT,
-                user_id INTEGER,
-                username TEXT,
-                details TEXT,
-                log_type TEXT DEFAULT 'user'
-            )
-        ''')
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS withdrawal_requests (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER,
-                username TEXT,
-                amount REAL,
-                address TEXT,
-                network TEXT,
-                status TEXT DEFAULT 'pending',
-                created_at TEXT,
-                processed_at TEXT
-            )
-        ''')
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS stats_history (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                date TEXT UNIQUE,
-                clicks INTEGER DEFAULT 0,
-                ad_views INTEGER DEFAULT 0,
-                stars_donated INTEGER DEFAULT 0,
-                online_peak INTEGER DEFAULT 0,
-                tickets_sold INTEGER DEFAULT 0,
-                new_users INTEGER DEFAULT 0
-            )
-        ''')
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS daily_rewards (
-                user_id INTEGER PRIMARY KEY,
-                current_day INTEGER DEFAULT 0,
-                last_claim_date TEXT,
-                streak_start_date TEXT,
-                recovered_count INTEGER DEFAULT 0
-            )
-        ''')
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS promo_codes (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                code TEXT UNIQUE NOT NULL,
-                reward_type TEXT NOT NULL,
-                reward_amount INTEGER NOT NULL,
-                max_uses INTEGER NOT NULL,
-                used_count INTEGER DEFAULT 0,
-                password TEXT,
-                created_by INTEGER,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                expires_at TIMESTAMP,
-                is_active BOOLEAN DEFAULT 1
-            )
-        ''')
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS promo_activations (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                promo_id INTEGER,
-                user_id INTEGER,
-                activated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (promo_id) REFERENCES promo_codes(id)
-            )
-        ''')
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS ad_watch_history (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER,
-                ad_type TEXT,
-                watched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS tasks (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title TEXT NOT NULL,
-                channel_link TEXT NOT NULL,
-                channel_username TEXT NOT NULL,
-                channel_avatar TEXT DEFAULT '',
-                reward_amount INTEGER DEFAULT 10,
-                reward_type TEXT DEFAULT 'wg',
-                daily_limit INTEGER DEFAULT 1,
-                total_limit INTEGER DEFAULT 100,
-                completed_count INTEGER DEFAULT 0,
-                days_remaining INTEGER DEFAULT 7,
-                is_active BOOLEAN DEFAULT 1,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS user_tasks (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER,
-                task_id INTEGER,
-                completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                reward_claimed BOOLEAN DEFAULT 1,
-                UNIQUE(user_id, task_id)
-            )
-        ''')
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS achievements (
-                id INTEGER PRIMARY KEY,
-                name TEXT UNIQUE NOT NULL,
-                display_name TEXT NOT NULL,
-                description TEXT NOT NULL,
-                icon TEXT NOT NULL,
-                target_count INTEGER NOT NULL
-            )
-        ''')
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS user_achievements (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                achievement_id INTEGER NOT NULL,
-                current_count INTEGER DEFAULT 0,
-                is_completed BOOLEAN DEFAULT 0,
-                completed_at TIMESTAMP,
-                UNIQUE(user_id, achievement_id)
-            )
-        ''')
-        # ========== НОВЫЕ ТАБЛИЦЫ ДЛЯ ФОРТУНЫ ==========
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS fortune_bets (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                round_id TEXT NOT NULL,
-                user_id INTEGER NOT NULL,
-                team TEXT NOT NULL,
-                amount REAL NOT NULL,
-                net_amount REAL NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS fortune_rounds (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                round_id TEXT NOT NULL,
-                winner_team TEXT,
-                start_time TIMESTAMP,
-                end_time TIMESTAMP,
-                yellow_pool REAL DEFAULT 0,
-                red_pool REAL DEFAULT 0
-            )
-        ''')
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS fortune_history (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                round_id TEXT NOT NULL,
-                team TEXT NOT NULL,
-                amount REAL NOT NULL,
-                result TEXT NOT NULL,
-                win_amount REAL DEFAULT 0,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS fortune_active_bets (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                round_id TEXT NOT NULL,
-                user_id INTEGER NOT NULL,
-                team TEXT NOT NULL,
-                amount REAL NOT NULL,
-                net_amount REAL NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS task_miniapp_clicks (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER,
-                task_id INTEGER,
-                clicked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE(user_id, task_id)
-            )
-        ''')
-        print("✅ Создана таблица task_miniapp_clicks")
-
-        # ========== PAYDAY БОНУС ==========
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS payday_bonus (
-                id INTEGER PRIMARY KEY CHECK (id = 1),
-                multiplier REAL DEFAULT 1.0,
-                start_time TIMESTAMP,
-                end_time TIMESTAMP,
-                is_active BOOLEAN DEFAULT 0,
-                updated_by INTEGER DEFAULT 0,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-
-        # Добавляем запись если её нет
-        cursor.execute("SELECT id FROM payday_bonus WHERE id = 1")
-        if not cursor.fetchone():
+    # ========== ИНИЦИАЛИЗАЦИЯ БД ==========
+    def init_db():
+        with db.get_cursor() as cursor:
+            # ========== ОСНОВНЫЕ ТАБЛИЦЫ ==========
             cursor.execute('''
-                INSERT INTO payday_bonus (id, multiplier, is_active)
-                VALUES (1, 1.0, 0)
+                CREATE TABLE IF NOT EXISTS users (
+                    user_id INTEGER PRIMARY KEY,
+                    wg REAL DEFAULT 0,
+                    lp INTEGER DEFAULT 0,
+                    energy INTEGER DEFAULT 500,
+                    last_energy_update REAL,
+                    tickets TEXT DEFAULT '[]',
+                    total_clicks INTEGER DEFAULT 0,
+                    upgrade_counts TEXT DEFAULT '{"1":0,"2":0,"3":0}',
+                    username TEXT DEFAULT '',
+                    first_name TEXT DEFAULT '',
+                    last_name TEXT DEFAULT '',
+                    ticket_counter INTEGER DEFAULT 0,
+                    referral_code TEXT DEFAULT '',
+                    referrer_id INTEGER DEFAULT 0,
+                    likes INTEGER DEFAULT 0,
+                    dislikes INTEGER DEFAULT 0,
+                    settings TEXT DEFAULT '{"theme":"dark"}',
+                    avatar_url TEXT DEFAULT '',
+                    usdt REAL DEFAULT 0,
+                    wins INTEGER DEFAULT 0,
+                    role TEXT DEFAULT 'player',
+                    stars INTEGER DEFAULT 0,
+                    max_energy INTEGER DEFAULT 500,
+                    energy_upgrades INTEGER DEFAULT 0,
+                    energy_limit_upgrades INTEGER DEFAULT 0,
+                    unlocked_prefixes TEXT DEFAULT '["player"]',
+                    tutorial_completed INTEGER DEFAULT 0,
+                    ton_wallet TEXT DEFAULT '',
+                    banned_until REAL DEFAULT 0,
+                    ban_reason TEXT DEFAULT '',
+                    banned_by INTEGER DEFAULT 0,
+                    completed_achievements INTEGER DEFAULT 0,
+                    daily_clicks INTEGER DEFAULT 0,
+                    fortune_bets_count INTEGER DEFAULT 0,
+                    fortune_wins_count INTEGER DEFAULT 0,
+                    fortune_total_bet_amount REAL DEFAULT 0
+                )
             ''')
 
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_fortune_bets_round ON fortune_bets(round_id)')
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_fortune_bets_user ON fortune_bets(user_id)')
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_fortune_rounds_id ON fortune_rounds(round_id)')
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_fortune_history_user ON fortune_history(user_id)')
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_achievements_user ON user_achievements(user_id)')
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_achievements_completed ON user_achievements(is_completed)')
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_ad_watch_user_type ON ad_watch_history(user_id, ad_type)')
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_ad_watch_date ON ad_watch_history(watched_at)')
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_logs_timestamp ON system_logs(timestamp DESC)')
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_logs_user_id ON system_logs(user_id)')
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_tasks ON user_tasks(user_id, task_id)')
-        # ========== МИГРАЦИЯ СТАРЫХ ТАБЛИЦ ==========
-        for col in ['banned_until', 'ban_reason', 'banned_by']:
-            try:
-                cursor.execute(f"ALTER TABLE users ADD COLUMN {col} DEFAULT 0")
-            except:
-                pass
-        for col in ['completed_achievements', 'daily_clicks']:
-            try:
-                cursor.execute(f"ALTER TABLE users ADD COLUMN {col} INTEGER DEFAULT 0")
-            except:
-                pass
-        for col in ['is_drawn', 'draw_time', 'global_ticket_counter', 'lottery_phase']:
-            try:
-                cursor.execute(f"ALTER TABLE lottery ADD COLUMN {col} DEFAULT 0")
-            except:
-                pass
-            # ========== МИГРАЦИЯ ДЛЯ НОВЫХ ДОСТИЖЕНИЙ ФОРТУНЫ ==========
-            try:
-                cursor.execute("ALTER TABLE users ADD COLUMN fortune_bets_count INTEGER DEFAULT 0")
-                print("✅ Добавлена колонка fortune_bets_count")
-            except:
-                pass
-
-            try:
-                cursor.execute("ALTER TABLE users ADD COLUMN fortune_wins_count INTEGER DEFAULT 0")
-                print("✅ Добавлена колонка fortune_wins_count")
-            except:
-                pass
-
-            try:
-                cursor.execute("ALTER TABLE users ADD COLUMN fortune_total_bet_amount REAL DEFAULT 0")
-                print("✅ Добавлена колонка fortune_total_bet_amount")
-            except:
-                pass
-        try:
-            cursor.execute("SELECT end_time FROM fortune_rounds LIMIT 1")
-        except sqlite3.OperationalError:
-            cursor.execute("ALTER TABLE fortune_rounds ADD COLUMN end_time TIMESTAMP")
-            print("✅ Добавлена колонка end_time в fortune_rounds")
-        try:
-            cursor.execute("SELECT winner_team FROM fortune_rounds LIMIT 1")
-        except sqlite3.OperationalError:
-            cursor.execute("ALTER TABLE fortune_rounds ADD COLUMN winner_team TEXT")
-            print("✅ Добавлена колонка winner_team в fortune_rounds")
-        try:
-            cursor.execute("SELECT yellow_pool FROM fortune_rounds LIMIT 1")
-        except sqlite3.OperationalError:
-            cursor.execute("ALTER TABLE fortune_rounds ADD COLUMN yellow_pool REAL DEFAULT 0")
-            print("✅ Добавлена колонка yellow_pool в fortune_rounds")
-        try:
-            cursor.execute("SELECT red_pool FROM fortune_rounds LIMIT 1")
-        except sqlite3.OperationalError:
-            cursor.execute("ALTER TABLE fortune_rounds ADD COLUMN red_pool REAL DEFAULT 0")
-            print("✅ Добавлена колонка red_pool в fortune_rounds")
-        try:
-            cursor.execute("SELECT net_amount FROM fortune_active_bets LIMIT 1")
-        except sqlite3.OperationalError:
-            cursor.execute("ALTER TABLE fortune_active_bets ADD COLUMN net_amount REAL DEFAULT 0")
-            print("✅ Добавлена колонка net_amount в fortune_active_bets")
-
-            # Добавь в init_db() после других ALTER TABLE:
-            try:
-                cursor.execute("ALTER TABLE users ADD COLUMN fortune_bets_count INTEGER DEFAULT 0")
-                print("✅ Добавлена колонка fortune_bets_count")
-            except:
-                pass
-
-            try:
-                cursor.execute("ALTER TABLE users ADD COLUMN fortune_wins_count INTEGER DEFAULT 0")
-                print("✅ Добавлена колонка fortune_wins_count")
-            except:
-                pass
-
-            try:
-                cursor.execute("ALTER TABLE users ADD COLUMN fortune_total_bet_amount REAL DEFAULT 0")
-                print("✅ Добавлена колонка fortune_total_bet_amount")
-            except:
-                pass
-
-            # После создания таблицы tasks
-            try:
-                cursor.execute("ALTER TABLE tasks ADD COLUMN task_type TEXT DEFAULT 'channel'")
-                print("✅ Добавлена колонка task_type в tasks")
-            except:
-                pass
-
-            try:
-                cursor.execute("ALTER TABLE tasks ADD COLUMN miniapp_url TEXT DEFAULT ''")
-                print("✅ Добавлена колонка miniapp_url в tasks")
-            except:
-                pass
-        # ========== ЗАПОЛНЕНИЕ ДОСТИЖЕНИЙ ==========
-        # ========== ЗАПОЛНЕНИЕ ДОСТИЖЕНИЙ ==========
-        achievements_list = [
-            ('autoclicker', '🏆 Автокликер', 'Сделать 50 000 кликов по монете', '🖱️', 50000),
-            ('investor', '💰 Инвестор', 'Купить 30 улучшений в магазине', '📈', 30),
-            ('social', '👥 Общительный', 'Пригласить 10 рефералов', '🤝', 10),
-            ('gambler', '🎲 Азартный', 'Купить 100 билетов в Вызове', '🎫', 100),
-            ('lucky', '🍀 Счастливчик', 'Выиграть Вызов 5 раз', '🏆', 5),
-            ('liker', '👍 Подписчик', 'Поставить 200 лайков', '❤️', 200),
-            ('hater', '👎 Хейтер', 'Поставить 200 дизлайков', '💔', 200),
-            ('ad_lover', '📺 Любитель TV', 'Просмотреть 100 реклам', '🎬', 100),
-            ('spender', '💸 Транжира', 'Потратить 50 000 WG Coin', '💎', 50000),
-            ('task_master', '📋 Выполнитель', 'Выполнить 10 заданий', '✅', 10),
-            # ========== НОВЫЕ ДОСТИЖЕНИЯ ФОРТУНЫ ==========
-            ('brave', '⚔️ Бесстрашный', 'Сделать 100 ставок в Командной Фортуне', '🎲', 100),
-            ('lucky_fortune', '🍀 Везучий', 'Выиграть 100 раз в Командной Фортуне', '🏆', 100),
-            ('gambler_fortune', '🎰 Лудоман', 'Поставить 200 000 WG в Командной Фортуне', '💰', 200000),
-            ('crazy', '🤪 Сумасшедший', 'Сделать 1000 ставок в Командной Фортуне', '🔥', 1000)
-        ]
-        for ach in achievements_list:
             cursor.execute('''
-                INSERT OR IGNORE INTO achievements (name, display_name, description, icon, target_count)
-                VALUES (?, ?, ?, ?, ?)
-            ''', ach)
-        cursor.execute("SELECT * FROM lottery LIMIT 1")
-        if not cursor.fetchone():
-            cursor.execute(
-                "INSERT INTO lottery (prize_pool, tickets, winning_numbers, is_drawn, lottery_phase) VALUES (0, '[]', '', 0, 'buy')")
+                CREATE TABLE IF NOT EXISTS lottery (
+                    id INTEGER PRIMARY KEY,
+                    prize_pool REAL DEFAULT 0,
+                    tickets TEXT DEFAULT '[]',
+                    winning_numbers TEXT DEFAULT '',
+                    last_draw TIMESTAMP,
+                    global_ticket_counter INTEGER DEFAULT 0,
+                    is_drawn BOOLEAN DEFAULT 0,
+                    draw_time TIMESTAMP,
+                    lottery_phase TEXT DEFAULT 'buy'
+                )
+            ''')
 
-init_db()
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS referrals (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    referrer_id INTEGER,
+                    referred_id INTEGER,
+                    username TEXT,
+                    first_name TEXT,
+                    total_spent_lp INTEGER DEFAULT 0,
+                    total_earned_wg REAL DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS votes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    voter_id INTEGER,
+                    target_id INTEGER,
+                    vote_type TEXT,
+                    last_vote_time TEXT,
+                    UNIQUE(voter_id, target_id)
+                )
+            ''')
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS lottery_tickets_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER,
+                    ticket_number INTEGER,
+                    username TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS successful_payments (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER,
+                    telegram_payment_charge_id TEXT UNIQUE,
+                    payload TEXT,
+                    amount INTEGER,
+                    granted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS used_ton_transactions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    tx_hash TEXT UNIQUE,
+                    user_id INTEGER,
+                    used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS system_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp TEXT,
+                    action TEXT,
+                    user_id INTEGER,
+                    username TEXT,
+                    details TEXT,
+                    log_type TEXT DEFAULT 'user'
+                )
+            ''')
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS withdrawal_requests (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER,
+                    username TEXT,
+                    amount REAL,
+                    address TEXT,
+                    network TEXT,
+                    status TEXT DEFAULT 'pending',
+                    created_at TEXT,
+                    processed_at TEXT
+                )
+            ''')
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS stats_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    date TEXT UNIQUE,
+                    clicks INTEGER DEFAULT 0,
+                    ad_views INTEGER DEFAULT 0,
+                    stars_donated INTEGER DEFAULT 0,
+                    online_peak INTEGER DEFAULT 0,
+                    tickets_sold INTEGER DEFAULT 0,
+                    new_users INTEGER DEFAULT 0
+                )
+            ''')
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS daily_rewards (
+                    user_id INTEGER PRIMARY KEY,
+                    current_day INTEGER DEFAULT 0,
+                    last_claim_date TEXT,
+                    streak_start_date TEXT,
+                    recovered_count INTEGER DEFAULT 0
+                )
+            ''')
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS promo_codes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    code TEXT UNIQUE NOT NULL,
+                    reward_type TEXT NOT NULL,
+                    reward_amount INTEGER NOT NULL,
+                    max_uses INTEGER NOT NULL,
+                    used_count INTEGER DEFAULT 0,
+                    password TEXT,
+                    created_by INTEGER,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    expires_at TIMESTAMP,
+                    is_active BOOLEAN DEFAULT 1
+                )
+            ''')
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS promo_activations (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    promo_id INTEGER,
+                    user_id INTEGER,
+                    activated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (promo_id) REFERENCES promo_codes(id)
+                )
+            ''')
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS ad_watch_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER,
+                    ad_type TEXT,
+                    watched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+
+            # ========== ТАБЛИЦА ЗАДАНИЙ С НОВЫМИ ПОЛЯМИ ==========
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS tasks (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title TEXT NOT NULL,
+                    task_type TEXT DEFAULT 'channel',
+                    miniapp_url TEXT DEFAULT '',
+                    channel_link TEXT DEFAULT '',
+                    channel_username TEXT DEFAULT '',
+                    channel_avatar TEXT DEFAULT '',
+                    reward_amount INTEGER DEFAULT 10,
+                    reward_type TEXT DEFAULT 'wg',
+                    daily_limit INTEGER DEFAULT 1,
+                    total_limit INTEGER DEFAULT 100,
+                    completed_count INTEGER DEFAULT 0,
+                    days_remaining INTEGER DEFAULT 7,
+                    is_active BOOLEAN DEFAULT 1,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS user_tasks (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER,
+                    task_id INTEGER,
+                    completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    reward_claimed BOOLEAN DEFAULT 1,
+                    UNIQUE(user_id, task_id)
+                )
+            ''')
+
+            # ========== ТАБЛИЦА ДЛЯ MINI APP КЛИКОВ ==========
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS task_miniapp_clicks (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER,
+                    task_id INTEGER,
+                    clicked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(user_id, task_id)
+                )
+            ''')
+            print("✅ Создана таблица task_miniapp_clicks")
+
+            # ========== ДОСТИЖЕНИЯ ==========
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS achievements (
+                    id INTEGER PRIMARY KEY,
+                    name TEXT UNIQUE NOT NULL,
+                    display_name TEXT NOT NULL,
+                    description TEXT NOT NULL,
+                    icon TEXT NOT NULL,
+                    target_count INTEGER NOT NULL
+                )
+            ''')
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS user_achievements (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    achievement_id INTEGER NOT NULL,
+                    current_count INTEGER DEFAULT 0,
+                    is_completed BOOLEAN DEFAULT 0,
+                    completed_at TIMESTAMP,
+                    UNIQUE(user_id, achievement_id)
+                )
+            ''')
+
+            # ========== ФОРТУНА ==========
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS fortune_bets (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    round_id TEXT NOT NULL,
+                    user_id INTEGER NOT NULL,
+                    team TEXT NOT NULL,
+                    amount REAL NOT NULL,
+                    net_amount REAL NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS fortune_rounds (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    round_id TEXT NOT NULL,
+                    winner_team TEXT,
+                    start_time TIMESTAMP,
+                    end_time TIMESTAMP,
+                    yellow_pool REAL DEFAULT 0,
+                    red_pool REAL DEFAULT 0
+                )
+            ''')
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS fortune_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    round_id TEXT NOT NULL,
+                    team TEXT NOT NULL,
+                    amount REAL NOT NULL,
+                    result TEXT NOT NULL,
+                    win_amount REAL DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS fortune_active_bets (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    round_id TEXT NOT NULL,
+                    user_id INTEGER NOT NULL,
+                    team TEXT NOT NULL,
+                    amount REAL NOT NULL,
+                    net_amount REAL NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+
+            # ========== PAYDAY БОНУС ==========
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS payday_bonus (
+                    id INTEGER PRIMARY KEY CHECK (id = 1),
+                    multiplier REAL DEFAULT 1.0,
+                    start_time TIMESTAMP,
+                    end_time TIMESTAMP,
+                    is_active BOOLEAN DEFAULT 0,
+                    updated_by INTEGER DEFAULT 0,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+
+            # Добавляем запись payday если её нет
+            cursor.execute("SELECT id FROM payday_bonus WHERE id = 1")
+            if not cursor.fetchone():
+                cursor.execute('''
+                    INSERT INTO payday_bonus (id, multiplier, is_active)
+                    VALUES (1, 1.0, 0)
+                ''')
+
+            # ========== ИНДЕКСЫ ==========
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_fortune_bets_round ON fortune_bets(round_id)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_fortune_bets_user ON fortune_bets(user_id)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_fortune_rounds_id ON fortune_rounds(round_id)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_fortune_history_user ON fortune_history(user_id)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_achievements_user ON user_achievements(user_id)')
+            cursor.execute(
+                'CREATE INDEX IF NOT EXISTS idx_user_achievements_completed ON user_achievements(is_completed)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_ad_watch_user_type ON ad_watch_history(user_id, ad_type)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_ad_watch_date ON ad_watch_history(watched_at)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_logs_timestamp ON system_logs(timestamp DESC)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_logs_user_id ON system_logs(user_id)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_tasks ON user_tasks(user_id, task_id)')
+            cursor.execute(
+                'CREATE INDEX IF NOT EXISTS idx_task_miniapp_clicks ON task_miniapp_clicks(user_id, task_id)')
+
+            # ========== МИГРАЦИЯ СТАРЫХ ТАБЛИЦ (user) ==========
+            user_columns = ['banned_until', 'ban_reason', 'banned_by', 'completed_achievements', 'daily_clicks',
+                            'fortune_bets_count', 'fortune_wins_count', 'fortune_total_bet_amount']
+            for col in user_columns:
+                try:
+                    cursor.execute(f"ALTER TABLE users ADD COLUMN {col} DEFAULT 0")
+                    print(f"✅ Добавлена колонка {col} в users")
+                except:
+                    pass
+
+            # ========== МИГРАЦИЯ СТАРЫХ ТАБЛИЦ (lottery) ==========
+            lottery_columns = ['is_drawn', 'draw_time', 'global_ticket_counter', 'lottery_phase']
+            for col in lottery_columns:
+                try:
+                    cursor.execute(f"ALTER TABLE lottery ADD COLUMN {col} DEFAULT 0")
+                    print(f"✅ Добавлена колонка {col} в lottery")
+                except:
+                    pass
+
+            # ========== МИГРАЦИЯ СТАРЫХ ТАБЛИЦ (fortune_rounds) ==========
+            fortune_columns = ['end_time', 'winner_team', 'yellow_pool', 'red_pool']
+            for col in fortune_columns:
+                try:
+                    cursor.execute(f"ALTER TABLE fortune_rounds ADD COLUMN {col} DEFAULT 0")
+                    print(f"✅ Добавлена колонка {col} в fortune_rounds")
+                except:
+                    pass
+
+            # ========== МИГРАЦИЯ СТАРЫХ ТАБЛИЦ (fortune_active_bets) ==========
+            try:
+                cursor.execute("ALTER TABLE fortune_active_bets ADD COLUMN net_amount REAL DEFAULT 0")
+                print("✅ Добавлена колонка net_amount в fortune_active_bets")
+            except:
+                pass
+
+            # ========== МИГРАЦИЯ СТАРЫХ ТАБЛИЦ (tasks) ==========
+            tasks_columns = ['task_type', 'miniapp_url']
+            for col in tasks_columns:
+                try:
+                    if col == 'task_type':
+                        cursor.execute(f"ALTER TABLE tasks ADD COLUMN {col} TEXT DEFAULT 'channel'")
+                    else:
+                        cursor.execute(f"ALTER TABLE tasks ADD COLUMN {col} TEXT DEFAULT ''")
+                    print(f"✅ Добавлена колонка {col} в tasks")
+                except:
+                    pass
+
+            # ========== ЗАПОЛНЕНИЕ ДОСТИЖЕНИЙ ==========
+            achievements_list = [
+                ('autoclicker', '🏆 Автокликер', 'Сделать 50 000 кликов по монете', '🖱️', 50000),
+                ('investor', '💰 Инвестор', 'Купить 30 улучшений в магазине', '📈', 30),
+                ('social', '👥 Общительный', 'Пригласить 10 рефералов', '🤝', 10),
+                ('gambler', '🎲 Азартный', 'Купить 100 билетов в Вызове', '🎫', 100),
+                ('lucky', '🍀 Счастливчик', 'Выиграть Вызов 5 раз', '🏆', 5),
+                ('liker', '👍 Подписчик', 'Поставить 200 лайков', '❤️', 200),
+                ('hater', '👎 Хейтер', 'Поставить 200 дизлайков', '💔', 200),
+                ('ad_lover', '📺 Любитель TV', 'Просмотреть 100 реклам', '🎬', 100),
+                ('spender', '💸 Транжира', 'Потратить 50 000 WG Coin', '💎', 50000),
+                ('task_master', '📋 Выполнитель', 'Выполнить 10 заданий', '✅', 10),
+                ('brave', '⚔️ Бесстрашный', 'Сделать 100 ставок в Командной Фортуне', '🎲', 100),
+                ('lucky_fortune', '🍀 Везучий', 'Выиграть 100 раз в Командной Фортуне', '🏆', 100),
+                ('gambler_fortune', '🎰 Лудоман', 'Поставить 200 000 WG в Командной Фортуне', '💰', 200000),
+                ('crazy', '🤪 Сумасшедший', 'Сделать 1000 ставок в Командной Фортуне', '🔥', 1000)
+            ]
+
+            for ach in achievements_list:
+                cursor.execute('''
+                    INSERT OR IGNORE INTO achievements (name, display_name, description, icon, target_count)
+                    VALUES (?, ?, ?, ?, ?)
+                ''', ach)
+
+            # ========== ИНИЦИАЛИЗАЦИЯ ЛОТЕРЕИ ==========
+            cursor.execute("SELECT * FROM lottery LIMIT 1")
+            if not cursor.fetchone():
+                cursor.execute(
+                    "INSERT INTO lottery (prize_pool, tickets, winning_numbers, is_drawn, lottery_phase) VALUES (0, '[]', '', 0, 'buy')"
+                )
+
+            print("✅ Все таблицы созданы/обновлены успешно!")
+
+    init_db()
 
 def is_banned(user_id):
     with db.get_cursor() as cursor:
@@ -5019,6 +5014,7 @@ def api_get_tasks():
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid:
         return jsonify({'success': False, 'error': 'Invalid user_id'}), 400
+
     with db.get_cursor() as cursor:
         cursor.execute('''
             SELECT t.*, 
@@ -5029,14 +5025,17 @@ def api_get_tasks():
             ORDER BY is_completed ASC, t.created_at DESC
         ''', (user_id,))
         rows = cursor.fetchall()
+
         tasks = []
         for row in rows:
             tasks.append({
                 'id': row['id'],
                 'title': row['title'],
-                'channel_link': row['channel_link'],
-                'channel_username': row['channel_username'],
-                'channel_avatar': row['channel_avatar'],
+                'task_type': row.get('task_type', 'channel'),
+                'miniapp_url': row.get('miniapp_url', ''),
+                'channel_link': row['channel_link'] or '',
+                'channel_username': row['channel_username'] or '',
+                'channel_avatar': row['channel_avatar'] or '',
                 'reward_amount': row['reward_amount'],
                 'reward_type': row['reward_type'],
                 'daily_limit': row['daily_limit'],
@@ -5053,6 +5052,7 @@ def api_check_task_subscription():
     data = request.json
     if not data:
         return jsonify({'success': False, 'error': 'No data'}), 400
+
     user_id = data.get('user_id')
     task_id = data.get('task_id')
     is_valid, user_id = validate_user_id(user_id)
@@ -5066,11 +5066,11 @@ def api_check_task_subscription():
             return jsonify({'success': False, 'error': 'Задание не найдено'}), 404
 
         if task['completed_count'] >= task['total_limit']:
-            return jsonify({'success': False, 'error': 'Задание больше недоступно'})
+            return jsonify({'success': False, 'error': 'Задание больше недоступно'}), 400
 
         cursor.execute('SELECT * FROM user_tasks WHERE user_id = ? AND task_id = ?', (user_id, task_id))
         if cursor.fetchone():
-            return jsonify({'success': False, 'error': 'Вы уже получили награду за это задание'})
+            return jsonify({'success': False, 'error': 'Вы уже получили награду за это задание'}), 400
 
         # ========== ПРОВЕРКА В ЗАВИСИМОСТИ ОТ ТИПА ЗАДАНИЯ ==========
         task_type = task.get('task_type', 'channel')
@@ -5078,6 +5078,9 @@ def api_check_task_subscription():
         if task_type == 'channel':
             # ---- ПРОВЕРКА ПОДПИСКИ НА КАНАЛ ----
             channel_username = task['channel_username'].replace('@', '')
+            if not channel_username:
+                return jsonify({'success': False, 'error': 'Не указан канал'}), 400
+
             url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/getChatMember"
             try:
                 response = requests.get(url, params={
@@ -5106,7 +5109,10 @@ def api_check_task_subscription():
             click = cursor.fetchone()
 
             if not click:
-                return jsonify({'success': False, 'error': 'Откройте Mini App по ссылке и вернитесь'})
+                return jsonify({'success': False, 'error': 'Откройте Mini App по ссылке и вернитесь через 2-3 секунды'})
+
+        else:
+            return jsonify({'success': False, 'error': 'Неизвестный тип задания'}), 400
 
         # ========== ВЫДАЁМ НАГРАДУ ==========
         user = get_user(user_id)
@@ -5117,27 +5123,33 @@ def api_check_task_subscription():
             old_value = user['wg']
             new_value = old_value + task['reward_amount']
             safe_update_user(user_id, wg=new_value)
-            add_log(f"📋 Выполнил задание '{task['title']}' | +{task['reward_amount']} WG", user_id, user['username'])
         elif task['reward_type'] == 'lp':
             old_value = user['lp']
             new_value = old_value + task['reward_amount']
             safe_update_user(user_id, lp=new_value)
-            add_log(f"📋 Выполнил задание '{task['title']}' | +{task['reward_amount']} LP", user_id, user['username'])
         elif task['reward_type'] == 'usdt':
             old_value = user['usdt']
             new_value = old_value + task['reward_amount']
             safe_update_user(user_id, usdt=new_value)
-            add_log(f"📋 Выполнил задание '{task['title']}' | +{task['reward_amount']} USDT", user_id, user['username'])
         elif task['reward_type'] == 'energy':
             current_energy, _ = calculate_energy(user)
             new_energy = min(user['max_energy'], current_energy + task['reward_amount'])
             update_energy_in_db(user_id, user, new_energy)
-            add_log(f"📋 Выполнил задание '{task['title']}' | +{task['reward_amount']} энергии", user_id,
-                    user['username'])
 
+        # Записываем выполнение
         cursor.execute('INSERT INTO user_tasks (user_id, task_id) VALUES (?, ?)', (user_id, task_id))
         cursor.execute('UPDATE tasks SET completed_count = completed_count + 1 WHERE id = ?', (task_id,))
+
+        # Обновляем достижение
         update_achievement_progress(user_id, 'task_master', 1)
+
+        # Логируем
+        reward_names = {'wg': 'WG', 'lp': 'LP', 'usdt': 'USDT', 'energy': 'энергии'}
+        add_log(
+            f"📋 Выполнил задание '{task['title']}' | +{task['reward_amount']} {reward_names.get(task['reward_type'], task['reward_type'])}",
+            user_id,
+            user.get('username') or f"User_{user_id}"
+        )
 
         return jsonify({
             'success': True,
@@ -5164,14 +5176,18 @@ def api_log_miniapp_click():
         if not cursor.fetchone():
             return jsonify({'success': False, 'error': 'Задание не найдено'}), 404
 
+        # Проверяем, не выполнил ли уже задание
+        cursor.execute('SELECT id FROM user_tasks WHERE user_id = ? AND task_id = ?', (user_id, task_id))
+        if cursor.fetchone():
+            return jsonify({'success': False, 'error': 'Вы уже выполнили это задание'}), 400
+
         # Записываем клик
         cursor.execute('''
-            INSERT OR IGNORE INTO task_miniapp_clicks (user_id, task_id)
-            VALUES (?, ?)
+            INSERT OR REPLACE INTO task_miniapp_clicks (user_id, task_id, clicked_at)
+            VALUES (?, ?, datetime('now'))
         ''', (user_id, task_id))
 
     return jsonify({'success': True, 'message': 'Клик зафиксирован'})
-
 # ========== ДОСТИЖЕНИЯ API ==========
 @app.route('/api/achievements/list', methods=['POST'])
 def api_achievements_list():
@@ -5689,7 +5705,12 @@ def api_admin_get_tasks():
 @require_admin
 def api_admin_create_task():
     data = request.json
+    if not data:
+        return jsonify({'success': False, 'error': 'No data'}), 400
+
     title = data.get('title', '').strip()
+    task_type = data.get('task_type', 'channel')
+    miniapp_url = data.get('miniapp_url', '').strip()
     channel_link = data.get('channel_link', '').strip()
     channel_username = data.get('channel_username', '').strip()
     channel_avatar = data.get('channel_avatar', '').strip()
@@ -5698,11 +5719,20 @@ def api_admin_create_task():
     daily_limit = int(data.get('daily_limit', 1))
     total_limit = int(data.get('total_limit', 100))
     days_remaining = int(data.get('days_remaining', 7))
-    task_type = data.get('task_type', 'channel')  # ← НОВОЕ
-    miniapp_url = data.get('miniapp_url', '').strip()  # ← НОВОЕ
+    is_active = data.get('is_active', True)
 
-    if not title or not channel_link or not channel_username:
-        return jsonify({'success': False, 'error': 'Заполните все поля'}), 400
+    # ========== ВАЛИДАЦИЯ В ЗАВИСИМОСТИ ОТ ТИПА ==========
+    if not title:
+        return jsonify({'success': False, 'error': 'Название задания обязательно'}), 400
+
+    if task_type == 'channel':
+        if not channel_link or not channel_username:
+            return jsonify({'success': False, 'error': 'Для задания "Канал" нужны ссылка и username'}), 400
+    elif task_type == 'miniapp':
+        if not miniapp_url:
+            return jsonify({'success': False, 'error': 'Для задания "Mini App" нужна ссылка'}), 400
+    else:
+        return jsonify({'success': False, 'error': 'Неизвестный тип задания'}), 400
 
     if reward_amount <= 0:
         return jsonify({'success': False, 'error': 'Сумма награды должна быть больше 0'}), 400
@@ -5713,25 +5743,37 @@ def api_admin_create_task():
     with db.get_cursor() as cursor:
         cursor.execute('''
             INSERT INTO tasks (
-                title, channel_link, channel_username, channel_avatar, 
-                reward_amount, reward_type, daily_limit, total_limit, 
-                days_remaining, task_type, miniapp_url
+                title, task_type, miniapp_url, channel_link, channel_username, channel_avatar,
+                reward_amount, reward_type, daily_limit, total_limit, days_remaining, is_active
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (title, channel_link, channel_username, channel_avatar,
-              reward_amount, reward_type, daily_limit, total_limit,
-              days_remaining, task_type, miniapp_url))
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            title, task_type, miniapp_url, channel_link, channel_username, channel_avatar,
+            reward_amount, reward_type, daily_limit, total_limit, days_remaining, 1 if is_active else 0
+        ))
         task_id = cursor.lastrowid
 
-    add_admin_log(f"📋 Создал задание '{title}' (ID: {task_id}, тип: {task_type})", admin_id, admin_name)
+    add_admin_log(
+        f"📋 Создал задание '{title}' (ID: {task_id}, тип: {task_type})",
+        admin_id, admin_name
+    )
     return jsonify({'success': True, 'task_id': task_id})
+
 
 @app.route('/api/admin/update_task', methods=['POST'])
 @require_admin
 def api_admin_update_task():
     data = request.json
+    if not data:
+        return jsonify({'success': False, 'error': 'No data'}), 400
+
     task_id = data.get('task_id')
+    if not task_id:
+        return jsonify({'success': False, 'error': 'task_id required'}), 400
+
     title = data.get('title', '').strip()
+    task_type = data.get('task_type', 'channel')
+    miniapp_url = data.get('miniapp_url', '').strip()
     channel_link = data.get('channel_link', '').strip()
     channel_username = data.get('channel_username', '').strip()
     channel_avatar = data.get('channel_avatar', '').strip()
@@ -5741,20 +5783,33 @@ def api_admin_update_task():
     total_limit = int(data.get('total_limit', 100))
     days_remaining = int(data.get('days_remaining', 7))
     is_active = data.get('is_active', True)
-    if not task_id:
-        return jsonify({'success': False, 'error': 'task_id required'}), 400
+
+    # ========== ВАЛИДАЦИЯ ==========
+    if not title:
+        return jsonify({'success': False, 'error': 'Название задания обязательно'}), 400
+
     admin_id = request.args.get('user_id', 'Admin')
     admin_name = "Admin"
+
     with db.get_cursor() as cursor:
+        # Проверяем, существует ли задание
+        cursor.execute("SELECT id FROM tasks WHERE id = ?", (task_id,))
+        if not cursor.fetchone():
+            return jsonify({'success': False, 'error': 'Задание не найдено'}), 404
+
         cursor.execute('''
             UPDATE tasks SET 
-                title = ?, channel_link = ?, channel_username = ?, channel_avatar = ?,
-                reward_amount = ?, reward_type = ?, daily_limit = ?, total_limit = ?,
-                days_remaining = ?, is_active = ?
+                title = ?, task_type = ?, miniapp_url = ?, channel_link = ?, 
+                channel_username = ?, channel_avatar = ?,
+                reward_amount = ?, reward_type = ?, daily_limit = ?, 
+                total_limit = ?, days_remaining = ?, is_active = ?
             WHERE id = ?
-        ''', (title, channel_link, channel_username, channel_avatar,
-              reward_amount, reward_type, daily_limit, total_limit,
-              days_remaining, is_active, task_id))
+        ''', (
+            title, task_type, miniapp_url, channel_link, channel_username, channel_avatar,
+            reward_amount, reward_type, daily_limit, total_limit, days_remaining,
+            1 if is_active else 0, task_id
+        ))
+
     add_admin_log(f"📋 Обновил задание ID: {task_id}", admin_id, admin_name)
     return jsonify({'success': True})
 
