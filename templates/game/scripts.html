@@ -5161,180 +5161,186 @@ async function checkTaskCompletion() {
     }
 
     // ==================== DOMCONTENTLOADED ====================
-    document.addEventListener("DOMContentLoaded", () => {
-        initTonConnect();
-        initSocket();
-        autoRegister();
-        loadAvatar();
-        logGameEntry();
-        syncData(true);
-        loadReferralLink();
-        loadReferrals();
-        loadSettings();
-        loadDailyStatus();
-        setTimeout(checkAndStartTutorial, 2000);
+document.addEventListener("DOMContentLoaded", () => {
+    initTonConnect();
+    initSocket();
+    autoRegister();
+    loadAvatar();
+    logGameEntry();
+    syncData(true);
 
-        // ============================================================
-// ОПТИМИЗИРОВАННЫЙ СИНХРОНИЗАТОР (КАК В NOTCOIN)
-// ============================================================
-
-// 1️⃣ БЫСТРОЕ ОБНОВЛЕНИЕ БАЛАНСА (каждые 2 секунды)
-// Используем ЛЁГКИЙ эндпоинт /api/sync_light - только баланс и энергия
-setInterval(async () => {
-    if (isScratchingActive) {
-        // Если идёт стирание - пропускаем
-        return;
-    }
-
-    try {
-        const res = await fetch('/api/sync_light', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId })
-        });
-        const data = await res.json();
-
-        if (data.success) {
-            const d = data.data;
-
-            // Обновляем ТОЛЬКО цифры (мгновенно!)
-            const wgEl = document.getElementById('wgBalance');
-            if (wgEl) wgEl.textContent = d.wg.toFixed(2);
-
-            const lpEl = document.getElementById('lpBalance');
-            if (lpEl) lpEl.textContent = d.lp;
-
-            const energyEl = document.getElementById('energyValue');
-            if (energyEl) energyEl.textContent = d.energy;
-
-            const maxEnergyEl = document.getElementById('maxEnergyValue');
-            if (maxEnergyEl) maxEnergyEl.textContent = d.max_energy;
-
-            const earningEl = document.getElementById('earningPerClick');
-            if (earningEl) earningEl.textContent = d.earning_per_click.toFixed(2);
-
-            const clickAmountEl = document.getElementById('clickAmount');
-            if (clickAmountEl) clickAmountEl.textContent = d.earning_per_click.toFixed(2);
-
-            // Обновляем энергобар
-            const percent = (d.energy / d.max_energy) * 100;
-            const bar = document.getElementById('energyBar');
-            if (bar) bar.style.width = percent + '%';
-
-            // Обновляем энергию в хедере
-            const headerEnergy = document.getElementById('energyHeader');
-            if (headerEnergy) headerEnergy.textContent = d.energy;
-        }
-    } catch(e) {
-        // Тихая ошибка - не беспокоим игрока
-    }
-}, 2000); // ← 2 секунды, как в Notcoin!
-
-// 2️⃣ ТЯЖЕЛЫЕ ДАННЫЕ (лотерея, лидерборд, рефералы) - РЕДКО!
-setInterval(() => {
-    if (isScratchingActive) return;
-
-    const activeTab = document.querySelector('.tab-pane.active');
-
-    // Если на вкладке "Лотерея" - обновляем лотерею
-    if (activeTab && activeTab.id === 'tabLottery') {
-        loadUserTickets();
-        updateLottery();
-    }
-
-    // Если на вкладке "Профиль" - обновляем рефералов
-    if (activeTab && activeTab.id === 'tabProfile') {
-        loadReferrals();
-    }
-
-    // Всегда обновляем лидерборд (но редко)
-    if (activeTab && activeTab.id === 'tabHome') {
+    // ===== ПРИНУДИТЕЛЬНАЯ ЗАГРУЗКА МИНИ-ЛИДЕРБОРДА =====
+    setTimeout(() => {
         loadLeaderboardData('day', true);
-    }
-}, 30000); // ← 30 секунд
+    }, 500);
 
-console.log('✅ Оптимизированный синхронизатор запущен!');
-console.log('   📊 Баланс обновляется каждые 2 секунды (лёгкий запрос)');
-console.log('   🎰 Лотерея обновляется каждые 30 секунд');
-console.log('   👥 Рефералы обновляются каждые 30 секунд');
+    loadReferralLink();
+    loadReferrals();
+    loadSettings();
+    loadDailyStatus();
+    setTimeout(checkAndStartTutorial, 2000);
 
+    // ============================================================
+    // ОПТИМИЗИРОВАННЫЙ СИНХРОНИЗАТОР (КАК В NOTCOIN)
+    // ============================================================
 
-        startDailyLeaderboardTimer();
-        updateLPBoostCount();
+    // 1️⃣ БЫСТРОЕ ОБНОВЛЕНИЕ БАЛАНСА (каждые 2 секунды)
+    // Используем ЛЁГКИЙ эндпоинт /api/sync_light - только баланс и энергия
+    setInterval(async () => {
+        if (isScratchingActive) {
+            // Если идёт стирание - пропускаем
+            return;
+        }
 
-        if (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
-            const startParam = tg.initDataUnsafe.start_param;
-            if (startParam && startParam.startsWith('claim_')) {
-                const promoCode = startParam.replace('claim_', '');
-                setTimeout(() => {
-                    openPromoModalWithCode(promoCode);
-                    showToast(`🎫 Промокод ${promoCode} готов к активации!`, 'success');
-                }, 2000);
-            } else if (startParam && !startParam.startsWith('claim_')) {
-                const refCode = startParam;
-                setTimeout(async () => {
-                    try {
-                        const response = await fetch('/api/set_referral', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ user_id: userId, referral_code: refCode })
-                        });
-                        const data = await response.json();
-                        if (data.success) {
-                            showToast('🎉 Реферальный код активирован!', 'success');
-                        }
-                    } catch(e) {
-                        console.error('Error sending referral code:', e);
-                    }
-                }, 1500);
+        try {
+            const res = await fetch('/api/sync_light', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: userId })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                const d = data.data;
+
+                // Обновляем ТОЛЬКО цифры (мгновенно!)
+                const wgEl = document.getElementById('wgBalance');
+                if (wgEl) wgEl.textContent = d.wg.toFixed(2);
+
+                const lpEl = document.getElementById('lpBalance');
+                if (lpEl) lpEl.textContent = d.lp;
+
+                const energyEl = document.getElementById('energyValue');
+                if (energyEl) energyEl.textContent = d.energy;
+
+                const maxEnergyEl = document.getElementById('maxEnergyValue');
+                if (maxEnergyEl) maxEnergyEl.textContent = d.max_energy;
+
+                const earningEl = document.getElementById('earningPerClick');
+                if (earningEl) earningEl.textContent = d.earning_per_click.toFixed(2);
+
+                const clickAmountEl = document.getElementById('clickAmount');
+                if (clickAmountEl) clickAmountEl.textContent = d.earning_per_click.toFixed(2);
+
+                // Обновляем энергобар
+                const percent = (d.energy / d.max_energy) * 100;
+                const bar = document.getElementById('energyBar');
+                if (bar) bar.style.width = percent + '%';
+
+                // Обновляем энергию в хедере
+                const headerEnergy = document.getElementById('energyHeader');
+                if (headerEnergy) headerEnergy.textContent = d.energy;
             }
+        } catch(e) {
+            // Тихая ошибка - не беспокоим игрока
+        }
+    }, 2000); // ← 2 секунды, как в Notcoin!
+
+    // 2️⃣ ТЯЖЕЛЫЕ ДАННЫЕ (лотерея, лидерборд, рефералы) - РЕДКО!
+    setInterval(() => {
+        if (isScratchingActive) return;
+
+        const activeTab = document.querySelector('.tab-pane.active');
+
+        // Если на вкладке "Лотерея" - обновляем лотерею
+        if (activeTab && activeTab.id === 'tabLottery') {
+            loadUserTickets();
+            updateLottery();
         }
 
-        if (tg) {
-            tg.ready();
-            tg.expand();
+        // Если на вкладке "Профиль" - обновляем рефералов
+        if (activeTab && activeTab.id === 'tabProfile') {
+            loadReferrals();
         }
 
-        const closeBetModalBtn = document.querySelector('#betModal .bet-modal-close');
-        if (closeBetModalBtn) {
-            closeBetModalBtn.addEventListener('click', closeBetModal);
+        // Всегда обновляем лидерборд (но редко)
+        if (activeTab && activeTab.id === 'tabHome') {
+            loadLeaderboardData('day', true);
         }
-        const submitBetBtn = document.getElementById('submitBetBtn');
-        if (submitBetBtn) {
-            submitBetBtn.addEventListener('click', submitBet);
-        }
-        const betAmountInput = document.getElementById('betAmount');
-        if (betAmountInput) {
-            betAmountInput.addEventListener('input', calculateBet);
-        }
-        const betPresets = document.querySelectorAll('.bet-preset-premium');
-        betPresets.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const multiplier = parseFloat(btn.getAttribute('data-multiplier'));
-                if (!isNaN(multiplier) && betAmountInput) {
-                    const presetAmount = Math.floor(localWG * multiplier);
-                    betAmountInput.value = presetAmount;
-                    calculateBet();
+    }, 30000); // ← 30 секунд
+
+    console.log('✅ Оптимизированный синхронизатор запущен!');
+    console.log('   📊 Баланс обновляется каждые 2 секунды (лёгкий запрос)');
+    console.log('   🎰 Лотерея обновляется каждые 30 секунд');
+    console.log('   👥 Рефералы обновляются каждые 30 секунд');
+    console.log('   🏆 Мини-лидерборд загружен при старте!');
+
+    startDailyLeaderboardTimer();
+    updateLPBoostCount();
+
+    if (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
+        const startParam = tg.initDataUnsafe.start_param;
+        if (startParam && startParam.startsWith('claim_')) {
+            const promoCode = startParam.replace('claim_', '');
+            setTimeout(() => {
+                openPromoModalWithCode(promoCode);
+                showToast(`🎫 Промокод ${promoCode} готов к активации!`, 'success');
+            }, 2000);
+        } else if (startParam && !startParam.startsWith('claim_')) {
+            const refCode = startParam;
+            setTimeout(async () => {
+                try {
+                    const response = await fetch('/api/set_referral', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ user_id: userId, referral_code: refCode })
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        showToast('🎉 Реферальный код активирован!', 'success');
+                    }
+                } catch(e) {
+                    console.error('Error sending referral code:', e);
                 }
-            });
+            }, 1500);
+        }
+    }
+
+    if (tg) {
+        tg.ready();
+        tg.expand();
+    }
+
+    const closeBetModalBtn = document.querySelector('#betModal .bet-modal-close');
+    if (closeBetModalBtn) {
+        closeBetModalBtn.addEventListener('click', closeBetModal);
+    }
+    const submitBetBtn = document.getElementById('submitBetBtn');
+    if (submitBetBtn) {
+        submitBetBtn.addEventListener('click', submitBet);
+    }
+    const betAmountInput = document.getElementById('betAmount');
+    if (betAmountInput) {
+        betAmountInput.addEventListener('input', calculateBet);
+    }
+    const betPresets = document.querySelectorAll('.bet-preset-premium');
+    betPresets.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const multiplier = parseFloat(btn.getAttribute('data-multiplier'));
+            if (!isNaN(multiplier) && betAmountInput) {
+                const presetAmount = Math.floor(localWG * multiplier);
+                betAmountInput.value = presetAmount;
+                calculateBet();
+            }
         });
-        const betBtnYellow = document.getElementById('betBtnYellow');
-        if (betBtnYellow) {
-            betBtnYellow.addEventListener('click', (e) => {
-                e.stopPropagation();
-                console.log('Ставка на Жёлтых');
-                openBetModal('yellow');
-            });
-        }
-        const betBtnRed = document.getElementById('betBtnRed');
-        if (betBtnRed) {
-            betBtnRed.addEventListener('click', (e) => {
-                e.stopPropagation();
-                console.log('Ставка на Красных');
-                openBetModal('red');
-            });
-        }
     });
+    const betBtnYellow = document.getElementById('betBtnYellow');
+    if (betBtnYellow) {
+        betBtnYellow.addEventListener('click', (e) => {
+            e.stopPropagation();
+            console.log('Ставка на Жёлтых');
+            openBetModal('yellow');
+        });
+    }
+    const betBtnRed = document.getElementById('betBtnRed');
+    if (betBtnRed) {
+        betBtnRed.addEventListener('click', (e) => {
+            e.stopPropagation();
+            console.log('Ставка на Красных');
+            openBetModal('red');
+        });
+    }
+});
 
     document.addEventListener('click', function(e) {
         const btn = e.target.closest('.bet-btn-premium');
