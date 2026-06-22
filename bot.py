@@ -1548,54 +1548,76 @@ def update_stats_history(date, clicks=0, ad_views=0, stars=0, online=0, tickets=
                online_peak = MAX(online_peak, ?), tickets_sold = tickets_sold + ?, new_users = new_users + ?''',
             (date, clicks, ad_views, stars, online, tickets, users, clicks, ad_views, stars, online, tickets, users))
 
+
 def get_stats_history(period='week', metric='clicks'):
     now = datetime.datetime.now()
     data = []
     labels = []
+
+    # ========== МАППИНГ МЕТРИК НА КОЛОНКИ В БД ==========
+    metric_map = {
+        'clicks': 'clicks',
+        'tickets': 'tickets_sold',
+        'users': 'new_users',
+        'ad_views': 'ad_views',
+        'stars': 'stars_donated',
+        'online': 'online_peak'
+    }
+
+    db_column = metric_map.get(metric, 'clicks')
+
     with db.get_cursor() as cursor:
         if period == 'day':
             for i in range(24):
                 labels.append(f"{i}:00")
                 date_key = now.strftime("%Y-%m-%d")
                 cursor.execute(
-                    "SELECT clicks, ad_views, stars_donated, online_peak, tickets_sold, new_users FROM stats_history WHERE date = ?",
-                    (date_key,))
+                    f"SELECT {db_column} FROM stats_history WHERE date = ?",
+                    (date_key,)
+                )
                 row = cursor.fetchone()
-                val = row[metric] if row and metric in row.keys() else 0
+                val = row[0] if row else 0
                 data.append(val or 0)
+
         elif period == 'week':
             for i in range(6, -1, -1):
                 date = (now - datetime.timedelta(days=i)).strftime("%d.%m")
                 labels.append(date)
                 date_key = (now - datetime.timedelta(days=i)).strftime("%Y-%m-%d")
                 cursor.execute(
-                    "SELECT clicks, ad_views, stars_donated, online_peak, tickets_sold, new_users FROM stats_history WHERE date = ?",
-                    (date_key,))
+                    f"SELECT {db_column} FROM stats_history WHERE date = ?",
+                    (date_key,)
+                )
                 row = cursor.fetchone()
-                val = row[metric] if row and metric in row.keys() else 0
+                val = row[0] if row else 0
                 data.append(val or 0)
+
         elif period == 'month':
             for i in range(29, -1, -1):
                 date = (now - datetime.timedelta(days=i)).strftime("%d.%m")
                 labels.append(date)
                 date_key = (now - datetime.timedelta(days=i)).strftime("%Y-%m-%d")
                 cursor.execute(
-                    "SELECT clicks, ad_views, stars_donated, online_peak, tickets_sold, new_users FROM stats_history WHERE date = ?",
-                    (date_key,))
+                    f"SELECT {db_column} FROM stats_history WHERE date = ?",
+                    (date_key,)
+                )
                 row = cursor.fetchone()
-                val = row[metric] if row and metric in row.keys() else 0
+                val = row[0] if row else 0
                 data.append(val or 0)
-        else:
+
+        else:  # year
             for i in range(11, -1, -1):
                 month_date = now - datetime.timedelta(days=30 * i)
                 labels.append(month_date.strftime("%b %Y"))
                 month_start = month_date.strftime("%Y-%m")
                 cursor.execute(
-                    "SELECT SUM(clicks) as clicks, SUM(ad_views) as ad_views, SUM(stars_donated) as stars_donated, MAX(online_peak) as online_peak, SUM(tickets_sold) as tickets_sold, SUM(new_users) as new_users FROM stats_history WHERE date LIKE ?",
-                    (f'{month_start}%',))
+                    f"SELECT SUM({db_column}) FROM stats_history WHERE date LIKE ?",
+                    (f'{month_start}%',)
+                )
                 row = cursor.fetchone()
-                val = row[metric] if row and metric in row.keys() else 0
+                val = row[0] if row else 0
                 data.append(val or 0)
+
     return {"labels": labels, "data": data}
 
 def create_withdrawal_request_db(user_id, username, amount, address, network):

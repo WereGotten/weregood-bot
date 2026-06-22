@@ -1804,54 +1804,57 @@
 
         // ========== ГРАФИКИ ==========
         async function loadChart() {
-            const canvas = document.getElementById('activityChart');
-            if (!canvas) return;
-            const data = await apiRequest(`chart_data?period=${currentPeriod}&metric=${currentMetric}`);
-            if (!data.success) return;
-            const titles = {
-                clicks: '📈 Количество кликов по монете',
-                tickets: '🎫 Купленные билеты',
-                users: '👥 Новые игроки',
-                ad_views: '🎬 Просмотры рекламы',
-                stars: '⭐ Донат Telegram Stars',
-                online: '🟢 Онлайн пользователей'
-            };
-            document.getElementById('chartTitle').innerHTML = titles[currentMetric] || '📈 График';
-            if (!data.labels || data.labels.length === 0) return;
-            if (currentChart) currentChart.destroy();
-            const ctx = canvas.getContext('2d');
-            currentChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: data.labels,
-                    datasets: [{
-                        label: titles[currentMetric] || currentMetric,
-                        data: data.data,
-                        borderColor: '#FFD700',
-                        backgroundColor: 'rgba(255,215,0,0.1)',
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.3,
-                        pointBackgroundColor: '#FFD700',
-                        pointBorderColor: '#fff',
-                        pointRadius: 4,
-                        pointHoverRadius: 6
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: {
-                        legend: { labels: { color: '#fff' } },
-                        tooltip: { backgroundColor: '#1a1a2e', titleColor: '#FFD700', bodyColor: '#fff' }
-                    },
-                    scales: {
-                        y: { beginAtZero: true, ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.1)' } },
-                        x: { ticks: { color: '#fff', maxRotation: 45 }, grid: { color: 'rgba(255,255,255,0.1)' } }
-                    }
-                }
-            });
+    const canvas = document.getElementById('activityChart');
+    if (!canvas) return;
+    const data = await apiRequest(`chart_data?period=${currentPeriod}&metric=${currentMetric}`);
+    if (!data.success) return;
+
+    // ========== ПРАВИЛЬНЫЕ НАЗВАНИЯ ДЛЯ ГРАФИКОВ ==========
+    const titles = {
+        clicks: '👆 Количество кликов по монете',
+        tickets: '🎫 Купленные билеты (tickets_sold)',
+        users: '👥 Новые игроки (new_users)',
+        ad_views: '🎬 Просмотры рекламы (ad_views)',
+        stars: '⭐ Донат Telegram Stars (stars_donated)',
+        online: '🟢 Онлайн пользователей (online_peak)'
+    };
+
+    document.getElementById('chartTitle').innerHTML = titles[currentMetric] || '📈 График';
+    if (!data.labels || data.labels.length === 0) return;
+    if (currentChart) currentChart.destroy();
+    const ctx = canvas.getContext('2d');
+    currentChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: data.labels,
+            datasets: [{
+                label: titles[currentMetric] || currentMetric,
+                data: data.data,
+                borderColor: '#FFD700',
+                backgroundColor: 'rgba(255,215,0,0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.3,
+                pointBackgroundColor: '#FFD700',
+                pointBorderColor: '#fff',
+                pointRadius: 4,
+                pointHoverRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { labels: { color: '#fff' } },
+                tooltip: { backgroundColor: '#1a1a2e', titleColor: '#FFD700', bodyColor: '#fff' }
+            },
+            scales: {
+                y: { beginAtZero: true, ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.1)' } },
+                x: { ticks: { color: '#fff', maxRotation: 45 }, grid: { color: 'rgba(255,255,255,0.1)' } }
+            }
         }
+    });
+}
 
         // ========== АДМИНКА КОНКУРСА ==========
         async function loadAdminContestData() {
