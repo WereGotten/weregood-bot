@@ -3664,41 +3664,42 @@ async function checkTaskCompletion() {
     let paymentCheckInterval = null;
 
     async function initTonConnect() {
-        try {
-            if (typeof window.TON_CONNECT_UI === 'undefined') {
-                setTimeout(() => initTonConnect(), 300);
-                return;
+    try {
+        if (typeof window.TON_CONNECT_UI === 'undefined') {
+            setTimeout(() => initTonConnect(), 300);
+            return;
+        }
+        const manifestUrl = `${window.location.origin}/tonconnect-manifest.json`;
+        tonConnectUI = new window.TON_CONNECT_UI.TonConnectUI({
+            manifestUrl: manifestUrl,
+            actionsConfiguration: {
+                twaReturnUrl: `https://t.me/WereGooodbot`
             }
-            const manifestUrl = `${window.location.origin}/tonconnect-manifest.json`;
-            tonConnectUI = new window.TON_CONNECT_UI.TonConnectUI({
-                manifestUrl: manifestUrl,
-                actionsConfiguration: {
-                    twaReturnUrl: `https://t.me/WereGooodbot`
-                }
-            });
-            await tonConnectUI.connectionRestored;
-            if (tonConnectUI.wallet) {
-                const address = tonConnectUI.wallet.account.address;
+        });
+        await tonConnectUI.connectionRestored;
+        if (tonConnectUI.wallet) {
+            const address = tonConnectUI.wallet.account.address;
+            await saveWalletToBackend(address);
+            updateTonWalletStatus(address);
+        } else {
+            // Если кошелёк не подключён через UI — проверяем БД
+            await loadTonWalletStatus();
+        }
+        tonConnectUI.onStatusChange(async (wallet) => {
+            if (wallet) {
+                const address = wallet.account.address;
                 await saveWalletToBackend(address);
                 updateTonWalletStatus(address);
+                showToast('✅ TON кошелёк успешно привязан!', 'success');
             } else {
+                await saveWalletToBackend('');
                 updateTonWalletStatus(null);
             }
-            tonConnectUI.onStatusChange(async (wallet) => {
-                if (wallet) {
-                    const address = wallet.account.address;
-                    await saveWalletToBackend(address);
-                    updateTonWalletStatus(address);
-                    showToast('✅ TON кошелёк успешно привязан!', 'success');
-                } else {
-                    await saveWalletToBackend('');
-                    updateTonWalletStatus(null);
-                }
-            });
-        } catch(e) {
-            console.error('TON Connect init error:', e);
-        }
+        });
+    } catch(e) {
+        console.error('TON Connect init error:', e);
     }
+}
 
     async function saveWalletToBackend(address) {
         const targetUrl = address ? '/api/ton/save_wallet' : '/api/ton/disconnect_wallet';
@@ -3727,6 +3728,41 @@ async function checkTaskCompletion() {
             walletStatus.style.color = '#FFD700';
         }
     }
+
+// ===== ЗАГРУЗКА СТАТУСА TON КОШЕЛЬКА ИЗ БД =====
+async function loadTonWalletStatus() {
+    try {
+        const res = await fetch('/api/ton/get_wallet', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId })
+        });
+        const data = await res.json();
+
+        if (data.success && data.wallet) {
+            // Кошелёк есть в БД — обновляем UI
+            updateTonWalletStatus(data.wallet);
+
+            // Если TON Connect UI уже инициализирован, но кошелёк не подключён — подключаем
+            if (tonConnectUI && !tonConnectUI.wallet) {
+                try {
+                    await tonConnectUI.connectionRestored;
+                    if (tonConnectUI.wallet) {
+                        // Уже подключён через UI
+                        return;
+                    }
+                } catch(e) {
+                    // Если не подключён — ничего не делаем, просто показываем статус из БД
+                }
+            }
+        } else {
+            // В БД нет кошелька
+            updateTonWalletStatus(null);
+        }
+    } catch(e) {
+        console.error('Error loading TON wallet status:', e);
+    }
+}
 
     window.buyWithTon = async function() {
         if (!tonConnectUI) {
@@ -5163,6 +5199,7 @@ async function checkTaskCompletion() {
     // ==================== DOMCONTENTLOADED ====================
 document.addEventListener("DOMContentLoaded", () => {
     initTonConnect();
+    loadTonWalletStatus();
     initSocket();
     autoRegister();
     loadAvatar();
