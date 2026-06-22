@@ -7,195 +7,45 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
 
-    <!-- ==================== CRITICAL: СКЕЛЕТОН/SPLASH ==================== -->
-    <style>
-        #splashScreen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #0a0a1a;
-            z-index: 99999;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            transition: opacity 0.6s ease, transform 0.6s ease;
-            font-family: 'Inter', -apple-system, sans-serif;
-        }
-        #splashScreen.hidden {
-            opacity: 0;
-            transform: scale(1.05);
-            pointer-events: none;
-        }
-        .splash-logo {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            margin-bottom: 44px;
-            animation: splashFadeIn 0.8s ease;
-        }
-        .splash-logo-icon {
-            width: 56px;
-            height: 56px;
-            background: linear-gradient(135deg, #FFD700, #FFA500);
-            border-radius: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 0 50px rgba(255,215,0,0.25);
-            animation: splashPulse 2s ease-in-out infinite;
-        }
-        .splash-logo-icon img {
-            width: 32px;
-            height: 32px;
-            filter: brightness(0) invert(1);
-        }
-        .splash-logo-text {
-            font-size: 30px;
-            font-weight: 800;
-            background: linear-gradient(135deg, #FFD700, #FFA500);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            letter-spacing: -0.5px;
-        }
-        .splash-bar-wrap {
-            width: 240px;
-            height: 4px;
-            background: rgba(255,255,255,0.08);
-            border-radius: 10px;
-            overflow: hidden;
-            position: relative;
-            margin-bottom: 14px;
-        }
-        .splash-bar-fill {
-            width: 0%;
-            height: 100%;
-            background: linear-gradient(90deg, #FFD700, #FFA500, #FFD700);
-            background-size: 200% 100%;
-            border-radius: 10px;
-            transition: width 0.15s ease;
-            animation: splashShimmer 1.2s linear infinite;
-        }
-        .splash-percent {
-            color: rgba(255,255,255,0.35);
-            font-size: 0.7rem;
-            letter-spacing: 3px;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-        .splash-tip {
-            color: rgba(255,255,255,0.2);
-            font-size: 0.6rem;
-            margin-top: 22px;
-            text-align: center;
-            max-width: 220px;
-            line-height: 1.5;
-            transition: opacity 0.4s ease;
-            min-height: 40px;
-        }
-        .splash-version {
-            position: absolute;
-            bottom: 30px;
-            color: rgba(255,255,255,0.06);
-            font-size: 0.5rem;
-            letter-spacing: 1px;
-        }
-        .splash-particles {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            pointer-events: none;
-        }
-        .splash-particle {
-            position: absolute;
-            border-radius: 50%;
-            animation: splashFloat 8s ease-in-out infinite;
-        }
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
+    <script>
+        window.TON_CONNECT_UI = null;
+        const tonScript = document.createElement('script');
+        tonScript.src = 'https://unpkg.com/@tonconnect/ui@2.0.9/dist/tonconnect-ui.min.js';
+        tonScript.onload = function() {
+            if (window.TON_CONNECT_UI) console.log('TON Connect ready');
+            else if (window.tonconnect) window.TON_CONNECT_UI = window.tonconnect;
+            window.dispatchEvent(new Event('tonconnect-ready'));
+        };
+        tonScript.onerror = function() {
+            const btn = document.getElementById('tonDonateBtn');
+            if (btn) { btn.style.opacity = '0.5'; btn.disabled = true; }
+        };
+        document.head.appendChild(tonScript);
+    </script>
 
-        @keyframes splashFadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes splashPulse {
-            0%, 100% { transform: scale(1); box-shadow: 0 0 40px rgba(255,215,0,0.2); }
-            50% { transform: scale(1.04); box-shadow: 0 0 60px rgba(255,215,0,0.35); }
-        }
-        @keyframes splashShimmer {
-            0% { background-position: -200% 0; }
-            100% { background-position: 200% 0; }
-        }
-        @keyframes splashFloat {
-            0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.3; }
-            25% { transform: translate(30px, -40px) scale(1.6); opacity: 0.8; }
-            50% { transform: translate(-20px, 20px) scale(0.8); opacity: 0.4; }
-            75% { transform: translate(40px, 30px) scale(1.3); opacity: 0.7; }
-        }
-
-        /* Скрываем приложение до загрузки */
-        .app { opacity: 0; transition: opacity 0.5s ease; }
-        .app.ready { opacity: 1; }
-
-        /* Адаптация для светлой темы */
-        .light-theme #splashScreen {
-            background: #f5f5f5;
-        }
-        .light-theme .splash-bar-wrap {
-            background: rgba(0,0,0,0.08);
-        }
-        .light-theme .splash-percent {
-            color: rgba(0,0,0,0.3);
-        }
-        .light-theme .splash-tip {
-            color: rgba(0,0,0,0.2);
-        }
-        .light-theme .splash-version {
-            color: rgba(0,0,0,0.06);
-        }
-    </style>
+    <!-- Telegram Mini Apps Analytics SDK -->
+    <script>
+        (function() {
+            if (window.Telegram && window.Telegram.WebApp) {
+                var script = document.createElement('script');
+                script.src = 'https://tganalytics.xyz/index.js';
+                script.onload = function() {
+                    window.telegramAnalytics.init({
+                        token: 'eyJhcHBfbmFtZSI6IndlcmVnb29kIiwiYXBwX3VybCI6Imh0dHBzOi8vdC5tZS9XZXJlR29vb2Rib3QiLCJhcHBfZG9tYWluIjoiaHR0cHM6Ly93ZXJlZ29vZC5ydS8ifQ==!/Jd1QUzU6q1h1gN60VfBz53M1flHZlcVC5pcyACO9tM='
+                    });
+                    window.telegramAnalytics.trackEvent('app_started');
+                };
+                document.head.appendChild(script);
+            }
+        })();
+    </script>
 </head>
 <body>
 
-    <!-- ============================================================ -->
-    <!-- SPLASH SCREEN - КРАСИВАЯ ЗАГРУЗКА -->
-    <!-- ============================================================ -->
-    <div id="splashScreen">
-        <!-- ПАРТИКЛЫ -->
-        <div class="splash-particles" id="splashParticles"></div>
-
-        <!-- ЛОГОТИП -->
-        <div class="splash-logo">
-            <div class="splash-logo-icon">
-                <img src="/static/wallet.png" alt="WereGood">
-            </div>
-            <span class="splash-logo-text">WereGood</span>
-        </div>
-
-        <!-- ПОЛЗУНОК -->
-        <div class="splash-bar-wrap">
-            <div class="splash-bar-fill" id="splashBar"></div>
-        </div>
-
-        <!-- ПРОЦЕНТЫ -->
-        <div class="splash-percent">
-            <span id="splashPercent">0</span>%
-        </div>
-
-        <!-- СОВЕТ -->
-        <div class="splash-tip" id="splashTip">
-            💡 Кликай по монете и зарабатывай!
-        </div>
-
-        <!-- ВЕРСИЯ -->
-        <div class="splash-version">v2.5.0</div>
-    </div>
-
-    <!-- ============================================================ -->
-    <!-- ОСНОВНОЕ ПРИЛОЖЕНИЕ -->
-    <!-- ============================================================ -->
-    <div class="app" id="app">
+    <div class="app">
         {% include 'game/header.html' %}
 
         <main class="main-content">
@@ -225,231 +75,18 @@
         </nav>
     </div>
 
+
+
     {% include 'game/modals.html' %}
     {% include 'game/fortune.html' %}
 
-    <!-- ============================================================ -->
-    <!-- АУДИО (ЛЕНИВАЯ ЗАГРУЗКА) -->
-    <!-- ============================================================ -->
-    <div id="audioContainer" style="display:none;">
-        <audio id="errorSound" preload="none"><source src="/static/error.mp3" type="audio/mpeg"></audio>
-        <audio id="clickSound" preload="none"><source src="/static/click.mp3" type="audio/mpeg"></audio>
-        <audio id="navSound" preload="none"><source src="/static/nav.mp3" type="audio/mpeg"></audio>
-        <audio id="lpDropSound" preload="none"><source src="/static/lp_drop.mp3" type="audio/mpeg"></audio>
-        <audio id="settingsSound" preload="none"><source src="/static/settings.mp3" type="audio/mpeg"></audio>
-        <audio id="purchaseSound" preload="none"><source src="/static/purchase.mp3" type="audio/mpeg"></audio>
-    </div>
+    <audio id="errorSound" preload="auto"><source src="/static/error.mp3" type="audio/mpeg"></audio>
+    <audio id="clickSound" preload="auto"><source src="/static/click.mp3" type="audio/mpeg"></audio>
+    <audio id="navSound" preload="auto"><source src="/static/nav.mp3" type="audio/mpeg"></audio>
+    <audio id="lpDropSound" preload="auto"><source src="/static/lp_drop.mp3" type="audio/mpeg"></audio>
+    <audio id="settingsSound" preload="auto"><source src="/static/settings.mp3" type="audio/mpeg"></audio>
+    <audio id="purchaseSound" preload="auto"><source src="/static/purchase.mp3" type="audio/mpeg"></audio>
 
-    <!-- ============================================================ -->
-    <!-- СКРИПТЫ (ОПТИМИЗИРОВАННАЯ ЗАГРУЗКА) -->
-    <!-- ============================================================ -->
-    <script>
-    // ================================================================
-    // 1. SPLASH SCREEN — УМНАЯ ЗАГРУЗКА
-    // ================================================================
-    (function() {
-        const splash = document.getElementById('splashScreen');
-        const bar = document.getElementById('splashBar');
-        const percentEl = document.getElementById('splashPercent');
-        const tipEl = document.getElementById('splashTip');
-
-        // Советы
-        const tips = [
-            '💡 Кликай по монете и зарабатывай!',
-            '⚡ Энергия восстанавливается со временем',
-            '🎲 Участвуй в лотерее каждый день!',
-            '👥 Приглашай друзей и получай бонусы!',
-            '⭐ Покупай улучшения за Telegram Stars',
-            '💎 Выводи USDT на свой кошелек',
-            '🏆 Соревнуйся в топе игроков!'
-        ];
-
-        // Длительность загрузки: 3-5 секунд
-        const LOAD_DURATION = 3000 + Math.random() * 2000;
-        const STEP_INTERVAL = 50;
-        const STEPS = LOAD_DURATION / STEP_INTERVAL;
-        let step = 0;
-        let progress = 0;
-
-        // Меняем советы
-        let tipIndex = 0;
-        setInterval(function() {
-            tipIndex = (tipIndex + 1) % tips.length;
-            if (tipEl) {
-                tipEl.style.opacity = '0';
-                setTimeout(function() {
-                    tipEl.textContent = tips[tipIndex];
-                    tipEl.style.opacity = '1';
-                }, 350);
-            }
-        }, 2800);
-
-        // Анимация загрузки
-        function updateLoading() {
-            step++;
-            progress = Math.min(100, (step / STEPS) * 100);
-
-            // Лёгкое ускорение в конце
-            let eased = progress < 70
-                ? progress * 0.92
-                : 70 + (progress - 70) * 1.4;
-            eased = Math.min(100, eased);
-
-            if (bar) bar.style.width = eased + '%';
-            if (percentEl) percentEl.textContent = Math.round(eased);
-
-            if (eased < 100) {
-                requestAnimationFrame(updateLoading);
-            } else {
-                setTimeout(finishLoading, 300);
-            }
-        }
-
-        function finishLoading() {
-            if (splash) {
-                splash.classList.add('hidden');
-                setTimeout(function() {
-                    splash.style.display = 'none';
-                    const app = document.getElementById('app');
-                    if (app) app.classList.add('ready');
-                }, 700);
-            }
-        }
-
-        // Запускаем через 100 мс для отрисовки
-        setTimeout(updateLoading, 100);
-
-        // Форс-мажор: если загрузка зависла
-        setTimeout(function() {
-            if (splash && !splash.classList.contains('hidden')) {
-                console.warn('⚠️ Принудительное завершение загрузки');
-                finishLoading();
-            }
-        }, 8000);
-    })();
-
-    // ================================================================
-    // 2. ПАРТИКЛЫ НА ЭКРАНЕ ЗАГРУЗКИ
-    // ================================================================
-    (function() {
-        const container = document.getElementById('splashParticles');
-        if (!container) return;
-        const colors = ['#FFD700', '#FFA500', '#FF6B00', '#FF8C00', '#FFB800'];
-        for (let i = 0; i < 35; i++) {
-            const dot = document.createElement('div');
-            dot.className = 'splash-particle';
-            const size = 2 + Math.random() * 5;
-            dot.style.cssText = `
-                width: ${size}px;
-                height: ${size}px;
-                background: ${colors[Math.floor(Math.random() * colors.length)]};
-                left: ${Math.random() * 100}%;
-                top: ${Math.random() * 100}%;
-                opacity: ${0.15 + Math.random() * 0.45};
-                animation-delay: ${Math.random() * 6}s;
-                animation-duration: ${6 + Math.random() * 10}s;
-            `;
-            container.appendChild(dot);
-        }
-    })();
-
-    // ================================================================
-    // 3. ЛЕНИВАЯ ЗАГРУЗКА АУДИО (после первого клика)
-    // ================================================================
-    document.addEventListener('click', function loadAudio() {
-        document.querySelectorAll('#audioContainer audio').forEach(function(audio) {
-            audio.setAttribute('preload', 'auto');
-            audio.load();
-        });
-        document.removeEventListener('click', loadAudio);
-    }, { once: true });
-
-    // ================================================================
-    // 4. TON CONNECT — ГРУЗИМ С ЗАДЕРЖКОЙ
-    // ================================================================
-    window.TON_CONNECT_UI = null;
-    var tonScriptLoaded = false;
-
-    function loadTonConnect() {
-        if (tonScriptLoaded) return;
-        tonScriptLoaded = true;
-        var script = document.createElement('script');
-        script.src = 'https://unpkg.com/@tonconnect/ui@2.0.9/dist/tonconnect-ui.min.js';
-        script.onload = function() {
-            if (window.TON_CONNECT_UI) console.log('TON Connect ready');
-            else if (window.tonconnect) window.TON_CONNECT_UI = window.tonconnect;
-            window.dispatchEvent(new Event('tonconnect-ready'));
-        };
-        script.onerror = function() {
-            var btn = document.getElementById('tonDonateBtn');
-            if (btn) { btn.style.opacity = '0.5'; btn.disabled = true; }
-        };
-        document.head.appendChild(script);
-    }
-
-    // Загружаем через 3 секунды или по клику на кнопку TON
-    setTimeout(loadTonConnect, 3000);
-    document.addEventListener('click', function(e) {
-        if (e.target.closest('.btn-ton') || e.target.closest('#tonDonateBtn')) {
-            loadTonConnect();
-        }
-    });
-
-    // ================================================================
-    // 5. ADSGRAM — ГРУЗИМ ПОЗЖЕ
-    // ================================================================
-    function loadAdsgram() {
-        if (document.querySelector('script[src*="sad.adsgram.ai"]')) return;
-        var script = document.createElement('script');
-        script.src = 'https://sad.adsgram.ai/js/sad.min.js';
-        document.head.appendChild(script);
-    }
-    setTimeout(loadAdsgram, 5000);
-
-    // ================================================================
-    // 6. TELEGRAM ANALYTICS — ГРУЗИМ ПОЗЖЕ
-    // ================================================================
-    function loadAnalytics() {
-        if (window.Telegram && window.Telegram.WebApp) {
-            var script = document.createElement('script');
-            script.src = 'https://tganalytics.xyz/index.js';
-            script.onload = function() {
-                if (window.telegramAnalytics) {
-                    try {
-                        window.telegramAnalytics.init({
-                            token: 'eyJhcHBfbmFtZSI6IndlcmVnb29kIiwiYXBwX3VybCI6Imh0dHBzOi8vdC5tZS9XZXJlR29vb2Rib3QiLCJhcHBfZG9tYWluIjoiaHR0cHM6Ly93ZXJlZ29vZC5ydS8ifQ==!/Jd1QUzU6q1h1gN60VfBz53M1flHZlcVC5pcyACO9tM='
-                        });
-                        window.telegramAnalytics.trackEvent('app_started');
-                    } catch(e) {}
-                }
-            };
-            document.head.appendChild(script);
-        }
-    }
-    setTimeout(loadAnalytics, 4000);
-
-    // ================================================================
-    // 7. ДЕТЕКТОР СЛАБЫХ УСТРОЙСТВ (ОТКЛЮЧАЕМ АНИМАЦИИ)
-    // ================================================================
-    setTimeout(function() {
-        var start = performance.now();
-        for (var i = 0; i < 5000; i++) { Math.sqrt(i); }
-        var duration = performance.now() - start;
-
-        if (duration > 30) {
-            // Слабое устройство — упрощаем анимации
-            document.documentElement.style.setProperty('--animation-speed', '0.01s');
-            console.log('🐢 Режим слабого устройства активирован');
-        } else {
-            console.log('🚀 Быстрое устройство');
-        }
-    }, 1500);
-    </script>
-
-    <!-- ============================================================ -->
-    <!-- ОСНОВНОЙ JS (ПОСЛЕДНИЙ) -->
-    <!-- ============================================================ -->
     {% include 'game/scripts.html' %}
-
 </body>
 </html>
