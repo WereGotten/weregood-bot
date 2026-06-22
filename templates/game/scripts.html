@@ -5479,16 +5479,91 @@ async function checkTaskCompletion() {
         loadDailyStatus();
         setTimeout(checkAndStartTutorial, 2000);
 
-        // УМНЫЙ ИНТЕРВАЛ — НЕ СИНХРОНИЗИРУЕМ ВО ВРЕМЯ СТИРАНИЯ!
-        setInterval(() => {
-            if (!isScratchingActive) {
-                syncData();
-            } else {
-                console.log('⏸️ Синхронизация отложена (идет стирание)');
-            }
-        }, 5000);
+        // ============================================================
+// ОПТИМИЗИРОВАННЫЙ СИНХРОНИЗАТОР (КАК В NOTCOIN)
+// ============================================================
 
-        setInterval(() => loadReferrals(), 30000);
+// 1️⃣ БЫСТРОЕ ОБНОВЛЕНИЕ БАЛАНСА (каждые 2 секунды)
+// Используем ЛЁГКИЙ эндпоинт /api/sync_light - только баланс и энергия
+setInterval(async () => {
+    if (isScratchingActive) {
+        // Если идёт стирание - пропускаем
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/sync_light', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            const d = data.data;
+
+            // Обновляем ТОЛЬКО цифры (мгновенно!)
+            const wgEl = document.getElementById('wgBalance');
+            if (wgEl) wgEl.textContent = d.wg.toFixed(2);
+
+            const lpEl = document.getElementById('lpBalance');
+            if (lpEl) lpEl.textContent = d.lp;
+
+            const energyEl = document.getElementById('energyValue');
+            if (energyEl) energyEl.textContent = d.energy;
+
+            const maxEnergyEl = document.getElementById('maxEnergyValue');
+            if (maxEnergyEl) maxEnergyEl.textContent = d.max_energy;
+
+            const earningEl = document.getElementById('earningPerClick');
+            if (earningEl) earningEl.textContent = d.earning_per_click.toFixed(2);
+
+            const clickAmountEl = document.getElementById('clickAmount');
+            if (clickAmountEl) clickAmountEl.textContent = d.earning_per_click.toFixed(2);
+
+            // Обновляем энергобар
+            const percent = (d.energy / d.max_energy) * 100;
+            const bar = document.getElementById('energyBar');
+            if (bar) bar.style.width = percent + '%';
+
+            // Обновляем энергию в хедере
+            const headerEnergy = document.getElementById('energyHeader');
+            if (headerEnergy) headerEnergy.textContent = d.energy;
+        }
+    } catch(e) {
+        // Тихая ошибка - не беспокоим игрока
+    }
+}, 2000); // ← 2 секунды, как в Notcoin!
+
+// 2️⃣ ТЯЖЕЛЫЕ ДАННЫЕ (лотерея, лидерборд, рефералы) - РЕДКО!
+setInterval(() => {
+    if (isScratchingActive) return;
+
+    const activeTab = document.querySelector('.tab-pane.active');
+
+    // Если на вкладке "Лотерея" - обновляем лотерею
+    if (activeTab && activeTab.id === 'tabLottery') {
+        loadUserTickets();
+        updateLottery();
+    }
+
+    // Если на вкладке "Профиль" - обновляем рефералов
+    if (activeTab && activeTab.id === 'tabProfile') {
+        loadReferrals();
+    }
+
+    // Всегда обновляем лидерборд (но редко)
+    if (activeTab && activeTab.id === 'tabHome') {
+        loadLeaderboardData('day', true);
+    }
+}, 30000); // ← 30 секунд
+
+console.log('✅ Оптимизированный синхронизатор запущен!');
+console.log('   📊 Баланс обновляется каждые 2 секунды (лёгкий запрос)');
+console.log('   🎰 Лотерея обновляется каждые 30 секунд');
+console.log('   👥 Рефералы обновляются каждые 30 секунд');
+
+
         startDailyLeaderboardTimer();
         updateLPBoostCount();
 

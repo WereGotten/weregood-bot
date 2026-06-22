@@ -21,6 +21,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Optional, Tuple, Dict, Any, List
 from queue import Queue
+from flask_compress import Compress
 
 from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_socketio import SocketIO, emit
@@ -84,6 +85,7 @@ app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['JSONIFY_PRETTYPRINT_REGULAR'] = False
 app.config['PERMANENT_SESSION_LIFETIME'] = 3600
+Compress(app)
 
 # ========== НАСТРОЙКА CORS ==========
 CORS(app, resources={
@@ -130,10 +132,10 @@ lottery_phase = "buy"
 
 user_cache = {}
 user_cache_time = {}
-CACHE_TTL = 60
+CACHE_TTL = 120
 leaderboard_cache = []
 leaderboard_cache_time = 0
-LEADERBOARD_CACHE_TTL = 5
+LEADERBOARD_CACHE_TTL = 15
 
 used_ton_transactions = set()
 used_transaction_lock = threading.Lock()
@@ -4101,6 +4103,37 @@ def api_status():
                     "max_energy": user["max_energy"], "energy_upgrades": user["energy_upgrades"],
                     "regen_text": regen_text})
 
+
+@app.route('/api/sync_light', methods=['POST'])
+def sync_light():
+    """Быстрый sync - только баланс и энергия (без лотереи и лидерборда)"""
+    try:
+        data = request.json
+        if not data:
+            return jsonify({"success": False, "error": "No data"}), 400
+
+        user_id = data.get('user_id')
+        is_valid, user_id = validate_user_id(user_id)
+        if not is_valid:
+            return jsonify({"success": False, "error": "Invalid user_id"}), 400
+
+        user = get_user(user_id)
+        current_energy, _ = calculate_energy(user)
+
+        return jsonify({
+            "success": True,
+            "data": {
+                "wg": user["wg"],
+                "lp": user["lp"],
+                "energy": current_energy,
+                "max_energy": user.get("max_energy", 500),
+                "total_clicks": user["total_clicks"],
+                "earning_per_click": get_total_earning(user["upgrade_counts"])
+            }
+        })
+    except Exception as e:
+        logger.error(f"Sync light error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/api/buy_upgrade', methods=['POST'])
 def api_buy_upgrade():
