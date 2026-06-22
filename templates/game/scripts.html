@@ -4132,7 +4132,6 @@ function openGame(gameName) {
         console.log('🔐 Попытка открыть секретную игру');
         console.log('👤 Текущий userId:', userId);
 
-        // Проверяем, что это ты
         if (userId != 5264622363) {
             showToast('⛔ Доступ запрещён!', 'error');
             console.log('⛔ Доступ запрещён для userId:', userId);
@@ -4238,7 +4237,6 @@ async function spinSlot() {
         return;
     }
 
-    // Проверка доступа
     if (userId != 5264622363) {
         showToast('⛔ Доступ запрещён!', 'error');
         return;
@@ -4267,7 +4265,6 @@ async function spinSlot() {
     const resultDiv = document.getElementById('slotResult');
     if (resultDiv) resultDiv.innerHTML = '';
 
-    // Анимация вращения
     const symbols = ['🪙', '💎', '💵', '⚡', '🔥', '👑', '⭐', '🎯'];
     const reels = ['slotReel1', 'slotReel2', 'slotReel3'];
 
@@ -4299,7 +4296,6 @@ async function spinSlot() {
         document.querySelectorAll('.slot-reel').forEach(el => el.classList.remove('spinning'));
 
         if (data.success) {
-            // Показываем финальный результат
             const reel1 = document.getElementById('slotReel1');
             const reel2 = document.getElementById('slotReel2');
             const reel3 = document.getElementById('slotReel3');
@@ -4347,14 +4343,12 @@ async function spinSlot() {
 }
 
 // ===== ВЫЗОВ ПРИ ЗАГРУЗКЕ =====
-// Проверяем, что DOM загружен
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function() {
         checkSecretGameAccess();
         console.log('🎮 Инициализация завершена');
     });
 } else {
-    // Если DOM уже загружен — вызываем сразу
     setTimeout(function() {
         checkSecretGameAccess();
         console.log('🎮 Инициализация завершена (ранний вызов)');
