@@ -6233,3 +6233,54 @@ body.light-theme .star-upgrade-card {
 .light-theme #splashScreen .splash-coin {
     background: linear-gradient(135deg, #FFD700, #F5A623);
 }
+/* ===== СЛОТ-МАШИНА ===== */
+.slot-reel {
+    font-size: 4rem;
+    width: 100px;
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.3);
+    border-radius: 16px;
+    border: 2px solid rgba(255,215,0,0.2);
+    transition: all 0.1s ease;
+    user-select: none;
+}
+
+.slot-reel.spinning {
+    border-color: #FFD700;
+    box-shadow: 0 0 30px rgba(255,215,0,0.3);
+    animation: slotPulse 0.15s ease-in-out infinite alternate;
+}
+
+@keyframes slotPulse {
+    0% { transform: scale(1); border-color: rgba(255,215,0,0.3); }
+    100% { transform: scale(1.03); border-color: #FFD700; }
+}
+
+@media (max-width: 480px) {
+    .slot-reel {
+        font-size: 2.8rem;
+        width: 70px;
+        height: 70px;
+    }
+}
+
+/* Секретная игра — золотая рамка */
+#secretGameCard {
+    border: 2px solid #FFD700 !important;
+    background: linear-gradient(135deg, rgba(255,215,0,0.05), rgba(255,165,0,0.02)) !important;
+    position: relative;
+}
+
+#secretGameCard::after {
+    content: '🔐';
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    font-size: 1.2rem;
+    background: rgba(0,0,0,0.8);
+    border-radius: 50%;
+    padding: 4px;
+}
