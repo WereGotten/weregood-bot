@@ -562,7 +562,7 @@ db = Database(DATABASE_PATH)
 
 ALLOWED_UPDATE_FIELDS = {
     'wg', 'lp', 'energy', 'last_energy_update', 'tickets', 'total_clicks',
-    'upgrade_counts', 'username', 'first_name', 'last_name', 'ticket_counter',
+    'upgrade_counts', 'free_upgrade_counts', 'username', 'first_name', 'last_name', 'ticket_counter',
     'referral_code', 'referrer_id', 'likes', 'dislikes', 'settings',
     'avatar_url', 'usdt', 'wins', 'role', 'stars', 'max_energy',
     'energy_upgrades', 'energy_limit_upgrades', 'unlocked_prefixes',
@@ -1364,6 +1364,13 @@ def update_fortune_achievements(user_id, bet_amount=None, is_win=False, is_new_r
                 except:
                     pass
 
+                # ========== МИГРАЦИЯ: free_upgrade_counts ==========
+                try:
+                    cursor.execute("ALTER TABLE users ADD COLUMN free_upgrade_counts TEXT DEFAULT '{}'")
+                    print("✅ Добавлена колонка free_upgrade_counts в users")
+                except:
+                    pass
+
             # ========== ЗАПОЛНЕНИЕ ДОСТИЖЕНИЙ ==========
             achievements_list = [
                 ('autoclicker', '🏆 Автокликер', 'Сделать 50 000 кликов по монете', '🖱️', 50000),
@@ -1969,29 +1976,48 @@ UPGRADE_CONFIG = {
     5: {"base_cost": 150, "bonus": 0.10, "name": "Легенда"},
 }
 
-def get_upgrade_cost(upgrade_id, current_count):
+def get_upgrade_cost(upgrade_id, current_count, free_count=0):
+    """Возвращает стоимость улучшения с учётом платных и бесплатных"""
     config = UPGRADE_CONFIG[upgrade_id]
     base_cost = config["base_cost"]
-    if current_count == 0:
+    # Цена считается ТОЛЬКО от платных улучшений!
+    paid_count = max(0, current_count - free_count)
+    if paid_count == 0:
         return base_cost
-    return base_cost * (1.65 ** current_count)
+    return base_cost * (1.65 ** paid_count)
 
 
-def get_total_earning(upgrade_counts):
-    """Возвращает доход с учётом множителей PayDay для каждого улучшения"""
+def get_total_earning(upgrade_counts, user_id=None):
+    """Возвращает доход с учётом улучшений"""
     base = 0.01
     total_bonus = 0
 
-    # Текущий множитель PayDay (для новых покупок)
     current_payday_multiplier = get_payday_multiplier()
 
-    for key, value in upgrade_counts.items():
-        # ========== ПРОВЕРЯЕМ, ЧТО КЛЮЧ — ЭТО ЧИСЛО ==========
+    # Получаем бесплатные улучшения
+    free_upgrade_counts = {}
+    if user_id:
         try:
-            # Если ключ — строка, проверяем, состоит ли она из цифр
+            with db.get_cursor() as cursor:
+                cursor.execute("SELECT free_upgrade_counts FROM users WHERE user_id = ?", (user_id,))
+                row = cursor.fetchone()
+                if row and row['free_upgrade_counts']:
+                    free_upgrade_counts = json.loads(row['free_upgrade_counts'])
+        except:
+            pass
+
+    # Объединяем все улучшения для дохода
+    all_upgrades = {}
+    for key, value in upgrade_counts.items():
+        all_upgrades[key] = value
+    for key, value in free_upgrade_counts.items():
+        all_upgrades[key] = all_upgrades.get(key, 0) + value
+
+    for key, value in all_upgrades.items():
+        try:
             if isinstance(key, str):
                 if not key.isdigit():
-                    continue  # ← ПРОПУСКАЕМ payday_bonus_X!
+                    continue
                 key = int(key)
             else:
                 key = int(key)
@@ -1999,7 +2025,6 @@ def get_total_earning(upgrade_counts):
             if key in UPGRADE_CONFIG:
                 bonus = UPGRADE_CONFIG[key]["bonus"]
 
-                # Проверяем, был ли это улучшение куплено во время PayDay
                 bonus_key = f"payday_bonus_{key}"
                 if bonus_key in upgrade_counts:
                     multiplier = upgrade_counts[bonus_key]
@@ -4135,6 +4160,7 @@ def sync_light():
         logger.error(f"Sync light error: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
+
 @app.route('/api/buy_upgrade', methods=['POST'])
 def api_buy_upgrade():
     data = request.json
@@ -4155,21 +4181,28 @@ def api_buy_upgrade():
         return jsonify({"success": False, "msg": "Неверный ID улучшения"})
 
     user = get_user(user_id)
-    current_count = user["upgrade_counts"].get(upgrade_id, 0)
-    cost = get_upgrade_cost(upgrade_id, current_count)
+
+    # Получаем платные и бесплатные улучшения
+    upgrade_counts = user.get("upgrade_counts", {})
+    free_upgrade_counts = user.get("free_upgrade_counts", {})
+
+    current_paid = upgrade_counts.get(upgrade_id, 0)
+    current_free = free_upgrade_counts.get(upgrade_id, 0)
+    total_current = current_paid + current_free
+
+    # Цена считается ТОЛЬКО от платных улучшений!
+    cost = get_upgrade_cost(upgrade_id, current_paid)
 
     if user["wg"] < cost:
         return jsonify({"success": False, "msg": f"Не хватает WG! Нужно {cost:.2f} WG"})
 
     old_wg = user["wg"]
     new_wg = old_wg - cost
-    new_count = current_count + 1
+    new_paid_count = current_paid + 1
 
     # ========== ЧИСТИМ upgrade_counts ОТ ВСЕГО МУСОРА ==========
-    upgrade_counts = user["upgrade_counts"]
     clean_counts = {}
     for key, value in upgrade_counts.items():
-        # Оставляем ТОЛЬКО числовые ключи (1, 2, 3)
         try:
             if isinstance(key, str) and key.isdigit():
                 clean_counts[int(key)] = value
@@ -4178,8 +4211,8 @@ def api_buy_upgrade():
         except:
             pass
 
-    # Обновляем количество улучшений
-    clean_counts[upgrade_id] = new_count
+    # Обновляем количество платных улучшений
+    clean_counts[upgrade_id] = new_paid_count
 
     # Сохраняем ТОЛЬКО чистые данные
     safe_update_user(user_id, wg=new_wg, upgrade_counts=clean_counts)
@@ -4188,18 +4221,25 @@ def api_buy_upgrade():
     update_achievement_progress(user_id, 'investor', 1)
     update_achievement_progress(user_id, 'spender', int(cost))
 
-    if current_count == 0:
-        add_log(f"🆕⭐ ПЕРВАЯ ПОКУПКА улучшения! {UPGRADE_CONFIG[upgrade_id]['name']} за {cost:.2f} WG",
+    upgrade_name = UPGRADE_CONFIG[upgrade_id]['name']
+
+    if current_paid == 0 and current_free == 0:
+        add_log(f"🆕⭐ ПЕРВАЯ ПОКУПКА улучшения! {upgrade_name} за {cost:.2f} WG",
                 user_id, user['username'], old_value=old_wg, new_value=new_wg, currency="wg")
     else:
-        add_log(f"💰 Купил {UPGRADE_CONFIG[upgrade_id]['name']} #{new_count} за {cost:.2f} WG",
+        add_log(f"💰 Купил {upgrade_name} #{total_current + 1} за {cost:.2f} WG",
                 user_id, user['username'], old_value=old_wg, new_value=new_wg, currency="wg")
+
+    # Следующая цена считается от нового количества платных улучшений
+    next_cost = get_upgrade_cost(upgrade_id, new_paid_count)
 
     return jsonify({
         "success": True,
-        "msg": f"{UPGRADE_CONFIG[upgrade_id]['name']} #{new_count} куплено!",
-        "new_count": new_count,
-        "next_cost": get_upgrade_cost(upgrade_id, new_count)
+        "msg": f"{upgrade_name} #{total_current + 1} куплено!",
+        "new_count": total_current + 1,
+        "paid_count": new_paid_count,
+        "free_count": current_free,
+        "next_cost": next_cost
     })
 
 
@@ -6202,7 +6242,7 @@ def api_admin_give_upgrade():
     user_id = data.get('user_id')
     upgrade_id = data.get('upgrade_id')
     amount = data.get('amount', 1)
-    increase_price = data.get('increase_price', True)  # ← НОВАЯ ГАЛОЧКА
+    increase_price = data.get('increase_price', True)
 
     if not user_id:
         return jsonify({"success": False, "error": "user_id required"}), 400
@@ -6222,32 +6262,42 @@ def api_admin_give_upgrade():
 
     user = get_user(user_id)
     upgrade_counts = user.get("upgrade_counts", {})
+    free_upgrade_counts = user.get("free_upgrade_counts", {})
 
-    # Получаем текущее количество
     current = upgrade_counts.get(upgrade_id, 0)
-    new_count = current + amount
+    free_current = free_upgrade_counts.get(upgrade_id, 0)
 
-    # Обновляем
-    upgrade_counts[upgrade_id] = new_count
-    safe_update_user(user_id, upgrade_counts=upgrade_counts)
+    if increase_price:
+        # С повышением цены — добавляем в upgrade_counts
+        new_count = current + amount
+        upgrade_counts[upgrade_id] = new_count
+        safe_update_user(user_id, upgrade_counts=upgrade_counts)
+        price_action = "с повышением цены"
+    else:
+        # БЕЗ повышения цены — добавляем в free_upgrade_counts
+        new_free_count = free_current + amount
+        free_upgrade_counts[upgrade_id] = new_free_count
+        safe_update_user(user_id, free_upgrade_counts=free_upgrade_counts)
+        price_action = "БЕЗ повышения цены"
 
     upgrade_name = UPGRADE_CONFIG[upgrade_id]['name']
 
-    # Логируем с информацией о цене
-    price_action = "с повышением цены" if increase_price else "БЕЗ повышения цены"
     add_admin_log(
-        f"🎁 Выдал улучшение {upgrade_name} x{amount} ({price_action}) | было {current}, стало {new_count}",
+        f"🎁 Выдал улучшение {upgrade_name} x{amount} ({price_action})",
         admin_id, admin_name,
         user_id, user.get('username') or f"User_{user_id}"
     )
 
+    # Общий счёт улучшений (платные + бесплатные)
+    total = current + free_current + amount
+
     return jsonify({
         "success": True,
-        "message": f"✅ {upgrade_name} x{amount} выдано! Теперь: {new_count}",
+        "message": f"✅ {upgrade_name} x{amount} выдано! Всего улучшений: {total}",
         "upgrade_id": upgrade_id,
-        "old_count": current,
-        "new_count": new_count,
-        "upgrade_name": upgrade_name,
+        "total_count": total,
+        "paid_count": upgrade_counts.get(upgrade_id, 0),
+        "free_count": free_upgrade_counts.get(upgrade_id, 0),
         "increase_price": increase_price
     })
 
