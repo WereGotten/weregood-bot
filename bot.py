@@ -1977,21 +1977,31 @@ def get_upgrade_cost(upgrade_id, current_count):
     return base_cost * (1.65 ** current_count)
 
 
-def get_total_earning(upgrade_counts):
-    """Возвращает доход с учётом множителей PayDay для каждого улучшения"""
+def get_total_earning(upgrade_counts, user_id=None):
+    """Возвращает доход с учётом множителей PayDay и персонального множителя игрока"""
     base = 0.01
     total_bonus = 0
 
-    # Текущий множитель PayDay (для новых покупок)
+    # Текущий множитель PayDay
     current_payday_multiplier = get_payday_multiplier()
 
-    for key, value in upgrade_counts.items():
-        # ========== ПРОВЕРЯЕМ, ЧТО КЛЮЧ — ЭТО ЧИСЛО ==========
+    # Персональный множитель игрока (если есть)
+    personal_multiplier = 1.0
+    if user_id:
         try:
-            # Если ключ — строка, проверяем, состоит ли она из цифр
+            with db.get_cursor() as cursor:
+                cursor.execute("SELECT earning_multiplier FROM users WHERE user_id = ?", (user_id,))
+                row = cursor.fetchone()
+                if row and row['earning_multiplier']:
+                    personal_multiplier = float(row['earning_multiplier'])
+        except:
+            pass
+
+    for key, value in upgrade_counts.items():
+        try:
             if isinstance(key, str):
                 if not key.isdigit():
-                    continue  # ← ПРОПУСКАЕМ payday_bonus_X!
+                    continue
                 key = int(key)
             else:
                 key = int(key)
@@ -2010,7 +2020,8 @@ def get_total_earning(upgrade_counts):
         except (ValueError, TypeError):
             continue
 
-    return base + total_bonus
+    # ===== УЧЁТ ПЕРСОНАЛЬНОГО МНОЖИТЕЛЯ =====
+    return (base + total_bonus) * personal_multiplier
 
 def generate_ticket_numbers():
     return sorted(random.sample(range(1, 81), 12))
@@ -3779,7 +3790,7 @@ def api_click():
     payday_multiplier = get_payday_multiplier()
 
     # ========== ДОХОД ЗА КЛИК (УЖЕ С МНОЖИТЕЛЕМ!) ==========
-    earning = get_total_earning(user["upgrade_counts"])
+    earning = get_total_earning(user["upgrade_counts"], user_id)
 
     old_wg = user["wg"]
     new_wg = old_wg + earning
@@ -3863,7 +3874,7 @@ def api_status():
         return jsonify({"banned": True, "reason": ban_info['reason'], "until": ban_info['until_date']})
     user = get_user(user_id)
     current_energy, seconds_passed = calculate_energy(user)
-    earning = get_total_earning(user["upgrade_counts"])
+    earning = get_total_earning(user["upgrade_counts"], user_id)
     with online_users_lock:
         online_users[user_id] = time.time()
     update_online_count()
@@ -6058,6 +6069,62 @@ def api_admin_distribute_contest_prizes():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+@app.route('/api/admin/set_earning_multiplier', methods=['POST'])
+@require_admin
+def api_admin_set_earning_multiplier():
+    """Установить множитель заработка для игрока"""
+    data = request.json
+    if not data:
+        return jsonify({"success": False, "error": "No JSON"}), 400
+
+    user_id = data.get('user_id')
+    multiplier = data.get('multiplier', 1.0)
+
+    if not user_id:
+        return jsonify({"success": False, "error": "user_id required"}), 400
+
+    try:
+        multiplier = float(multiplier)
+        if multiplier < 0.1 or multiplier > 100:
+            return jsonify({"success": False, "error": "Множитель должен быть от 0.1 до 100"}), 400
+    except ValueError:
+        return jsonify({"success": False, "error": "Неверный формат множителя"}), 400
+
+    admin_id = request.args.get('user_id', 'Admin')
+    admin_name = "Admin"
+
+    user = get_user(user_id)
+    old_multiplier = user.get('earning_multiplier', 1.0)
+
+    with db.get_cursor() as cursor:
+        # Проверяем, есть ли колонка earning_multiplier
+        cursor.execute("PRAGMA table_info(users)")
+        columns = [col[1] for col in cursor.fetchall()]
+        if 'earning_multiplier' not in columns:
+            cursor.execute("ALTER TABLE users ADD COLUMN earning_multiplier REAL DEFAULT 1.0")
+            print("✅ Добавлена колонка earning_multiplier в users")
+
+        cursor.execute(
+            "UPDATE users SET earning_multiplier = ? WHERE user_id = ?",
+            (multiplier, user_id)
+        )
+
+    invalidate_cache(user_id)
+
+    add_admin_log(
+        f"⚡ Изменил множитель заработка с {old_multiplier}x на {multiplier}x",
+        admin_id, admin_name,
+        user_id, user.get('username') or f"User_{user_id}",
+        details=f"Новый множитель: {multiplier}x"
+    )
+
+    return jsonify({
+        "success": True,
+        "message": f"Множитель заработка изменён с {old_multiplier}x на {multiplier}x",
+        "old_multiplier": old_multiplier,
+        "new_multiplier": multiplier
+    })
+
 # ========== РАССЫЛКА ==========
 broadcast_active = False
 broadcast_cancel = False
@@ -6283,7 +6350,7 @@ def api_sync():
         })
     user = get_user(user_id)
     current_energy, seconds_passed = calculate_energy(user)
-    earning = get_total_earning(user["upgrade_counts"])
+    earning = get_total_earning(user["upgrade_counts"], user_id)
     regen_text = get_energy_regen_text(user["max_energy"], current_energy)
     with online_users_lock:
         online_users[user_id] = time.time()

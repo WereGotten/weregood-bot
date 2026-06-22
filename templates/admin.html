@@ -2972,341 +2972,460 @@
         }
 
         // ========== ПРОФИЛЬ ИГРОКА ==========
-        async function openPlayerProfile(userId) {
-            const data = await apiRequest('get_user', { method: 'POST', body: JSON.stringify({ user_id: userId }) });
-            if (!data.success) {
-                showToast('Ошибка загрузки профиля', 'error');
-                return;
-            }
-            currentUserData = data.user;
-            const modalContent = document.getElementById('playerModalContent');
-            if (!modalContent) return;
-            modalContent.innerHTML = `
-                <div style="text-align:center;margin-bottom:20px;">
-                    <div style="font-size:3rem;">👤</div>
-                    <h3>${escapeHtml(currentUserData.username || 'Игрок')}</h3>
-                    <p style="opacity:0.5;">ID: ${currentUserData.user_id} | Роль: <span style="color:#FFD700;">${currentUserData.role}</span></p>
-                    ${currentUserData.is_banned ? `<p style="color:#f44336;">🔨 ЗАБЛОКИРОВАН до: ${currentUserData.ban_info?.until_date}<br>Причина: ${currentUserData.ban_info?.reason}</p>` : ''}
-                </div>
+async function openPlayerProfile(userId) {
+    const data = await apiRequest('get_user', { method: 'POST', body: JSON.stringify({ user_id: userId }) });
+    if (!data.success) {
+        showToast('Ошибка загрузки профиля', 'error');
+        return;
+    }
+    currentUserData = data.user;
+    const modalContent = document.getElementById('playerModalContent');
+    if (!modalContent) return;
 
-                <div class="profile-tabs">
-                    <button class="profile-tab active" data-tab="info">📊 Информация</button>
-                    <button class="profile-tab" data-tab="actions">⚡ Действия</button>
-                    <button class="profile-tab" data-tab="referrals">👥 Рефералы</button>
-                    <button class="profile-tab" data-tab="logs">📋 Логи</button>
-                </div>
+    // Получаем текущий множитель (если есть)
+    const currentMultiplier = currentUserData.earning_multiplier || 1.0;
 
-                <div id="profileTabInfo" class="profile-tab-content active">
-                    <div class="stats-grid" style="grid-template-columns:repeat(2,1fr);">
-                        <div class="stat-card"><div class="stat-card-title">💰 WG</div><div class="stat-card-value"><span class="clickable-value" onclick="openEditModal(${currentUserData.user_id}, 'wg', ${currentUserData.wg})">${formatNumber(currentUserData.wg)}</span></div></div>
-                        <div class="stat-card"><div class="stat-card-title">🎯 LP</div><div class="stat-card-value"><span class="clickable-value" onclick="openEditModal(${currentUserData.user_id}, 'lp', ${currentUserData.lp})">${currentUserData.lp}</span></div></div>
-                        <div class="stat-card"><div class="stat-card-title">💎 USDT</div><div class="stat-card-value"><span class="clickable-value" onclick="openEditModal(${currentUserData.user_id}, 'usdt', ${currentUserData.usdt})">${formatNumber(currentUserData.usdt)}</span></div></div>
-                        <div class="stat-card"><div class="stat-card-title">⭐ Stars</div><div class="stat-card-value"><span class="clickable-value" onclick="openEditModal(${currentUserData.user_id}, 'stars', ${currentUserData.stars})">${currentUserData.stars}</span></div></div>
-                        <div class="stat-card"><div class="stat-card-title">🏆 Побед</div><div class="stat-card-value">${currentUserData.wins}</div></div>
-                        <div class="stat-card"><div class="stat-card-title">👆 Кликов</div><div class="stat-card-value">${currentUserData.total_clicks}</div></div>
-                        <div class="stat-card"><div class="stat-card-title">⚡ Энергия</div><div class="stat-card-value"><span class="clickable-value" onclick="openEditModal(${currentUserData.user_id}, 'energy', ${currentUserData.energy})">${currentUserData.energy}</span>/${currentUserData.max_energy}</div></div>
-                        <div class="stat-card"><div class="stat-card-title">⚡ Макс. энергия</div><div class="stat-card-value"><span class="clickable-value" onclick="openEditModal(${currentUserData.user_id}, 'max_energy', ${currentUserData.max_energy})">${currentUserData.max_energy}</span></div></div>
-                        <div class="stat-card"><div class="stat-card-title">🔓 Префиксы</div><div class="stat-card-value">${(currentUserData.unlocked_prefixes || ['player']).join(', ')}</div></div>
-                    </div>
-                </div>
+    modalContent.innerHTML = `
+        <div style="text-align:center;margin-bottom:20px;">
+            <div style="font-size:3rem;">👤</div>
+            <h3>${escapeHtml(currentUserData.username || 'Игрок')}</h3>
+            <p style="opacity:0.5;">ID: ${currentUserData.user_id} | Роль: <span style="color:#FFD700;">${currentUserData.role}</span></p>
+            ${currentUserData.is_banned ? `<p style="color:#f44336;">🔨 ЗАБЛОКИРОВАН до: ${currentUserData.ban_info?.until_date}<br>Причина: ${currentUserData.ban_info?.reason}</p>` : ''}
+        </div>
 
-                <div id="profileTabActions" class="profile-tab-content">
-                    <div class="form-group">
-                        <label>➕ Добавить WG</label>
-                        <div class="form-row">
-                            <input type="number" class="form-input" id="actionAmount" placeholder="Количество">
-                            <button class="btn" onclick="adminAction('add_wg')">Добавить</button>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>📉 Отнять WG</label>
-                        <div class="form-row">
-                            <input type="number" class="form-input" id="actionAmountRemove" placeholder="Количество">
-                            <button class="btn btn-danger" onclick="adminAction('remove_wg')">Отнять</button>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>➕ Добавить LP</label>
-                        <div class="form-row">
-                            <input type="number" class="form-input" id="actionAmountLP" placeholder="Количество">
-                            <button class="btn" onclick="adminAction('add_lp')">Добавить</button>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>📉 Отнять LP</label>
-                        <div class="form-row">
-                            <input type="number" class="form-input" id="actionAmountRemoveLP" placeholder="Количество">
-                            <button class="btn btn-danger" onclick="adminAction('remove_lp')">Отнять</button>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>➕ Добавить USDT</label>
-                        <div class="form-row">
-                            <input type="number" class="form-input" id="actionAmountUSDT" step="0.01" placeholder="Количество">
-                            <button class="btn" onclick="adminAction('add_usdt')">Добавить</button>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>📉 Отнять USDT</label>
-                        <div class="form-row">
-                            <input type="number" class="form-input" id="actionAmountRemoveUSDT" step="0.01" placeholder="Количество">
-                            <button class="btn btn-danger" onclick="adminAction('remove_usdt')">Отнять</button>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>⭐ Добавить Stars</label>
-                        <div class="form-row">
-                            <input type="number" class="form-input" id="actionAmountStars" placeholder="Количество">
-                            <button class="btn" onclick="adminAction('add_stars')">Добавить</button>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>⭐ Отнять Stars</label>
-                        <div class="form-row">
-                            <input type="number" class="form-input" id="actionAmountRemoveStars" placeholder="Количество">
-                            <button class="btn btn-danger" onclick="adminAction('remove_stars')">Отнять</button>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>⚡ Добавить энергию</label>
-                        <div class="form-row">
-                            <input type="number" class="form-input" id="actionAmountEnergy" placeholder="Количество">
-                            <button class="btn" onclick="adminAction('add_energy')">Добавить</button>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>⚡ Отнять энергию</label>
-                        <div class="form-row">
-                            <input type="number" class="form-input" id="actionAmountRemoveEnergy" placeholder="Количество">
-                            <button class="btn btn-danger" onclick="adminAction('remove_energy')">Отнять</button>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>⚡ Увеличить макс. энергию</label>
-                        <div class="form-row">
-                            <input type="number" class="form-input" id="actionAmountMaxEnergy" placeholder="+50">
-                            <button class="btn" onclick="adminAction('add_max_energy')">Увеличить</button>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>👆 Добавить кликов</label>
-                        <div class="form-row">
-                            <input type="number" class="form-input" id="actionAmountClicks" placeholder="Количество">
-                            <button class="btn" onclick="adminAction('add_clicks')">Добавить</button>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>⚡ Сбросить энергию</label>
-                        <button class="btn btn-secondary" onclick="adminAction('reset_energy')">Сбросить до максимума</button>
-                    </div>
-                    <div class="form-group">
-                        <label>👑 Выдать префикс</label>
-                        <div class="form-row">
-                            <select class="form-select" id="actionPrefix">
-                                <option value="pioneer">⭐ Первооткрыватель</option>
-                                <option value="founder">👑 Основатель</option>
-                            </select>
-                            <button class="btn" onclick="adminAction('unlock_prefix')">Выдать</button>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>🎭 Сменить роль</label>
-                        <div class="form-row">
-                            <select class="form-select" id="actionRole">
-                                <option value="player">Игрок</option>
-                                <option value="pioneer">Первооткрыватель</option>
-                                <option value="founder">Основатель</option>
-                            </select>
-                            <button class="btn" onclick="adminAction('set_role')">Сменить</button>
-                        </div>
-                    </div>
+        <div class="profile-tabs">
+            <button class="profile-tab active" data-tab="info">📊 Информация</button>
+            <button class="profile-tab" data-tab="actions">⚡ Действия</button>
+            <button class="profile-tab" data-tab="referrals">👥 Рефералы</button>
+            <button class="profile-tab" data-tab="logs">📋 Логи</button>
+        </div>
 
-                    <div class="form-group" style="border-top:1px solid rgba(255,215,0,0.2);padding-top:15px;">
-                        <label style="color:#FFD700;">⚡ Управление энергетическим усилителем</label>
-                        <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                            <button class="btn-sm" onclick="manageEnergyUpgrades('add',1,true)" style="background:rgba(34,197,94,0.2);color:#22c55e;">+1 (с наградой)</button>
-                            <button class="btn-sm" onclick="manageEnergyUpgrades('add',1,false)" style="background:rgba(255,215,0,0.2);color:#FFD700;">+1 (без награды)</button>
-                            <button class="btn-sm" onclick="manageEnergyUpgrades('remove',1,false)" style="background:rgba(244,67,54,0.2);color:#f44336;">-1</button>
-                            <input type="number" id="energyUpgradeAmount" value="1" min="1" max="15" style="width:60px;background:rgba(255,255,255,0.1);border-radius:8px;padding:4px 8px;color:white;">
-                            <button class="btn-sm" onclick="manageEnergyUpgrades('add', parseInt(document.getElementById('energyUpgradeAmount').value), true)" style="background:rgba(34,197,94,0.2);color:#22c55e;">➕ Добавить (с наградой)</button>
-                            <button class="btn-sm" onclick="manageEnergyUpgrades('add', parseInt(document.getElementById('energyUpgradeAmount').value), false)" style="background:rgba(255,215,0,0.2);color:#FFD700;">➕ Добавить (без награды)</button>
-                            <button class="btn-sm" onclick="manageEnergyUpgrades('remove', parseInt(document.getElementById('energyUpgradeAmount').value), false)" style="background:rgba(244,67,54,0.2);color:#f44336;">➖ Убавить</button>
-                        </div>
-                        <div style="font-size:0.65rem;margin-top:8px;">📊 Текущий прогресс: <span id="currentEnergyUpgrades">${currentUserData.energy_upgrades || 0}</span>/15</div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>🔨 Блокировка</label>
-                        <button class="btn btn-danger" onclick="openBanModal(${currentUserData.user_id})">🔨 Заблокировать</button>
-                    </div>
-
-                    ${currentUserData.is_banned ? `
-                    <div class="form-group">
-                        <label>🔓 Разблокировка</label>
-                        <button class="btn btn-secondary" onclick="adminAction('unban')">🔓 Разблокировать</button>
-                    </div>` : ''}
-
-                    <div class="form-group">
-                        <label>🗑️ TON кошелёк</label>
-                        <button class="btn btn-danger" onclick="clearUserWallet(${currentUserData.user_id})">🗑️ Отвязать кошелёк</button>
-                    </div>
-
-                    <div class="form-group">
-                        <label style="color:#f44336;">⚠️ ОПАСНАЯ ЗОНА</label>
-                        <button class="btn btn-danger" onclick="openDeleteUserModal()" style="background:rgba(244,67,54,0.2);border:1px solid #f44336;color:#f44336;">🗑️ ПОЛНОСТЬЮ УДАЛИТЬ ИГРОКА</button>
-                        <p style="font-size:0.6rem;opacity:0.5;">ВНИМАНИЕ! Это действие нельзя отменить.</p>
+        <div id="profileTabInfo" class="profile-tab-content active">
+            <div class="stats-grid" style="grid-template-columns:repeat(2,1fr);">
+                <div class="stat-card"><div class="stat-card-title">💰 WG</div><div class="stat-card-value"><span class="clickable-value" onclick="openEditModal(${currentUserData.user_id}, 'wg', ${currentUserData.wg})">${formatNumber(currentUserData.wg)}</span></div></div>
+                <div class="stat-card"><div class="stat-card-title">🎯 LP</div><div class="stat-card-value"><span class="clickable-value" onclick="openEditModal(${currentUserData.user_id}, 'lp', ${currentUserData.lp})">${currentUserData.lp}</span></div></div>
+                <div class="stat-card"><div class="stat-card-title">💎 USDT</div><div class="stat-card-value"><span class="clickable-value" onclick="openEditModal(${currentUserData.user_id}, 'usdt', ${currentUserData.usdt})">${formatNumber(currentUserData.usdt)}</span></div></div>
+                <div class="stat-card"><div class="stat-card-title">⭐ Stars</div><div class="stat-card-value"><span class="clickable-value" onclick="openEditModal(${currentUserData.user_id}, 'stars', ${currentUserData.stars})">${currentUserData.stars}</span></div></div>
+                <div class="stat-card"><div class="stat-card-title">🏆 Побед</div><div class="stat-card-value">${currentUserData.wins}</div></div>
+                <div class="stat-card"><div class="stat-card-title">👆 Кликов</div><div class="stat-card-value">${currentUserData.total_clicks}</div></div>
+                <div class="stat-card"><div class="stat-card-title">⚡ Энергия</div><div class="stat-card-value"><span class="clickable-value" onclick="openEditModal(${currentUserData.user_id}, 'energy', ${currentUserData.energy})">${currentUserData.energy}</span>/${currentUserData.max_energy}</div></div>
+                <div class="stat-card"><div class="stat-card-title">⚡ Макс. энергия</div><div class="stat-card-value"><span class="clickable-value" onclick="openEditModal(${currentUserData.user_id}, 'max_energy', ${currentUserData.max_energy})">${currentUserData.max_energy}</span></div></div>
+                <div class="stat-card"><div class="stat-card-title">🔓 Префиксы</div><div class="stat-card-value">${(currentUserData.unlocked_prefixes || ['player']).join(', ')}</div></div>
+                <!-- ===== НОВОЕ: МНОЖИТЕЛЬ ЗАРАБОТКА ===== -->
+                <div class="stat-card" style="border: 1px solid rgba(255,215,0,0.3); background: rgba(255,215,0,0.05);">
+                    <div class="stat-card-title">⚡ Множитель заработка</div>
+                    <div class="stat-card-value" style="color: #FFD700; font-size: 1.3rem;">
+                        <span id="playerEarningMultiplier">${currentMultiplier.toFixed(1)}</span>x
                     </div>
                 </div>
+            </div>
+        </div>
 
-                <div id="profileTabReferrals" class="profile-tab-content">
-                    ${currentUserData.referrals && currentUserData.referrals.length ? currentUserData.referrals.map(r => `<div class="log-entry">👥 ${escapeHtml(r.username)} | Потрачено LP: ${r.spent_lp} | Заработано: ${r.earned} LP | ${r.date}</div>`).join('') : '<div class="loading">📭 Нет рефералов</div>'}
+        <div id="profileTabActions" class="profile-tab-content">
+            <div class="form-group">
+                <label>➕ Добавить WG</label>
+                <div class="form-row">
+                    <input type="number" class="form-input" id="actionAmount" placeholder="Количество">
+                    <button class="btn" onclick="adminAction('add_wg')">Добавить</button>
                 </div>
-
-                <div id="profileTabLogs" class="profile-tab-content" style="max-height:300px;overflow-y:auto;">
-                    ${currentUserData.personal_logs && currentUserData.personal_logs.length ? currentUserData.personal_logs.map(l => `<div class="log-entry"><span class="log-time">[${l.timestamp}]</span> ${escapeHtml(l.action)}</div>`).join('') : '<div class="loading">📭 Нет логов</div>'}
+            </div>
+            <div class="form-group">
+                <label>📉 Отнять WG</label>
+                <div class="form-row">
+                    <input type="number" class="form-input" id="actionAmountRemove" placeholder="Количество">
+                    <button class="btn btn-danger" onclick="adminAction('remove_wg')">Отнять</button>
                 </div>
-            `;
+            </div>
+            <div class="form-group">
+                <label>➕ Добавить LP</label>
+                <div class="form-row">
+                    <input type="number" class="form-input" id="actionAmountLP" placeholder="Количество">
+                    <button class="btn" onclick="adminAction('add_lp')">Добавить</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>📉 Отнять LP</label>
+                <div class="form-row">
+                    <input type="number" class="form-input" id="actionAmountRemoveLP" placeholder="Количество">
+                    <button class="btn btn-danger" onclick="adminAction('remove_lp')">Отнять</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>➕ Добавить USDT</label>
+                <div class="form-row">
+                    <input type="number" class="form-input" id="actionAmountUSDT" step="0.01" placeholder="Количество">
+                    <button class="btn" onclick="adminAction('add_usdt')">Добавить</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>📉 Отнять USDT</label>
+                <div class="form-row">
+                    <input type="number" class="form-input" id="actionAmountRemoveUSDT" step="0.01" placeholder="Количество">
+                    <button class="btn btn-danger" onclick="adminAction('remove_usdt')">Отнять</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>⭐ Добавить Stars</label>
+                <div class="form-row">
+                    <input type="number" class="form-input" id="actionAmountStars" placeholder="Количество">
+                    <button class="btn" onclick="adminAction('add_stars')">Добавить</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>⭐ Отнять Stars</label>
+                <div class="form-row">
+                    <input type="number" class="form-input" id="actionAmountRemoveStars" placeholder="Количество">
+                    <button class="btn btn-danger" onclick="adminAction('remove_stars')">Отнять</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>⚡ Добавить энергию</label>
+                <div class="form-row">
+                    <input type="number" class="form-input" id="actionAmountEnergy" placeholder="Количество">
+                    <button class="btn" onclick="adminAction('add_energy')">Добавить</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>⚡ Отнять энергию</label>
+                <div class="form-row">
+                    <input type="number" class="form-input" id="actionAmountRemoveEnergy" placeholder="Количество">
+                    <button class="btn btn-danger" onclick="adminAction('remove_energy')">Отнять</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>⚡ Увеличить макс. энергию</label>
+                <div class="form-row">
+                    <input type="number" class="form-input" id="actionAmountMaxEnergy" placeholder="+50">
+                    <button class="btn" onclick="adminAction('add_max_energy')">Увеличить</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>👆 Добавить кликов</label>
+                <div class="form-row">
+                    <input type="number" class="form-input" id="actionAmountClicks" placeholder="Количество">
+                    <button class="btn" onclick="adminAction('add_clicks')">Добавить</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>⚡ Сбросить энергию</label>
+                <button class="btn btn-secondary" onclick="adminAction('reset_energy')">Сбросить до максимума</button>
+            </div>
+            <div class="form-group">
+                <label>👑 Выдать префикс</label>
+                <div class="form-row">
+                    <select class="form-select" id="actionPrefix">
+                        <option value="pioneer">⭐ Первооткрыватель</option>
+                        <option value="founder">👑 Основатель</option>
+                    </select>
+                    <button class="btn" onclick="adminAction('unlock_prefix')">Выдать</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>🎭 Сменить роль</label>
+                <div class="form-row">
+                    <select class="form-select" id="actionRole">
+                        <option value="player">Игрок</option>
+                        <option value="pioneer">Первооткрыватель</option>
+                        <option value="founder">Основатель</option>
+                    </select>
+                    <button class="btn" onclick="adminAction('set_role')">Сменить</button>
+                </div>
+            </div>
 
-            document.querySelectorAll('.profile-tab').forEach(tab => {
-                tab.onclick = () => {
-                    document.querySelectorAll('.profile-tab').forEach(t => t.classList.remove('active'));
-                    document.querySelectorAll('.profile-tab-content').forEach(c => c.classList.remove('active'));
-                    tab.classList.add('active');
-                    const tabName = tab.dataset.tab;
-                    const contentId = `profileTab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`;
-                    const contentEl = document.getElementById(contentId);
-                    if (contentEl) contentEl.classList.add('active');
-                };
-            });
+            <!-- ===== НОВОЕ: МНОЖИТЕЛЬ ЗАРАБОТКА ===== -->
+            <div class="form-group" style="border-top: 2px solid rgba(255,215,0,0.3); padding-top: 15px; margin-top: 10px; background: rgba(255,215,0,0.03); border-radius: 12px; padding: 15px;">
+                <label style="color: #FFD700; font-weight: 700; font-size: 0.95rem;">⚡ Множитель заработка</label>
+                <div style="font-size: 0.7rem; opacity: 0.6; margin-bottom: 10px;">
+                    Множитель влияет на весь доход за клик. От 0.1x до 100x.
+                </div>
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <span style="font-size: 0.85rem; opacity: 0.7;">
+                        Текущий: <strong id="currentEarningMultiplier" style="color: #FFD700; font-size: 1.1rem;">${currentMultiplier.toFixed(1)}</strong>x
+                    </span>
+                    <input type="number" id="earningMultiplierInput" value="${currentMultiplier.toFixed(1)}" step="0.1" min="0.1" max="100"
+                           style="width: 100px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,215,0,0.3); border-radius: 8px; padding: 6px 10px; color: white; font-size: 0.9rem;">
+                    <button class="btn-sm" onclick="setEarningMultiplier()" style="background: rgba(255,215,0,0.25); color: #FFD700; padding: 6px 16px;">
+                        ⚡ Установить
+                    </button>
+                    <button class="btn-sm" onclick="resetEarningMultiplier()" style="background: rgba(244,67,54,0.2); color: #f44336; padding: 6px 16px;">
+                        🔄 Сбросить
+                    </button>
+                </div>
+            </div>
 
-            document.getElementById('playerModal').classList.add('active');
+            <div class="form-group" style="border-top:1px solid rgba(255,215,0,0.2);padding-top:15px;">
+                <label style="color:#FFD700;">⚡ Управление энергетическим усилителем</label>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                    <button class="btn-sm" onclick="manageEnergyUpgrades('add',1,true)" style="background:rgba(34,197,94,0.2);color:#22c55e;">+1 (с наградой)</button>
+                    <button class="btn-sm" onclick="manageEnergyUpgrades('add',1,false)" style="background:rgba(255,215,0,0.2);color:#FFD700;">+1 (без награды)</button>
+                    <button class="btn-sm" onclick="manageEnergyUpgrades('remove',1,false)" style="background:rgba(244,67,54,0.2);color:#f44336;">-1</button>
+                    <input type="number" id="energyUpgradeAmount" value="1" min="1" max="15" style="width:60px;background:rgba(255,255,255,0.1);border-radius:8px;padding:4px 8px;color:white;">
+                    <button class="btn-sm" onclick="manageEnergyUpgrades('add', parseInt(document.getElementById('energyUpgradeAmount').value), true)" style="background:rgba(34,197,94,0.2);color:#22c55e;">➕ Добавить (с наградой)</button>
+                    <button class="btn-sm" onclick="manageEnergyUpgrades('add', parseInt(document.getElementById('energyUpgradeAmount').value), false)" style="background:rgba(255,215,0,0.2);color:#FFD700;">➕ Добавить (без награды)</button>
+                    <button class="btn-sm" onclick="manageEnergyUpgrades('remove', parseInt(document.getElementById('energyUpgradeAmount').value), false)" style="background:rgba(244,67,54,0.2);color:#f44336;">➖ Убавить</button>
+                </div>
+                <div style="font-size:0.65rem;margin-top:8px;">📊 Текущий прогресс: <span id="currentEnergyUpgrades">${currentUserData.energy_upgrades || 0}</span>/15</div>
+            </div>
+
+            <div class="form-group">
+                <label>🔨 Блокировка</label>
+                <button class="btn btn-danger" onclick="openBanModal(${currentUserData.user_id})">🔨 Заблокировать</button>
+            </div>
+
+            ${currentUserData.is_banned ? `
+            <div class="form-group">
+                <label>🔓 Разблокировка</label>
+                <button class="btn btn-secondary" onclick="adminAction('unban')">🔓 Разблокировать</button>
+            </div>` : ''}
+
+            <div class="form-group">
+                <label>🗑️ TON кошелёк</label>
+                <button class="btn btn-danger" onclick="clearUserWallet(${currentUserData.user_id})">🗑️ Отвязать кошелёк</button>
+            </div>
+
+            <div class="form-group">
+                <label style="color:#f44336;">⚠️ ОПАСНАЯ ЗОНА</label>
+                <button class="btn btn-danger" onclick="openDeleteUserModal()" style="background:rgba(244,67,54,0.2);border:1px solid #f44336;color:#f44336;">🗑️ ПОЛНОСТЬЮ УДАЛИТЬ ИГРОКА</button>
+                <p style="font-size:0.6rem;opacity:0.5;">ВНИМАНИЕ! Это действие нельзя отменить.</p>
+            </div>
+        </div>
+
+        <div id="profileTabReferrals" class="profile-tab-content">
+            ${currentUserData.referrals && currentUserData.referrals.length ? currentUserData.referrals.map(r => `<div class="log-entry">👥 ${escapeHtml(r.username)} | Потрачено LP: ${r.spent_lp} | Заработано: ${r.earned} LP | ${r.date}</div>`).join('') : '<div class="loading">📭 Нет рефералов</div>'}
+        </div>
+
+        <div id="profileTabLogs" class="profile-tab-content" style="max-height:300px;overflow-y:auto;">
+            ${currentUserData.personal_logs && currentUserData.personal_logs.length ? currentUserData.personal_logs.map(l => `<div class="log-entry"><span class="log-time">[${l.timestamp}]</span> ${escapeHtml(l.action)}</div>`).join('') : '<div class="loading">📭 Нет логов</div>'}
+        </div>
+    `;
+
+    document.querySelectorAll('.profile-tab').forEach(tab => {
+        tab.onclick = () => {
+            document.querySelectorAll('.profile-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.profile-tab-content').forEach(c => c.classList.remove('active'));
+            tab.classList.add('active');
+            const tabName = tab.dataset.tab;
+            const contentId = `profileTab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`;
+            const contentEl = document.getElementById(contentId);
+            if (contentEl) contentEl.classList.add('active');
+        };
+    });
+
+    document.getElementById('playerModal').classList.add('active');
+}
+
+function closePlayerModal() {
+    document.getElementById('playerModal').classList.remove('active');
+    currentUserData = null;
+}
+
+// ===== НОВЫЕ ФУНКЦИИ ДЛЯ МНОЖИТЕЛЯ =====
+
+// ===== УСТАНОВКА МНОЖИТЕЛЯ ЗАРАБОТКА =====
+async function setEarningMultiplier() {
+    if (!currentUserData) {
+        showToast('Сначала выберите игрока', 'error');
+        return;
+    }
+
+    const input = document.getElementById('earningMultiplierInput');
+    const multiplier = parseFloat(input.value);
+
+    if (isNaN(multiplier) || multiplier < 0.1 || multiplier > 100) {
+        showToast('Множитель должен быть от 0.1 до 100', 'error');
+        return;
+    }
+
+    if (!confirm(`Установить множитель заработка ${multiplier}x для игрока ${currentUserData.username || currentUserData.user_id}?`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/admin/set_earning_multiplier?key=' + adminKey, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id: currentUserData.user_id,
+                multiplier: multiplier
+            })
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            showToast(data.message, 'success');
+            // Обновляем отображение
+            document.getElementById('currentEarningMultiplier').innerText = multiplier.toFixed(1);
+            document.getElementById('playerEarningMultiplier').innerText = multiplier.toFixed(1);
+            // Перезагружаем профиль
+            await openPlayerProfile(currentUserData.user_id);
+            if (typeof loadStats === 'function') loadStats();
+        } else {
+            showToast('❌ Ошибка: ' + data.error, 'error');
         }
+    } catch(e) {
+        console.error('Set multiplier error:', e);
+        showToast('❌ Ошибка соединения', 'error');
+    }
+}
 
-        function closePlayerModal() {
-            document.getElementById('playerModal').classList.remove('active');
-            currentUserData = null;
+// ===== СБРОС МНОЖИТЕЛЯ =====
+async function resetEarningMultiplier() {
+    if (!currentUserData) {
+        showToast('Сначала выберите игрока', 'error');
+        return;
+    }
+
+    if (!confirm(`Сбросить множитель заработка до 1.0x для игрока ${currentUserData.username || currentUserData.user_id}?`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/admin/set_earning_multiplier?key=' + adminKey, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id: currentUserData.user_id,
+                multiplier: 1.0
+            })
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            showToast('✅ Множитель сброшен до 1.0x', 'success');
+            document.getElementById('currentEarningMultiplier').innerText = '1.0';
+            document.getElementById('playerEarningMultiplier').innerText = '1.0';
+            document.getElementById('earningMultiplierInput').value = '1.0';
+            await openPlayerProfile(currentUserData.user_id);
+            if (typeof loadStats === 'function') loadStats();
+        } else {
+            showToast('❌ Ошибка: ' + data.error, 'error');
         }
+    } catch(e) {
+        console.error('Reset multiplier error:', e);
+        showToast('❌ Ошибка соединения', 'error');
+    }
+}
 
-        async function manageEnergyUpgrades(action, amount, giveReward) {
-            if (!currentUserData) {
-                showToast('Сначала выберите игрока', 'error');
-                return;
-            }
-            if (amount <= 0 || isNaN(amount)) {
-                showToast('Введите корректное количество', 'error');
-                return;
-            }
-            let confirmMsg = '';
-            if (action === 'add' && giveReward) {
-                confirmMsg = `Добавить ${amount} покупок с выдачей награды (${amount * 50} LP + ${amount * 40} к макс. энергии)?`;
-            } else if (action === 'add' && !giveReward) {
-                confirmMsg = `Добавить ${amount} покупок БЕЗ выдачи награды?`;
-            } else {
-                confirmMsg = `Убавить ${amount} покупок?`;
-            }
-            if (!confirm(confirmMsg)) return;
-            try {
-                const response = await fetch('/api/admin/manage_energy_upgrades?key=' + adminKey, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        user_id: currentUserData.user_id,
-                        action: action,
-                        amount: amount,
-                        give_reward: giveReward
-                    })
-                });
-                const result = await response.json();
-                if (result.success) {
-                    showToast(`✅ ${result.message}`, 'success');
-                    await openPlayerProfile(currentUserData.user_id);
-                    if (typeof loadStats === 'function') loadStats();
-                } else {
-                    showToast(`❌ Ошибка: ${result.error}`, 'error');
-                }
-            } catch (e) {
-                showToast('❌ Ошибка', 'error');
-            }
+async function manageEnergyUpgrades(action, amount, giveReward) {
+    if (!currentUserData) {
+        showToast('Сначала выберите игрока', 'error');
+        return;
+    }
+    if (amount <= 0 || isNaN(amount)) {
+        showToast('Введите корректное количество', 'error');
+        return;
+    }
+    let confirmMsg = '';
+    if (action === 'add' && giveReward) {
+        confirmMsg = `Добавить ${amount} покупок с выдачей награды (${amount * 50} LP + ${amount * 40} к макс. энергии)?`;
+    } else if (action === 'add' && !giveReward) {
+        confirmMsg = `Добавить ${amount} покупок БЕЗ выдачи награды?`;
+    } else {
+        confirmMsg = `Убавить ${amount} покупок?`;
+    }
+    if (!confirm(confirmMsg)) return;
+    try {
+        const response = await fetch('/api/admin/manage_energy_upgrades?key=' + adminKey, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id: currentUserData.user_id,
+                action: action,
+                amount: amount,
+                give_reward: giveReward
+            })
+        });
+        const result = await response.json();
+        if (result.success) {
+            showToast(`✅ ${result.message}`, 'success');
+            await openPlayerProfile(currentUserData.user_id);
+            if (typeof loadStats === 'function') loadStats();
+        } else {
+            showToast(`❌ Ошибка: ${result.error}`, 'error');
         }
+    } catch (e) {
+        showToast('❌ Ошибка', 'error');
+    }
+}
 
-        async function adminAction(actionType) {
-            const userId = currentUserData.user_id;
-            let amount = 0;
-            let prefixId = null;
-            let role = null;
+async function adminAction(actionType) {
+    const userId = currentUserData.user_id;
+    let amount = 0;
+    let prefixId = null;
+    let role = null;
 
-            switch (actionType) {
-                case 'add_wg':
-                    amount = parseFloat(document.getElementById('actionAmount')?.value) || 0;
-                    break;
-                case 'remove_wg':
-                    amount = parseFloat(document.getElementById('actionAmountRemove')?.value) || 0;
-                    break;
-                case 'add_lp':
-                    amount = parseFloat(document.getElementById('actionAmountLP')?.value) || 0;
-                    break;
-                case 'remove_lp':
-                    amount = parseFloat(document.getElementById('actionAmountRemoveLP')?.value) || 0;
-                    break;
-                case 'add_usdt':
-                    amount = parseFloat(document.getElementById('actionAmountUSDT')?.value) || 0;
-                    break;
-                case 'remove_usdt':
-                    amount = parseFloat(document.getElementById('actionAmountRemoveUSDT')?.value) || 0;
-                    break;
-                case 'add_stars':
-                    amount = parseFloat(document.getElementById('actionAmountStars')?.value) || 0;
-                    break;
-                case 'remove_stars':
-                    amount = parseFloat(document.getElementById('actionAmountRemoveStars')?.value) || 0;
-                    break;
-                case 'add_energy':
-                    amount = parseFloat(document.getElementById('actionAmountEnergy')?.value) || 0;
-                    break;
-                case 'remove_energy':
-                    amount = parseFloat(document.getElementById('actionAmountRemoveEnergy')?.value) || 0;
-                    break;
-                case 'add_max_energy':
-                    amount = parseFloat(document.getElementById('actionAmountMaxEnergy')?.value) || 50;
-                    break;
-                case 'add_clicks':
-                    amount = parseFloat(document.getElementById('actionAmountClicks')?.value) || 0;
-                    break;
-                case 'unlock_prefix':
-                    prefixId = document.getElementById('actionPrefix')?.value;
-                    break;
-                case 'set_role':
-                    role = document.getElementById('actionRole')?.value;
-                    break;
-                case 'unban':
-                    actionType = 'unban';
-                    break;
-            }
+    switch (actionType) {
+        case 'add_wg':
+            amount = parseFloat(document.getElementById('actionAmount')?.value) || 0;
+            break;
+        case 'remove_wg':
+            amount = parseFloat(document.getElementById('actionAmountRemove')?.value) || 0;
+            break;
+        case 'add_lp':
+            amount = parseFloat(document.getElementById('actionAmountLP')?.value) || 0;
+            break;
+        case 'remove_lp':
+            amount = parseFloat(document.getElementById('actionAmountRemoveLP')?.value) || 0;
+            break;
+        case 'add_usdt':
+            amount = parseFloat(document.getElementById('actionAmountUSDT')?.value) || 0;
+            break;
+        case 'remove_usdt':
+            amount = parseFloat(document.getElementById('actionAmountRemoveUSDT')?.value) || 0;
+            break;
+        case 'add_stars':
+            amount = parseFloat(document.getElementById('actionAmountStars')?.value) || 0;
+            break;
+        case 'remove_stars':
+            amount = parseFloat(document.getElementById('actionAmountRemoveStars')?.value) || 0;
+            break;
+        case 'add_energy':
+            amount = parseFloat(document.getElementById('actionAmountEnergy')?.value) || 0;
+            break;
+        case 'remove_energy':
+            amount = parseFloat(document.getElementById('actionAmountRemoveEnergy')?.value) || 0;
+            break;
+        case 'add_max_energy':
+            amount = parseFloat(document.getElementById('actionAmountMaxEnergy')?.value) || 50;
+            break;
+        case 'add_clicks':
+            amount = parseFloat(document.getElementById('actionAmountClicks')?.value) || 0;
+            break;
+        case 'unlock_prefix':
+            prefixId = document.getElementById('actionPrefix')?.value;
+            break;
+        case 'set_role':
+            role = document.getElementById('actionRole')?.value;
+            break;
+        case 'unban':
+            actionType = 'unban';
+            break;
+    }
 
-            if ((actionType === 'add_wg' || actionType === 'remove_wg' || actionType === 'add_lp' || actionType ===
-                    'remove_lp' ||
-                    actionType === 'add_usdt' || actionType === 'remove_usdt' || actionType === 'add_stars' || actionType ===
-                    'remove_stars' ||
-                    actionType === 'add_energy' || actionType === 'remove_energy' || actionType === 'add_max_energy' ||
-                    actionType === 'add_clicks') &&
-                amount <= 0 && actionType !== 'unban') {
-                showToast('Введите корректное количество', 'error');
-                return;
-            }
+    if ((actionType === 'add_wg' || actionType === 'remove_wg' || actionType === 'add_lp' || actionType ===
+            'remove_lp' ||
+            actionType === 'add_usdt' || actionType === 'remove_usdt' || actionType === 'add_stars' || actionType ===
+            'remove_stars' ||
+            actionType === 'add_energy' || actionType === 'remove_energy' || actionType === 'add_max_energy' ||
+            actionType === 'add_clicks') &&
+        amount <= 0 && actionType !== 'unban') {
+        showToast('Введите корректное количество', 'error');
+        return;
+    }
 
-            const body = { user_id: userId, action_type: actionType, amount: amount };
-            if (prefixId) body.prefix_id = prefixId;
-            if (role) body.role = role;
-            const result = await apiRequest('update_user', { method: 'POST', body: JSON.stringify(body) });
-            if (result.success) {
-                showToast('✅ Готово!', 'success');
-                openPlayerProfile(userId);
-                loadStats();
-                searchPlayers();
-            } else {
-                showToast('❌ Ошибка', 'error');
-            }
-        }
+    const body = { user_id: userId, action_type: actionType, amount: amount };
+    if (prefixId) body.prefix_id = prefixId;
+    if (role) body.role = role;
+    const result = await apiRequest('update_user', { method: 'POST', body: JSON.stringify(body) });
+    if (result.success) {
+        showToast('✅ Готово!', 'success');
+        openPlayerProfile(userId);
+        loadStats();
+        searchPlayers();
+    } else {
+        showToast('❌ Ошибка', 'error');
+    }
+}
 
         // ========== РАССЫЛКА ==========
         async function loadUsersCount() {
