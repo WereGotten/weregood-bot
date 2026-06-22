@@ -569,8 +569,7 @@ ALLOWED_UPDATE_FIELDS = {
     'tutorial_completed', 'ton_wallet', 'banned_until', 'ban_reason', 'banned_by',
     'completed_achievements', 'daily_clicks',
     'fortune_bets_count', 'fortune_wins_count', 'fortune_total_bet_amount',
-    'language',
-    'custom_earning'
+    'language'
 }
 
 MAX_USER_CACHE = 20000
@@ -630,8 +629,7 @@ def get_user(user_id, force_refresh=False, username=None, first_name=None, last_
                 "likes": 0, "dislikes": 0, "settings": {"theme": "dark"}, "avatar_url": "", "usdt": 0, "wins": 0,
                 "role": "player", "stars": 0, "max_energy": 500, "energy_upgrades": 0, "energy_limit_upgrades": 0,
                 "unlocked_prefixes": ["player"], "ton_wallet": "", "banned_until": 0, "ban_reason": "", "banned_by": 0,
-                "completed_achievements": 0, "language": "ru",
-                "custom_earning": 0  # ← ДОБАВИТЬ
+                "completed_achievements": 0, "language": "ru"
             }
             user_cache[user_id] = default_user
             user_cache_time[user_id] = now
@@ -679,8 +677,7 @@ def get_user(user_id, force_refresh=False, username=None, first_name=None, last_
             "banned_until": row['banned_until'] if 'banned_until' in row.keys() else 0,
             "ban_reason": row['ban_reason'] if 'ban_reason' in row.keys() else '',
             "banned_by": row['banned_by'] if 'banned_by' in row.keys() else 0,
-            "completed_achievements": row['completed_achievements'] if 'completed_achievements' in row.keys() else 0,
-            "custom_earning": row['custom_earning'] if 'custom_earning' in row.keys() else 0  # ← ДОБАВИТЬ
+            "completed_achievements": row['completed_achievements'] if 'completed_achievements' in row.keys() else 0
         }
         user_cache[user_id] = user_data
         user_cache_time[user_id] = now
@@ -1367,13 +1364,6 @@ def update_fortune_achievements(user_id, bet_amount=None, is_win=False, is_new_r
                 except:
                     pass
 
-                # ========== МИГРАЦИЯ: custom_earning ==========
-                try:
-                    cursor.execute("ALTER TABLE users ADD COLUMN custom_earning REAL DEFAULT 0")
-                    print("✅ Добавлена колонка custom_earning в users")
-                except:
-                    pass
-
             # ========== ЗАПОЛНЕНИЕ ДОСТИЖЕНИЙ ==========
             achievements_list = [
                 ('autoclicker', '🏆 Автокликер', 'Сделать 50 000 кликов по монете', '🖱️', 50000),
@@ -1987,36 +1977,21 @@ def get_upgrade_cost(upgrade_id, current_count):
     return base_cost * (1.65 ** current_count)
 
 
-def get_total_earning(upgrade_counts, user_id=None):
-    """Возвращает доход с учётом улучшений и кастомного значения"""
+def get_total_earning(upgrade_counts):
+    """Возвращает доход с учётом множителей PayDay для каждого улучшения"""
     base = 0.01
     total_bonus = 0
 
-    # Текущий множитель PayDay
+    # Текущий множитель PayDay (для новых покупок)
     current_payday_multiplier = get_payday_multiplier()
 
-    # Кастомный доход игрока (если есть)
-    custom_earning = None
-    if user_id:
-        try:
-            with db.get_cursor() as cursor:
-                cursor.execute("SELECT custom_earning FROM users WHERE user_id = ?", (user_id,))
-                row = cursor.fetchone()
-                if row and row['custom_earning'] and row['custom_earning'] > 0:
-                    custom_earning = float(row['custom_earning'])
-        except:
-            pass
-
-    # Если есть кастомный доход — используем его
-    if custom_earning is not None:
-        return custom_earning
-
-    # Иначе считаем стандартно
     for key, value in upgrade_counts.items():
+        # ========== ПРОВЕРЯЕМ, ЧТО КЛЮЧ — ЭТО ЧИСЛО ==========
         try:
+            # Если ключ — строка, проверяем, состоит ли она из цифр
             if isinstance(key, str):
                 if not key.isdigit():
-                    continue
+                    continue  # ← ПРОПУСКАЕМ payday_bonus_X!
                 key = int(key)
             else:
                 key = int(key)
@@ -2024,6 +1999,7 @@ def get_total_earning(upgrade_counts, user_id=None):
             if key in UPGRADE_CONFIG:
                 bonus = UPGRADE_CONFIG[key]["bonus"]
 
+                # Проверяем, был ли это улучшение куплено во время PayDay
                 bonus_key = f"payday_bonus_{key}"
                 if bonus_key in upgrade_counts:
                     multiplier = upgrade_counts[bonus_key]
@@ -4030,7 +4006,7 @@ def api_click():
     payday_multiplier = get_payday_multiplier()
 
     # ========== ДОХОД ЗА КЛИК (УЖЕ С МНОЖИТЕЛЕМ!) ==========
-    earning = get_total_earning(user["upgrade_counts"], user_id)
+    earning = get_total_earning(user["upgrade_counts"])
 
     old_wg = user["wg"]
     new_wg = old_wg + earning
@@ -5473,57 +5449,30 @@ def api_admin_search_users():
                           "unlocked_prefixes": json.loads(row['unlocked_prefixes']) if row['unlocked_prefixes'] else ["player"], "is_banned": banned})
     return jsonify({"success": True, "users": users})
 
-
 @app.route('/api/admin/get_user', methods=['POST'])
 @require_admin
 def api_admin_get_user():
-    try:
-        data = request.get_json()
-        if not data:
-            return jsonify({"success": False, "error": "No JSON"}), 400
-
-        user_id = data.get('user_id')
-        if not user_id:
-            return jsonify({"success": False, "error": "user_id required"}), 400
-
-        user = get_user(user_id)
-
-        # Проверка на бан
-        banned, ban_info = is_banned(user_id)
-        user['is_banned'] = banned
-        if banned:
-            user['ban_info'] = ban_info
-
-        # ========== ДОБАВЛЯЕМ custom_earning ==========
-        try:
-            with db.get_cursor() as cursor:
-                cursor.execute("SELECT custom_earning FROM users WHERE user_id = ?", (user_id,))
-                row = cursor.fetchone()
-                user['custom_earning'] = float(row['custom_earning']) if row and row['custom_earning'] else 0
-        except Exception as e:
-            logger.error(f"Ошибка получения custom_earning: {e}")
-            user['custom_earning'] = 0
-
-        # Рефералы
-        with db.get_cursor() as cursor:
-            cursor.execute(
-                "SELECT r.username, r.first_name, r.created_at, r.total_spent_lp FROM referrals r WHERE r.referrer_id = ?",
-                (user_id,))
-            referrals = cursor.fetchall()
-            user['referrals'] = [
-                {"username": escape_html(r['username'] or r['first_name'] or 'Игрок'), "date": r['created_at'],
-                 "spent_lp": r['total_spent_lp'] or 0, "earned": round((r['total_spent_lp'] or 0) * 0.05, 2)} for r in
-                referrals
-            ]
-
-        # Логи
-        user['personal_logs'], _ = get_logs('all', 100, 0, None, None, str(user_id))
-
-        return jsonify({"success": True, "user": user})
-
-    except Exception as e:
-        logger.error(f"Ошибка в api_admin_get_user: {e}", exc_info=True)
-        return jsonify({"success": False, "error": str(e)}), 500
+    data = request.get_json()
+    if not data:
+        return jsonify({"success": False, "error": "No JSON"}), 400
+    user_id = data.get('user_id')
+    if not user_id:
+        return jsonify({"success": False, "error": "user_id required"}), 400
+    user = get_user(user_id)
+    banned, ban_info = is_banned(user_id)
+    user['is_banned'] = banned
+    if banned:
+        user['ban_info'] = ban_info
+    with db.get_cursor() as cursor:
+        cursor.execute(
+            "SELECT r.username, r.first_name, r.created_at, r.total_spent_lp FROM referrals r WHERE r.referrer_id = ?",
+            (user_id,))
+        referrals = cursor.fetchall()
+        user['referrals'] = [
+            {"username": escape_html(r['username'] or r['first_name'] or 'Игрок'), "date": r['created_at'],
+             "spent_lp": r['total_spent_lp'] or 0, "earned": round((r['total_spent_lp'] or 0) * 0.05, 2)} for r in referrals]
+    user['personal_logs'], _ = get_logs('all', 100, 0, None, None, str(user_id))
+    return jsonify({"success": True, "user": user})
 
 @app.route('/api/admin/update_user', methods=['POST'])
 @require_admin
@@ -6335,53 +6284,6 @@ def api_admin_distribute_contest_prizes():
         logger.error(f"Ошибка выдачи призов: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
-@app.route('/api/admin/set_custom_earning', methods=['POST'])
-@require_admin
-def api_admin_set_custom_earning():
-    """Установить кастомный доход за клик для игрока"""
-    data = request.json
-    if not data:
-        return jsonify({"success": False, "error": "No JSON"}), 400
-
-    user_id = data.get('user_id')
-    custom_earning = data.get('custom_earning')
-
-    if not user_id:
-        return jsonify({"success": False, "error": "user_id required"}), 400
-
-    try:
-        custom_earning = float(custom_earning)
-        if custom_earning < 0.0001 or custom_earning > 100:
-            return jsonify({"success": False, "error": "Доход должен быть от 0.0001 до 100"}), 400
-    except (ValueError, TypeError):
-        return jsonify({"success": False, "error": "Неверный формат дохода"}), 400
-
-    admin_id = request.args.get('user_id', 'Admin')
-    admin_name = "Admin"
-
-    user = get_user(user_id)
-    old_earning = user.get('custom_earning', 0)
-
-    with db.get_cursor() as cursor:
-        cursor.execute(
-            "UPDATE users SET custom_earning = ? WHERE user_id = ?",
-            (custom_earning, user_id)
-        )
-
-    invalidate_cache(user_id)
-
-    add_admin_log(
-        f"⚡ Изменил доход за клик с {old_earning if old_earning > 0 else 'стандартный'} на {custom_earning} WG",
-        admin_id, admin_name,
-        user_id, user.get('username') or f"User_{user_id}"
-    )
-
-    return jsonify({
-        "success": True,
-        "message": f"Доход за клик изменён на {custom_earning} WG",
-        "old_earning": old_earning,
-        "new_earning": custom_earning
-    })
 
 # ========== РАССЫЛКА ==========
 broadcast_active = False
