@@ -4073,287 +4073,46 @@ async function loadTonWalletStatus() {
     if (tutorialSkipBtn) tutorialSkipBtn.onclick = () => skipTutorial();
 
     // ========== ГЕЙМПАД МЕНЮ ==========
-function openGamepad() {
-    const modal = document.getElementById('gamepadModal');
-    if (!modal) {
-        console.error('gamepadModal not found');
-        return;
-    }
-    modal.classList.add('active');
-    document.body.style.overflow = 'hidden';
-    document.body.style.position = 'fixed';
-    document.body.style.width = '100%';
-}
-
-function closeGamepad() {
-    const modal = document.getElementById('gamepadModal');
-    if (modal) modal.classList.remove('active');
-    document.body.style.overflow = '';
-    document.body.style.position = '';
-    document.body.style.width = '';
-}
-
-// ========== СЕКРЕТНАЯ ИГРА (ТОЛЬКО ДЛЯ ТЕБЯ) ==========
-function checkSecretGameAccess() {
-    const secretCard = document.getElementById('secretGameCard');
-    if (!secretCard) {
-        console.log('❌ secretGameCard не найден');
-        return;
-    }
-
-    console.log('🔍 Проверка доступа. userId:', userId, 'Требуется: 5264622363');
-
-    if (userId == 5264622363) {
-        secretCard.style.display = 'flex';
-        console.log('🔐 Секретная игра разблокирована!');
-    } else {
-        secretCard.style.display = 'none';
-        console.log('⛔ Секретная игра скрыта');
-    }
-}
-
-// ===== ОТКРЫТИЕ ИГР =====
-function openGame(gameName) {
-    console.log('🎮 openGame вызвана с:', gameName);
-
-    if (gameName === 'fortune') {
-        const fortuneModal = document.getElementById('fortuneModal');
-        if (fortuneModal) {
-            if (typeof preCacheWheel === 'function') {
-                preCacheWheel();
-            }
-            fortuneModal.classList.add('active');
-            document.body.style.overflow = 'hidden';
-            closeGamepad();
-        } else {
-            console.error('fortuneModal не найден');
-        }
-    } else if (gameName === 'secret') {
-        console.log('🔐 Попытка открыть секретную игру');
-        console.log('👤 Текущий userId:', userId);
-
-        if (userId != 5264622363) {
-            showToast('⛔ Доступ запрещён!', 'error');
-            console.log('⛔ Доступ запрещён для userId:', userId);
+    function openGamepad() {
+        const modal = document.getElementById('gamepadModal');
+        if (!modal) {
+            console.error('gamepadModal not found');
             return;
         }
-
-        console.log('✅ Доступ разрешён! Открываем слот...');
-        closeGamepad();
-        openSlotGame();
-    }
-}
-
-function closeFortuneGame() {
-    const fortuneModal = document.getElementById('fortuneModal');
-    if (fortuneModal) fortuneModal.classList.remove('active');
-    document.body.style.overflow = '';
-    if (fortuneTimerInterval) clearInterval(fortuneTimerInterval);
-}
-
-// ========== СЛОТ-ИГРА (СЕКРЕТНАЯ) ==========
-let slotData = {
-    balance: 0,
-    totalSpins: 0,
-    totalWins: 0,
-    totalWon: 0
-};
-
-function openSlotGame() {
-    console.log('🎰 openSlotGame вызвана!');
-    const modal = document.getElementById('slotModal');
-    if (!modal) {
-        console.error('❌ slotModal не найден!');
-        showToast('Ошибка: слот не найден', 'error');
-        return;
-    }
-    modal.classList.add('active');
-    document.body.style.overflow = 'hidden';
-    updateSlotBalance();
-    loadSlotStats();
-    console.log('✅ Слот открыт!');
-}
-
-function closeSlotGame() {
-    console.log('🔒 closeSlotGame вызвана');
-    const modal = document.getElementById('slotModal');
-    if (modal) modal.classList.remove('active');
-    document.body.style.overflow = '';
-}
-
-function slotBetPreset(amount) {
-    document.getElementById('slotBet').value = amount;
-}
-
-function updateSlotBalance() {
-    fetch('/api/status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: userId })
-    })
-    .then(res => res.json())
-    .then(data => {
-        slotData.balance = data.wg || 0;
-        const balanceEl = document.getElementById('slotBalance');
-        if (balanceEl) balanceEl.innerText = slotData.balance.toFixed(2);
-    })
-    .catch(e => console.log('Balance update error:', e));
-}
-
-function loadSlotStats() {
-    try {
-        const saved = JSON.parse(localStorage.getItem('slotStats') || '{}');
-        slotData.totalSpins = saved.totalSpins || 0;
-        slotData.totalWins = saved.totalWins || 0;
-        slotData.totalWon = saved.totalWon || 0;
-        updateSlotStatsDisplay();
-    } catch(e) {
-        console.log('Load stats error:', e);
-    }
-}
-
-function updateSlotStatsDisplay() {
-    const spinsEl = document.getElementById('slotTotalSpins');
-    const winsEl = document.getElementById('slotTotalWins');
-    const wonEl = document.getElementById('slotTotalWon');
-    if (spinsEl) spinsEl.innerText = slotData.totalSpins;
-    if (winsEl) winsEl.innerText = slotData.totalWins;
-    if (wonEl) wonEl.innerText = slotData.totalWon.toFixed(2);
-}
-
-function saveSlotStats() {
-    localStorage.setItem('slotStats', JSON.stringify({
-        totalSpins: slotData.totalSpins,
-        totalWins: slotData.totalWins,
-        totalWon: slotData.totalWon
-    }));
-}
-
-let isSlotSpinning = false;
-
-async function spinSlot() {
-    if (isSlotSpinning) {
-        console.log('⏳ Уже крутится, ждём...');
-        return;
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+        document.body.style.position = 'fixed';
+        document.body.style.width = '100%';
     }
 
-    if (userId != 5264622363) {
-        showToast('⛔ Доступ запрещён!', 'error');
-        return;
+    function closeGamepad() {
+        const modal = document.getElementById('gamepadModal');
+        if (modal) modal.classList.remove('active');
+        document.body.style.overflow = '';
+        document.body.style.position = '';
+        document.body.style.width = '';
     }
 
-    const betInput = document.getElementById('slotBet');
-    const bet = parseInt(betInput ? betInput.value : 10);
-
-    if (isNaN(bet) || bet < 1) {
-        showToast('Ставка должна быть не меньше 1 WG', 'error');
-        return;
-    }
-
-    if (bet > slotData.balance) {
-        showToast('Недостаточно WG!', 'error');
-        return;
-    }
-
-    isSlotSpinning = true;
-    const btn = document.getElementById('slotSpinBtn');
-    if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = '⏳ Крутим...';
-    }
-
-    const resultDiv = document.getElementById('slotResult');
-    if (resultDiv) resultDiv.innerHTML = '';
-
-    const symbols = ['🪙', '💎', '💵', '⚡', '🔥', '👑', '⭐', '🎯'];
-    const reels = ['slotReel1', 'slotReel2', 'slotReel3'];
-
-    document.querySelectorAll('.slot-reel').forEach(el => el.classList.add('spinning'));
-
-    let spinInterval = setInterval(() => {
-        reels.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.innerText = symbols[Math.floor(Math.random() * symbols.length)];
-        });
-    }, 50);
-
-    try {
-        console.log('📤 Отправка запроса на /api/slot_spin, ставка:', bet);
-
-        const response = await fetch('/api/slot_spin', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                user_id: userId,
-                bet: bet
-            })
-        });
-
-        const data = await response.json();
-        console.log('📥 Ответ сервера:', data);
-
-        clearInterval(spinInterval);
-        document.querySelectorAll('.slot-reel').forEach(el => el.classList.remove('spinning'));
-
-        if (data.success) {
-            const reel1 = document.getElementById('slotReel1');
-            const reel2 = document.getElementById('slotReel2');
-            const reel3 = document.getElementById('slotReel3');
-            if (reel1) reel1.innerText = data.result[0];
-            if (reel2) reel2.innerText = data.result[1];
-            if (reel3) reel3.innerText = data.result[2];
-
-            slotData.totalSpins++;
-
-            if (resultDiv) {
-                if (data.is_win) {
-                    slotData.totalWins++;
-                    slotData.totalWon += data.win_amount;
-                    resultDiv.innerHTML = `🎉 <span style="color: #22c55e; font-weight: 700;">ПОБЕДА! +${data.win_amount.toFixed(2)} WG (x${data.win_multiplier})</span> 🎉`;
-                    showToast(`🎉 Выигрыш ${data.win_amount.toFixed(2)} WG!`, 'success');
-                } else {
-                    resultDiv.innerHTML = `❌ <span style="color: #f44336; font-weight: 700;">Проигрыш! -${data.bet.toFixed(2)} WG</span>`;
-                    showToast(`❌ Проигрыш ${data.bet.toFixed(2)} WG`, 'error');
+    function openGame(gameName) {
+        if (gameName === 'fortune') {
+            const fortuneModal = document.getElementById('fortuneModal');
+            if (fortuneModal) {
+                if (typeof preCacheWheel === 'function') {
+                    preCacheWheel();
                 }
+                fortuneModal.classList.add('active');
+                document.body.style.overflow = 'hidden';
+                closeGamepad();
             }
-
-            slotData.balance = data.new_balance;
-            const balanceEl = document.getElementById('slotBalance');
-            if (balanceEl) balanceEl.innerText = data.new_balance.toFixed(2);
-
-            updateSlotStatsDisplay();
-            saveSlotStats();
-            updateUI();
-            updateStatus();
-        } else {
-            showToast(data.error || 'Ошибка', 'error');
         }
-    } catch(e) {
-        console.error('❌ Slot error:', e);
-        showToast('❌ Ошибка соединения', 'error');
-        clearInterval(spinInterval);
-        document.querySelectorAll('.slot-reel').forEach(el => el.classList.remove('spinning'));
     }
 
-    if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = '🎲 КРУТИТЬ';
+    function closeFortuneGame() {
+        const fortuneModal = document.getElementById('fortuneModal');
+        if (fortuneModal) fortuneModal.classList.remove('active');
+        document.body.style.overflow = '';
+        if (fortuneTimerInterval) clearInterval(fortuneTimerInterval);
     }
-    isSlotSpinning = false;
-}
-
-// ===== ВЫЗОВ ПРИ ЗАГРУЗКЕ =====
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() {
-        checkSecretGameAccess();
-        console.log('🎮 Инициализация завершена');
-    });
-} else {
-    setTimeout(function() {
-        checkSecretGameAccess();
-        console.log('🎮 Инициализация завершена (ранний вызов)');
-    }, 100);
-}
 
     // ==================== КОМАНДНАЯ ФОРТУНА ====================
     let fortuneData = {
@@ -7208,5 +6967,168 @@ function translateElement(el, key) {
 
 // Загружаем язык при старте
 setTimeout(loadLanguageSettings, 500);
+
+    // ========== ГЕЙМПАД МЕНЮ ==========
+function openGamepad() {
+    const modal = document.getElementById('gamepadModal');
+    if (!modal) return;
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+}
+
+function closeGamepad() {
+    const modal = document.getElementById('gamepadModal');
+    if (modal) modal.classList.remove('active');
+    document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.body.style.width = '';
+}
+
+// ========== СЕКРЕТНАЯ ИГРА ==========
+function checkSecretGameAccess() {
+    const card = document.getElementById('secretGameCard');
+    if (!card) return;
+    if (userId == 5264622363) {
+        card.style.display = 'flex';
+        console.log('🔐 Секретная игра доступна');
+    } else {
+        card.style.display = 'none';
+    }
+}
+
+function openGame(gameName) {
+    if (gameName === 'fortune') {
+        const modal = document.getElementById('fortuneModal');
+        if (modal) {
+            if (typeof preCacheWheel === 'function') preCacheWheel();
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+            closeGamepad();
+        }
+    } else if (gameName === 'secret') {
+        if (userId != 5264622363) {
+            showToast('⛔ Доступ запрещён!', 'error');
+            return;
+        }
+        closeGamepad();
+        document.getElementById('slotModal').classList.add('active');
+        document.body.style.overflow = 'hidden';
+        updateSlotBalance();
+    }
+}
+
+function closeSlotGame() {
+    document.getElementById('slotModal').classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+function slotBetPreset(amount) {
+    document.getElementById('slotBet').value = amount;
+}
+
+function updateSlotBalance() {
+    fetch('/api/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId })
+    })
+    .then(res => res.json())
+    .then(data => {
+        document.getElementById('slotBalance').innerText = (data.wg || 0).toFixed(2);
+    })
+    .catch(() => {});
+}
+
+let isSpinning = false;
+
+async function spinSlot() {
+    if (isSpinning) return;
+    if (userId != 5264622363) {
+        showToast('⛔ Доступ запрещён!', 'error');
+        return;
+    }
+
+    const bet = parseInt(document.getElementById('slotBet').value);
+    if (isNaN(bet) || bet < 1) {
+        showToast('Ставка не меньше 1 WG', 'error');
+        return;
+    }
+
+    const balance = parseFloat(document.getElementById('slotBalance').innerText);
+    if (bet > balance) {
+        showToast('Недостаточно WG!', 'error');
+        return;
+    }
+
+    isSpinning = true;
+    const btn = document.getElementById('slotSpinBtn');
+    btn.disabled = true;
+    btn.innerHTML = '⏳...';
+    document.getElementById('slotResult').innerHTML = '';
+
+    const symbols = ['🪙', '💎', '💵', '⚡', '🔥', '👑', '⭐', '🎯'];
+    const reels = ['slotReel1', 'slotReel2', 'slotReel3'];
+
+    document.querySelectorAll('.slot-reel').forEach(el => el.classList.add('spinning'));
+
+    let interval = setInterval(() => {
+        reels.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerText = symbols[Math.floor(Math.random() * symbols.length)];
+        });
+    }, 50);
+
+    try {
+        const res = await fetch('/api/slot_spin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId, bet: bet })
+        });
+        const data = await res.json();
+
+        clearInterval(interval);
+        document.querySelectorAll('.slot-reel').forEach(el => el.classList.remove('spinning'));
+
+        if (data.success) {
+            document.getElementById('slotReel1').innerText = data.result[0];
+            document.getElementById('slotReel2').innerText = data.result[1];
+            document.getElementById('slotReel3').innerText = data.result[2];
+
+            const resultDiv = document.getElementById('slotResult');
+            if (data.is_win) {
+                resultDiv.innerHTML = `🎉 ПОБЕДА! +${data.win_amount.toFixed(2)} WG (x${data.win_multiplier})`;
+                resultDiv.style.color = '#22c55e';
+                showToast(`🎉 +${data.win_amount.toFixed(2)} WG`, 'success');
+            } else {
+                resultDiv.innerHTML = `❌ Проигрыш! -${data.bet.toFixed(2)} WG`;
+                resultDiv.style.color = '#f44336';
+                showToast(`❌ -${data.bet.toFixed(2)} WG`, 'error');
+            }
+
+            document.getElementById('slotBalance').innerText = data.new_balance.toFixed(2);
+            updateUI();
+            updateStatus();
+        } else {
+            showToast(data.error || 'Ошибка', 'error');
+        }
+    } catch(e) {
+        clearInterval(interval);
+        document.querySelectorAll('.slot-reel').forEach(el => el.classList.remove('spinning'));
+        showToast('❌ Ошибка сервера', 'error');
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '🎲 КРУТИТЬ';
+    isSpinning = false;
+}
+
+// Запускаем проверку при загрузке
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', checkSecretGameAccess);
+} else {
+    checkSecretGameAccess();
+}
 
 </script>
