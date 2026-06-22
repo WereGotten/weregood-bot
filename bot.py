@@ -630,7 +630,8 @@ def get_user(user_id, force_refresh=False, username=None, first_name=None, last_
                 "likes": 0, "dislikes": 0, "settings": {"theme": "dark"}, "avatar_url": "", "usdt": 0, "wins": 0,
                 "role": "player", "stars": 0, "max_energy": 500, "energy_upgrades": 0, "energy_limit_upgrades": 0,
                 "unlocked_prefixes": ["player"], "ton_wallet": "", "banned_until": 0, "ban_reason": "", "banned_by": 0,
-                "completed_achievements": 0, "language": "ru"
+                "completed_achievements": 0, "language": "ru",
+                "custom_earning": 0  # ← ДОБАВИТЬ
             }
             user_cache[user_id] = default_user
             user_cache_time[user_id] = now
@@ -678,7 +679,8 @@ def get_user(user_id, force_refresh=False, username=None, first_name=None, last_
             "banned_until": row['banned_until'] if 'banned_until' in row.keys() else 0,
             "ban_reason": row['ban_reason'] if 'ban_reason' in row.keys() else '',
             "banned_by": row['banned_by'] if 'banned_by' in row.keys() else 0,
-            "completed_achievements": row['completed_achievements'] if 'completed_achievements' in row.keys() else 0
+            "completed_achievements": row['completed_achievements'] if 'completed_achievements' in row.keys() else 0,
+            "custom_earning": row['custom_earning'] if 'custom_earning' in row.keys() else 0  # ← ДОБАВИТЬ
         }
         user_cache[user_id] = user_data
         user_cache_time[user_id] = now
