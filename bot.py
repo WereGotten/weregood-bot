@@ -3879,68 +3879,6 @@ def api_payday_status_public():
         })
 
 
-# ========== СЕКРЕТНАЯ ИГРА (СЛОТ) ==========
-@app.route('/api/slot_spin', methods=['POST'])
-def api_slot_spin():
-    """Слот-машина (только для основателя)"""
-    data = request.json
-    if not data:
-        return jsonify({"success": False, "error": "No data"}), 400
-
-    user_id = data.get('user_id')
-    bet = data.get('bet', 10)
-
-    is_valid, user_id = validate_user_id(user_id)
-    if not is_valid:
-        return jsonify({"success": False, "error": "Invalid user_id"}), 400
-
-    # ========== ДОСТУП ТОЛЬКО ДЛЯ ОСНОВАТЕЛЯ ==========
-    if user_id != 5264622363:
-        return jsonify({"success": False, "error": "Доступ запрещён"}), 403
-
-    user = get_user(user_id)
-
-    if user['wg'] < bet:
-        return jsonify({"success": False, "error": "Недостаточно WG"}), 400
-
-    symbols = ['🪙', '💎', '💵', '⚡', '🔥', '👑', '⭐', '🎯']
-    result = [random.choice(symbols) for _ in range(3)]
-
-    win_multiplier = 0
-
-    if result[0] == result[1] == result[2]:
-        if result[0] == '👑':
-            win_multiplier = 50
-        elif result[0] == '⭐':
-            win_multiplier = 30
-        elif result[0] == '🔥':
-            win_multiplier = 20
-        else:
-            win_multiplier = 10
-    elif result[0] == result[1] or result[1] == result[2] or result[0] == result[2]:
-        win_multiplier = 2
-
-    win_amount = bet * win_multiplier if win_multiplier > 0 else 0
-
-    if win_amount > 0:
-        new_wg = user['wg'] - bet + win_amount
-        safe_update_user(user_id, wg=new_wg)
-    else:
-        new_wg = user['wg'] - bet
-        safe_update_user(user_id, wg=new_wg)
-
-    add_log(f"🎰 Слот: {''.join(result)} | Ставка: {bet} | Выигрыш: {win_amount}",
-            user_id, user['username'])
-
-    return jsonify({
-        "success": True,
-        "result": result,
-        "win_multiplier": win_multiplier,
-        "win_amount": win_amount,
-        "new_balance": new_wg,
-        "bet": bet,
-        "is_win": win_amount > 0
-    })
 
 # ========== ОСНОВНЫЕ API (СОКРАЩЕННО ДЛЯ ЭКОНОМИИ МЕСТА, НО РАБОТАЮТ) ==========
 @app.route('/api/log_game_entry', methods=['POST'])
