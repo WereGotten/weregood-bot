@@ -5473,37 +5473,57 @@ def api_admin_search_users():
                           "unlocked_prefixes": json.loads(row['unlocked_prefixes']) if row['unlocked_prefixes'] else ["player"], "is_banned": banned})
     return jsonify({"success": True, "users": users})
 
+
 @app.route('/api/admin/get_user', methods=['POST'])
 @require_admin
 def api_admin_get_user():
-    data = request.get_json()
-    if not data:
-        return jsonify({"success": False, "error": "No JSON"}), 400
-    user_id = data.get('user_id')
-    if not user_id:
-        return jsonify({"success": False, "error": "user_id required"}), 400
-    user = get_user(user_id)
-    banned, ban_info = is_banned(user_id)
-    user['is_banned'] = banned
-    if banned:
-        user['ban_info'] = ban_info
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"success": False, "error": "No JSON"}), 400
 
-    # ========== ДОБАВИТЬ custom_earning ==========
-    with db.get_cursor() as cursor:
-        cursor.execute("SELECT custom_earning FROM users WHERE user_id = ?", (user_id,))
-        row = cursor.fetchone()
-        user['custom_earning'] = float(row['custom_earning']) if row and row['custom_earning'] else 0
+        user_id = data.get('user_id')
+        if not user_id:
+            return jsonify({"success": False, "error": "user_id required"}), 400
 
-    with db.get_cursor() as cursor:
-        cursor.execute(
-            "SELECT r.username, r.first_name, r.created_at, r.total_spent_lp FROM referrals r WHERE r.referrer_id = ?",
-            (user_id,))
-        referrals = cursor.fetchall()
-        user['referrals'] = [
-            {"username": escape_html(r['username'] or r['first_name'] or 'Игрок'), "date": r['created_at'],
-             "spent_lp": r['total_spent_lp'] or 0, "earned": round((r['total_spent_lp'] or 0) * 0.05, 2)} for r in referrals]
-    user['personal_logs'], _ = get_logs('all', 100, 0, None, None, str(user_id))
-    return jsonify({"success": True, "user": user})
+        user = get_user(user_id)
+
+        # Проверка на бан
+        banned, ban_info = is_banned(user_id)
+        user['is_banned'] = banned
+        if banned:
+            user['ban_info'] = ban_info
+
+        # ========== ДОБАВЛЯЕМ custom_earning ==========
+        try:
+            with db.get_cursor() as cursor:
+                cursor.execute("SELECT custom_earning FROM users WHERE user_id = ?", (user_id,))
+                row = cursor.fetchone()
+                user['custom_earning'] = float(row['custom_earning']) if row and row['custom_earning'] else 0
+        except Exception as e:
+            logger.error(f"Ошибка получения custom_earning: {e}")
+            user['custom_earning'] = 0
+
+        # Рефералы
+        with db.get_cursor() as cursor:
+            cursor.execute(
+                "SELECT r.username, r.first_name, r.created_at, r.total_spent_lp FROM referrals r WHERE r.referrer_id = ?",
+                (user_id,))
+            referrals = cursor.fetchall()
+            user['referrals'] = [
+                {"username": escape_html(r['username'] or r['first_name'] or 'Игрок'), "date": r['created_at'],
+                 "spent_lp": r['total_spent_lp'] or 0, "earned": round((r['total_spent_lp'] or 0) * 0.05, 2)} for r in
+                referrals
+            ]
+
+        # Логи
+        user['personal_logs'], _ = get_logs('all', 100, 0, None, None, str(user_id))
+
+        return jsonify({"success": True, "user": user})
+
+    except Exception as e:
+        logger.error(f"Ошибка в api_admin_get_user: {e}", exc_info=True)
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/api/admin/update_user', methods=['POST'])
 @require_admin
