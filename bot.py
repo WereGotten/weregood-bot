@@ -569,7 +569,8 @@ ALLOWED_UPDATE_FIELDS = {
     'tutorial_completed', 'ton_wallet', 'banned_until', 'ban_reason', 'banned_by',
     'completed_achievements', 'daily_clicks',
     'fortune_bets_count', 'fortune_wins_count', 'fortune_total_bet_amount',
-    'language'
+    'language',
+    'custom_earning'
 }
 
 MAX_USER_CACHE = 20000
@@ -1364,6 +1365,13 @@ def update_fortune_achievements(user_id, bet_amount=None, is_win=False, is_new_r
                 except:
                     pass
 
+                # ========== МИГРАЦИЯ: custom_earning ==========
+                try:
+                    cursor.execute("ALTER TABLE users ADD COLUMN custom_earning REAL DEFAULT 0")
+                    print("✅ Добавлена колонка custom_earning в users")
+                except:
+                    pass
+
             # ========== ЗАПОЛНЕНИЕ ДОСТИЖЕНИЙ ==========
             achievements_list = [
                 ('autoclicker', '🏆 Автокликер', 'Сделать 50 000 кликов по монете', '🖱️', 50000),
@@ -1978,25 +1986,30 @@ def get_upgrade_cost(upgrade_id, current_count):
 
 
 def get_total_earning(upgrade_counts, user_id=None):
-    """Возвращает доход с учётом множителей PayDay и персонального множителя игрока"""
+    """Возвращает доход с учётом улучшений и кастомного значения"""
     base = 0.01
     total_bonus = 0
 
     # Текущий множитель PayDay
     current_payday_multiplier = get_payday_multiplier()
 
-    # Персональный множитель игрока (если есть)
-    personal_multiplier = 1.0
+    # Кастомный доход игрока (если есть)
+    custom_earning = None
     if user_id:
         try:
             with db.get_cursor() as cursor:
-                cursor.execute("SELECT earning_multiplier FROM users WHERE user_id = ?", (user_id,))
+                cursor.execute("SELECT custom_earning FROM users WHERE user_id = ?", (user_id,))
                 row = cursor.fetchone()
-                if row and row['earning_multiplier']:
-                    personal_multiplier = float(row['earning_multiplier'])
+                if row and row['custom_earning'] and row['custom_earning'] > 0:
+                    custom_earning = float(row['custom_earning'])
         except:
             pass
 
+    # Если есть кастомный доход — используем его
+    if custom_earning is not None:
+        return custom_earning
+
+    # Иначе считаем стандартно
     for key, value in upgrade_counts.items():
         try:
             if isinstance(key, str):
@@ -2009,7 +2022,6 @@ def get_total_earning(upgrade_counts, user_id=None):
             if key in UPGRADE_CONFIG:
                 bonus = UPGRADE_CONFIG[key]["bonus"]
 
-                # Проверяем, был ли это улучшение куплено во время PayDay
                 bonus_key = f"payday_bonus_{key}"
                 if bonus_key in upgrade_counts:
                     multiplier = upgrade_counts[bonus_key]
@@ -2020,8 +2032,7 @@ def get_total_earning(upgrade_counts, user_id=None):
         except (ValueError, TypeError):
             continue
 
-    # ===== УЧЁТ ПЕРСОНАЛЬНОГО МНОЖИТЕЛЯ =====
-    return (base + total_bonus) * personal_multiplier
+    return base + total_bonus
 
 def generate_ticket_numbers():
     return sorted(random.sample(range(1, 81), 12))
@@ -2806,6 +2817,233 @@ def api_get_lp_boost_count():
         )
         row = cursor.fetchone()
         count = row['count'] if row else 0
+    return jsonify({"success": True, "count": count})
+
+# ========== МЕГА-БУСТЕР (АКЦИЯ) ==========
+
+@app.route('/api/create_mega_boost_invoice', methods=['POST'])
+def api_create_mega_boost_invoice():
+    data = request.json
+    if not data:
+        return jsonify({"success": False, "msg": "No data"}), 400
+    user_id = data.get('user_id')
+    chat_id = data.get('chat_id', user_id)
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"success": False, "msg": "Invalid user_id"}), 400
+
+    try:
+        title = "🔥 Мега-бустер (Акция)"
+        description = "100 LP + 2 Легенды + 2 Мастера + 1500 WG!"
+        payload = json.dumps({"user_id": user_id, "type": "mega_boost"})
+        provider_token = ""
+        currency = "XTR"
+        prices = [{"label": "Мега-бустер", "amount": 50}]
+        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/createInvoiceLink"
+        data = {
+            "title": title,
+            "description": description,
+            "payload": payload,
+            "provider_token": provider_token,
+            "currency": currency,
+            "prices": prices
+        }
+        verify_ssl = not DEBUG_MODE
+        response = requests.post(url, json=data, timeout=10, verify=verify_ssl)
+        result = response.json()
+        if result.get("ok"):
+            return jsonify({"success": True, "invoice_link": result["result"]})
+        return jsonify({"success": False, "msg": "Ошибка создания счёта"})
+    except Exception as e:
+        logger.error(f"Ошибка в create_mega_boost_invoice: {e}")
+        return jsonify({"success": False, "msg": str(e)}), 500
+
+
+@app.route('/api/ton/create_mega_boost_payment', methods=['POST'])
+def api_ton_create_mega_boost_payment():
+    data = request.json or {}
+    user_id = data.get('user_id')
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"success": False, "error": "Неавторизованный запрос"}), 400
+
+    proj_wallet = globals().get('PROJECT_WALLET_ADDRESS') or os.getenv('PROJECT_WALLET_ADDRESS')
+    if not proj_wallet:
+        logger.critical("🚨 PROJECT_WALLET_ADDRESS отсутствует!")
+        return jsonify({"success": False, "error": "Ошибка конфигурации платежного шлюза"}), 500
+
+    payment_amount_ton = 0.40
+    payment_amount_nano = int(payment_amount_ton * 1e9)
+    return jsonify({
+        "success": True,
+        "wallet_address": proj_wallet,
+        "amount": payment_amount_ton,
+        "amount_nano": payment_amount_nano,
+        "comment": f"WereGood_MEGA:{user_id}"
+    })
+
+
+@app.route('/api/ton/check_mega_boost_payment', methods=['POST'])
+def check_mega_boost_payment():
+    try:
+        data = request.json or {}
+        user_id = data.get('user_id')
+        expected_amount = data.get('expected_amount')
+        sender_wallet = data.get('sender_wallet')
+
+        if not user_id or not expected_amount:
+            return jsonify({'confirmed': False, 'error': 'Missing parameters'}), 400
+
+        expected_amount = float(expected_amount)
+        confirmed, amount_paid, tx_hash = check_ton_transaction(sender_wallet, expected_amount, user_id)
+
+        if confirmed:
+            # Выдаём награду
+            user = get_user(user_id)
+
+            # +100 LP
+            old_lp = user['lp']
+            new_lp = old_lp + 100
+            safe_update_user(user_id, lp=new_lp)
+
+            # +1500 WG
+            old_wg = user['wg']
+            new_wg = old_wg + 1500
+            safe_update_user(user_id, wg=new_wg)
+
+            # +2 Легенды (id: 5)
+            upgrade_counts = user['upgrade_counts']
+            upgrade_counts[5] = upgrade_counts.get(5, 0) + 2
+            safe_update_user(user_id, upgrade_counts=upgrade_counts)
+
+            # +2 Мастера (id: 4)
+            upgrade_counts = user['upgrade_counts']
+            upgrade_counts[4] = upgrade_counts.get(4, 0) + 2
+            safe_update_user(user_id, upgrade_counts=upgrade_counts)
+
+            add_admin_log(
+                f"🔥 Активировал Мега-бустер (TON) | +100 LP, +1500 WG, +2 Легенды, +2 Мастера",
+                user_id,
+                user.get('username') or f"User_{user_id}",
+                details=f"Хэш транзакции: {tx_hash}"
+            )
+
+            if 'send_telegram_message' in globals():
+                try:
+                    send_telegram_message(user_id,
+                        f"🔥 **МЕГА-БУСТЕР АКТИВИРОВАН!**\n\n"
+                        f"💎 +100 LP\n"
+                        f"👑 +2 Легенды (улучшения)\n"
+                        f"🦅 +2 Мастера (улучшения)\n"
+                        f"💰 +1500 WG\n\n"
+                        f"🎉 Спасибо за покупку!"
+                    )
+                except Exception as tg_err:
+                    logger.error(f"⚠️ Не удалось отправить ТГ-сообщение: {tg_err}")
+
+            return jsonify({'confirmed': True, 'tx_hash': tx_hash})
+
+        return jsonify({'confirmed': False})
+
+    except Exception as e:
+        logger.error(f"Ошибка в check_mega_boost_payment: {e}", exc_info=True)
+        return jsonify({'confirmed': False, 'error': str(e)}), 500
+
+
+@app.route('/api/claim_mega_boost', methods=['POST'])
+def api_claim_mega_boost():
+    data = request.json
+    if not data:
+        return jsonify({"success": False, "error": "No data"}), 400
+
+    user_id = data.get('user_id')
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"success": False, "error": "Invalid user_id"}), 400
+
+    try:
+        # Проверяем лимит
+        with db.get_cursor() as cursor:
+            cursor.execute(
+                "SELECT COUNT(*) as count FROM successful_payments WHERE user_id = ? AND payload = 'mega_boost'",
+                (user_id,)
+            )
+            row = cursor.fetchone()
+            if row and row['count'] >= 2:
+                return jsonify({"success": False, "message": "Вы уже купили Мега-бустер 2 раза!"}), 400
+
+        user = get_user(user_id)
+
+        # +100 LP
+        old_lp = user['lp']
+        new_lp = old_lp + 100
+        safe_update_user(user_id, lp=new_lp)
+
+        # +1500 WG
+        old_wg = user['wg']
+        new_wg = old_wg + 1500
+        safe_update_user(user_id, wg=new_wg)
+
+        # +2 Легенды (id: 5)
+        upgrade_counts = user['upgrade_counts']
+        upgrade_counts[5] = upgrade_counts.get(5, 0) + 2
+        safe_update_user(user_id, upgrade_counts=upgrade_counts)
+
+        # +2 Мастера (id: 4)
+        upgrade_counts = user['upgrade_counts']
+        upgrade_counts[4] = upgrade_counts.get(4, 0) + 2
+        safe_update_user(user_id, upgrade_counts=upgrade_counts)
+
+        # Записываем покупку
+        with db.get_cursor() as cursor:
+            cursor.execute(
+                "INSERT INTO successful_payments (user_id, telegram_payment_charge_id, payload, amount) VALUES (?, ?, ?, ?)",
+                (user_id, f"mega_boost_{int(time.time())}", "mega_boost", 50)
+            )
+
+        add_admin_log(
+            f"🔥 Активировал Мега-бустер | +100 LP, +1500 WG, +2 Легенды, +2 Мастера",
+            user_id,
+            user.get('username') or f"User_{user_id}"
+        )
+
+        if 'send_telegram_message' in globals():
+            try:
+                send_telegram_message(user_id,
+                    f"🔥 **МЕГА-БУСТЕР АКТИВИРОВАН!**\n\n"
+                    f"💎 +100 LP\n"
+                    f"👑 +2 Легенды (улучшения)\n"
+                    f"🦅 +2 Мастера (улучшения)\n"
+                    f"💰 +1500 WG\n\n"
+                    f"🎉 Спасибо за покупку!"
+                )
+            except Exception as tg_err:
+                logger.error(f"⚠️ Не удалось отправить ТГ-сообщение: {tg_err}")
+
+        return jsonify({"success": True, "message": "Мега-бустер активирован!"})
+
+    except Exception as e:
+        logger.error(f"Ошибка в claim_mega_boost: {e}", exc_info=True)
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+# ========== МЕГА-БУСТЕР - ПРОВЕРКА ЛИМИТА ==========
+@app.route('/api/get_mega_boost_count', methods=['POST'])
+def api_get_mega_boost_count():
+    data = request.json or {}
+    user_id = data.get('user_id')
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"success": False, "error": "Invalid user_id"}), 400
+
+    with db.get_cursor() as cursor:
+        cursor.execute(
+            "SELECT COUNT(*) as count FROM successful_payments WHERE user_id = ? AND payload = 'mega_boost'",
+            (user_id,)
+        )
+        row = cursor.fetchone()
+        count = row['count'] if row else 0
+
     return jsonify({"success": True, "count": count})
 
 # ========== ФОРТУНА API (РУЧНОЕ УПРАВЛЕНИЕ - БЕЗ АВТОЗАВЕРШЕНИЯ) ==========
@@ -3874,7 +4112,7 @@ def api_status():
         return jsonify({"banned": True, "reason": ban_info['reason'], "until": ban_info['until_date']})
     user = get_user(user_id)
     current_energy, seconds_passed = calculate_energy(user)
-    earning = get_total_earning(user["upgrade_counts"], user_id)
+    earning = get_total_earning(user["upgrade_counts"])
     with online_users_lock:
         online_users[user_id] = time.time()
     update_online_count()
@@ -5247,6 +5485,13 @@ def api_admin_get_user():
     user['is_banned'] = banned
     if banned:
         user['ban_info'] = ban_info
+
+    # ========== ДОБАВИТЬ custom_earning ==========
+    with db.get_cursor() as cursor:
+        cursor.execute("SELECT custom_earning FROM users WHERE user_id = ?", (user_id,))
+        row = cursor.fetchone()
+        user['custom_earning'] = float(row['custom_earning']) if row and row['custom_earning'] else 0
+
     with db.get_cursor() as cursor:
         cursor.execute(
             "SELECT r.username, r.first_name, r.created_at, r.total_spent_lp FROM referrals r WHERE r.referrer_id = ?",
@@ -6068,61 +6313,52 @@ def api_admin_distribute_contest_prizes():
         logger.error(f"Ошибка выдачи призов: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
-
-@app.route('/api/admin/set_earning_multiplier', methods=['POST'])
+@app.route('/api/admin/set_custom_earning', methods=['POST'])
 @require_admin
-def api_admin_set_earning_multiplier():
-    """Установить множитель заработка для игрока"""
+def api_admin_set_custom_earning():
+    """Установить кастомный доход за клик для игрока"""
     data = request.json
     if not data:
         return jsonify({"success": False, "error": "No JSON"}), 400
 
     user_id = data.get('user_id')
-    multiplier = data.get('multiplier', 1.0)
+    custom_earning = data.get('custom_earning')
 
     if not user_id:
         return jsonify({"success": False, "error": "user_id required"}), 400
 
     try:
-        multiplier = float(multiplier)
-        if multiplier < 0.1 or multiplier > 100:
-            return jsonify({"success": False, "error": "Множитель должен быть от 0.1 до 100"}), 400
-    except ValueError:
-        return jsonify({"success": False, "error": "Неверный формат множителя"}), 400
+        custom_earning = float(custom_earning)
+        if custom_earning < 0.0001 or custom_earning > 100:
+            return jsonify({"success": False, "error": "Доход должен быть от 0.0001 до 100"}), 400
+    except (ValueError, TypeError):
+        return jsonify({"success": False, "error": "Неверный формат дохода"}), 400
 
     admin_id = request.args.get('user_id', 'Admin')
     admin_name = "Admin"
 
     user = get_user(user_id)
-    old_multiplier = user.get('earning_multiplier', 1.0)
+    old_earning = user.get('custom_earning', 0)
 
     with db.get_cursor() as cursor:
-        # Проверяем, есть ли колонка earning_multiplier
-        cursor.execute("PRAGMA table_info(users)")
-        columns = [col[1] for col in cursor.fetchall()]
-        if 'earning_multiplier' not in columns:
-            cursor.execute("ALTER TABLE users ADD COLUMN earning_multiplier REAL DEFAULT 1.0")
-            print("✅ Добавлена колонка earning_multiplier в users")
-
         cursor.execute(
-            "UPDATE users SET earning_multiplier = ? WHERE user_id = ?",
-            (multiplier, user_id)
+            "UPDATE users SET custom_earning = ? WHERE user_id = ?",
+            (custom_earning, user_id)
         )
 
     invalidate_cache(user_id)
 
     add_admin_log(
-        f"⚡ Изменил множитель заработка с {old_multiplier}x на {multiplier}x",
+        f"⚡ Изменил доход за клик с {old_earning if old_earning > 0 else 'стандартный'} на {custom_earning} WG",
         admin_id, admin_name,
-        user_id, user.get('username') or f"User_{user_id}",
-        details=f"Новый множитель: {multiplier}x"
+        user_id, user.get('username') or f"User_{user_id}"
     )
 
     return jsonify({
         "success": True,
-        "message": f"Множитель заработка изменён с {old_multiplier}x на {multiplier}x",
-        "old_multiplier": old_multiplier,
-        "new_multiplier": multiplier
+        "message": f"Доход за клик изменён на {custom_earning} WG",
+        "old_earning": old_earning,
+        "new_earning": custom_earning
     })
 
 # ========== РАССЫЛКА ==========
@@ -6350,7 +6586,7 @@ def api_sync():
         })
     user = get_user(user_id)
     current_energy, seconds_passed = calculate_energy(user)
-    earning = get_total_earning(user["upgrade_counts"], user_id)
+    earning = get_total_earning(user["upgrade_counts"])
     regen_text = get_energy_regen_text(user["max_energy"], current_energy)
     with online_users_lock:
         online_users[user_id] = time.time()

@@ -2982,8 +2982,8 @@ async function openPlayerProfile(userId) {
     const modalContent = document.getElementById('playerModalContent');
     if (!modalContent) return;
 
-    // Получаем текущий множитель (если есть)
-    const currentMultiplier = currentUserData.earning_multiplier || 1.0;
+    // Получаем текущий доход за клик
+    const currentEarning = currentUserData.custom_earning || currentUserData.earning_per_click || 0.01;
 
     modalContent.innerHTML = `
         <div style="text-align:center;margin-bottom:20px;">
@@ -3011,11 +3011,11 @@ async function openPlayerProfile(userId) {
                 <div class="stat-card"><div class="stat-card-title">⚡ Энергия</div><div class="stat-card-value"><span class="clickable-value" onclick="openEditModal(${currentUserData.user_id}, 'energy', ${currentUserData.energy})">${currentUserData.energy}</span>/${currentUserData.max_energy}</div></div>
                 <div class="stat-card"><div class="stat-card-title">⚡ Макс. энергия</div><div class="stat-card-value"><span class="clickable-value" onclick="openEditModal(${currentUserData.user_id}, 'max_energy', ${currentUserData.max_energy})">${currentUserData.max_energy}</span></div></div>
                 <div class="stat-card"><div class="stat-card-title">🔓 Префиксы</div><div class="stat-card-value">${(currentUserData.unlocked_prefixes || ['player']).join(', ')}</div></div>
-                <!-- ===== НОВОЕ: МНОЖИТЕЛЬ ЗАРАБОТКА ===== -->
+                <!-- ===== НОВОЕ: ДОХОД ЗА КЛИК ===== -->
                 <div class="stat-card" style="border: 1px solid rgba(255,215,0,0.3); background: rgba(255,215,0,0.05);">
-                    <div class="stat-card-title">⚡ Множитель заработка</div>
+                    <div class="stat-card-title">💰 Доход за клик</div>
                     <div class="stat-card-value" style="color: #FFD700; font-size: 1.3rem;">
-                        <span id="playerEarningMultiplier">${currentMultiplier.toFixed(1)}</span>x
+                        <span id="playerEarningDisplay">${currentEarning.toFixed(4)}</span> WG
                     </div>
                 </div>
             </div>
@@ -3132,24 +3132,27 @@ async function openPlayerProfile(userId) {
                 </div>
             </div>
 
-            <!-- ===== НОВОЕ: МНОЖИТЕЛЬ ЗАРАБОТКА ===== -->
+            <!-- ===== НОВОЕ: УПРАВЛЕНИЕ ДОХОДОМ ЗА КЛИК ===== -->
             <div class="form-group" style="border-top: 2px solid rgba(255,215,0,0.3); padding-top: 15px; margin-top: 10px; background: rgba(255,215,0,0.03); border-radius: 12px; padding: 15px;">
-                <label style="color: #FFD700; font-weight: 700; font-size: 0.95rem;">⚡ Множитель заработка</label>
+                <label style="color: #FFD700; font-weight: 700; font-size: 0.95rem;">💰 Доход за клик</label>
                 <div style="font-size: 0.7rem; opacity: 0.6; margin-bottom: 10px;">
-                    Множитель влияет на весь доход за клик. От 0.1x до 100x.
+                    Установите конкретное значение дохода за один клик. От 0.0001 до 100 WG.
                 </div>
                 <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                     <span style="font-size: 0.85rem; opacity: 0.7;">
-                        Текущий: <strong id="currentEarningMultiplier" style="color: #FFD700; font-size: 1.1rem;">${currentMultiplier.toFixed(1)}</strong>x
+                        Текущий: <strong id="currentEarningDisplay" style="color: #FFD700; font-size: 1.1rem;">${currentEarning.toFixed(4)}</strong> WG
                     </span>
-                    <input type="number" id="earningMultiplierInput" value="${currentMultiplier.toFixed(1)}" step="0.1" min="0.1" max="100"
-                           style="width: 100px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,215,0,0.3); border-radius: 8px; padding: 6px 10px; color: white; font-size: 0.9rem;">
-                    <button class="btn-sm" onclick="setEarningMultiplier()" style="background: rgba(255,215,0,0.25); color: #FFD700; padding: 6px 16px;">
-                        ⚡ Установить
+                    <input type="number" id="customEarningInput" value="${currentEarning.toFixed(4)}" step="0.0001" min="0.0001" max="100"
+                           style="width: 120px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,215,0,0.3); border-radius: 8px; padding: 6px 10px; color: white; font-size: 0.9rem;">
+                    <button class="btn-sm" onclick="setCustomEarning()" style="background: rgba(255,215,0,0.25); color: #FFD700; padding: 6px 16px;">
+                        💰 Установить
                     </button>
-                    <button class="btn-sm" onclick="resetEarningMultiplier()" style="background: rgba(244,67,54,0.2); color: #f44336; padding: 6px 16px;">
-                        🔄 Сбросить
+                    <button class="btn-sm" onclick="resetCustomEarning()" style="background: rgba(244,67,54,0.2); color: #f44336; padding: 6px 16px;">
+                        🔄 Сбросить (стандартный)
                     </button>
+                </div>
+                <div style="font-size: 0.6rem; opacity: 0.5; margin-top: 6px;">
+                    Если установлено значение — оно перекрывает стандартный расчёт дохода.
                 </div>
             </div>
 
@@ -3219,89 +3222,88 @@ function closePlayerModal() {
     currentUserData = null;
 }
 
-// ===== НОВЫЕ ФУНКЦИИ ДЛЯ МНОЖИТЕЛЯ =====
+// ===== НОВЫЕ ФУНКЦИИ ДЛЯ ДОХОДА ЗА КЛИК =====
 
-// ===== УСТАНОВКА МНОЖИТЕЛЯ ЗАРАБОТКА =====
-async function setEarningMultiplier() {
+// ===== УСТАНОВКА ДОХОДА ЗА КЛИК =====
+async function setCustomEarning() {
     if (!currentUserData) {
         showToast('Сначала выберите игрока', 'error');
         return;
     }
 
-    const input = document.getElementById('earningMultiplierInput');
-    const multiplier = parseFloat(input.value);
+    const input = document.getElementById('customEarningInput');
+    const value = parseFloat(input.value);
 
-    if (isNaN(multiplier) || multiplier < 0.1 || multiplier > 100) {
-        showToast('Множитель должен быть от 0.1 до 100', 'error');
+    if (isNaN(value) || value < 0.0001 || value > 100) {
+        showToast('Доход должен быть от 0.0001 до 100', 'error');
         return;
     }
 
-    if (!confirm(`Установить множитель заработка ${multiplier}x для игрока ${currentUserData.username || currentUserData.user_id}?`)) {
+    if (!confirm(`Установить доход за клик ${value} WG для игрока ${currentUserData.username || currentUserData.user_id}?`)) {
         return;
     }
 
     try {
-        const response = await fetch('/api/admin/set_earning_multiplier?key=' + adminKey, {
+        const response = await fetch('/api/admin/set_custom_earning?key=' + adminKey, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 user_id: currentUserData.user_id,
-                multiplier: multiplier
+                custom_earning: value
             })
         });
         const data = await response.json();
 
         if (data.success) {
             showToast(data.message, 'success');
-            // Обновляем отображение
-            document.getElementById('currentEarningMultiplier').innerText = multiplier.toFixed(1);
-            document.getElementById('playerEarningMultiplier').innerText = multiplier.toFixed(1);
-            // Перезагружаем профиль
+            document.getElementById('currentEarningDisplay').innerText = value.toFixed(4);
+            document.getElementById('playerEarningDisplay').innerText = value.toFixed(4);
             await openPlayerProfile(currentUserData.user_id);
             if (typeof loadStats === 'function') loadStats();
         } else {
             showToast('❌ Ошибка: ' + data.error, 'error');
         }
     } catch(e) {
-        console.error('Set multiplier error:', e);
+        console.error('Set earning error:', e);
         showToast('❌ Ошибка соединения', 'error');
     }
 }
 
-// ===== СБРОС МНОЖИТЕЛЯ =====
-async function resetEarningMultiplier() {
+// ===== СБРОС ДОХОДА (СТАНДАРТНЫЙ РАСЧЁТ) =====
+async function resetCustomEarning() {
     if (!currentUserData) {
         showToast('Сначала выберите игрока', 'error');
         return;
     }
 
-    if (!confirm(`Сбросить множитель заработка до 1.0x для игрока ${currentUserData.username || currentUserData.user_id}?`)) {
+    if (!confirm(`Сбросить доход за клик до стандартного расчёта для игрока ${currentUserData.username || currentUserData.user_id}?`)) {
         return;
     }
 
     try {
-        const response = await fetch('/api/admin/set_earning_multiplier?key=' + adminKey, {
+        const response = await fetch('/api/admin/set_custom_earning?key=' + adminKey, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 user_id: currentUserData.user_id,
-                multiplier: 1.0
+                custom_earning: 0
             })
         });
         const data = await response.json();
 
         if (data.success) {
-            showToast('✅ Множитель сброшен до 1.0x', 'success');
-            document.getElementById('currentEarningMultiplier').innerText = '1.0';
-            document.getElementById('playerEarningMultiplier').innerText = '1.0';
-            document.getElementById('earningMultiplierInput').value = '1.0';
+            showToast('✅ Доход сброшен до стандартного расчёта', 'success');
+            const standardEarning = currentUserData.earning_per_click || 0.01;
+            document.getElementById('currentEarningDisplay').innerText = standardEarning.toFixed(4);
+            document.getElementById('playerEarningDisplay').innerText = standardEarning.toFixed(4);
+            document.getElementById('customEarningInput').value = standardEarning.toFixed(4);
             await openPlayerProfile(currentUserData.user_id);
             if (typeof loadStats === 'function') loadStats();
         } else {
             showToast('❌ Ошибка: ' + data.error, 'error');
         }
     } catch(e) {
-        console.error('Reset multiplier error:', e);
+        console.error('Reset earning error:', e);
         showToast('❌ Ошибка соединения', 'error');
     }
 }
