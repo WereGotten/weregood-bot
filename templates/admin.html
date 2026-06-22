@@ -2982,8 +2982,8 @@ async function openPlayerProfile(userId) {
     const modalContent = document.getElementById('playerModalContent');
     if (!modalContent) return;
 
-    // Получаем текущий доход за клик
-    const currentEarning = currentUserData.custom_earning || currentUserData.earning_per_click || 0.01;
+    // Получаем доход за клик (только для отображения)
+    const currentEarning = currentUserData.earning_per_click || 0.01;
 
     modalContent.innerHTML = `
         <div style="text-align:center;margin-bottom:20px;">
@@ -3011,7 +3011,7 @@ async function openPlayerProfile(userId) {
                 <div class="stat-card"><div class="stat-card-title">⚡ Энергия</div><div class="stat-card-value"><span class="clickable-value" onclick="openEditModal(${currentUserData.user_id}, 'energy', ${currentUserData.energy})">${currentUserData.energy}</span>/${currentUserData.max_energy}</div></div>
                 <div class="stat-card"><div class="stat-card-title">⚡ Макс. энергия</div><div class="stat-card-value"><span class="clickable-value" onclick="openEditModal(${currentUserData.user_id}, 'max_energy', ${currentUserData.max_energy})">${currentUserData.max_energy}</span></div></div>
                 <div class="stat-card"><div class="stat-card-title">🔓 Префиксы</div><div class="stat-card-value">${(currentUserData.unlocked_prefixes || ['player']).join(', ')}</div></div>
-                <!-- ===== НОВОЕ: ДОХОД ЗА КЛИК ===== -->
+                <!-- ===== ДОХОД ЗА КЛИК (ТОЛЬКО ДЛЯ ПРОСМОТРА) ===== -->
                 <div class="stat-card" style="border: 1px solid rgba(255,215,0,0.3); background: rgba(255,215,0,0.05);">
                     <div class="stat-card-title">💰 Доход за клик</div>
                     <div class="stat-card-value" style="color: #FFD700; font-size: 1.3rem;">
@@ -3132,27 +3132,28 @@ async function openPlayerProfile(userId) {
                 </div>
             </div>
 
-            <!-- ===== НОВОЕ: УПРАВЛЕНИЕ ДОХОДОМ ЗА КЛИК ===== -->
+            <!-- ===== НОВОЕ: ВЫДАЧА УЛУЧШЕНИЙ ===== -->
             <div class="form-group" style="border-top: 2px solid rgba(255,215,0,0.3); padding-top: 15px; margin-top: 10px; background: rgba(255,215,0,0.03); border-radius: 12px; padding: 15px;">
-                <label style="color: #FFD700; font-weight: 700; font-size: 0.95rem;">💰 Доход за клик</label>
+                <label style="color: #FFD700; font-weight: 700; font-size: 0.95rem;">🎁 Выдача улучшений</label>
                 <div style="font-size: 0.7rem; opacity: 0.6; margin-bottom: 10px;">
-                    Установите конкретное значение дохода за один клик. От 0.0001 до 100 WG.
+                    Выдайте игроку улучшения бесплатно (без траты WG)
                 </div>
                 <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                    <span style="font-size: 0.85rem; opacity: 0.7;">
-                        Текущий: <strong id="currentEarningDisplay" style="color: #FFD700; font-size: 1.1rem;">${currentEarning.toFixed(4)}</strong> WG
-                    </span>
-                    <input type="number" id="customEarningInput" value="${currentEarning.toFixed(4)}" step="0.0001" min="0.0001" max="100"
-                           style="width: 120px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,215,0,0.3); border-radius: 8px; padding: 6px 10px; color: white; font-size: 0.9rem;">
-                    <button class="btn-sm" onclick="setCustomEarning()" style="background: rgba(255,215,0,0.25); color: #FFD700; padding: 6px 16px;">
-                        💰 Установить
-                    </button>
-                    <button class="btn-sm" onclick="resetCustomEarning()" style="background: rgba(244,67,54,0.2); color: #f44336; padding: 6px 16px;">
-                        🔄 Сбросить (стандартный)
+                    <select id="upgradeToGive" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,215,0,0.3); border-radius: 8px; padding: 6px 10px; color: white; min-width: 140px;">
+                        <option value="1">⭐ Новичок</option>
+                        <option value="2">🔥 Опытный</option>
+                        <option value="3">💎 Профессионал</option>
+                        <option value="4">👑 Мастер</option>
+                        <option value="5">🌟 Легенда</option>
+                    </select>
+                    <input type="number" id="upgradeGiveAmount" value="1" min="1" max="100"
+                           style="width: 60px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,215,0,0.3); border-radius: 8px; padding: 6px 8px; color: white; text-align: center;">
+                    <button class="btn-sm" onclick="giveUpgrade()" style="background: rgba(34,197,94,0.25); color: #22c55e; padding: 6px 16px;">
+                        🎁 Выдать
                     </button>
                 </div>
-                <div style="font-size: 0.6rem; opacity: 0.5; margin-top: 6px;">
-                    Если установлено значение — оно перекрывает стандартный расчёт дохода.
+                <div style="font-size: 0.65rem; opacity: 0.5; margin-top: 6px;">
+                    Текущие улучшения: <span id="currentUpgradesDisplay">${JSON.stringify(currentUserData.upgrade_counts || {})}</span>
                 </div>
             </div>
 
@@ -3222,88 +3223,54 @@ function closePlayerModal() {
     currentUserData = null;
 }
 
-// ===== НОВЫЕ ФУНКЦИИ ДЛЯ ДОХОДА ЗА КЛИК =====
-
-// ===== УСТАНОВКА ДОХОДА ЗА КЛИК =====
-async function setCustomEarning() {
+// ===== ВЫДАЧА УЛУЧШЕНИЙ =====
+async function giveUpgrade() {
     if (!currentUserData) {
         showToast('Сначала выберите игрока', 'error');
         return;
     }
 
-    const input = document.getElementById('customEarningInput');
-    const value = parseFloat(input.value);
+    const upgradeId = parseInt(document.getElementById('upgradeToGive').value);
+    const amount = parseInt(document.getElementById('upgradeGiveAmount').value);
 
-    if (isNaN(value) || value < 0.0001 || value > 100) {
-        showToast('Доход должен быть от 0.0001 до 100', 'error');
+    if (isNaN(amount) || amount < 1 || amount > 100) {
+        showToast('Количество должно быть от 1 до 100', 'error');
         return;
     }
 
-    if (!confirm(`Установить доход за клик ${value} WG для игрока ${currentUserData.username || currentUserData.user_id}?`)) {
+    const upgradeNames = {
+        1: 'Новичок',
+        2: 'Опытный',
+        3: 'Профессионал',
+        4: 'Мастер',
+        5: 'Легенда'
+    };
+
+    if (!confirm(`Выдать ${upgradeNames[upgradeId]} x${amount} игроку ${currentUserData.username || currentUserData.user_id}?`)) {
         return;
     }
 
     try {
-        const response = await fetch('/api/admin/set_custom_earning?key=' + adminKey, {
+        const response = await fetch('/api/admin/give_upgrade?key=' + adminKey, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 user_id: currentUserData.user_id,
-                custom_earning: value
+                upgrade_id: upgradeId,
+                amount: amount
             })
         });
         const data = await response.json();
 
         if (data.success) {
             showToast(data.message, 'success');
-            document.getElementById('currentEarningDisplay').innerText = value.toFixed(4);
-            document.getElementById('playerEarningDisplay').innerText = value.toFixed(4);
             await openPlayerProfile(currentUserData.user_id);
             if (typeof loadStats === 'function') loadStats();
         } else {
             showToast('❌ Ошибка: ' + data.error, 'error');
         }
     } catch(e) {
-        console.error('Set earning error:', e);
-        showToast('❌ Ошибка соединения', 'error');
-    }
-}
-
-// ===== СБРОС ДОХОДА (СТАНДАРТНЫЙ РАСЧЁТ) =====
-async function resetCustomEarning() {
-    if (!currentUserData) {
-        showToast('Сначала выберите игрока', 'error');
-        return;
-    }
-
-    if (!confirm(`Сбросить доход за клик до стандартного расчёта для игрока ${currentUserData.username || currentUserData.user_id}?`)) {
-        return;
-    }
-
-    try {
-        const response = await fetch('/api/admin/set_custom_earning?key=' + adminKey, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                user_id: currentUserData.user_id,
-                custom_earning: 0
-            })
-        });
-        const data = await response.json();
-
-        if (data.success) {
-            showToast('✅ Доход сброшен до стандартного расчёта', 'success');
-            const standardEarning = currentUserData.earning_per_click || 0.01;
-            document.getElementById('currentEarningDisplay').innerText = standardEarning.toFixed(4);
-            document.getElementById('playerEarningDisplay').innerText = standardEarning.toFixed(4);
-            document.getElementById('customEarningInput').value = standardEarning.toFixed(4);
-            await openPlayerProfile(currentUserData.user_id);
-            if (typeof loadStats === 'function') loadStats();
-        } else {
-            showToast('❌ Ошибка: ' + data.error, 'error');
-        }
-    } catch(e) {
-        console.error('Reset earning error:', e);
+        console.error('Give upgrade error:', e);
         showToast('❌ Ошибка соединения', 'error');
     }
 }

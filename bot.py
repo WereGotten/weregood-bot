@@ -6191,6 +6191,62 @@ def api_admin_reset_contest():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+@app.route('/api/admin/give_upgrade', methods=['POST'])
+@require_admin
+def api_admin_give_upgrade():
+    """Выдать улучшение игроку (бесплатно)"""
+    data = request.json
+    if not data:
+        return jsonify({"success": False, "error": "No JSON"}), 400
+
+    user_id = data.get('user_id')
+    upgrade_id = data.get('upgrade_id')
+    amount = data.get('amount', 1)
+
+    if not user_id:
+        return jsonify({"success": False, "error": "user_id required"}), 400
+
+    if upgrade_id not in [1, 2, 3, 4, 5]:
+        return jsonify({"success": False, "error": "Неверный ID улучшения"}), 400
+
+    try:
+        amount = int(amount)
+        if amount < 1 or amount > 100:
+            return jsonify({"success": False, "error": "Количество должно быть от 1 до 100"}), 400
+    except ValueError:
+        return jsonify({"success": False, "error": "Неверный формат количества"}), 400
+
+    admin_id = request.args.get('user_id', 'Admin')
+    admin_name = "Admin"
+
+    user = get_user(user_id)
+    upgrade_counts = user.get("upgrade_counts", {})
+
+    # Получаем текущее количество
+    current = upgrade_counts.get(upgrade_id, 0)
+    new_count = current + amount
+
+    # Обновляем
+    upgrade_counts[upgrade_id] = new_count
+    safe_update_user(user_id, upgrade_counts=upgrade_counts)
+
+    upgrade_name = UPGRADE_CONFIG[upgrade_id]['name']
+
+    add_admin_log(
+        f"🎁 Выдал улучшение {upgrade_name} x{amount} (было {current}, стало {new_count})",
+        admin_id, admin_name,
+        user_id, user.get('username') or f"User_{user_id}"
+    )
+
+    return jsonify({
+        "success": True,
+        "message": f"✅ {upgrade_name} x{amount} выдано! Теперь: {new_count}",
+        "upgrade_id": upgrade_id,
+        "old_count": current,
+        "new_count": new_count,
+        "upgrade_name": upgrade_name
+    })
+
 @app.route('/api/admin/export_contest', methods=['GET'])
 @require_admin
 def api_admin_export_contest():
@@ -6283,6 +6339,7 @@ def api_admin_distribute_contest_prizes():
     except Exception as e:
         logger.error(f"Ошибка выдачи призов: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
+
 
 
 # ========== РАССЫЛКА ==========
