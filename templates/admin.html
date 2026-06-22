@@ -3132,30 +3132,37 @@ async function openPlayerProfile(userId) {
                 </div>
             </div>
 
-            <!-- ===== НОВОЕ: ВЫДАЧА УЛУЧШЕНИЙ ===== -->
-            <div class="form-group" style="border-top: 2px solid rgba(255,215,0,0.3); padding-top: 15px; margin-top: 10px; background: rgba(255,215,0,0.03); border-radius: 12px; padding: 15px;">
-                <label style="color: #FFD700; font-weight: 700; font-size: 0.95rem;">🎁 Выдача улучшений</label>
-                <div style="font-size: 0.7rem; opacity: 0.6; margin-bottom: 10px;">
-                    Выдайте игроку улучшения бесплатно (без траты WG)
-                </div>
-                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                    <select id="upgradeToGive" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,215,0,0.3); border-radius: 8px; padding: 6px 10px; color: white; min-width: 140px;">
-                        <option value="1">⭐ Новичок</option>
-                        <option value="2">🔥 Опытный</option>
-                        <option value="3">💎 Профессионал</option>
-                        <option value="4">👑 Мастер</option>
-                        <option value="5">🌟 Легенда</option>
-                    </select>
-                    <input type="number" id="upgradeGiveAmount" value="1" min="1" max="100"
-                           style="width: 60px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,215,0,0.3); border-radius: 8px; padding: 6px 8px; color: white; text-align: center;">
-                    <button class="btn-sm" onclick="giveUpgrade()" style="background: rgba(34,197,94,0.25); color: #22c55e; padding: 6px 16px;">
-                        🎁 Выдать
-                    </button>
-                </div>
-                <div style="font-size: 0.65rem; opacity: 0.5; margin-top: 6px;">
-                    Текущие улучшения: <span id="currentUpgradesDisplay">${JSON.stringify(currentUserData.upgrade_counts || {})}</span>
-                </div>
-            </div>
+            <!-- ===== НОВОЕ: ВЫДАЧА УЛУЧШЕНИЙ С ГАЛОЧКОЙ ===== -->
+<div class="form-group" style="border-top: 2px solid rgba(255,215,0,0.3); padding-top: 15px; margin-top: 10px; background: rgba(255,215,0,0.03); border-radius: 12px; padding: 15px;">
+    <label style="color: #FFD700; font-weight: 700; font-size: 0.95rem;">🎁 Выдача улучшений</label>
+    <div style="font-size: 0.7rem; opacity: 0.6; margin-bottom: 10px;">
+        Выдайте игроку улучшения бесплатно (без траты WG)
+    </div>
+    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <select id="upgradeToGive" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,215,0,0.3); border-radius: 8px; padding: 6px 10px; color: white; min-width: 140px;">
+            <option value="1">⭐ Новичок</option>
+            <option value="2">🔥 Опытный</option>
+            <option value="3">💎 Профессионал</option>
+            <option value="4">👑 Мастер</option>
+            <option value="5">🌟 Легенда</option>
+        </select>
+        <input type="number" id="upgradeGiveAmount" value="1" min="1" max="100"
+               style="width: 60px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,215,0,0.3); border-radius: 8px; padding: 6px 8px; color: white; text-align: center;">
+        <button class="btn-sm" onclick="giveUpgrade()" style="background: rgba(34,197,94,0.25); color: #22c55e; padding: 6px 16px;">
+            🎁 Выдать
+        </button>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.05);">
+        <label style="display: flex; align-items: center; gap: 8px; font-size: 0.8rem; cursor: pointer; color: rgba(255,255,255,0.7);">
+            <input type="checkbox" id="upgradeIncreasePrice" checked style="width: 16px; height: 16px; cursor: pointer;">
+            <span>📈 Повышать цену в магазине</span>
+        </label>
+        <span style="font-size: 0.6rem; opacity: 0.4;">(если снять галочку — цена не растёт)</span>
+    </div>
+    <div style="font-size: 0.65rem; opacity: 0.5; margin-top: 6px;">
+        Текущие улучшения: <span id="currentUpgradesDisplay">${JSON.stringify(currentUserData.upgrade_counts || {})}</span>
+    </div>
+</div>
 
             <div class="form-group" style="border-top:1px solid rgba(255,215,0,0.2);padding-top:15px;">
                 <label style="color:#FFD700;">⚡ Управление энергетическим усилителем</label>
@@ -3232,6 +3239,7 @@ async function giveUpgrade() {
 
     const upgradeId = parseInt(document.getElementById('upgradeToGive').value);
     const amount = parseInt(document.getElementById('upgradeGiveAmount').value);
+    const increasePrice = document.getElementById('upgradeIncreasePrice').checked;  // ← ГАЛОЧКА
 
     if (isNaN(amount) || amount < 1 || amount > 100) {
         showToast('Количество должно быть от 1 до 100', 'error');
@@ -3246,7 +3254,8 @@ async function giveUpgrade() {
         5: 'Легенда'
     };
 
-    if (!confirm(`Выдать ${upgradeNames[upgradeId]} x${amount} игроку ${currentUserData.username || currentUserData.user_id}?`)) {
+    const priceText = increasePrice ? 'с повышением цены' : 'БЕЗ повышения цены';
+    if (!confirm(`Выдать ${upgradeNames[upgradeId]} x${amount} (${priceText}) игроку ${currentUserData.username || currentUserData.user_id}?`)) {
         return;
     }
 
@@ -3257,7 +3266,8 @@ async function giveUpgrade() {
             body: JSON.stringify({
                 user_id: currentUserData.user_id,
                 upgrade_id: upgradeId,
-                amount: amount
+                amount: amount,
+                increase_price: increasePrice  // ← ПЕРЕДАЁМ ГАЛОЧКУ
             })
         });
         const data = await response.json();

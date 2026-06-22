@@ -6202,6 +6202,7 @@ def api_admin_give_upgrade():
     user_id = data.get('user_id')
     upgrade_id = data.get('upgrade_id')
     amount = data.get('amount', 1)
+    increase_price = data.get('increase_price', True)  # ← НОВАЯ ГАЛОЧКА
 
     if not user_id:
         return jsonify({"success": False, "error": "user_id required"}), 400
@@ -6232,8 +6233,10 @@ def api_admin_give_upgrade():
 
     upgrade_name = UPGRADE_CONFIG[upgrade_id]['name']
 
+    # Логируем с информацией о цене
+    price_action = "с повышением цены" if increase_price else "БЕЗ повышения цены"
     add_admin_log(
-        f"🎁 Выдал улучшение {upgrade_name} x{amount} (было {current}, стало {new_count})",
+        f"🎁 Выдал улучшение {upgrade_name} x{amount} ({price_action}) | было {current}, стало {new_count}",
         admin_id, admin_name,
         user_id, user.get('username') or f"User_{user_id}"
     )
@@ -6244,7 +6247,8 @@ def api_admin_give_upgrade():
         "upgrade_id": upgrade_id,
         "old_count": current,
         "new_count": new_count,
-        "upgrade_name": upgrade_name
+        "upgrade_name": upgrade_name,
+        "increase_price": increase_price
     })
 
 @app.route('/api/admin/export_contest', methods=['GET'])
