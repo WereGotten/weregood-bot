@@ -6233,3 +6233,37 @@ body.light-theme .star-upgrade-card {
 .light-theme #splashScreen .splash-coin {
     background: linear-gradient(135deg, #FFD700, #F5A623);
 }
+
+/* ===== СЕКРЕТНАЯ РУЛЕТКА ===== */
+#secretGameModal .bet-preset-premium:active {
+    transform: scale(0.94);
+    background: rgba(255,215,0,0.2);
+}
+
+#secretGameModal .bet-preset-premium:hover {
+    background: rgba(255,215,0,0.2);
+    border-color: rgba(255,215,0,0.4);
+}
+
+#secretHistory::-webkit-scrollbar {
+    width: 3px;
+}
+
+#secretHistory::-webkit-scrollbar-track {
+    background: rgba(255,255,255,0.05);
+}
+
+#secretHistory::-webkit-scrollbar-thumb {
+    background: #FFD700;
+    border-radius: 3px;
+}
+
+/* Анимация для кнопки */
+#spinRouletteBtn:active {
+    transform: scale(0.97);
+}
+
+#spinRouletteBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}

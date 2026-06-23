@@ -7197,6 +7197,82 @@ def handle_telegram_updates():
 restore_fortune_from_db()
 start_fortune_timer_thread()
 
+
+# ==================== СЕКРЕТНАЯ РУЛЕТКА ====================
+
+@app.route('/api/secret/spin', methods=['POST'])
+def secret_spin():
+    """Вращение секретной рулетки (только для владельца)"""
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id')
+        bet = data.get('bet', 0)
+        chosen_sector = data.get('chosen_sector', 0)
+
+        if not user_id:
+            return jsonify({'success': False, 'error': 'Не авторизован'})
+
+        # Проверяем, что это владелец
+        OWNER_ID = 5264622363
+        if user_id != OWNER_ID:
+            return jsonify({'success': False, 'error': 'Доступ запрещён'})
+
+        # Проверка ставки
+        if bet < 10:
+            return jsonify({'success': False, 'error': 'Минимальная ставка 10 WG'})
+
+        # Получаем данные игрока
+        user = get_user(user_id)
+        if not user:
+            return jsonify({'success': False, 'error': 'Игрок не найден'})
+
+        wg = user.get('wg', 0)
+        if wg < bet:
+            return jsonify({'success': False, 'error': 'Не хватает WG'})
+
+        # 8 секторов, каждый с равным шансом
+        import random
+        win_index = random.randint(0, 7)
+        is_win = (win_index == chosen_sector)
+
+        # Коэффициенты: у Gold (индекс 3) 3x, у остальных 2x
+        multipliers = [2, 2, 2, 3, 2, 2, 2, 2]
+        multiplier = multipliers[win_index]
+
+        if is_win:
+            win_amount = bet * multiplier
+            new_balance = wg + win_amount
+
+            # Логируем победу
+            log_action(user_id, 'secret_roulette_win', f'Выиграл {win_amount} WG (x{multiplier})')
+
+            return jsonify({
+                'success': True,
+                'win_index': win_index,
+                'is_win': True,
+                'win_amount': win_amount,
+                'new_balance': new_balance,
+                'multiplier': multiplier
+            })
+        else:
+            new_balance = wg - bet
+
+            # Логируем проигрыш
+            log_action(user_id, 'secret_roulette_lose', f'Проиграл {bet} WG')
+
+            return jsonify({
+                'success': True,
+                'win_index': win_index,
+                'is_win': False,
+                'win_amount': 0,
+                'new_balance': new_balance,
+                'multiplier': multiplier
+            })
+
+    except Exception as e:
+        print(f'❌ Secret spin error: {e}')
+        return jsonify({'success': False, 'error': str(e)})
+
 if __name__ == '__main__':
     # Запускаем polling для Telegram
     threading.Thread(target=handle_telegram_updates, daemon=True).start()
