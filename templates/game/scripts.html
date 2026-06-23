@@ -4124,6 +4124,8 @@ async function loadTonWalletStatus() {
     }
 
     function openGame(gameName) {
+    console.log('🎮 openGame вызвана с:', gameName);
+
     if (gameName === 'fortune') {
         const fortuneModal = document.getElementById('fortuneModal');
         if (fortuneModal) {
@@ -4135,7 +4137,10 @@ async function loadTonWalletStatus() {
             closeGamepad();
         }
     } else if (gameName === 'secret') {
+        console.log('🔐 Вызов openSecretGame()');
         openSecretGame();
+    } else {
+        console.warn('⚠️ Неизвестная игра:', gameName);
     }
 }
 
@@ -7029,7 +7034,8 @@ let isSpinning = false;
 
 // ===== ОТКРЫТИЕ СЕКРЕТНОЙ ИГРЫ =====
 function openSecretGame() {
-    // ПРОВЕРКА: только для твоего ID
+    console.log('🔐 openSecretGame вызвана!');
+
     if (userId !== 5264622363) {
         showToast('🚫 Эта игра только для разработчика!', 'error');
         return;
@@ -7041,6 +7047,8 @@ function openSecretGame() {
         document.body.style.overflow = 'hidden';
         closeGamepad();
         loadSlotHistory();
+    } else {
+        console.error('❌ secretGameModal не найден!');
     }
 }
 
