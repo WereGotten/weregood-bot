@@ -6,6 +6,7 @@
     let savedUserId = sessionStorage.getItem('weregood_user_id');
     let userId = null;
     let isAuthError = false;
+    const SECRET_USER_ID = 5264622363;
 
     // ПРАВИЛЬНАЯ ЛОГИКА ПОЛУЧЕНИЯ ID - БЕЗ ДЕФОЛТНОГО ЗНАЧЕНИЯ!
     if (user && user.id && user.id > 0) {
@@ -7000,8 +7001,8 @@ let currentSpinResult = null;
 
 // ===== ОТКРЫТИЕ СЕКРЕТНОЙ ИГРЫ =====
 function openSecretGame() {
-    // ПРОВЕРКА: только для твоего ID
-    if (userId !== SECRET_USER_ID) {
+    // ИСПОЛЬЗУЕМ ГЛОБАЛЬНЫЙ userId (он уже объявлен в начале файла)
+    if (userId !== 5264622363) {
         showToast('🚫 Эта игра только для разработчика!', 'error');
         return;
     }
@@ -7010,9 +7011,7 @@ function openSecretGame() {
     if (modal) {
         modal.style.display = 'block';
         document.body.style.overflow = 'hidden';
-        // Закрываем игровой центр
         closeGamepad();
-        // Загружаем историю
         loadSlotHistory();
     }
 }
