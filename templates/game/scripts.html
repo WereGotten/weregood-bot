@@ -4102,19 +4102,6 @@ async function loadTonWalletStatus() {
     if (tutorialNextBtn) tutorialNextBtn.onclick = () => nextTutorialStep();
     if (tutorialSkipBtn) tutorialSkipBtn.onclick = () => skipTutorial();
 
-    // ========== ГЕЙМПАД МЕНЮ ==========
-    function openGamepad() {
-        const modal = document.getElementById('gamepadModal');
-        if (!modal) {
-            console.error('gamepadModal not found');
-            return;
-        }
-        modal.classList.add('active');
-        document.body.style.overflow = 'hidden';
-        document.body.style.position = 'fixed';
-        document.body.style.width = '100%';
-    }
-
     function closeGamepad() {
         const modal = document.getElementById('gamepadModal');
         if (modal) modal.classList.remove('active');
