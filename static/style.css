@@ -6234,36 +6234,36 @@ body.light-theme .star-upgrade-card {
     background: linear-gradient(135deg, #FFD700, #F5A623);
 }
 
-/* ===== СЕКРЕТНАЯ РУЛЕТКА ===== */
-#secretGameModal .bet-preset-premium:active {
-    transform: scale(0.94);
-    background: rgba(255,215,0,0.2);
+/* ===== СЛОТ-МАШИНА (БАРАБАНЫ) ===== */
+.slot-reel {
+    font-size: 4rem;
+    width: 100px;
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.3);
+    border-radius: 16px;
+    border: 2px solid rgba(255,215,0,0.2);
+    transition: all 0.1s ease;
+    user-select: none;
 }
 
-#secretGameModal .bet-preset-premium:hover {
-    background: rgba(255,215,0,0.2);
-    border-color: rgba(255,215,0,0.4);
+.slot-reel.spinning {
+    border-color: #FFD700;
+    box-shadow: 0 0 30px rgba(255,215,0,0.3);
+    animation: slotPulse 0.15s ease-in-out infinite alternate;
 }
 
-#secretHistory::-webkit-scrollbar {
-    width: 3px;
+@keyframes slotPulse {
+    0% { transform: scale(1); border-color: rgba(255,215,0,0.3); }
+    100% { transform: scale(1.03); border-color: #FFD700; }
 }
 
-#secretHistory::-webkit-scrollbar-track {
-    background: rgba(255,255,255,0.05);
-}
-
-#secretHistory::-webkit-scrollbar-thumb {
-    background: #FFD700;
-    border-radius: 3px;
-}
-
-/* Анимация для кнопки */
-#spinRouletteBtn:active {
-    transform: scale(0.97);
-}
-
-#spinRouletteBtn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+@media (max-width: 480px) {
+    .slot-reel {
+        font-size: 2.8rem;
+        width: 70px;
+        height: 70px;
+    }
 }

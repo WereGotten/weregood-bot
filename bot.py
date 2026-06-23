@@ -7202,12 +7202,13 @@ start_fortune_timer_thread()
 
 @app.route('/api/secret/spin', methods=['POST'])
 def secret_spin():
-    """Вращение секретной рулетки (только для владельца)"""
+    """Вращение секретного слота (только для владельца)"""
     try:
         data = request.get_json()
         user_id = data.get('user_id')
         bet = data.get('bet', 0)
-        chosen_sector = data.get('chosen_sector', 0)
+        symbols = data.get('symbols', [])
+        win_multiplier = data.get('win_multiplier', 0)
 
         if not user_id:
             return jsonify({'success': False, 'error': 'Не авторизован'})
@@ -7217,11 +7218,9 @@ def secret_spin():
         if user_id != OWNER_ID:
             return jsonify({'success': False, 'error': 'Доступ запрещён'})
 
-        # Проверка ставки
         if bet < 10:
             return jsonify({'success': False, 'error': 'Минимальная ставка 10 WG'})
 
-        # Получаем данные игрока
         user = get_user(user_id)
         if not user:
             return jsonify({'success': False, 'error': 'Игрок не найден'})
@@ -7230,47 +7229,44 @@ def secret_spin():
         if wg < bet:
             return jsonify({'success': False, 'error': 'Не хватает WG'})
 
-        # 8 секторов, каждый с равным шансом
-        import random
-        win_index = random.randint(0, 7)
-        is_win = (win_index == chosen_sector)
-
-        # Коэффициенты: у Gold (индекс 3) 3x, у остальных 2x
-        multipliers = [2, 2, 2, 3, 2, 2, 2, 2]
-        multiplier = multipliers[win_index]
+        is_win = win_multiplier > 0
+        win_amount = bet * win_multiplier if is_win else 0
 
         if is_win:
-            win_amount = bet * multiplier
             new_balance = wg + win_amount
-
-            # Логируем победу
-            log_action(user_id, 'secret_roulette_win', f'Выиграл {win_amount} WG (x{multiplier})')
-
-            return jsonify({
-                'success': True,
-                'win_index': win_index,
-                'is_win': True,
-                'win_amount': win_amount,
-                'new_balance': new_balance,
-                'multiplier': multiplier
-            })
+            # Используем add_log вместо log_action
+            add_log(
+                f"🎰 СЕКРЕТНЫЙ СЛОТ: ВЫИГРЫШ! {win_amount} WG (x{win_multiplier}) | Комбинация: {symbols}",
+                user_id,
+                user.get('username', 'Unknown'),
+                old_value=wg,
+                new_value=new_balance,
+                currency="wg"
+            )
         else:
             new_balance = wg - bet
+            add_log(
+                f"🎰 СЕКРЕТНЫЙ СЛОТ: ПРОИГРЫШ! -{bet} WG | Комбинация: {symbols}",
+                user_id,
+                user.get('username', 'Unknown'),
+                old_value=wg,
+                new_value=new_balance,
+                currency="wg"
+            )
 
-            # Логируем проигрыш
-            log_action(user_id, 'secret_roulette_lose', f'Проиграл {bet} WG')
+        # Обновляем баланс
+        safe_update_user(user_id, wg=new_balance)
 
-            return jsonify({
-                'success': True,
-                'win_index': win_index,
-                'is_win': False,
-                'win_amount': 0,
-                'new_balance': new_balance,
-                'multiplier': multiplier
-            })
+        return jsonify({
+            'success': True,
+            'is_win': is_win,
+            'win_amount': win_amount,
+            'new_balance': new_balance,
+            'win_multiplier': win_multiplier
+        })
 
     except Exception as e:
-        print(f'❌ Secret spin error: {e}')
+        print(f'❌ Secret slot error: {e}')
         return jsonify({'success': False, 'error': str(e)})
 
 if __name__ == '__main__':
