@@ -26,9 +26,26 @@
         document.head.appendChild(tonScript);
     </script>
 
+    <!-- Telegram Mini Apps Analytics SDK -->
+    <script>
+        (function() {
+            if (window.Telegram && window.Telegram.WebApp) {
+                var script = document.createElement('script');
+                script.src = 'https://tganalytics.xyz/index.js';
+                script.onload = function() {
+                    window.telegramAnalytics.init({
+                        token: 'eyJhcHBfbmFtZSI6IndlcmVnb29kIiwiYXBwX3VybCI6Imh0dHBzOi8vdC5tZS9XZXJlR29vb2Rib3QiLCJhcHBfZG9tYWluIjoiaHR0cHM6Ly93ZXJlZ29vZC5ydS8ifQ==!/Jd1QUzU6q1h1gN60VfBz53M1flHZlcVC5pcyACO9tM='
+                    });
+                    window.telegramAnalytics.trackEvent('app_started');
+                };
+                document.head.appendChild(script);
+            }
+        })();
+    </script>
+
     <style>
         /* ============================================================
-           SPLASH SCREEN
+           КАСТОМНЫЙ ЗАГРУЗОЧНЫЙ ЭКРАН (SPLASH SCREEN)
            ============================================================ */
         #splashScreen {
             position: fixed;
@@ -61,10 +78,17 @@
         }
 
         @keyframes splashFadeIn {
-            from { opacity: 0; transform: translateY(30px) scale(0.95); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
+            from {
+                opacity: 0;
+                transform: translateY(30px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
         }
 
+        /* ===== МОНЕТА С ПУЛЬСАЦИЕЙ ===== */
         .splash-coin {
             width: 120px;
             height: 120px;
@@ -77,7 +101,8 @@
             font-size: 42px;
             font-weight: 900;
             color: #0a0a1a;
-            box-shadow: 0 0 80px rgba(255,215,0,0.25), 0 0 160px rgba(255,215,0,0.08);
+            box-shadow: 0 0 80px rgba(255, 215, 0, 0.25),
+                        0 0 160px rgba(255, 215, 0, 0.08);
             animation: coinPulse 2s ease-in-out infinite, gradientShine 3s ease-in-out infinite;
             user-select: none;
             position: relative;
@@ -91,14 +116,26 @@
             right: -4px;
             bottom: -4px;
             border-radius: 50%;
-            border: 2px solid rgba(255,215,0,0.15);
+            border: 2px solid rgba(255, 215, 0, 0.15);
             animation: ringPulse 2s ease-in-out infinite;
         }
 
-        @keyframes coinPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
-        @keyframes gradientShine { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
-        @keyframes ringPulse { 0%, 100% { transform: scale(1); opacity: 0.3; } 50% { transform: scale(1.1); opacity: 0.8; } }
+        @keyframes coinPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.04); }
+        }
 
+        @keyframes gradientShine {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        @keyframes ringPulse {
+            0%, 100% { transform: scale(1); opacity: 0.3; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+
+        /* ===== НАЗВАНИЕ ===== */
         .splash-title {
             font-size: 32px;
             font-weight: 900;
@@ -114,12 +151,13 @@
         .splash-subtitle {
             font-size: 14px;
             font-weight: 500;
-            color: rgba(255,255,255,0.3);
+            color: rgba(255, 255, 255, 0.3);
             letter-spacing: 4px;
             text-transform: uppercase;
             margin-top: -12px;
         }
 
+        /* ===== ПРОГРЕСС-БАР ===== */
         .splash-progress-wrap {
             width: 220px;
             display: flex;
@@ -131,7 +169,7 @@
         .splash-progress-track {
             width: 100%;
             height: 4px;
-            background: rgba(255,255,255,0.06);
+            background: rgba(255, 255, 255, 0.06);
             border-radius: 4px;
             overflow: hidden;
             position: relative;
@@ -157,35 +195,53 @@
             animation: progressShine 1.5s ease-in-out infinite;
         }
 
-        @keyframes progressShine { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+        @keyframes progressShine {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
 
         .splash-percent {
             font-size: 15px;
             font-weight: 600;
-            color: rgba(255,255,255,0.4);
+            color: rgba(255, 255, 255, 0.4);
             font-variant-numeric: tabular-nums;
             letter-spacing: 2px;
             text-align: center;
             font-feature-settings: "tnum";
         }
 
+        /* ===== ВЕРСИЯ ===== */
         .splash-version {
             position: fixed;
             bottom: 30px;
             font-size: 11px;
-            color: rgba(255,255,255,0.15);
+            color: rgba(255, 255, 255, 0.15);
             letter-spacing: 1px;
             font-weight: 400;
         }
 
+        /* ===== АДАПТАЦИЯ ДЛЯ LIGHT THEME ===== */
         body.light-theme #splashScreen {
             background: #f0f0f5;
         }
-        body.light-theme .splash-subtitle { color: rgba(0,0,0,0.25); }
-        body.light-theme .splash-percent { color: rgba(0,0,0,0.4); }
-        body.light-theme .splash-version { color: rgba(0,0,0,0.15); }
-        body.light-theme .splash-progress-track { background: rgba(0,0,0,0.06); }
 
+        body.light-theme .splash-subtitle {
+            color: rgba(0, 0, 0, 0.25);
+        }
+
+        body.light-theme .splash-percent {
+            color: rgba(0, 0, 0, 0.4);
+        }
+
+        body.light-theme .splash-version {
+            color: rgba(0, 0, 0, 0.15);
+        }
+
+        body.light-theme .splash-progress-track {
+            background: rgba(0, 0, 0, 0.06);
+        }
+
+        /* ===== АНИМАЦИЯ ДЛЯ ЭЛЕМЕНТОВ ПРИ ЗАГРУЗКЕ ===== */
         .splash-loading-dots {
             display: flex;
             gap: 8px;
@@ -196,53 +252,83 @@
             width: 8px;
             height: 8px;
             border-radius: 50%;
-            background: rgba(255,215,0,0.3);
+            background: rgba(255, 215, 0, 0.3);
             animation: dotBounce 1.4s ease-in-out infinite;
         }
 
         .splash-loading-dots span:nth-child(2) { animation-delay: 0.2s; }
         .splash-loading-dots span:nth-child(3) { animation-delay: 0.4s; }
 
-        @keyframes dotBounce { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.3; } 40% { transform: scale(1); opacity: 1; } }
+        @keyframes dotBounce {
+            0%, 80%, 100% { transform: scale(0.6); opacity: 0.3; }
+            40% { transform: scale(1); opacity: 1; }
+        }
 
-        .app { opacity: 0; transition: opacity 0.4s ease; }
-        .app.visible { opacity: 1; }
+        /* ===== СКРЫТИЕ APP ПОКА НЕ ЗАГРУЗИТСЯ ===== */
+        .app {
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
 
+        .app.visible {
+            opacity: 1;
+        }
+
+        /* ===== МЕДИА ===== */
         @media (max-width: 480px) {
-            .splash-coin { width: 100px; height: 100px; font-size: 34px; }
-            .splash-title { font-size: 26px; }
-            .splash-progress-wrap { width: 180px; }
-            .splash-subtitle { font-size: 11px; letter-spacing: 3px; }
+            .splash-coin {
+                width: 100px;
+                height: 100px;
+                font-size: 34px;
+            }
+            .splash-title {
+                font-size: 26px;
+            }
+            .splash-progress-wrap {
+                width: 180px;
+            }
+            .splash-subtitle {
+                font-size: 11px;
+                letter-spacing: 3px;
+            }
         }
     </style>
 </head>
 <body>
 
     <!-- ============================================================
-         SPLASH SCREEN
+         КАСТОМНЫЙ ЗАГРУЗОЧНЫЙ ЭКРАН
          ============================================================ -->
     <div id="splashScreen">
         <div class="splash-content">
+            <!-- МОНЕТА -->
             <div class="splash-coin">WG</div>
+
+            <!-- НАЗВАНИЕ -->
             <div class="splash-title">WereGood</div>
             <div class="splash-subtitle">Click to Earn</div>
+
+            <!-- ПРОГРЕСС-БАР -->
             <div class="splash-progress-wrap">
                 <div class="splash-progress-track">
                     <div class="splash-progress-fill" id="splashProgressFill"></div>
                 </div>
                 <div class="splash-percent" id="splashPercent">0%</div>
             </div>
+
+            <!-- ТОЧКИ ЗАГРУЗКИ -->
             <div class="splash-loading-dots">
                 <span></span>
                 <span></span>
                 <span></span>
             </div>
         </div>
+
         <div class="splash-version">v3.0 • WereGood</div>
     </div>
 
     <!-- ============================================================
-         MAIN APP
+         ОСНОВНОЙ APP (СКРЫТ ПОКА НЕ ЗАГРУЗИТСЯ)
          ============================================================ -->
     <div class="app" id="app">
 
@@ -278,129 +364,6 @@
     {% include 'game/modals.html' %}
     {% include 'game/fortune.html' %}
 
-    <!-- ============================================================
-         SECRET SLOT - 3D REEL (BOINKERS STYLE)
-         ============================================================ -->
-    <div id="secretGameModal" class="game-modal-full" style="display: none;">
-        <div class="game-modal-full-content">
-
-            <div class="game-modal-full-header">
-                <h2>🎰 Секретный слот</h2>
-                <button class="game-modal-full-close" onclick="window.closeSecretGame()">✕</button>
-            </div>
-
-            <div class="fortune-balance-card">
-                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                    <span class="balance-label-premium">💰 Баланс WG</span>
-                    <span class="balance-value-premium" id="secretBalance">0</span>
-                </div>
-            </div>
-
-            <!-- ===== 3D SLOT REELS ===== -->
-            <div class="slot-machine-wrapper">
-                <div class="slot-machine-body">
-
-                    <!-- Neon Top -->
-                    <div class="slot-neon-top">
-                        <div class="neon-lights">
-                            <span class="neon-dot"></span><span class="neon-dot"></span><span class="neon-dot"></span>
-                            <span class="neon-dot"></span><span class="neon-dot"></span><span class="neon-dot"></span>
-                            <span class="neon-dot"></span><span class="neon-dot"></span><span class="neon-dot"></span>
-                            <span class="neon-dot"></span><span class="neon-dot"></span><span class="neon-dot"></span>
-                            <span class="neon-dot"></span><span class="neon-dot"></span><span class="neon-dot"></span>
-                            <span class="neon-dot"></span><span class="neon-dot"></span><span class="neon-dot"></span>
-                            <span class="neon-dot"></span><span class="neon-dot"></span><span class="neon-dot"></span>
-                        </div>
-                    </div>
-
-                    <!-- 3D Reels -->
-                    <div class="slot-reels-3d">
-                        <div class="reel-3d" id="reel1">
-                            <div class="reel-track">
-                                <div class="reel-cell cell-top" id="cell_0_0">🍒</div>
-                                <div class="reel-cell cell-center" id="cell_1_0">🍒</div>
-                                <div class="reel-cell cell-bottom" id="cell_2_0">🍒</div>
-                            </div>
-                            <div class="reel-shadow"></div>
-                        </div>
-                        <div class="reel-divider-3d"></div>
-                        <div class="reel-3d" id="reel2">
-                            <div class="reel-track">
-                                <div class="reel-cell cell-top" id="cell_0_1">🍒</div>
-                                <div class="reel-cell cell-center" id="cell_1_1">🍒</div>
-                                <div class="reel-cell cell-bottom" id="cell_2_1">🍒</div>
-                            </div>
-                            <div class="reel-shadow"></div>
-                        </div>
-                        <div class="reel-divider-3d"></div>
-                        <div class="reel-3d" id="reel3">
-                            <div class="reel-track">
-                                <div class="reel-cell cell-top" id="cell_0_2">🍒</div>
-                                <div class="reel-cell cell-center" id="cell_1_2">🍒</div>
-                                <div class="reel-cell cell-bottom" id="cell_2_2">🍒</div>
-                            </div>
-                            <div class="reel-shadow"></div>
-                        </div>
-                    </div>
-
-                    <!-- Win Line -->
-                    <div class="win-line-3d" id="winLine3d"></div>
-
-                    <!-- Neon Bottom -->
-                    <div class="slot-neon-bottom">
-                        <div class="neon-lights">
-                            <span class="neon-dot"></span><span class="neon-dot"></span><span class="neon-dot"></span>
-                            <span class="neon-dot"></span><span class="neon-dot"></span><span class="neon-dot"></span>
-                            <span class="neon-dot"></span><span class="neon-dot"></span><span class="neon-dot"></span>
-                            <span class="neon-dot"></span><span class="neon-dot"></span><span class="neon-dot"></span>
-                            <span class="neon-dot"></span><span class="neon-dot"></span><span class="neon-dot"></span>
-                            <span class="neon-dot"></span><span class="neon-dot"></span><span class="neon-dot"></span>
-                            <span class="neon-dot"></span><span class="neon-dot"></span><span class="neon-dot"></span>
-                        </div>
-                    </div>
-
-                    <div class="win-indicator" id="winIndicator">💰</div>
-                </div>
-            </div>
-
-            <div id="secretResult" class="secret-result">
-                <span>🎰 Нажми "Крутить"</span>
-            </div>
-
-            <div class="bet-controls">
-                <div class="bet-control-group">
-                    <button class="bet-control-btn" onclick="window.adjustBet(-10)">−</button>
-                    <span class="bet-display" id="betDisplay">10</span>
-                    <button class="bet-control-btn" onclick="window.adjustBet(10)">+</button>
-                </div>
-                <span class="bet-label">WG</span>
-            </div>
-
-            <button id="spinSlotBtn" class="spin-btn" onclick="window.spinSlot()">
-                <span class="spin-btn-icon">🎰</span>
-                <span class="spin-btn-text">КРУТИТЬ</span>
-            </button>
-
-            <div class="history-section">
-                <div class="history-header">
-                    <span class="history-title">📋 История</span>
-                    <span class="history-count" id="secretHistoryCount">0</span>
-                </div>
-                <div id="secretHistory" class="history-list"></div>
-            </div>
-
-            <div class="info-card-glass">
-                <span>🎲 Выигрыш: </span>
-                <strong>3 одинаковых = x3</strong>
-                <span style="opacity: 0.4; margin: 0 6px;">|</span>
-                <strong>2 одинаковых = x2</strong>
-            </div>
-        </div>
-    </div>
-
-    <!-- ============================================================
-         AUDIO
-         ============================================================ -->
     <audio id="errorSound" preload="auto"><source src="/static/error.mp3" type="audio/mpeg"></audio>
     <audio id="clickSound" preload="auto"><source src="/static/click.mp3" type="audio/mpeg"></audio>
     <audio id="navSound" preload="auto"><source src="/static/nav.mp3" type="audio/mpeg"></audio>
@@ -409,7 +372,7 @@
     <audio id="purchaseSound" preload="auto"><source src="/static/purchase.mp3" type="audio/mpeg"></audio>
 
     <!-- ============================================================
-         LOADING SCRIPT
+         СКРИПТ УПРАВЛЕНИЯ ЗАГРУЗКОЙ
          ============================================================ -->
     <script>
         (function() {
@@ -423,6 +386,7 @@
             let currentProgress = 0;
             let isHidden = false;
 
+            // ===== ФУНКЦИЯ ОБНОВЛЕНИЯ ПРОГРЕССА =====
             function updateProgress(value) {
                 if (isHidden) return;
                 currentProgress = Math.min(100, Math.max(0, value));
@@ -430,20 +394,30 @@
                 if (percentText) percentText.textContent = Math.round(currentProgress) + '%';
             }
 
+            // ===== СИМУЛЯЦИЯ ЗАГРУЗКИ =====
             function simulateLoading() {
                 let progress = 0;
                 const steps = [
-                    { target: 15, delay: 300 }, { target: 30, delay: 400 },
-                    { target: 45, delay: 350 }, { target: 55, delay: 300 },
-                    { target: 70, delay: 500 }, { target: 82, delay: 400 },
-                    { target: 90, delay: 300 }, { target: 95, delay: 200 },
+                    { target: 15, delay: 300 },
+                    { target: 30, delay: 400 },
+                    { target: 45, delay: 350 },
+                    { target: 55, delay: 300 },
+                    { target: 70, delay: 500 },
+                    { target: 82, delay: 400 },
+                    { target: 90, delay: 300 },
+                    { target: 95, delay: 200 },
                     { target: 100, delay: 300 }
                 ];
 
                 let index = 0;
 
                 function nextStep() {
-                    if (index >= steps.length) { finishLoading(); return; }
+                    if (index >= steps.length) {
+                        // Загрузка завершена
+                        finishLoading();
+                        return;
+                    }
+
                     const step = steps[index];
                     const increment = (step.target - progress) / 3;
 
@@ -459,14 +433,19 @@
                         updateProgress(progress);
                         requestAnimationFrame(animateStep);
                     }
+
                     animateStep();
                 }
+
                 nextStep();
             }
 
+            // ===== ЗАВЕРШЕНИЕ ЗАГРУЗКИ =====
             function finishLoading() {
                 if (isHidden) return;
                 isHidden = true;
+
+                // Доводим до 100% если ещё не дошли
                 if (currentProgress < 100) {
                     updateProgress(100);
                     setTimeout(hideSplash, 400);
@@ -478,481 +457,119 @@
             function hideSplash() {
                 if (splash) {
                     splash.classList.add('hidden');
-                    setTimeout(() => { splash.style.display = 'none'; }, 600);
+                    setTimeout(() => {
+                        splash.style.display = 'none';
+                    }, 600);
                 }
-                if (app) app.classList.add('visible');
+
+                // Показываем приложение
+                if (app) {
+                    app.classList.add('visible');
+                }
+
+                // Убираем блокировку скролла
                 document.body.style.overflow = '';
             }
 
+            // ===== ОТСЛЕЖИВАНИЕ РЕАЛЬНОЙ ЗАГРУЗКИ =====
             function trackRealLoading() {
+                // Ждём загрузку DOM
                 if (document.readyState === 'loading') {
-                    document.addEventListener('DOMContentLoaded', () => { updateProgress(60); });
-                } else { updateProgress(60); }
+                    document.addEventListener('DOMContentLoaded', () => {
+                        updateProgress(60);
+                    });
+                } else {
+                    updateProgress(60);
+                }
+
+                // Ждём загрузку стилей
                 window.addEventListener('load', () => {
                     updateProgress(85);
-                    setTimeout(() => { updateProgress(95); }, 500);
+                    // Даём время на инициализацию скриптов
+                    setTimeout(() => {
+                        updateProgress(95);
+                    }, 500);
                 });
-                if (window.Telegram?.WebApp?.isVersionAtLeast) updateProgress(70);
-                if (typeof io !== 'undefined') updateProgress(75);
-                if (window.TON_CONNECT_UI !== null) updateProgress(80);
-                if (typeof window.Adsgram !== 'undefined') updateProgress(78);
+
+                // Ждём инициализацию Telegram WebApp
+                if (window.Telegram && window.Telegram.WebApp) {
+                    if (window.Telegram.WebApp.isVersionAtLeast) {
+                        updateProgress(70);
+                    }
+                }
+
+                // Ждём Socket.IO
+                if (typeof io !== 'undefined') {
+                    updateProgress(75);
+                }
+
+                // Ждём TON Connect
+                if (window.TON_CONNECT_UI !== null) {
+                    updateProgress(80);
+                }
+
+                // Ждём Adsgram
+                if (typeof window.Adsgram !== 'undefined') {
+                    updateProgress(78);
+                }
             }
 
-            setTimeout(() => {
-                if (!isHidden && currentProgress < 70) {
-                    updateProgress(Math.max(currentProgress, 70));
-                }
-            }, 3000);
-
-            setTimeout(() => {
+            // ===== АВТОМАТИЧЕСКОЕ ЗАВЕРШЕНИЕ (ЗАПАСНОЙ ТАЙМЕР) =====
+            // Если что-то пошло не так — скрываем через 5 секунд
+            const fallbackTimer = setTimeout(() => {
                 if (!isHidden) {
-                    console.log('⚠️ Force finish loading');
+                    console.log('⏱️ Запасной таймер: принудительное завершение загрузки');
                     updateProgress(100);
-                    setTimeout(finishLoading, 200);
+                    setTimeout(finishLoading, 300);
                 }
-            }, 7000);
+            }, 5000);
 
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', () => {
-                    updateProgress(5);
-                    simulateLoading();
-                    trackRealLoading();
-                });
-            } else {
+            // ===== ЗАПУСК =====
+            function init() {
+                // Начальный прогресс
                 updateProgress(5);
+
+                // Запускаем симуляцию
                 simulateLoading();
+
+                // Отслеживаем реальную загрузку
                 trackRealLoading();
+
+                // Если через 3 секунды всё ещё загружаемся — ускоряем
+                setTimeout(() => {
+                    if (!isHidden && currentProgress < 70) {
+                        updateProgress(Math.max(currentProgress, 70));
+                    }
+                }, 3000);
+
+                // Если через 7 секунд всё ещё загружаемся — форсируем
+                setTimeout(() => {
+                    if (!isHidden) {
+                        console.log('⚠️ Форсированное завершение загрузки');
+                        updateProgress(100);
+                        setTimeout(finishLoading, 200);
+                    }
+                }, 7000);
             }
 
+            // Запускаем когда DOM готов
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+
+            // Экспортируем функцию для ручного завершения (если нужно)
             window.hideSplashScreen = function() {
-                if (!isHidden) { updateProgress(100); finishLoading(); }
+                if (!isHidden) {
+                    updateProgress(100);
+                    finishLoading();
+                }
             };
+
         })();
     </script>
 
     {% include 'game/scripts.html' %}
-
-    <!-- ============================================================
-         SECRET SLOT SCRIPT
-         ============================================================ -->
-    <script>
-    (function() {
-        'use strict';
-
-        console.log('🎰 Loading Secret Slot...');
-
-        let secretIsSpinning = false;
-        let localWG = 1000;
-        let currentBet = 10;
-
-        const SYMBOLS = ['🍒', '🍋', '🍊', '🍇', '🔔', '💎', '⭐', '7️⃣'];
-
-        const WIN_COMBOS = [
-            { symbol: '💎', multiplier: 10 },
-            { symbol: '7️⃣', multiplier: 8 },
-            { symbol: '⭐', multiplier: 5 },
-            { symbol: '🔔', multiplier: 4 },
-            { symbol: '🍇', multiplier: 3 },
-            { symbol: '🍊', multiplier: 2 },
-            { symbol: '🍋', multiplier: 2 },
-            { symbol: '🍒', multiplier: 1.5 },
-        ];
-
-        let userId = null;
-
-        function getUserId() {
-            if (window.Telegram?.WebApp?.initDataUnsafe?.user?.id) {
-                return window.Telegram.WebApp.initDataUnsafe.user.id;
-            }
-            if (sessionStorage.getItem('weregood_user_id')) {
-                return parseInt(sessionStorage.getItem('weregood_user_id'));
-            }
-            return null;
-        }
-
-        function isOwner() {
-            const id = getUserId();
-            return id === 5264622363;
-        }
-
-        function showToast(msg, type = 'info') {
-            let toast = document.getElementById('toast');
-            if (!toast) {
-                toast = document.createElement('div');
-                toast.id = 'toast';
-                toast.className = 'toast';
-                document.body.appendChild(toast);
-            }
-            toast.textContent = msg;
-            toast.className = `toast ${type} show`;
-            setTimeout(() => toast.className = 'toast', 1500);
-        }
-
-        function updateSecretBalance() {
-            const el = document.getElementById('secretBalance');
-            if (el) el.innerText = localWG.toFixed(2);
-        }
-
-        function setGridSymbols(s00, s01, s02, s10, s11, s12, s20, s21, s22) {
-            const cells = [
-                [s00, s01, s02],
-                [s10, s11, s12],
-                [s20, s21, s22]
-            ];
-            for (let r = 0; r < 3; r++) {
-                for (let c = 0; c < 3; c++) {
-                    const el = document.getElementById(`cell_${r}_${c}`);
-                    if (el) el.textContent = cells[r][c];
-                }
-            }
-        }
-
-        function resetWinLine() {
-            document.getElementById('winLine3d')?.classList.remove('active');
-            document.querySelector('.win-indicator')?.classList.remove('active');
-            document.querySelectorAll('.reel-cell').forEach(c => c.classList.remove('win-cell'));
-        }
-
-        function getRandomSymbol() {
-            return SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
-        }
-
-        function getWinMultiplier(symbol, count) {
-            if (count < 2) return 0;
-            const combo = WIN_COMBOS.find(c => c.symbol === symbol);
-            if (!combo) return 0;
-            if (count === 3) return combo.multiplier;
-            if (count === 2) return combo.multiplier * 0.5;
-            return 0;
-        }
-
-        // ===== MAIN SPIN FUNCTION WITH REEL ANIMATION =====
-        function spinReel(reelId, targetSymbols, duration, callback) {
-            const reel = document.getElementById(reelId);
-            const cells = reel.querySelectorAll('.reel-cell');
-            const startTime = Date.now();
-
-            reel.classList.add('spinning');
-            document.querySelectorAll('.neon-dot').forEach(d => d.classList.add('active'));
-
-            // Store current symbols for smooth transition
-            let currentSymbols = [];
-            cells.forEach(cell => currentSymbols.push(cell.textContent));
-
-            function animate() {
-                const elapsed = Date.now() - startTime;
-                const progress = Math.min(1, elapsed / duration);
-
-                if (progress < 0.7) {
-                    // Fast spinning - random symbols
-                    cells.forEach((cell, idx) => {
-                        cell.textContent = getRandomSymbol();
-                        // Add blur effect
-                        cell.style.filter = 'blur(2px)';
-                    });
-                    requestAnimationFrame(animate);
-                } else if (progress < 0.9) {
-                    // Slow down - sometimes change, sometimes stay
-                    cells.forEach((cell, idx) => {
-                        if (Math.random() > 0.3) {
-                            cell.textContent = getRandomSymbol();
-                        }
-                        cell.style.filter = 'blur(1px)';
-                    });
-                    requestAnimationFrame(animate);
-                } else {
-                    // Final positions - one by one with delay for realistic effect
-                    cells.forEach((cell, idx) => {
-                        setTimeout(() => {
-                            cell.textContent = targetSymbols[idx] || '🍒';
-                            cell.style.filter = 'blur(0px)';
-                            cell.style.transition = 'all 0.1s ease';
-                            cell.style.transform = 'scale(1.1)';
-                            setTimeout(() => {
-                                cell.style.transform = 'scale(1)';
-                            }, 100);
-                        }, idx * 80);
-                    });
-
-                    setTimeout(() => {
-                        reel.classList.remove('spinning');
-                        document.querySelectorAll('.neon-dot').forEach(d => d.classList.remove('active'));
-                        if (callback) callback();
-                    }, 300);
-                }
-            }
-
-            animate();
-        }
-
-        window.adjustBet = function(amount) {
-            const newBet = Math.max(10, Math.min(500, currentBet + amount));
-            currentBet = newBet;
-            document.getElementById('betDisplay').textContent = currentBet;
-        };
-
-        window.spinSlot = async function() {
-            if (secretIsSpinning) {
-                showToast('⏳ Барабаны крутятся!', 'error');
-                return;
-            }
-
-            if (localWG < currentBet) {
-                showToast(`❌ Не хватает WG! У вас ${localWG.toFixed(2)} WG`, 'error');
-                return;
-            }
-
-            secretIsSpinning = true;
-            const btn = document.getElementById('spinSlotBtn');
-            btn.disabled = true;
-            btn.innerHTML = `<span class="spin-btn-icon">⏳</span><span class="spin-btn-text">КРУТИМ...</span>`;
-
-            const resultEl = document.getElementById('secretResult');
-            resultEl.className = 'secret-result';
-            resultEl.innerHTML = '<span>🎰 Крутим барабаны...</span>';
-
-            resetWinLine();
-
-            try {
-                // Generate 9 random symbols
-                const targetSymbols = [];
-                for (let i = 0; i < 9; i++) {
-                    targetSymbols.push(getRandomSymbol());
-                }
-
-                // Spin each reel with different timing
-                await new Promise((resolve) => {
-                    let completed = 0;
-                    const checkComplete = () => {
-                        completed++;
-                        if (completed === 3) resolve();
-                    };
-
-                    spinReel('reel1', targetSymbols.slice(0, 3), 2500, checkComplete);
-                    spinReel('reel2', targetSymbols.slice(3, 6), 2800, checkComplete);
-                    spinReel('reel3', targetSymbols.slice(6, 9), 3100, checkComplete);
-                });
-
-                // Check win on middle row ONLY
-                const middleRow = targetSymbols.slice(3, 6);
-
-                const counts = {};
-                middleRow.forEach(s => { counts[s] = (counts[s] || 0) + 1; });
-
-                let winMultiplier = 0;
-                let winSymbol = null;
-                let maxCount = 0;
-
-                for (const [symbol, count] of Object.entries(counts)) {
-                    if (count > maxCount) {
-                        maxCount = count;
-                        winSymbol = symbol;
-                    }
-                }
-
-                winMultiplier = getWinMultiplier(winSymbol, maxCount);
-
-                // Send to server
-                const res = await fetch('/api/secret/spin', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        user_id: getUserId(),
-                        bet: currentBet,
-                        symbols: middleRow,
-                        win_multiplier: winMultiplier
-                    })
-                });
-
-                const data = await res.json();
-
-                if (!data.success) {
-                    showToast(data.error || 'Ошибка', 'error');
-                    secretIsSpinning = false;
-                    btn.disabled = false;
-                    btn.innerHTML = `<span class="spin-btn-icon">🎰</span><span class="spin-btn-text">КРУТИТЬ</span>`;
-                    return;
-                }
-
-                const isWin = data.is_win || false;
-                const winAmount = data.win_amount || 0;
-
-                // Highlight winning cells
-                if (isWin) {
-                    middleRow.forEach((s, idx) => {
-                        if (s === winSymbol) {
-                            const cell = document.getElementById(`cell_1_${idx}`);
-                            if (cell) cell.classList.add('win-cell');
-                        }
-                    });
-                    document.getElementById('winLine3d').classList.add('active');
-                    document.querySelector('.win-indicator').classList.add('active');
-                }
-
-                if (isWin) {
-                    resultEl.className = 'secret-result win-result';
-                    resultEl.innerHTML = `<span>🎉 ПОБЕДА! ${middleRow.join(' ')}<br>+${winAmount.toFixed(2)} WG (x${winMultiplier})</span>`;
-                    showToast(`🎉 +${winAmount.toFixed(2)} WG! ${winSymbol}x${winMultiplier}!`, 'success');
-                    if (navigator.vibrate) navigator.vibrate([50, 30, 50, 30, 50]);
-                    showWinEffect();
-                } else {
-                    resultEl.className = 'secret-result lose-result';
-                    resultEl.innerHTML = `<span>😔 Проигрыш! ${middleRow.join(' ')}<br>-${currentBet} WG</span>`;
-                    showToast(`😔 Проигрыш! Выпало ${middleRow.join(' ')}`, 'error');
-                    if (navigator.vibrate) navigator.vibrate(50);
-                }
-
-                localWG = data.new_balance || localWG;
-                updateSecretBalance();
-                addSecretHistory(isWin, middleRow.join(' '), currentBet, winAmount);
-
-                secretIsSpinning = false;
-                btn.disabled = false;
-                btn.innerHTML = `<span class="spin-btn-icon">🎰</span><span class="spin-btn-text">КРУТИТЬ</span>`;
-
-            } catch(e) {
-                console.error('Spin error:', e);
-                showToast('❌ Ошибка', 'error');
-                secretIsSpinning = false;
-                btn.disabled = false;
-                btn.innerHTML = `<span class="spin-btn-icon">🎰</span><span class="spin-btn-text">КРУТИТЬ</span>`;
-            }
-        };
-
-        function showWinEffect() {
-            const emojis = ['🎉', '✨', '⭐', '🎊', '💎', '🌟'];
-            const container = document.createElement('div');
-            container.style.cssText = `
-                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-                pointer-events: none; z-index: 99999;
-            `;
-            document.body.appendChild(container);
-
-            for (let i = 0; i < 35; i++) {
-                const particle = document.createElement('div');
-                particle.style.cssText = `
-                    position: absolute;
-                    font-size: ${1 + Math.random() * 2.5}rem;
-                    animation: particleFly 1.8s ease-out forwards;
-                    left: ${Math.random() * 100}%;
-                    top: ${Math.random() * 100}%;
-                    --tx: ${(Math.random() - 0.5) * 500}px;
-                    --ty: ${(Math.random() - 0.5) * 500}px;
-                `;
-                particle.textContent = emojis[Math.floor(Math.random() * emojis.length)];
-                container.appendChild(particle);
-            }
-
-            setTimeout(() => container.remove(), 2500);
-        }
-
-        function addSecretHistory(isWin, symbols, bet, winAmount) {
-            const history = document.getElementById('secretHistory');
-            const count = document.getElementById('secretHistoryCount');
-            if (!history) return;
-
-            const entry = document.createElement('span');
-            entry.className = `history-item ${isWin ? 'win' : 'lose'}`;
-            entry.textContent = isWin ? `+${winAmount.toFixed(1)}` : `-${bet}`;
-            history.prepend(entry);
-
-            while (history.children.length > 20) {
-                history.removeChild(history.lastChild);
-            }
-
-            if (count) {
-                count.textContent = history.children.length;
-            }
-        }
-
-        // ===== INIT =====
-        document.addEventListener('DOMContentLoaded', function() {
-            const owner = isOwner();
-            console.log('👤 Owner:', owner);
-
-            const secretCard = document.getElementById('secretGameCard');
-            if (secretCard) {
-                if (owner) {
-                    secretCard.style.display = 'flex';
-                    console.log('🔐 Secret game AVAILABLE');
-                } else {
-                    secretCard.style.display = 'none';
-                    console.log('🔐 Secret game HIDDEN');
-                }
-            }
-
-            if (owner) {
-                const newCard = secretCard.cloneNode(true);
-                secretCard.parentNode.replaceChild(newCard, secretCard);
-
-                newCard.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    console.log('🎰 Opening secret slot...');
-                    const modal = document.getElementById('secretGameModal');
-                    if (modal) {
-                        modal.style.display = 'block';
-                        modal.classList.add('active');
-                        document.body.style.overflow = 'hidden';
-                        const gamepad = document.getElementById('gamepadModal');
-                        if (gamepad) gamepad.classList.remove('active');
-                        updateSecretBalance();
-                        setGridSymbols('🍒', '🍒', '🍒', '🍒', '🍒', '🍒', '🍒', '🍒', '🍒');
-                        document.getElementById('betDisplay').textContent = currentBet;
-                        resetWinLine();
-                        document.querySelectorAll('.neon-dot').forEach(d => d.classList.add('active'));
-                    }
-                });
-
-                window.closeSecretGame = function() {
-                    const modal = document.getElementById('secretGameModal');
-                    if (modal) {
-                        modal.style.display = 'none';
-                        modal.classList.remove('active');
-                    }
-                    document.body.style.overflow = '';
-                    secretIsSpinning = false;
-                };
-
-                const originalOpenGame = window.openGame;
-                window.openGame = function(gameName) {
-                    console.log('🎮 openGame:', gameName);
-                    if (gameName === 'secret') {
-                        const modal = document.getElementById('secretGameModal');
-                        if (modal) {
-                            modal.style.display = 'block';
-                            modal.classList.add('active');
-                            document.body.style.overflow = 'hidden';
-                            const gamepad = document.getElementById('gamepadModal');
-                            if (gamepad) gamepad.classList.remove('active');
-                            updateSecretBalance();
-                            setGridSymbols('🍒', '🍒', '🍒', '🍒', '🍒', '🍒', '🍒', '🍒', '🍒');
-                            document.getElementById('betDisplay').textContent = currentBet;
-                            resetWinLine();
-                            document.querySelectorAll('.neon-dot').forEach(d => d.classList.add('active'));
-                        }
-                        return;
-                    }
-                    if (typeof originalOpenGame === 'function') {
-                        originalOpenGame(gameName);
-                    }
-                };
-
-                console.log('✅ Secret slot ready!');
-            }
-        });
-
-        // Add particle animation style
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes particleFly {
-                0% { transform: translate(0, 0) scale(0) rotate(0deg); opacity: 1; }
-                100% { transform: translate(var(--tx), var(--ty)) scale(1) rotate(720deg); opacity: 0; }
-            }
-        `;
-        document.head.appendChild(style);
-
-    })();
-    </script>
-
 </body>
 </html>
