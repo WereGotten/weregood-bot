@@ -285,15 +285,28 @@
         }
 
         /* ============================================================
-           СЕКРЕТНАЯ ИГРА - ПРЕМИУМ ДИЗАЙН (BOINKERS STYLE)
+           СЕКРЕТНАЯ ИГРА - 3D СЛОТ (BOINKERS STYLE)
            ============================================================ */
 
         /* --- ОБЩИЙ ФОН --- */
         #secretGameModal .game-modal-full-content {
-            background: linear-gradient(145deg, #0a0a1a 0%, #0d0d2b 40%, #1a0a2e 100%);
+            background: radial-gradient(ellipse at 50% 0%, #1a0a2e 0%, #0d0d2b 40%, #0a0a1a 100%);
             position: relative;
             overflow: hidden;
             padding: 20px 16px 30px;
+        }
+
+        #secretGameModal .game-modal-full-content::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(ellipse at 30% 20%, rgba(255,215,0,0.03) 0%, transparent 60%),
+                        radial-gradient(ellipse at 70% 80%, rgba(255,100,0,0.02) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
         }
 
         /* --- ШАПКА --- */
@@ -303,7 +316,9 @@
             align-items: center;
             margin-bottom: 20px;
             padding-bottom: 14px;
-            border-bottom: 1px solid rgba(255,215,0,0.12);
+            border-bottom: 1px solid rgba(255,215,0,0.1);
+            position: relative;
+            z-index: 1;
         }
 
         #secretGameModal .game-modal-full-header h2 {
@@ -337,6 +352,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            z-index: 1;
         }
 
         #secretGameModal .game-modal-full-close:hover {
@@ -349,11 +365,13 @@
         /* --- БАЛАНС --- */
         #secretGameModal .fortune-balance-card {
             background: linear-gradient(135deg, rgba(255,215,0,0.08), rgba(255,165,0,0.04));
-            border: 1px solid rgba(255,215,0,0.15);
+            border: 1px solid rgba(255,215,0,0.12);
             border-radius: 16px;
             padding: 14px 18px;
             margin-bottom: 18px;
             backdrop-filter: blur(10px);
+            position: relative;
+            z-index: 1;
         }
 
         .balance-label-premium {
@@ -374,191 +392,308 @@
             text-shadow: 0 0 30px rgba(255,215,0,0.2);
         }
 
-        /* --- СЛОТ-МАШИНА (3x3) --- */
+        /* ============================================================
+           3D СЛОТ-МАШИНА
+           ============================================================ */
+
         .slot-machine-wrapper {
-            margin: 12px 0 16px;
+            margin: 8px 0 14px;
             position: relative;
+            z-index: 1;
         }
 
         .slot-machine-body {
-            background: linear-gradient(180deg, #0f0f1f 0%, #1a1a2e 50%, #0f0f1f 100%);
-            border-radius: 20px;
-            padding: 16px 12px 20px;
-            border: 2px solid rgba(255,215,0,0.1);
-            box-shadow: 0 8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04), 0 0 60px rgba(255,215,0,0.03);
+            background: linear-gradient(180deg, #0f0f1f 0%, #0a0a15 40%, #1a0a2e 100%);
+            border-radius: 24px;
+            padding: 18px 14px 22px;
+            border: 1px solid rgba(255,215,0,0.08);
+            box-shadow: 0 8px 50px rgba(0,0,0,0.6),
+                        inset 0 1px 0 rgba(255,255,255,0.03),
+                        0 0 80px rgba(255,215,0,0.02);
             position: relative;
+            overflow: hidden;
         }
 
         .slot-machine-body::before {
             content: '';
             position: absolute;
-            top: -1px;
+            top: -2px;
             left: 10%;
             right: 10%;
             height: 2px;
-            background: linear-gradient(90deg, transparent, #FFD700, transparent);
+            background: linear-gradient(90deg, transparent, rgba(255,215,0,0.3), #FFD700, rgba(255,215,0,0.3), transparent);
             border-radius: 2px;
-            opacity: 0.4;
+            animation: neonLine 2s ease-in-out infinite;
         }
 
-        .slot-machine-body::after {
-            content: '';
-            position: absolute;
-            bottom: -1px;
-            left: 20%;
-            right: 20%;
+        @keyframes neonLine {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+
+        /* --- НЕОНОВАЯ ПОДСВЕТКА --- */
+        .slot-neon-top,
+        .slot-neon-bottom {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 0;
+        }
+
+        .slot-neon-top { margin-bottom: 10px; }
+        .slot-neon-bottom { margin-top: 10px; }
+
+        .neon-strip {
+            width: 80%;
             height: 1px;
             background: linear-gradient(90deg, transparent, rgba(255,215,0,0.2), transparent);
         }
 
-        /* --- СЕТКА 3x3 --- */
-        .slot-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 6px;
-            max-width: 340px;
-            margin: 0 auto;
-            position: relative;
-        }
-
-        .slot-cell {
-            aspect-ratio: 1 / 1;
-            background: linear-gradient(145deg, #0a0a1a, #12122a);
-            border-radius: 12px;
-            border: 2px solid rgba(255,215,0,0.06);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s ease;
-            position: relative;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.4);
-        }
-
-        .slot-cell::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 30%, transparent 70%, rgba(0,0,0,0.2) 100%);
-            border-radius: 10px;
-            pointer-events: none;
-        }
-
-        .slot-cell.active-cell {
-            border-color: rgba(255,215,0,0.25);
-            box-shadow: 0 0 20px rgba(255,215,0,0.05), inset 0 0 30px rgba(255,215,0,0.02);
-        }
-
-        .slot-cell.win-cell {
-            border-color: #FFD700;
-            box-shadow: 0 0 30px rgba(255,215,0,0.2), inset 0 0 30px rgba(255,215,0,0.05);
-            animation: cellWin 0.6s ease-in-out infinite alternate;
-        }
-
-        @keyframes cellWin {
-            0% { transform: scale(1); border-color: rgba(255,215,0,0.3); }
-            100% { transform: scale(1.05); border-color: #FFD700; box-shadow: 0 0 50px rgba(255,215,0,0.3); }
-        }
-
-        .slot-cell.spinning {
-            border-color: rgba(255,215,0,0.15);
-            animation: cellSpin 0.08s ease-in-out infinite;
-        }
-
-        @keyframes cellSpin {
-            0% { transform: scale(1); }
-            50% { transform: scale(0.97); }
-            100% { transform: scale(1); }
-        }
-
-        .slot-symbol {
-            font-size: 2.6rem;
-            line-height: 1;
-            filter: drop-shadow(0 0 10px rgba(255,215,0,0.05));
-            transition: all 0.3s ease;
-            position: relative;
-            z-index: 1;
-        }
-
-        .slot-cell.win-cell .slot-symbol {
-            animation: symbolWin 0.5s ease-in-out infinite alternate;
-        }
-
-        @keyframes symbolWin {
-            0% { transform: scale(1); filter: drop-shadow(0 0 10px rgba(255,215,0,0.2)); }
-            100% { transform: scale(1.15); filter: drop-shadow(0 0 30px rgba(255,215,0,0.6)); }
-        }
-
-        /* --- ВЫИГРЫШНАЯ ЛИНИЯ --- */
-        .win-line {
-            position: absolute;
-            left: 10%;
-            right: 10%;
-            top: 50%;
-            height: 3px;
-            background: linear-gradient(90deg, transparent, #FFD700, transparent);
-            transform: translateY(-50%) scaleX(0);
-            opacity: 0;
-            transition: all 0.5s ease;
-            border-radius: 2px;
-            box-shadow: 0 0 20px rgba(255,215,0,0.3);
-        }
-
-        .win-line.active {
-            opacity: 1;
-            transform: translateY(-50%) scaleX(1);
-            animation: linePulse 0.5s ease-in-out infinite alternate;
-        }
-
-        @keyframes linePulse {
-            0% { opacity: 0.6; box-shadow: 0 0 20px rgba(255,215,0,0.2); }
-            100% { opacity: 1; box-shadow: 0 0 40px rgba(255,215,0,0.5); }
-        }
-
-        /* --- ПОДСВЕТКА --- */
-        .slot-top-lights,
-        .slot-bottom-lights {
+        .neon-lights {
             display: flex;
             justify-content: center;
             gap: 4px;
-            padding: 6px 0;
+            flex-wrap: wrap;
         }
 
-        .slot-top-lights {
-            margin-bottom: 10px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid rgba(255,215,0,0.05);
-        }
-
-        .slot-bottom-lights {
-            margin-top: 10px;
-            padding-top: 8px;
-            border-top: 1px solid rgba(255,215,0,0.05);
-        }
-
-        .light-dot {
-            width: 5px;
-            height: 5px;
+        .neon-dot {
+            width: 4px;
+            height: 4px;
             border-radius: 50%;
             background: rgba(255,215,0,0.08);
             transition: all 0.3s ease;
         }
 
-        .light-dot.active {
+        .neon-dot.active {
             background: #FFD700;
-            box-shadow: 0 0 10px rgba(255,215,0,0.3);
-            animation: dotPulse 1s ease-in-out infinite alternate;
+            box-shadow: 0 0 8px rgba(255,215,0,0.4);
+            animation: neonPulse 1s ease-in-out infinite alternate;
         }
 
-        .light-dot:nth-child(odd) { animation-delay: 0.15s; }
-        .light-dot:nth-child(3n) { animation-delay: 0.4s; }
-        .light-dot:nth-child(5n+2) { animation-delay: 0.6s; }
+        .neon-dot:nth-child(odd) { animation-delay: 0.1s; }
+        .neon-dot:nth-child(3n) { animation-delay: 0.3s; }
+        .neon-dot:nth-child(5n+2) { animation-delay: 0.5s; }
+        .neon-dot:nth-child(7n+4) { animation-delay: 0.7s; }
 
-        @keyframes dotPulse {
-            0% { opacity: 0.2; transform: scale(0.7); }
+        @keyframes neonPulse {
+            0% { opacity: 0.2; transform: scale(0.6); }
             100% { opacity: 1; transform: scale(1.2); }
+        }
+
+        /* --- 3D БАРАБАНЫ --- */
+        .slot-reels-3d {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 0;
+            perspective: 800px;
+        }
+
+        .reel-3d {
+            flex: 1;
+            max-width: 120px;
+            min-width: 60px;
+            position: relative;
+            transform-style: preserve-3d;
+            transform: rotateX(4deg);
+            transition: all 0.3s ease;
+        }
+
+        .reel-3d:hover {
+            transform: rotateX(4deg) scale(1.02);
+        }
+
+        .reel-track {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            background: linear-gradient(180deg, rgba(0,0,0,0.4), rgba(0,0,0,0.2));
+            border-radius: 16px;
+            padding: 6px 4px;
+            border: 1px solid rgba(255,215,0,0.06);
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.3);
+        }
+
+        .reel-cell {
+            aspect-ratio: 1 / 1;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.8rem;
+            transition: all 0.2s ease;
+            position: relative;
+            background: linear-gradient(145deg, #0a0a1a, #12122a);
+            border: 1px solid rgba(255,215,0,0.04);
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.3);
+        }
+
+        /* ===== ПЕРСПЕКТИВА ===== */
+        .reel-cell.cell-top {
+            transform: scale(0.7) translateY(-6px);
+            opacity: 0.6;
+            font-size: 2rem;
+            border-color: rgba(255,215,0,0.02);
+            filter: blur(1px);
+        }
+
+        .reel-cell.cell-center {
+            transform: scale(1) translateY(0);
+            opacity: 1;
+            font-size: 3.6rem;
+            border-color: rgba(255,215,0,0.15);
+            box-shadow: 0 0 30px rgba(255,215,0,0.05), inset 0 0 30px rgba(255,215,0,0.02);
+            z-index: 2;
+        }
+
+        .reel-cell.cell-bottom {
+            transform: scale(0.7) translateY(6px);
+            opacity: 0.6;
+            font-size: 2rem;
+            border-color: rgba(255,215,0,0.02);
+            filter: blur(1px);
+        }
+
+        /* ===== АКТИВНАЯ ЦЕНТРАЛЬНАЯ ЯЧЕЙКА ===== */
+        .reel-cell.cell-center.active-cell {
+            border-color: rgba(255,215,0,0.3);
+            box-shadow: 0 0 40px rgba(255,215,0,0.1), inset 0 0 40px rgba(255,215,0,0.03);
+        }
+
+        /* ===== ВЫИГРЫШНАЯ ЯЧЕЙКА ===== */
+        .reel-cell.win-cell {
+            border-color: #FFD700 !important;
+            box-shadow: 0 0 50px rgba(255,215,0,0.3), inset 0 0 50px rgba(255,215,0,0.08) !important;
+            animation: winCellPulse 0.6s ease-in-out infinite alternate;
+        }
+
+        @keyframes winCellPulse {
+            0% { transform: scale(1); border-color: rgba(255,215,0,0.4); }
+            100% { transform: scale(1.08); border-color: #FFD700; box-shadow: 0 0 70px rgba(255,215,0,0.5); }
+        }
+
+        .reel-cell.win-cell .reel-symbol {
+            animation: winSymbolPulse 0.5s ease-in-out infinite alternate;
+        }
+
+        @keyframes winSymbolPulse {
+            0% { transform: scale(1); filter: drop-shadow(0 0 10px rgba(255,215,0,0.2)); }
+            100% { transform: scale(1.2); filter: drop-shadow(0 0 40px rgba(255,215,0,0.6)); }
+        }
+
+        /* ===== АНИМАЦИЯ КРУЧЕНИЯ ===== */
+        .reel-3d.spinning .reel-track {
+            animation: reelShake 0.08s ease-in-out infinite;
+        }
+
+        @keyframes reelShake {
+            0% { transform: translateY(0); }
+            50% { transform: translateY(1px); }
+            100% { transform: translateY(0); }
+        }
+
+        .reel-3d.spinning .reel-cell.cell-top {
+            animation: topBlur 0.1s ease-in-out infinite;
+        }
+
+        @keyframes topBlur {
+            0%, 100% { filter: blur(1px); opacity: 0.5; transform: scale(0.7) translateY(-6px) rotateX(5deg); }
+            50% { filter: blur(2px); opacity: 0.4; transform: scale(0.65) translateY(-8px) rotateX(-5deg); }
+        }
+
+        .reel-3d.spinning .reel-cell.cell-bottom {
+            animation: bottomBlur 0.1s ease-in-out infinite;
+        }
+
+        @keyframes bottomBlur {
+            0%, 100% { filter: blur(1px); opacity: 0.5; transform: scale(0.7) translateY(6px) rotateX(-5deg); }
+            50% { filter: blur(2px); opacity: 0.4; transform: scale(0.65) translateY(8px) rotateX(5deg); }
+        }
+
+        .reel-3d.spinning .reel-cell.cell-center {
+            animation: centerPulse 0.15s ease-in-out infinite;
+        }
+
+        @keyframes centerPulse {
+            0% { transform: scale(1); border-color: rgba(255,215,0,0.1); }
+            50% { transform: scale(1.02); border-color: rgba(255,215,0,0.2); }
+            100% { transform: scale(1); border-color: rgba(255,215,0,0.1); }
+        }
+
+        /* --- РАЗДЕЛИТЕЛЬ --- */
+        .reel-divider-3d {
+            width: 2px;
+            height: 80%;
+            min-height: 80px;
+            background: linear-gradient(180deg, transparent, rgba(255,215,0,0.08), transparent);
+            border-radius: 1px;
+            flex-shrink: 0;
+        }
+
+        /* --- ТЕНЬ БАРАБАНА --- */
+        .reel-shadow {
+            position: absolute;
+            bottom: -10px;
+            left: 10%;
+            right: 10%;
+            height: 15px;
+            background: radial-gradient(ellipse, rgba(0,0,0,0.3), transparent);
+            border-radius: 50%;
+            filter: blur(8px);
+        }
+
+        /* --- ВЫИГРЫШНАЯ ЛИНИЯ --- */
+        .win-line-3d {
+            position: absolute;
+            left: 8%;
+            right: 8%;
+            top: 50%;
+            height: 4px;
+            background: linear-gradient(90deg, transparent, #FFD700, transparent);
+            transform: translateY(-50%) scaleX(0);
+            opacity: 0;
+            transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+            border-radius: 2px;
+            box-shadow: 0 0 30px rgba(255,215,0,0.3), 0 0 60px rgba(255,215,0,0.1);
+            z-index: 3;
+            pointer-events: none;
+        }
+
+        .win-line-3d.active {
+            opacity: 1;
+            transform: translateY(-50%) scaleX(1);
+            animation: winLinePulse 0.5s ease-in-out infinite alternate;
+        }
+
+        @keyframes winLinePulse {
+            0% { opacity: 0.6; box-shadow: 0 0 20px rgba(255,215,0,0.2); }
+            100% { opacity: 1; box-shadow: 0 0 50px rgba(255,215,0,0.5); }
+        }
+
+        /* --- ИНДИКАТОР ВЫИГРЫША --- */
+        .win-indicator {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            font-size: 1.4rem;
+            opacity: 0;
+            transform: scale(0);
+            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            z-index: 4;
+            filter: drop-shadow(0 0 20px rgba(255,215,0,0.3));
+        }
+
+        .win-indicator.active {
+            opacity: 1;
+            transform: scale(1);
+            animation: indicatorFloat 1s ease-in-out infinite;
+        }
+
+        @keyframes indicatorFloat {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-8px) scale(1.1); }
         }
 
         /* --- РЕЗУЛЬТАТ --- */
@@ -575,8 +710,10 @@
             align-items: center;
             justify-content: center;
             backdrop-filter: blur(10px);
-            margin: 10px 0 14px;
+            margin: 8px 0 12px;
             transition: all 0.4s ease;
+            position: relative;
+            z-index: 1;
         }
 
         .secret-result.win-result {
@@ -590,10 +727,7 @@
             background: rgba(244,67,54,0.06);
         }
 
-        .secret-result span {
-            opacity: 0.7;
-        }
-
+        .secret-result span { opacity: 0.7; }
         .secret-result.win-result span { opacity: 1; color: #22c55e; }
         .secret-result.lose-result span { opacity: 1; color: #ef4444; }
 
@@ -603,7 +737,9 @@
             align-items: center;
             justify-content: center;
             gap: 12px;
-            margin: 8px 0 14px;
+            margin: 6px 0 12px;
+            position: relative;
+            z-index: 1;
         }
 
         .bet-control-group {
@@ -666,7 +802,8 @@
             position: relative;
             overflow: hidden;
             box-shadow: 0 4px 30px rgba(255,165,0,0.25);
-            margin: 2px 0 12px;
+            margin: 2px 0 10px;
+            z-index: 1;
         }
 
         .spin-btn::before {
@@ -717,16 +854,18 @@
 
         /* --- ИСТОРИЯ --- */
         .history-section {
-            margin-top: 10px;
-            padding-top: 12px;
-            border-top: 1px solid rgba(255,215,0,0.06);
+            margin-top: 8px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255,215,0,0.05);
+            position: relative;
+            z-index: 1;
         }
 
         .history-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
 
         .history-title {
@@ -747,7 +886,7 @@
             display: flex;
             flex-wrap: wrap;
             gap: 5px;
-            max-height: 80px;
+            max-height: 70px;
             overflow-y: auto;
             padding: 2px 0;
         }
@@ -755,12 +894,10 @@
         .history-list::-webkit-scrollbar {
             width: 3px;
         }
-
         .history-list::-webkit-scrollbar-track {
             background: rgba(255,255,255,0.05);
             border-radius: 3px;
         }
-
         .history-list::-webkit-scrollbar-thumb {
             background: #FFD700;
             border-radius: 3px;
@@ -803,7 +940,9 @@
             font-size: 0.65rem;
             opacity: 0.5;
             text-align: center;
-            margin-top: 12px;
+            margin-top: 10px;
+            position: relative;
+            z-index: 1;
         }
 
         .info-card-glass strong {
@@ -813,18 +952,33 @@
 
         /* --- АДАПТАЦИЯ --- */
         @media (max-width: 480px) {
-            .slot-symbol {
+            .reel-cell {
                 font-size: 1.8rem;
+                border-radius: 8px;
             }
 
-            .slot-cell {
+            .reel-cell.cell-center {
+                font-size: 2.4rem;
+            }
+
+            .reel-cell.cell-top,
+            .reel-cell.cell-bottom {
+                font-size: 1.3rem;
+            }
+
+            .reel-3d {
+                max-width: 80px;
+                min-width: 45px;
+            }
+
+            .reel-track {
+                padding: 4px 2px;
+                gap: 1px;
                 border-radius: 10px;
-                border-width: 1.5px;
             }
 
-            .slot-grid {
-                max-width: 260px;
-                gap: 4px;
+            .reel-divider-3d {
+                min-height: 50px;
             }
 
             #secretGameModal .game-modal-full-header h2 {
@@ -836,9 +990,9 @@
             }
 
             .bet-display {
-                font-size: 0.95rem;
+                font-size: 0.9rem;
                 padding: 4px 12px;
-                min-width: 40px;
+                min-width: 35px;
             }
 
             .bet-control-btn {
@@ -854,49 +1008,64 @@
                 padding: 12px 16px;
             }
 
-            .slot-top-lights,
-            .slot-bottom-lights {
-                gap: 3px;
-            }
-
-            .light-dot {
-                width: 4px;
-                height: 4px;
-            }
-
             .secret-result {
                 font-size: 0.85rem;
-                min-height: 38px;
+                min-height: 36px;
                 padding: 8px 12px;
             }
 
             .slot-machine-body {
                 padding: 12px 8px 16px;
+                border-radius: 16px;
+            }
+
+            .slot-neon-top,
+            .slot-neon-bottom {
+                gap: 4px;
+            }
+
+            .neon-dot {
+                width: 3px;
+                height: 3px;
+            }
+
+            .win-line-3d {
+                height: 2px;
             }
         }
 
         @media (max-width: 380px) {
-            .slot-symbol {
+            .reel-cell {
                 font-size: 1.4rem;
+                border-radius: 6px;
             }
 
-            .slot-grid {
-                max-width: 200px;
-                gap: 3px;
+            .reel-cell.cell-center {
+                font-size: 1.8rem;
             }
 
-            .slot-cell {
-                border-radius: 8px;
+            .reel-cell.cell-top,
+            .reel-cell.cell-bottom {
+                font-size: 1rem;
+            }
+
+            .reel-3d {
+                max-width: 60px;
+                min-width: 35px;
+            }
+
+            .reel-divider-3d {
+                min-height: 35px;
             }
 
             .bet-display {
-                font-size: 0.8rem;
-                min-width: 30px;
+                font-size: 0.75rem;
+                min-width: 28px;
                 padding: 4px 8px;
             }
 
             .spin-btn-text {
-                font-size: 0.75rem;
+                font-size: 0.7rem;
             }
 
             .spin-btn-icon {
@@ -968,7 +1137,7 @@
     {% include 'game/fortune.html' %}
 
     <!-- ============================================================
-         СЕКРЕТНАЯ ИГРА - СЛОТ-МАШИНА (ПРЕМИУМ ДИЗАЙН)
+         СЕКРЕТНАЯ ИГРА - 3D СЛОТ-МАШИНА (BOINKERS STYLE)
          ============================================================ -->
     <div id="secretGameModal" class="game-modal-full" style="display: none;">
         <div class="game-modal-full-content">
@@ -987,81 +1156,110 @@
                 </div>
             </div>
 
-            <!-- СЛОТ-МАШИНА (3x3) -->
+            <!-- ===== 3D СЛОТ-МАШИНА С ПЕРСПЕКТИВОЙ ===== -->
             <div class="slot-machine-wrapper">
                 <div class="slot-machine-body">
 
-                    <!-- Верхняя подсветка -->
-                    <div class="slot-top-lights">
-                        <span class="light-dot"></span>
-                        <span class="light-dot"></span>
-                        <span class="light-dot"></span>
-                        <span class="light-dot"></span>
-                        <span class="light-dot"></span>
-                        <span class="light-dot"></span>
-                        <span class="light-dot"></span>
-                        <span class="light-dot"></span>
-                        <span class="light-dot"></span>
-                        <span class="light-dot"></span>
-                        <span class="light-dot"></span>
-                        <span class="light-dot"></span>
-                        <span class="light-dot"></span>
-                        <span class="light-dot"></span>
-                        <span class="light-dot"></span>
+                    <!-- Верхняя неоновая подсветка -->
+                    <div class="slot-neon-top">
+                        <div class="neon-strip"></div>
+                        <div class="neon-lights">
+                            <span class="neon-dot"></span>
+                            <span class="neon-dot"></span>
+                            <span class="neon-dot"></span>
+                            <span class="neon-dot"></span>
+                            <span class="neon-dot"></span>
+                            <span class="neon-dot"></span>
+                            <span class="neon-dot"></span>
+                            <span class="neon-dot"></span>
+                            <span class="neon-dot"></span>
+                            <span class="neon-dot"></span>
+                            <span class="neon-dot"></span>
+                            <span class="neon-dot"></span>
+                            <span class="neon-dot"></span>
+                            <span class="neon-dot"></span>
+                            <span class="neon-dot"></span>
+                            <span class="neon-dot"></span>
+                            <span class="neon-dot"></span>
+                            <span class="neon-dot"></span>
+                            <span class="neon-dot"></span>
+                            <span class="neon-dot"></span>
+                        </div>
                     </div>
 
-                    <!-- 3x3 Сетка символов -->
-                    <div class="slot-grid">
-                        <div class="slot-cell" data-row="0" data-col="0">
-                            <span class="slot-symbol" id="cell_0_0">🍒</span>
+                    <!-- 3D БАРАБАНЫ С ПЕРСПЕКТИВОЙ -->
+                    <div class="slot-reels-3d">
+
+                        <!-- Барабан 1 -->
+                        <div class="reel-3d" id="reel1">
+                            <div class="reel-track">
+                                <div class="reel-cell cell-top" id="cell_0_0">🍒</div>
+                                <div class="reel-cell cell-center" id="cell_1_0">🍒</div>
+                                <div class="reel-cell cell-bottom" id="cell_2_0">🍒</div>
+                            </div>
+                            <div class="reel-shadow"></div>
                         </div>
-                        <div class="slot-cell" data-row="0" data-col="1">
-                            <span class="slot-symbol" id="cell_0_1">🍒</span>
+
+                        <!-- Разделитель -->
+                        <div class="reel-divider-3d"></div>
+
+                        <!-- Барабан 2 -->
+                        <div class="reel-3d" id="reel2">
+                            <div class="reel-track">
+                                <div class="reel-cell cell-top" id="cell_0_1">🍒</div>
+                                <div class="reel-cell cell-center" id="cell_1_1">🍒</div>
+                                <div class="reel-cell cell-bottom" id="cell_2_1">🍒</div>
+                            </div>
+                            <div class="reel-shadow"></div>
                         </div>
-                        <div class="slot-cell" data-row="0" data-col="2">
-                            <span class="slot-symbol" id="cell_0_2">🍒</span>
+
+                        <!-- Разделитель -->
+                        <div class="reel-divider-3d"></div>
+
+                        <!-- Барабан 3 -->
+                        <div class="reel-3d" id="reel3">
+                            <div class="reel-track">
+                                <div class="reel-cell cell-top" id="cell_0_2">🍒</div>
+                                <div class="reel-cell cell-center" id="cell_1_2">🍒</div>
+                                <div class="reel-cell cell-bottom" id="cell_2_2">🍒</div>
+                            </div>
+                            <div class="reel-shadow"></div>
                         </div>
-                        <div class="slot-cell" data-row="1" data-col="0">
-                            <span class="slot-symbol" id="cell_1_0">🍒</span>
-                        </div>
-                        <div class="slot-cell active-cell" data-row="1" data-col="1">
-                            <span class="slot-symbol" id="cell_1_1">🍒</span>
-                        </div>
-                        <div class="slot-cell" data-row="1" data-col="2">
-                            <span class="slot-symbol" id="cell_1_2">🍒</span>
-                        </div>
-                        <div class="slot-cell" data-row="2" data-col="0">
-                            <span class="slot-symbol" id="cell_2_0">🍒</span>
-                        </div>
-                        <div class="slot-cell" data-row="2" data-col="1">
-                            <span class="slot-symbol" id="cell_2_1">🍒</span>
-                        </div>
-                        <div class="slot-cell" data-row="2" data-col="2">
-                            <span class="slot-symbol" id="cell_2_2">🍒</span>
-                        </div>
+
                     </div>
 
                     <!-- Выигрышная линия -->
-                    <div class="win-line" id="winLine"></div>
+                    <div class="win-line-3d" id="winLine3d"></div>
 
-                    <!-- Нижняя подсветка -->
-                    <div class="slot-bottom-lights">
-                        <span class="light-dot"></span>
-                        <span class="light-dot"></span>
-                        <span class="light-dot"></span>
-                        <span class="light-dot"></span>
-                        <span class="light-dot"></span>
-                        <span class="light-dot"></span>
-                        <span class="light-dot"></span>
-                        <span class="light-dot"></span>
-                        <span class="light-dot"></span>
-                        <span class="light-dot"></span>
-                        <span class="light-dot"></span>
-                        <span class="light-dot"></span>
-                        <span class="light-dot"></span>
-                        <span class="light-dot"></span>
-                        <span class="light-dot"></span>
+                    <!-- Нижняя неоновая подсветка -->
+                    <div class="slot-neon-bottom">
+                        <div class="neon-lights">
+                            <span class="neon-dot"></span>
+                            <span class="neon-dot"></span>
+                            <span class="neon-dot"></span>
+                            <span class="neon-dot"></span>
+                            <span class="neon-dot"></span>
+                            <span class="neon-dot"></span>
+                            <span class="neon-dot"></span>
+                            <span class="neon-dot"></span>
+                            <span class="neon-dot"></span>
+                            <span class="neon-dot"></span>
+                            <span class="neon-dot"></span>
+                            <span class="neon-dot"></span>
+                            <span class="neon-dot"></span>
+                            <span class="neon-dot"></span>
+                            <span class="neon-dot"></span>
+                            <span class="neon-dot"></span>
+                            <span class="neon-dot"></span>
+                            <span class="neon-dot"></span>
+                            <span class="neon-dot"></span>
+                            <span class="neon-dot"></span>
+                        </div>
+                        <div class="neon-strip"></div>
                     </div>
+
+                    <!-- Индикатор выигрыша -->
+                    <div class="win-indicator" id="winIndicator">💰</div>
                 </div>
             </div>
 
@@ -1290,13 +1488,13 @@
     {% include 'game/scripts.html' %}
 
     <!-- ============================================================
-         СЕКРЕТНАЯ ИГРА - СЛОТ-МАШИНА (ОТДЕЛЬНЫЙ СКРИПТ)
+         СЕКРЕТНАЯ ИГРА - 3D СЛОТ (ОТДЕЛЬНЫЙ СКРИПТ)
          ============================================================ -->
     <script>
     (function() {
         'use strict';
 
-        console.log('🎰 Загрузка секретного слота...');
+        console.log('🎰 Загрузка 3D секретного слота...');
 
         let secretIsSpinning = false;
         let localWG = 1000;
@@ -1322,7 +1520,7 @@
         }
 
         function init() {
-            console.log('🎰 Инициализация секретного слота');
+            console.log('🎰 Инициализация 3D секретного слота');
 
             let userId = null;
             if (window.Telegram?.WebApp?.initDataUnsafe?.user?.id) {
@@ -1359,7 +1557,7 @@
             }
 
             function openSecretSlot() {
-                console.log('🎰 Открываем секретный слот...');
+                console.log('🎰 Открываем 3D секретный слот...');
 
                 const modal = document.getElementById('secretGameModal');
                 if (!modal) {
@@ -1381,10 +1579,11 @@
                 setGridSymbols('🍒', '🍒', '🍒', '🍒', '🍒', '🍒', '🍒', '🍒', '🍒');
                 document.getElementById('betDisplay').textContent = currentBet;
                 resetWinLine();
+                document.querySelectorAll('.neon-dot').forEach(d => d.classList.add('active'));
             }
 
             window.closeSecretGame = function() {
-                console.log('🔒 Закрываем секретный слот...');
+                console.log('🔒 Закрываем 3D секретный слот...');
                 const modal = document.getElementById('secretGameModal');
                 if (modal) {
                     modal.style.display = 'none';
@@ -1416,9 +1615,11 @@
             }
 
             function resetWinLine() {
-                const line = document.getElementById('winLine');
+                const line = document.getElementById('winLine3d');
                 if (line) line.classList.remove('active');
-                document.querySelectorAll('.slot-cell').forEach(c => c.classList.remove('win-cell'));
+                document.querySelectorAll('.reel-cell').forEach(c => c.classList.remove('win-cell'));
+                document.querySelector('.win-indicator').classList.remove('active');
+                document.getElementById('winLine3d').classList.remove('active');
             }
 
             function getRandomSymbol() {
@@ -1434,38 +1635,36 @@
                 return 0;
             }
 
-            function animateGrid(targetSymbols, duration, callback) {
-                const cells = document.querySelectorAll('.slot-cell');
+            function animateReel3D(reelId, targetSymbols, duration, callback) {
+                const reel = document.getElementById(reelId);
+                const cells = reel.querySelectorAll('.reel-cell');
                 const startTime = Date.now();
 
-                cells.forEach(c => c.classList.add('spinning'));
-                document.querySelectorAll('.light-dot').forEach(d => d.classList.add('active'));
+                reel.classList.add('spinning');
+                document.querySelectorAll('.neon-dot').forEach(d => d.classList.add('active'));
 
                 function animate() {
                     const elapsed = Date.now() - startTime;
                     const progress = Math.min(1, elapsed / duration);
 
-                    if (progress < 0.7) {
-                        cells.forEach((cell) => {
-                            const symbolEl = cell.querySelector('.slot-symbol');
-                            if (symbolEl) symbolEl.textContent = getRandomSymbol();
+                    if (progress < 0.65) {
+                        cells.forEach((cell, idx) => {
+                            cell.textContent = getRandomSymbol();
                         });
                         requestAnimationFrame(animate);
-                    } else if (progress < 0.92) {
-                        cells.forEach((cell) => {
-                            const symbolEl = cell.querySelector('.slot-symbol');
-                            if (symbolEl && Math.random() > 0.3) {
-                                symbolEl.textContent = getRandomSymbol();
+                    } else if (progress < 0.9) {
+                        cells.forEach((cell, idx) => {
+                            if (Math.random() > 0.3) {
+                                cell.textContent = getRandomSymbol();
                             }
                         });
                         requestAnimationFrame(animate);
                     } else {
                         cells.forEach((cell, idx) => {
-                            const symbolEl = cell.querySelector('.slot-symbol');
-                            if (symbolEl) symbolEl.textContent = targetSymbols[idx] || '🍒';
-                            cell.classList.remove('spinning');
+                            cell.textContent = targetSymbols[idx] || '🍒';
                         });
-                        document.querySelectorAll('.light-dot').forEach(d => d.classList.remove('active'));
+                        reel.classList.remove('spinning');
+                        document.querySelectorAll('.neon-dot').forEach(d => d.classList.remove('active'));
                         if (callback) callback();
                     }
                 }
@@ -1505,17 +1704,27 @@
                 resetWinLine();
 
                 try {
+                    // Генерируем 9 случайных символов
                     const targetSymbols = [];
                     for (let i = 0; i < 9; i++) {
                         targetSymbols.push(getRandomSymbol());
                     }
 
+                    // Анимируем каждый барабан отдельно с разной задержкой
                     await new Promise((resolve) => {
-                        animateGrid(targetSymbols, 3000, resolve);
+                        let completed = 0;
+                        const checkComplete = () => {
+                            completed++;
+                            if (completed === 3) resolve();
+                        };
+
+                        animateReel3D('reel1', targetSymbols.slice(0, 3), 2500, checkComplete);
+                        animateReel3D('reel2', targetSymbols.slice(3, 6), 2700, checkComplete);
+                        animateReel3D('reel3', targetSymbols.slice(6, 9), 2900, checkComplete);
                     });
 
-                    const row2 = targetSymbols.slice(3, 6);
-                    const middleRow = row2;
+                    // Анализируем выигрыш (центральный ряд)
+                    const middleRow = targetSymbols.slice(3, 6);
 
                     const counts = {};
                     middleRow.forEach(s => { counts[s] = (counts[s] || 0) + 1; });
@@ -1533,6 +1742,7 @@
 
                     winMultiplier = getWinMultiplier(winSymbol, maxCount);
 
+                    // Отправляем на сервер
                     const res = await fetch('/api/secret/spin', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -1560,16 +1770,18 @@
                     const isWin = data.is_win || false;
                     const winAmount = data.win_amount || 0;
 
+                    // Подсветка выигрышных ячеек
                     if (isWin) {
                         const winIndices = [];
                         middleRow.forEach((s, idx) => {
-                            if (s === winSymbol) winIndices.push(3 + idx);
+                            if (s === winSymbol) winIndices.push(idx);
                         });
                         winIndices.forEach(idx => {
-                            const cell = document.querySelectorAll('.slot-cell')[idx];
+                            const cell = document.getElementById(`cell_1_${idx}`);
                             if (cell) cell.classList.add('win-cell');
                         });
-                        document.getElementById('winLine').classList.add('active');
+                        document.getElementById('winLine3d').classList.add('active');
+                        document.querySelector('.win-indicator').classList.add('active');
                     }
 
                     if (isWin) {
@@ -1621,22 +1833,22 @@
                 `;
                 document.body.appendChild(container);
 
-                for (let i = 0; i < 30; i++) {
+                for (let i = 0; i < 35; i++) {
                     const particle = document.createElement('div');
                     particle.style.cssText = `
                         position: absolute;
-                        font-size: ${1 + Math.random() * 2}rem;
-                        animation: particleFly 1.5s ease-out forwards;
+                        font-size: ${1 + Math.random() * 2.5}rem;
+                        animation: particleFly 1.8s ease-out forwards;
                         left: ${Math.random() * 100}%;
                         top: ${Math.random() * 100}%;
-                        --tx: ${(Math.random() - 0.5) * 400}px;
-                        --ty: ${(Math.random() - 0.5) * 400}px;
+                        --tx: ${(Math.random() - 0.5) * 500}px;
+                        --ty: ${(Math.random() - 0.5) * 500}px;
                     `;
                     particle.textContent = emojis[Math.floor(Math.random() * emojis.length)];
                     container.appendChild(particle);
                 }
 
-                setTimeout(() => container.remove(), 2000);
+                setTimeout(() => container.remove(), 2500);
             }
 
             const style = document.createElement('style');
@@ -1694,7 +1906,7 @@
                 };
             }
 
-            console.log('✅ Секретный слот готов!');
+            console.log('✅ 3D Секретный слот готов!');
         }
     })();
     </script>
