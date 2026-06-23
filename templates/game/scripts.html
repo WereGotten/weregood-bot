@@ -4137,8 +4137,14 @@ async function loadTonWalletStatus() {
             closeGamepad();
         }
     } else if (gameName === 'secret') {
+        // ===== ВОТ ЭТОТ БЛОК ДОБАВЬ! =====
         console.log('🔐 Вызов openSecretGame()');
-        openSecretGame();
+        if (typeof openSecretGame === 'function') {
+            openSecretGame();
+        } else {
+            console.error('❌ openSecretGame не определена!');
+            showToast('❌ Ошибка: игра не загружена', 'error');
+        }
     } else {
         console.warn('⚠️ Неизвестная игра:', gameName);
     }
