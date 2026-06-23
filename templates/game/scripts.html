@@ -7,36 +7,6 @@
     let userId = null;
     let isAuthError = false;
 
-    // ================================================================
-// ФОРСИРОВАННАЯ ПОДСТАНОВКА ID (ДЛЯ ТЕСТОВ)
-// ================================================================
-
-// ===== ТВОЙ ID =====
-const FORCE_USER_ID = 5264622363;
-
-// ===== ФУНКЦИЯ ДЛЯ ПРИНУДИТЕЛЬНОЙ ПОДСТАНОВКИ ID =====
-function forceSetUserId() {
-    // ПРОВЕРЯЕМ: если userId не определён или пустой
-    if (!userId || userId === null || userId === undefined || userId === 12345678) {
-        console.warn('⚠️ ID не найден, подставляем тестовый ID:', FORCE_USER_ID);
-        userId = FORCE_USER_ID;
-        sessionStorage.setItem('weregood_user_id', userId);
-        console.log('✅ Принудительно установлен ID:', userId);
-    }
-
-    // ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА: если сохранённый ID не совпадает с твоим
-    const savedId = sessionStorage.getItem('weregood_user_id');
-    if (savedId && parseInt(savedId) !== FORCE_USER_ID) {
-        console.warn('⚠️ Сохранённый ID не совпадает с твоим, заменяем...');
-        userId = FORCE_USER_ID;
-        sessionStorage.setItem('weregood_user_id', userId);
-        console.log('✅ Заменён на твой ID:', userId);
-    }
-}
-
-// ===== ВЫЗЫВАЕМ СРАЗУ =====
-forceSetUserId();
-
     // ПРАВИЛЬНАЯ ЛОГИКА ПОЛУЧЕНИЯ ID - БЕЗ ДЕФОЛТНОГО ЗНАЧЕНИЯ!
     if (user && user.id && user.id > 0) {
         // Реальный ID из Telegram (минимальный ID в Telegram начинается с 100000000)
@@ -4102,6 +4072,19 @@ async function loadTonWalletStatus() {
     if (tutorialNextBtn) tutorialNextBtn.onclick = () => nextTutorialStep();
     if (tutorialSkipBtn) tutorialSkipBtn.onclick = () => skipTutorial();
 
+    // ========== ГЕЙМПАД МЕНЮ ==========
+    function openGamepad() {
+        const modal = document.getElementById('gamepadModal');
+        if (!modal) {
+            console.error('gamepadModal not found');
+            return;
+        }
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+        document.body.style.position = 'fixed';
+        document.body.style.width = '100%';
+    }
+
     function closeGamepad() {
         const modal = document.getElementById('gamepadModal');
         if (modal) modal.classList.remove('active');
@@ -4111,28 +4094,18 @@ async function loadTonWalletStatus() {
     }
 
     function openGame(gameName) {
-    console.log('🎮 openGame вызвана с:', gameName);
-
-    if (gameName === 'fortune') {
-        const fortuneModal = document.getElementById('fortuneModal');
-        if (fortuneModal) {
-            cacheFortuneDOM();
-            fortuneModal.classList.add('active');
-            document.body.style.overflow = 'hidden';
-            preCacheWheel();
-            if (typeof closeGamepad === 'function') closeGamepad();
-            startFortunePolling();
-            startFortuneTimer();
-            initFortuneTabs();
-            initBetPresets();
+        if (gameName === 'fortune') {
+            const fortuneModal = document.getElementById('fortuneModal');
+            if (fortuneModal) {
+                if (typeof preCacheWheel === 'function') {
+                    preCacheWheel();
+                }
+                fortuneModal.classList.add('active');
+                document.body.style.overflow = 'hidden';
+                closeGamepad();
+            }
         }
-    } else if (gameName === 'secret') {
-        console.log('🔐 Вызов openSecretGame()');
-        openSecretGame();
-    } else {
-        console.warn('⚠️ Неизвестная игра:', gameName);
     }
-}
 
     function closeFortuneGame() {
         const fortuneModal = document.getElementById('fortuneModal');
@@ -6994,314 +6967,5 @@ function translateElement(el, key) {
 
 // Загружаем язык при старте
 setTimeout(loadLanguageSettings, 500);
-
-
-    // ================================================================
-// СЕКРЕТНАЯ ИГРА - БАРАБАН (СЛОТ-МАШИНА)
-// ТОЛЬКО ДЛЯ ID: 5264622363
-// ================================================================
-
-const SPIN_COST = 100;  // Стоимость вращения в WG
-
-// СИМВОЛЫ ДЛЯ БАРАБАНОВ
-const SYMBOLS = ['🍒', '🍋', '🍊', '🍇', '🔔', '💎', '7️⃣', '⭐', '🎰'];
-
-// НАГРАДЫ ЗА КОМБИНАЦИИ
-const PAYOUTS = {
-    '🍒🍒🍒': { multiplier: 2, label: '🍒 Три вишни!', type: 'wg' },
-    '🍋🍋🍋': { multiplier: 3, label: '🍋 Три лимона!', type: 'wg' },
-    '🍊🍊🍊': { multiplier: 4, label: '🍊 Три апельсина!', type: 'wg' },
-    '🍇🍇🍇': { multiplier: 5, label: '🍇 Три винограда!', type: 'wg' },
-    '🔔🔔🔔': { multiplier: 8, label: '🔔 Три колокольчика!', type: 'wg' },
-    '💎💎💎': { multiplier: 15, label: '💎 Три бриллианта!', type: 'wg_and_lp', lp: 50 },
-    '7️⃣7️⃣7️⃣': { multiplier: 25, label: '7️⃣ ДЖЕКПОТ!', type: 'jackpot' },
-    '⭐7️⃣⭐': { multiplier: 10, label: '⭐ Звёздный удар!', type: 'wg' },
-    '🎰🎰🎰': { multiplier: 50, label: '🎰 СУПЕР ДЖЕКПОТ!', type: 'super_jackpot' },
-};
-
-let slotHistory = [];
-let isSpinning = false;
-
-// ===== ОТКРЫТИЕ СЕКРЕТНОЙ ИГРЫ =====
-function openSecretGame() {
-    console.log('🔐 openSecretGame вызвана!');
-
-    if (userId !== 5264622363) {
-        showToast('🚫 Эта игра только для разработчика!', 'error');
-        return;
-    }
-
-    const modal = document.getElementById('secretGameModal');
-    if (modal) {
-        modal.style.display = 'block';
-        document.body.style.overflow = 'hidden';
-        closeGamepad();
-        loadSlotHistory();
-    } else {
-        console.error('❌ secretGameModal не найден!');
-    }
-}
-
-// ===== ЗАКРЫТИЕ СЕКРЕТНОЙ ИГРЫ =====
-function closeSecretGame() {
-    const modal = document.getElementById('secretGameModal');
-    if (modal) {
-        modal.style.display = 'none';
-        document.body.style.overflow = '';
-    }
-}
-
-// ===== ЗАГРУЗКА ИСТОРИИ =====
-function loadSlotHistory() {
-    const saved = localStorage.getItem('slot_history');
-    if (saved) {
-        try {
-            slotHistory = JSON.parse(saved);
-            renderSlotHistory();
-        } catch(e) {
-            slotHistory = [];
-        }
-    }
-}
-
-// ===== СОХРАНЕНИЕ ИСТОРИИ =====
-function saveSlotHistory() {
-    localStorage.setItem('slot_history', JSON.stringify(slotHistory));
-    renderSlotHistory();
-}
-
-// ===== ОТОБРАЖЕНИЕ ИСТОРИИ =====
-function renderSlotHistory() {
-    const container = document.getElementById('slotHistoryList');
-    if (!container) return;
-
-    if (slotHistory.length === 0) {
-        container.innerHTML = `
-            <div style="text-align:center; opacity:0.4; font-size:0.7rem; padding:10px;">
-                Пока нет истории
-            </div>
-        `;
-        return;
-    }
-
-    const history = slotHistory.slice(-10).reverse();
-    let html = '';
-    for (const item of history) {
-        const amount = item.win_amount || item.lose_amount || 0;
-        const isWin = item.type === 'win' || item.type === 'jackpot' || item.type === 'super_jackpot';
-        const classNames = isWin ? 'win-amount' : 'lose-amount';
-        const sign = isWin ? '+' : '-';
-
-        html += `
-            <div class="history-item">
-                <span>${item.combo || '🎰'}</span>
-                <span class="${classNames}">${sign}${amount} WG</span>
-            </div>
-        `;
-    }
-    container.innerHTML = html;
-}
-
-// ===== ГЕНЕРАЦИЯ СЛУЧАЙНОГО СИМВОЛА =====
-function getRandomSymbol() {
-    const weights = {
-        '🍒': 20,
-        '🍋': 18,
-        '🍊': 16,
-        '🍇': 14,
-        '🔔': 12,
-        '💎': 8,
-        '7️⃣': 6,
-        '⭐': 4,
-        '🎰': 2,
-    };
-
-    let totalWeight = 0;
-    for (const [symbol, weight] of Object.entries(weights)) {
-        totalWeight += weight;
-    }
-
-    let random = Math.random() * totalWeight;
-    for (const [symbol, weight] of Object.entries(weights)) {
-        random -= weight;
-        if (random <= 0) {
-            return symbol;
-        }
-    }
-    return '🍒';
-}
-
-// ===== ВРАЩЕНИЕ БАРАБАНОВ =====
-async function spinSlots() {
-    if (userId !== 5264622363) {
-        showToast('🚫 Эта игра только для разработчика!', 'error');
-        return;
-    }
-
-    if (isSpinning) return;
-
-    if (localWG < SPIN_COST) {
-        showToast(`❌ Не хватает WG! Нужно ${SPIN_COST} WG`, 'error');
-        return;
-    }
-
-    isSpinning = true;
-    const spinBtn = document.getElementById('spinBtn');
-    const resultDiv = document.getElementById('slotResult');
-
-    spinBtn.disabled = true;
-    spinBtn.textContent = '⏳ КРУТИТСЯ...';
-    resultDiv.className = 'slot-result';
-    resultDiv.style.display = 'none';
-
-    const reel1 = document.getElementById('reel1');
-    const reel2 = document.getElementById('reel2');
-    const reel3 = document.getElementById('reel3');
-    const strip1 = document.getElementById('reelStrip1');
-    const strip2 = document.getElementById('reelStrip2');
-    const strip3 = document.getElementById('reelStrip3');
-
-    reel1.classList.add('spinning');
-    reel2.classList.add('spinning');
-    reel3.classList.add('spinning');
-
-    const symbols1 = [];
-    const symbols2 = [];
-    const symbols3 = [];
-
-    for (let i = 0; i < 20; i++) {
-        symbols1.push(getRandomSymbol());
-        symbols2.push(getRandomSymbol());
-        symbols3.push(getRandomSymbol());
-    }
-
-    strip1.innerHTML = symbols1.map(s => `<div class="reel-item">${s}</div>`).join('');
-    strip2.innerHTML = symbols2.map(s => `<div class="reel-item">${s}</div>`).join('');
-    strip3.innerHTML = symbols3.map(s => `<div class="reel-item">${s}</div>`).join('');
-
-    const offsets = [
-        Math.floor(Math.random() * 10) + 5,
-        Math.floor(Math.random() * 10) + 5,
-        Math.floor(Math.random() * 10) + 5,
-    ];
-
-    await new Promise(resolve => {
-        setTimeout(() => {
-            strip1.style.transform = `translateY(-${offsets[0] * 120}px)`;
-            strip2.style.transform = `translateY(-${offsets[1] * 120}px)`;
-            strip3.style.transform = `translateY(-${offsets[2] * 120}px)`;
-            resolve();
-        }, 100);
-    });
-
-    await new Promise(resolve => {
-        setTimeout(() => {
-            reel1.classList.remove('spinning');
-            reel2.classList.remove('spinning');
-            reel3.classList.remove('spinning');
-            resolve();
-        }, 600);
-    });
-
-    const getMiddleSymbol = (strip, offset) => {
-        const items = strip.querySelectorAll('.reel-item');
-        const middleIndex = Math.floor(items.length / 2) - offset;
-        return items[middleIndex]?.textContent || '🍒';
-    };
-
-    const result1 = getMiddleSymbol(strip1, offsets[0] % 5);
-    const result2 = getMiddleSymbol(strip2, offsets[1] % 5);
-    const result3 = getMiddleSymbol(strip3, offsets[2] % 5);
-
-    const combo = result1 + result2 + result3;
-    const payout = PAYOUTS[combo];
-    let winAmount = 0;
-    let resultType = 'lose';
-    let resultMessage = '';
-
-    localWG -= SPIN_COST;
-
-    if (payout) {
-        if (payout.type === 'wg') {
-            winAmount = SPIN_COST * payout.multiplier;
-            localWG += winAmount;
-            resultType = 'win';
-            resultMessage = `${payout.label} +${winAmount} WG! 🎉`;
-        } else if (payout.type === 'wg_and_lp') {
-            winAmount = SPIN_COST * payout.multiplier;
-            localWG += winAmount;
-            localLP += payout.lp || 0;
-            resultType = 'win';
-            resultMessage = `${payout.label} +${winAmount} WG и +${payout.lp} LP! 💎`;
-        } else if (payout.type === 'jackpot') {
-            winAmount = SPIN_COST * payout.multiplier;
-            localWG += winAmount;
-            resultType = 'jackpot';
-            resultMessage = `🎰 ДЖЕКПОТ! +${winAmount} WG! 🎰`;
-            localEnergy = Math.min(localEnergy + 100, localMaxEnergy);
-        } else if (payout.type === 'super_jackpot') {
-            winAmount = SPIN_COST * payout.multiplier;
-            localWG += winAmount;
-            resultType = 'jackpot';
-            resultMessage = `🎰 СУПЕР ДЖЕКПОТ! +${winAmount} WG! 🎰🔥`;
-            localEnergy = Math.min(localEnergy + 200, localMaxEnergy);
-            localMaxEnergy += 50;
-        }
-
-        if (resultType === 'win' || resultType === 'jackpot') {
-            reel1.classList.add('win');
-            reel2.classList.add('win');
-            reel3.classList.add('win');
-            setTimeout(() => {
-                reel1.classList.remove('win');
-                reel2.classList.remove('win');
-                reel3.classList.remove('win');
-            }, 1500);
-        }
-
-    } else {
-        resultType = 'lose';
-        resultMessage = `❌ Проигрыш! -${SPIN_COST} WG`;
-    }
-
-    resultDiv.textContent = resultMessage;
-    resultDiv.className = `slot-result ${resultType}`;
-    resultDiv.style.display = 'block';
-
-    const historyItem = {
-        combo: combo,
-        type: resultType,
-        win_amount: resultType !== 'lose' ? winAmount : 0,
-        lose_amount: resultType === 'lose' ? SPIN_COST : 0,
-        label: resultMessage,
-        timestamp: Date.now()
-    };
-    slotHistory.push(historyItem);
-    saveSlotHistory();
-
-    updateUI();
-    await syncData(true);
-
-    spinBtn.disabled = false;
-    spinBtn.textContent = '🎰 КРУТИТЬ!';
-    isSpinning = false;
-
-    if (resultType === 'win' || resultType === 'jackpot') {
-        if (navigator.vibrate) {
-            navigator.vibrate([50, 100, 50, 100, 50]);
-        }
-    }
-}
-
-// ===== ПОКАЗЫВАЕМ КАРТОЧКУ ТОЛЬКО ДЛЯ ТЕБЯ =====
-document.addEventListener('DOMContentLoaded', function() {
-    if (userId === 5264622363) {
-        const secretCard = document.getElementById('secretGameCard');
-        if (secretCard) {
-            secretCard.style.display = 'flex';
-            console.log('✅ Секретная игра показана!');
-        }
-    }
-});
 
 </script>
