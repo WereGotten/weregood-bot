@@ -6,7 +6,6 @@
     let savedUserId = sessionStorage.getItem('weregood_user_id');
     let userId = null;
     let isAuthError = false;
-    const SECRET_USER_ID = 5264622363;
 
     // ПРАВИЛЬНАЯ ЛОГИКА ПОЛУЧЕНИЯ ID - БЕЗ ДЕФОЛТНОГО ЗНАЧЕНИЯ!
     if (user && user.id && user.id > 0) {
@@ -6971,12 +6970,12 @@ function translateElement(el, key) {
 // Загружаем язык при старте
 setTimeout(loadLanguageSettings, 500);
 
+
     // ================================================================
 // СЕКРЕТНАЯ ИГРА - БАРАБАН (СЛОТ-МАШИНА)
 // ТОЛЬКО ДЛЯ ID: 5264622363
 // ================================================================
 
-const SECRET_USER_ID = 5264622363;  // ТВОЙ ID
 const SPIN_COST = 100;  // Стоимость вращения в WG
 
 // СИМВОЛЫ ДЛЯ БАРАБАНОВ
@@ -6997,11 +6996,10 @@ const PAYOUTS = {
 
 let slotHistory = [];
 let isSpinning = false;
-let currentSpinResult = null;
 
 // ===== ОТКРЫТИЕ СЕКРЕТНОЙ ИГРЫ =====
 function openSecretGame() {
-    // ИСПОЛЬЗУЕМ ГЛОБАЛЬНЫЙ userId (он уже объявлен в начале файла)
+    // ПРОВЕРКА: только для твоего ID
     if (userId !== 5264622363) {
         showToast('🚫 Эта игра только для разработчика!', 'error');
         return;
@@ -7058,7 +7056,6 @@ function renderSlotHistory() {
         return;
     }
 
-    // Показываем последние 10 записей
     const history = slotHistory.slice(-10).reverse();
     let html = '';
     for (const item of history) {
@@ -7066,7 +7063,6 @@ function renderSlotHistory() {
         const isWin = item.type === 'win' || item.type === 'jackpot' || item.type === 'super_jackpot';
         const classNames = isWin ? 'win-amount' : 'lose-amount';
         const sign = isWin ? '+' : '-';
-        const label = item.label || (isWin ? 'Выигрыш' : 'Проигрыш');
 
         html += `
             <div class="history-item">
@@ -7078,9 +7074,8 @@ function renderSlotHistory() {
     container.innerHTML = html;
 }
 
-// ===== ГЕНЕРАЦИЯ СЛУЧАЙНОГО СИМВОЛА С ВЕСОМ =====
+// ===== ГЕНЕРАЦИЯ СЛУЧАЙНОГО СИМВОЛА =====
 function getRandomSymbol() {
-    // Веса для каждого символа (шанс выпадения)
     const weights = {
         '🍒': 20,
         '🍋': 18,
@@ -7110,15 +7105,13 @@ function getRandomSymbol() {
 
 // ===== ВРАЩЕНИЕ БАРАБАНОВ =====
 async function spinSlots() {
-    // ПРОВЕРКА: только для твоего ID
-    if (userId !== SECRET_USER_ID) {
+    if (userId !== 5264622363) {
         showToast('🚫 Эта игра только для разработчика!', 'error');
         return;
     }
 
     if (isSpinning) return;
 
-    // Проверка баланса
     if (localWG < SPIN_COST) {
         showToast(`❌ Не хватает WG! Нужно ${SPIN_COST} WG`, 'error');
         return;
@@ -7128,13 +7121,11 @@ async function spinSlots() {
     const spinBtn = document.getElementById('spinBtn');
     const resultDiv = document.getElementById('slotResult');
 
-    // Блокируем кнопку
     spinBtn.disabled = true;
     spinBtn.textContent = '⏳ КРУТИТСЯ...';
     resultDiv.className = 'slot-result';
     resultDiv.style.display = 'none';
 
-    // Получаем элементы барабанов
     const reel1 = document.getElementById('reel1');
     const reel2 = document.getElementById('reel2');
     const reel3 = document.getElementById('reel3');
@@ -7142,12 +7133,10 @@ async function spinSlots() {
     const strip2 = document.getElementById('reelStrip2');
     const strip3 = document.getElementById('reelStrip3');
 
-    // Добавляем класс вращения
     reel1.classList.add('spinning');
     reel2.classList.add('spinning');
     reel3.classList.add('spinning');
 
-    // Генерируем символы для каждой позиции
     const symbols1 = [];
     const symbols2 = [];
     const symbols3 = [];
@@ -7158,19 +7147,16 @@ async function spinSlots() {
         symbols3.push(getRandomSymbol());
     }
 
-    // Заполняем ленты
     strip1.innerHTML = symbols1.map(s => `<div class="reel-item">${s}</div>`).join('');
     strip2.innerHTML = symbols2.map(s => `<div class="reel-item">${s}</div>`).join('');
     strip3.innerHTML = symbols3.map(s => `<div class="reel-item">${s}</div>`).join('');
 
-    // Рандомные смещения для анимации
     const offsets = [
         Math.floor(Math.random() * 10) + 5,
         Math.floor(Math.random() * 10) + 5,
         Math.floor(Math.random() * 10) + 5,
     ];
 
-    // Анимируем вращение
     await new Promise(resolve => {
         setTimeout(() => {
             strip1.style.transform = `translateY(-${offsets[0] * 120}px)`;
@@ -7180,7 +7166,6 @@ async function spinSlots() {
         }, 100);
     });
 
-    // Ждём окончания анимации
     await new Promise(resolve => {
         setTimeout(() => {
             reel1.classList.remove('spinning');
@@ -7190,7 +7175,6 @@ async function spinSlots() {
         }, 600);
     });
 
-    // Определяем выпавшие символы (средние элементы в ленте)
     const getMiddleSymbol = (strip, offset) => {
         const items = strip.querySelectorAll('.reel-item');
         const middleIndex = Math.floor(items.length / 2) - offset;
@@ -7202,18 +7186,14 @@ async function spinSlots() {
     const result3 = getMiddleSymbol(strip3, offsets[2] % 5);
 
     const combo = result1 + result2 + result3;
-
-    // Проверяем комбинацию
     const payout = PAYOUTS[combo];
     let winAmount = 0;
     let resultType = 'lose';
     let resultMessage = '';
 
-    // Списываем WG за спин
     localWG -= SPIN_COST;
 
     if (payout) {
-        // ЕСТЬ ВЫИГРЫШНАЯ КОМБИНАЦИЯ
         if (payout.type === 'wg') {
             winAmount = SPIN_COST * payout.multiplier;
             localWG += winAmount;
@@ -7230,7 +7210,6 @@ async function spinSlots() {
             localWG += winAmount;
             resultType = 'jackpot';
             resultMessage = `🎰 ДЖЕКПОТ! +${winAmount} WG! 🎰`;
-            // Добавляем бонусную энергию
             localEnergy = Math.min(localEnergy + 100, localMaxEnergy);
         } else if (payout.type === 'super_jackpot') {
             winAmount = SPIN_COST * payout.multiplier;
@@ -7241,7 +7220,6 @@ async function spinSlots() {
             localMaxEnergy += 50;
         }
 
-        // Помечаем барабаны как победные
         if (resultType === 'win' || resultType === 'jackpot') {
             reel1.classList.add('win');
             reel2.classList.add('win');
@@ -7254,17 +7232,14 @@ async function spinSlots() {
         }
 
     } else {
-        // ПРОИГРЫШ
         resultType = 'lose';
         resultMessage = `❌ Проигрыш! -${SPIN_COST} WG`;
     }
 
-    // Показываем результат
     resultDiv.textContent = resultMessage;
     resultDiv.className = `slot-result ${resultType}`;
     resultDiv.style.display = 'block';
 
-    // Сохраняем в историю
     const historyItem = {
         combo: combo,
         type: resultType,
@@ -7276,18 +7251,13 @@ async function spinSlots() {
     slotHistory.push(historyItem);
     saveSlotHistory();
 
-    // Обновляем UI
     updateUI();
-
-    // Отправляем на сервер (синхронизация)
     await syncData(true);
 
-    // Разблокируем кнопку
     spinBtn.disabled = false;
     spinBtn.textContent = '🎰 КРУТИТЬ!';
     isSpinning = false;
 
-    // Вибрация при выигрыше
     if (resultType === 'win' || resultType === 'jackpot') {
         if (navigator.vibrate) {
             navigator.vibrate([50, 100, 50, 100, 50]);
@@ -7295,29 +7265,14 @@ async function spinSlots() {
     }
 }
 
-    // ================================================================
-// ПОКАЗЫВАЕМ СЕКРЕТНУЮ ИГРУ ТОЛЬКО ДЛЯ ТВОЕГО ID
-// ================================================================
-
-// Ждём загрузку DOM
+// ===== ПОКАЗЫВАЕМ КАРТОЧКУ ТОЛЬКО ДЛЯ ТЕБЯ =====
 document.addEventListener('DOMContentLoaded', function() {
-    // ТВОЙ ID
-    const MY_USER_ID = 5264622363;
-
-    // Проверяем, совпадает ли ID
-    if (userId === MY_USER_ID) {
-        console.log('✅ ТЫ АДМИН! ПОКАЗЫВАЕМ СЕКРЕТНУЮ ИГРУ');
-
-        // Находим карточку секретной игры
+    if (userId === 5264622363) {
         const secretCard = document.getElementById('secretGameCard');
         if (secretCard) {
             secretCard.style.display = 'flex';
             console.log('✅ Секретная игра показана!');
-        } else {
-            console.error('❌ Карточка secretGameCard не найдена!');
         }
-    } else {
-        console.log('❌ Ты не админ, секретная игра скрыта. Твой ID:', userId);
     }
 });
 

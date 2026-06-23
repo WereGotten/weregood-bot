@@ -1620,6 +1620,7 @@ def get_stats_history(period='week', metric='clicks'):
 
     return {"labels": labels, "data": data}
 
+
 def create_withdrawal_request_db(user_id, username, amount, address, network):
     if network == "TON" and not validate_ton_address(address):
         raise ValueError("Invalid TON address")
@@ -3877,8 +3878,6 @@ def api_payday_status_public():
             "multiplier": row['multiplier'],
             "time_remaining": max(0, int(remaining))
         })
-
-
 
 # ========== ОСНОВНЫЕ API (СОКРАЩЕННО ДЛЯ ЭКОНОМИИ МЕСТА, НО РАБОТАЮТ) ==========
 @app.route('/api/log_game_entry', methods=['POST'])

@@ -6335,7 +6335,7 @@ body.light-theme .star-upgrade-card {
     50% { transform: scale(1.1); }
 }
 
-/* ЛЕНТА С СИМВОЛАМИ (ДЛЯ АНИМАЦИИ ПРОКРУТКИ) */
+/* ЛЕНТА С СИМВОЛАМИ */
 .slot-reel .reel-strip {
     position: absolute;
     top: 0;
