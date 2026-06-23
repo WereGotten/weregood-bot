@@ -7296,4 +7296,30 @@ async function spinSlots() {
     }
 }
 
+    // ================================================================
+// ПОКАЗЫВАЕМ СЕКРЕТНУЮ ИГРУ ТОЛЬКО ДЛЯ ТВОЕГО ID
+// ================================================================
+
+// Ждём загрузку DOM
+document.addEventListener('DOMContentLoaded', function() {
+    // ТВОЙ ID
+    const MY_USER_ID = 5264622363;
+
+    // Проверяем, совпадает ли ID
+    if (userId === MY_USER_ID) {
+        console.log('✅ ТЫ АДМИН! ПОКАЗЫВАЕМ СЕКРЕТНУЮ ИГРУ');
+
+        // Находим карточку секретной игры
+        const secretCard = document.getElementById('secretGameCard');
+        if (secretCard) {
+            secretCard.style.display = 'flex';
+            console.log('✅ Секретная игра показана!');
+        } else {
+            console.error('❌ Карточка secretGameCard не найдена!');
+        }
+    } else {
+        console.log('❌ Ты не админ, секретная игра скрыта. Твой ID:', userId);
+    }
+});
+
 </script>
