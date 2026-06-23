@@ -4093,19 +4093,42 @@ async function loadTonWalletStatus() {
         document.body.style.width = '';
     }
 
-    function openGame(gameName) {
-        if (gameName === 'fortune') {
-            const fortuneModal = document.getElementById('fortuneModal');
-            if (fortuneModal) {
-                if (typeof preCacheWheel === 'function') {
-                    preCacheWheel();
-                }
-                fortuneModal.classList.add('active');
-                document.body.style.overflow = 'hidden';
-                closeGamepad();
-            }
+    // ==================== ОТКРЫТИЕ ИГР ИЗ ГЕЙМПАДА ====================
+function openGame(gameName) {
+    console.log('🎮 openGame вызвана с gameName:', gameName);
+
+    if (gameName === 'secret') {
+        // Проверяем, владелец ли это
+        if (userId !== SECRET_GAME_OWNER_ID) {
+            showToast('🚧 Игра в разработке! Скоро появится.', 'info');
+            return;
         }
+        console.log('🔐 Открываем секретную рулетку для владельца');
+        openSecretGame();
+        return;
     }
+
+    if (gameName === 'fortune') {
+        console.log('🎲 Открываем Фортуну');
+        const fortuneModal = document.getElementById('fortuneModal');
+        if (fortuneModal) {
+            cacheFortuneDOM();
+            fortuneModal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+            preCacheWheel();
+            if (typeof closeGamepad === 'function') closeGamepad();
+            startFortunePolling();
+            startFortuneTimer();
+            initFortuneTabs();
+            initBetPresets();
+        }
+        return;
+    }
+
+    // Если игра не найдена
+    console.warn('⚠️ Неизвестная игра:', gameName);
+    showToast('🚧 Игра в разработке!', 'info');
+}
 
     function closeFortuneGame() {
         const fortuneModal = document.getElementById('fortuneModal');
@@ -4777,22 +4800,7 @@ async function loadTonWalletStatus() {
         }
     }
 
-    window.openGame = function(gameName) {
-        if (gameName === 'fortune') {
-            const fortuneModal = document.getElementById('fortuneModal');
-            if (fortuneModal) {
-                cacheFortuneDOM();
-                fortuneModal.classList.add('active');
-                document.body.style.overflow = 'hidden';
-                preCacheWheel();
-                if (typeof closeGamepad === 'function') closeGamepad();
-                startFortunePolling();
-                startFortuneTimer();
-                initFortuneTabs();
-                initBetPresets();
-            }
-        }
-    };
+
 
     window.closeFortuneGame = function() {
         const fortuneModal = document.getElementById('fortuneModal');
