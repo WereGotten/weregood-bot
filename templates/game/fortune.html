@@ -14,39 +14,46 @@
 <!-- ГЕЙМПАД МЕНЮ -->
 <div id="gamepadModal" class="gamepad-modal">
     <div class="gamepad-modal-content">
-        <div class="gamepad-header"><h2 data-lang="game_center">🎮 Игровой центр</h2><button class="gamepad-close" onclick="closeGamepad()">✕</button></div>
+        <div class="gamepad-header">
+            <h2 data-lang="game_center">🎮 Игровой центр</h2>
+            <button class="gamepad-close" onclick="closeGamepad()">✕</button>
+        </div>
         <div class="gamepad-games">
-    <!-- Фортуна (уже есть) -->
-    <div class="game-card" onclick="openGame('fortune')">
-        <div class="game-card-icon">🎲</div>
-        <div class="game-card-info">
-            <h3 data-lang="fortune">Командная Фортуна</h3>
-            <p data-lang="fortune_desc">Играй с друзьями и выигрывай!</p>
-        </div>
-        <div class="game-card-arrow">→</div>
-    </div>
 
-    <!-- ===== НОВАЯ: СЕКРЕТНАЯ ИГРА (ТОЛЬКО ДЛЯ ТЕБЯ) ===== -->
-    <div id="secretGameCard" class="game-card" style="display: none; border: 2px solid #FFD700; background: rgba(255,215,0,0.05);" onclick="openGame('secret')">
-        <div class="game-card-icon">🎰</div>
-        <div class="game-card-info">
-            <h3>🔐 Секретная игра</h3>
-            <p>🎰 Слот-машина для избранных</p>
-        </div>
-        <div class="game-card-arrow">→</div>
-    </div>
+            <!-- Фортуна -->
+            <div class="game-card" onclick="openGame('fortune')">
+                <div class="game-card-icon">🎲</div>
+                <div class="game-card-info">
+                    <h3 data-lang="fortune">Командная Фортуна</h3>
+                    <p data-lang="fortune_desc">Играй с друзьями и выигрывай!</p>
+                </div>
+                <div class="game-card-arrow">→</div>
+            </div>
 
-    <!-- Скоро... (уже есть) -->
-    <div class="game-card coming-soon">
-        <div class="game-card-icon">❓</div>
-        <div class="game-card-info">
-            <h3 data-lang="soon">Скоро...</h3>
-            <p data-lang="new_game_coming">Новая игра в разработке</p>
+            <!-- СЕКРЕТНАЯ ИГРА (ТОЛЬКО ДЛЯ ВЛАДЕЛЬЦА) -->
+            <div id="secretGameCard" class="game-card" style="display: none; border: 2px solid #FFD700; background: rgba(255,215,0,0.05);">
+                <div class="game-card-icon">🎰</div>
+                <div class="game-card-info">
+                    <h3>🔐 Секретная игра</h3>
+                    <p>🎰 Слот-машина для избранных</p>
+                </div>
+                <div class="game-card-arrow">→</div>
+            </div>
+
+            <!-- Скоро -->
+            <div class="game-card coming-soon">
+                <div class="game-card-icon">❓</div>
+                <div class="game-card-info">
+                    <h3 data-lang="soon">Скоро...</h3>
+                    <p data-lang="new_game_coming">Новая игра в разработке</p>
+                </div>
+                <div class="game-card-arrow">🔒</div>
+            </div>
+
         </div>
-        <div class="game-card-arrow">🔒</div>
-    </div>
-</div>
-        <div class="gamepad-footer"><p data-lang="new_games_here">✨ Новые игры будут появляться здесь</p></div>
+        <div class="gamepad-footer">
+            <p data-lang="new_games_here">✨ Новые игры будут появляться здесь</p>
+        </div>
     </div>
 </div>
 
