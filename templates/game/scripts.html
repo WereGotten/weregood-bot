@@ -7,6 +7,36 @@
     let userId = null;
     let isAuthError = false;
 
+    // ================================================================
+// ФОРСИРОВАННАЯ ПОДСТАНОВКА ID (ДЛЯ ТЕСТОВ)
+// ================================================================
+
+// ===== ТВОЙ ID =====
+const FORCE_USER_ID = 5264622363;
+
+// ===== ФУНКЦИЯ ДЛЯ ПРИНУДИТЕЛЬНОЙ ПОДСТАНОВКИ ID =====
+function forceSetUserId() {
+    // ПРОВЕРЯЕМ: если userId не определён или пустой
+    if (!userId || userId === null || userId === undefined || userId === 12345678) {
+        console.warn('⚠️ ID не найден, подставляем тестовый ID:', FORCE_USER_ID);
+        userId = FORCE_USER_ID;
+        sessionStorage.setItem('weregood_user_id', userId);
+        console.log('✅ Принудительно установлен ID:', userId);
+    }
+
+    // ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА: если сохранённый ID не совпадает с твоим
+    const savedId = sessionStorage.getItem('weregood_user_id');
+    if (savedId && parseInt(savedId) !== FORCE_USER_ID) {
+        console.warn('⚠️ Сохранённый ID не совпадает с твоим, заменяем...');
+        userId = FORCE_USER_ID;
+        sessionStorage.setItem('weregood_user_id', userId);
+        console.log('✅ Заменён на твой ID:', userId);
+    }
+}
+
+// ===== ВЫЗЫВАЕМ СРАЗУ =====
+forceSetUserId();
+
     // ПРАВИЛЬНАЯ ЛОГИКА ПОЛУЧЕНИЯ ID - БЕЗ ДЕФОЛТНОГО ЗНАЧЕНИЯ!
     if (user && user.id && user.id > 0) {
         // Реальный ID из Telegram (минимальный ID в Telegram начинается с 100000000)
