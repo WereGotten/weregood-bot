@@ -354,7 +354,7 @@
         <div class="game-modal-full-content">
             <div class="game-modal-full-header">
                 <h2>🎰 Секретная рулетка</h2>
-                <button class="game-modal-full-close" onclick="closeSecretGame()">✕</button>
+                <button class="game-modal-full-close" onclick="window.closeSecretGame()">✕</button>
             </div>
 
             <!-- БАЛАНС -->
@@ -381,7 +381,7 @@
             </div>
 
             <!-- КНОПКА -->
-            <button id="spinRouletteBtn" style="width: 100%; background: linear-gradient(135deg, #FFD700, #FFA500); border: none; border-radius: 60px; padding: 16px; font-weight: 800; font-size: 1.1rem; color: #0a0a1a; cursor: pointer; transition: transform 0.1s;" onclick="spinRoulette()">
+            <button id="spinRouletteBtn" style="width: 100%; background: linear-gradient(135deg, #FFD700, #FFA500); border: none; border-radius: 60px; padding: 16px; font-weight: 800; font-size: 1.1rem; color: #0a0a1a; cursor: pointer; transition: transform 0.1s;" onclick="window.spinRoulette()">
                 🎰 КРУТИТЬ РУЛЕТКУ (мин. 10 WG)
             </button>
 
@@ -594,6 +594,27 @@
 
         console.log('🎰 Загрузка секретной рулетки...');
 
+        // Переменные для рулетки
+        let secretAnimationId = null;
+        let secretIsSpinning = false;
+        let secretCanvas = null;
+        let secretCtx = null;
+        let localWG = 1000;
+
+        const ROULETTE_SECTORS = [
+            { label: '🟢', color: '#22c55e', multiplier: 2, value: 'Green' },
+            { label: '🔴', color: '#ef4444', multiplier: 2, value: 'Red' },
+            { label: '⚫', color: '#333333', multiplier: 2, value: 'Black' },
+            { label: '🟡', color: '#FFD700', multiplier: 3, value: 'Gold' },
+            { label: '🔵', color: '#3b82f6', multiplier: 2, value: 'Blue' },
+            { label: '🟣', color: '#8b5cf6', multiplier: 2, value: 'Purple' },
+            { label: '🟠', color: '#f97316', multiplier: 2, value: 'Orange' },
+            { label: '⚪', color: '#94a3b8', multiplier: 2, value: 'White' },
+        ];
+
+        const SECTOR_COLORS = ['#22c55e', '#ef4444', '#333333', '#FFD700', '#3b82f6', '#8b5cf6', '#f97316', '#94a3b8'];
+        const SECTOR_LABELS = ['🟢', '🔴', '⚫', '🟡', '🔵', '🟣', '🟠', '⚪'];
+
         // Ждём загрузку DOM
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', init);
@@ -631,7 +652,6 @@
 
             // ===== ПЕРЕХВАТЫВАЕМ КЛИК ПО КАРТОЧКЕ =====
             if (secretCard && isOwner) {
-                // Убираем все старые обработчики
                 const newCard = secretCard.cloneNode(true);
                 secretCard.parentNode.replaceChild(newCard, secretCard);
 
@@ -657,17 +677,35 @@
                 modal.classList.add('active');
                 document.body.style.overflow = 'hidden';
 
-                // Закрываем геймпад
                 const gamepad = document.getElementById('gamepadModal');
                 if (gamepad) {
                     gamepad.classList.remove('active');
                 }
+
+                // Обновляем баланс
+                updateSecretBalance();
 
                 // Инициализируем рулетку через 300 мс
                 setTimeout(function() {
                     initRoulette();
                 }, 300);
             }
+
+            // ===== ЗАКРЫТИЕ РУЛЕТКИ =====
+            window.closeSecretGame = function() {
+                console.log('🔒 Закрываем секретную рулетку...');
+                const modal = document.getElementById('secretGameModal');
+                if (modal) {
+                    modal.style.display = 'none';
+                    modal.classList.remove('active');
+                }
+                document.body.style.overflow = '';
+                if (secretAnimationId) {
+                    cancelAnimationFrame(secretAnimationId);
+                    secretAnimationId = null;
+                }
+                secretIsSpinning = false;
+            };
 
             // ===== ИНИЦИАЛИЗАЦИЯ РУЛЕТКИ =====
             function initRoulette() {
@@ -679,7 +717,9 @@
                     return;
                 }
 
-                const ctx = canvas.getContext('2d');
+                secretCanvas = canvas;
+                secretCtx = canvas.getContext('2d');
+
                 const rect = canvas.parentElement.getBoundingClientRect();
                 const size = Math.min(rect.width - 20, 400);
 
@@ -688,21 +728,30 @@
                 canvas.style.width = size + 'px';
                 canvas.style.height = size + 'px';
 
-                drawRoulette(ctx, canvas, 0);
+                drawRoulette(0);
                 console.log('✅ Рулетка инициализирована, размер:', size);
             }
 
+            // ===== ОБНОВЛЕНИЕ БАЛАНСА =====
+            function updateSecretBalance() {
+                const balanceEl = document.getElementById('secretBalance');
+                if (balanceEl) {
+                    balanceEl.innerText = localWG.toFixed(2);
+                }
+            }
+
             // ===== ОТРИСОВКА РУЛЕТКИ =====
-            function drawRoulette(ctx, canvas, rotation) {
+            function drawRoulette(rotation) {
+                const canvas = secretCanvas;
+                const ctx = secretCtx;
+                if (!canvas || !ctx) return;
+
                 const size = canvas.width;
                 const centerX = size / 2;
                 const centerY = size / 2;
                 const radius = size / 2 - 10;
                 const sectors = 8;
                 const sectorAngle = (Math.PI * 2) / sectors;
-
-                const colors = ['#22c55e', '#ef4444', '#333333', '#FFD700', '#3b82f6', '#8b5cf6', '#f97316', '#94a3b8'];
-                const labels = ['🟢', '🔴', '⚫', '🟡', '🔵', '🟣', '🟠', '⚪'];
 
                 ctx.clearRect(0, 0, size, size);
 
@@ -715,7 +764,7 @@
                     ctx.arc(centerX, centerY, radius, startAngle, endAngle);
                     ctx.closePath();
 
-                    ctx.fillStyle = colors[i];
+                    ctx.fillStyle = SECTOR_COLORS[i];
                     ctx.fill();
                     ctx.strokeStyle = 'rgba(255,215,0,0.3)';
                     ctx.lineWidth = 2;
@@ -735,11 +784,10 @@
                     ctx.fillStyle = '#ffffff';
                     ctx.shadowColor = 'rgba(0,0,0,0.8)';
                     ctx.shadowBlur = 4;
-                    ctx.fillText(labels[i], 0, 0);
+                    ctx.fillText(SECTOR_LABELS[i], 0, 0);
                     ctx.restore();
                 }
 
-                // Центр
                 const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius * 0.2);
                 gradient.addColorStop(0, '#FFD700');
                 gradient.addColorStop(0.5, '#F5A623');
@@ -760,6 +808,179 @@
                 ctx.fillText('🎰', centerX, centerY + 2);
             }
 
+            // ===== АНИМАЦИЯ ВРАЩЕНИЯ =====
+            function animateRoulette(targetRotation, duration, callback) {
+                const startTime = Date.now();
+                const startRotation = 0;
+                const totalRotation = targetRotation + (Math.PI * 2 * 8);
+
+                function animate() {
+                    const elapsed = Date.now() - startTime;
+                    const progress = Math.min(1, elapsed / duration);
+                    const ease = 1 - Math.pow(1 - progress, 3);
+                    const currentRotation = startRotation + totalRotation * ease;
+
+                    drawRoulette(currentRotation);
+
+                    if (progress < 1) {
+                        secretAnimationId = requestAnimationFrame(animate);
+                    } else {
+                        secretAnimationId = null;
+                        drawRoulette(totalRotation);
+                        if (callback) callback(totalRotation);
+                    }
+                }
+
+                if (secretAnimationId) {
+                    cancelAnimationFrame(secretAnimationId);
+                }
+                animate();
+            }
+
+            // ===== ОПРЕДЕЛИТЬ ВЫИГРЫШНЫЙ СЕКТОР =====
+            function getWinningSector(rotation) {
+                const sectorAngle = (Math.PI * 2) / ROULETTE_SECTORS.length;
+                const arrowAngle = -Math.PI / 2;
+                let normalizedRotation = rotation % (Math.PI * 2);
+                if (normalizedRotation < 0) normalizedRotation += Math.PI * 2;
+
+                let angle = (arrowAngle - normalizedRotation) % (Math.PI * 2);
+                if (angle < 0) angle += Math.PI * 2;
+
+                const sectorIndex = Math.floor(angle / sectorAngle);
+                return sectorIndex % ROULETTE_SECTORS.length;
+            }
+
+            // ===== КРУТИТЬ РУЛЕТКУ =====
+            window.spinRoulette = async function() {
+                if (secretIsSpinning) {
+                    showToast('⏳ Рулетка уже крутится!', 'error');
+                    return;
+                }
+
+                if (localWG < 10) {
+                    showToast('❌ Не хватает WG! Минимум 10 WG', 'error');
+                    return;
+                }
+
+                const betAmount = parseInt(prompt('💰 Введите сумму ставки (минимум 10 WG):', '10'));
+                if (isNaN(betAmount) || betAmount < 10) {
+                    showToast('❌ Минимальная ставка 10 WG', 'error');
+                    return;
+                }
+                if (betAmount > localWG) {
+                    showToast(`❌ Не хватает WG! У вас ${localWG.toFixed(2)} WG`, 'error');
+                    return;
+                }
+
+                const sectorOptions = ROULETTE_SECTORS.map((s, i) => `${i+1}. ${s.label} ${s.value}`).join('\n');
+                const choice = parseInt(prompt(`🎯 Выберите сектор:\n${sectorOptions}`, '1'));
+                if (isNaN(choice) || choice < 1 || choice > ROULETTE_SECTORS.length) {
+                    showToast('❌ Неверный выбор сектора', 'error');
+                    return;
+                }
+
+                const chosenIndex = choice - 1;
+
+                secretIsSpinning = true;
+                const btn = document.getElementById('spinRouletteBtn');
+                btn.disabled = true;
+                btn.textContent = '⏳ Крутим...';
+
+                const resultEl = document.getElementById('secretResult');
+                resultEl.innerHTML = '🎰 Вращение...';
+                resultEl.style.color = '#FFD700';
+
+                try {
+                    // Отправляем запрос на сервер
+                    const res = await fetch('/api/secret/spin', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            user_id: userId,
+                            bet: betAmount,
+                            chosen_sector: chosenIndex
+                        })
+                    });
+
+                    const data = await res.json();
+
+                    if (!data.success) {
+                        showToast(data.error || 'Ошибка при вращении', 'error');
+                        secretIsSpinning = false;
+                        btn.disabled = false;
+                        btn.textContent = '🎰 КРУТИТЬ РУЛЕТКУ (мин. 10 WG)';
+                        return;
+                    }
+
+                    const winIndex = data.win_index;
+                    const winAmount = data.win_amount || 0;
+                    const isWin = data.is_win || false;
+                    const winSector = ROULETTE_SECTORS[winIndex];
+
+                    const targetRotation = (Math.PI * 2 / ROULETTE_SECTORS.length) * winIndex;
+
+                    animateRoulette(targetRotation, 4000, function(finalRotation) {
+                        if (isWin) {
+                            resultEl.innerHTML = `🎉 ПОБЕДА! ${winSector.label} ${winSector.value}!\n+${winAmount.toFixed(2)} WG`;
+                            resultEl.style.color = '#22c55e';
+                            showToast(`🎉 +${winAmount.toFixed(2)} WG! Вы угадали ${winSector.label}!`, 'success');
+                            if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+                        } else {
+                            resultEl.innerHTML = `😔 Проигрыш! Выпало ${winSector.label} ${winSector.value}\n-${betAmount} WG`;
+                            resultEl.style.color = '#ef4444';
+                            showToast(`😔 Проигрыш! Выпало ${winSector.label} ${winSector.value}`, 'error');
+                            if (navigator.vibrate) navigator.vibrate(50);
+                        }
+
+                        localWG = data.new_balance || localWG;
+                        updateSecretBalance();
+
+                        addSecretHistory(isWin, winSector.label, betAmount, winAmount);
+
+                        secretIsSpinning = false;
+                        btn.disabled = false;
+                        btn.textContent = '🎰 КРУТИТЬ РУЛЕТКУ (мин. 10 WG)';
+                    });
+
+                } catch(e) {
+                    console.error('Spin error:', e);
+                    showToast('❌ Ошибка при вращении', 'error');
+                    secretIsSpinning = false;
+                    btn.disabled = false;
+                    btn.textContent = '🎰 КРУТИТЬ РУЛЕТКУ (мин. 10 WG)';
+                }
+            };
+
+            // ===== ДОБАВИТЬ В ИСТОРИЮ =====
+            function addSecretHistory(isWin, sector, bet, winAmount) {
+                const history = document.getElementById('secretHistory');
+                const count = document.getElementById('secretHistoryCount');
+                if (!history) return;
+
+                const entry = document.createElement('span');
+                entry.style.cssText = `
+                    display: inline-block;
+                    padding: 4px 10px;
+                    border-radius: 20px;
+                    font-size: 0.7rem;
+                    font-weight: 600;
+                    background: ${isWin ? 'rgba(34,197,94,0.15)' : 'rgba(244,67,54,0.15)'};
+                    color: ${isWin ? '#22c55e' : '#ef4444'};
+                    border: 1px solid ${isWin ? 'rgba(34,197,94,0.3)' : 'rgba(244,67,54,0.3)'};
+                `;
+                entry.textContent = isWin ? `+${winAmount.toFixed(1)}` : `-${bet}`;
+                history.prepend(entry);
+
+                while (history.children.length > 20) {
+                    history.removeChild(history.lastChild);
+                }
+
+                if (count) {
+                    count.textContent = history.children.length;
+                }
+            }
+
             // ===== ТОСТ =====
             function showToast(msg, type = 'info') {
                 let toast = document.getElementById('toast');
@@ -774,8 +995,7 @@
                 setTimeout(() => toast.className = 'toast', 1500);
             }
 
-            // ===== ГЛОБАЛЬНЫЙ ОБРАБОТЧИК =====
-            // Переопределяем window.openGame если нужно
+            // ===== ПЕРЕОПРЕДЕЛЯЕМ openGame =====
             if (isOwner) {
                 const originalOpenGame = window.openGame;
                 window.openGame = function(gameName) {
