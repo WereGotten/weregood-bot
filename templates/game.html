@@ -26,26 +26,9 @@
         document.head.appendChild(tonScript);
     </script>
 
-    <!-- Telegram Mini Apps Analytics SDK -->
-    <script>
-        (function() {
-            if (window.Telegram && window.Telegram.WebApp) {
-                var script = document.createElement('script');
-                script.src = 'https://tganalytics.xyz/index.js';
-                script.onload = function() {
-                    window.telegramAnalytics.init({
-                        token: 'eyJhcHBfbmFtZSI6IndlcmVnb29kIiwiYXBwX3VybCI6Imh0dHBzOi8vdC5tZS9XZXJlR29vb2Rib3QiLCJhcHBfZG9tYWluIjoiaHR0cHM6Ly93ZXJlZ29vZC5ydS8ifQ==!/Jd1QUzU6q1h1gN60VfBz53M1flHZlcVC5pcyACO9tM='
-                    });
-                    window.telegramAnalytics.trackEvent('app_started');
-                };
-                document.head.appendChild(script);
-            }
-        })();
-    </script>
-
     <style>
         /* ============================================================
-           КАСТОМНЫЙ ЗАГРУЗОЧНЫЙ ЭКРАН (SPLASH SCREEN)
+           SPLASH SCREEN
            ============================================================ */
         #splashScreen {
             position: fixed;
@@ -78,14 +61,8 @@
         }
 
         @keyframes splashFadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(30px) scale(0.95);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
+            from { opacity: 0; transform: translateY(30px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
         }
 
         .splash-coin {
@@ -100,7 +77,7 @@
             font-size: 42px;
             font-weight: 900;
             color: #0a0a1a;
-            box-shadow: 0 0 80px rgba(255, 215, 0, 0.25), 0 0 160px rgba(255, 215, 0, 0.08);
+            box-shadow: 0 0 80px rgba(255,215,0,0.25), 0 0 160px rgba(255,215,0,0.08);
             animation: coinPulse 2s ease-in-out infinite, gradientShine 3s ease-in-out infinite;
             user-select: none;
             position: relative;
@@ -114,24 +91,13 @@
             right: -4px;
             bottom: -4px;
             border-radius: 50%;
-            border: 2px solid rgba(255, 215, 0, 0.15);
+            border: 2px solid rgba(255,215,0,0.15);
             animation: ringPulse 2s ease-in-out infinite;
         }
 
-        @keyframes coinPulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.04); }
-        }
-
-        @keyframes gradientShine {
-            0%, 100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-        }
-
-        @keyframes ringPulse {
-            0%, 100% { transform: scale(1); opacity: 0.3; }
-            50% { transform: scale(1.1); opacity: 0.8; }
-        }
+        @keyframes coinPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+        @keyframes gradientShine { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+        @keyframes ringPulse { 0%, 100% { transform: scale(1); opacity: 0.3; } 50% { transform: scale(1.1); opacity: 0.8; } }
 
         .splash-title {
             font-size: 32px;
@@ -148,7 +114,7 @@
         .splash-subtitle {
             font-size: 14px;
             font-weight: 500;
-            color: rgba(255, 255, 255, 0.3);
+            color: rgba(255,255,255,0.3);
             letter-spacing: 4px;
             text-transform: uppercase;
             margin-top: -12px;
@@ -165,7 +131,7 @@
         .splash-progress-track {
             width: 100%;
             height: 4px;
-            background: rgba(255, 255, 255, 0.06);
+            background: rgba(255,255,255,0.06);
             border-radius: 4px;
             overflow: hidden;
             position: relative;
@@ -191,15 +157,12 @@
             animation: progressShine 1.5s ease-in-out infinite;
         }
 
-        @keyframes progressShine {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-        }
+        @keyframes progressShine { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
 
         .splash-percent {
             font-size: 15px;
             font-weight: 600;
-            color: rgba(255, 255, 255, 0.4);
+            color: rgba(255,255,255,0.4);
             font-variant-numeric: tabular-nums;
             letter-spacing: 2px;
             text-align: center;
@@ -210,7 +173,7 @@
             position: fixed;
             bottom: 30px;
             font-size: 11px;
-            color: rgba(255, 255, 255, 0.15);
+            color: rgba(255,255,255,0.15);
             letter-spacing: 1px;
             font-weight: 400;
         }
@@ -218,22 +181,10 @@
         body.light-theme #splashScreen {
             background: #f0f0f5;
         }
-
-        body.light-theme .splash-subtitle {
-            color: rgba(0, 0, 0, 0.25);
-        }
-
-        body.light-theme .splash-percent {
-            color: rgba(0, 0, 0, 0.4);
-        }
-
-        body.light-theme .splash-version {
-            color: rgba(0, 0, 0, 0.15);
-        }
-
-        body.light-theme .splash-progress-track {
-            background: rgba(0, 0, 0, 0.06);
-        }
+        body.light-theme .splash-subtitle { color: rgba(0,0,0,0.25); }
+        body.light-theme .splash-percent { color: rgba(0,0,0,0.4); }
+        body.light-theme .splash-version { color: rgba(0,0,0,0.15); }
+        body.light-theme .splash-progress-track { background: rgba(0,0,0,0.06); }
 
         .splash-loading-dots {
             display: flex;
@@ -245,839 +196,30 @@
             width: 8px;
             height: 8px;
             border-radius: 50%;
-            background: rgba(255, 215, 0, 0.3);
+            background: rgba(255,215,0,0.3);
             animation: dotBounce 1.4s ease-in-out infinite;
         }
 
         .splash-loading-dots span:nth-child(2) { animation-delay: 0.2s; }
         .splash-loading-dots span:nth-child(3) { animation-delay: 0.4s; }
 
-        @keyframes dotBounce {
-            0%, 80%, 100% { transform: scale(0.6); opacity: 0.3; }
-            40% { transform: scale(1); opacity: 1; }
-        }
+        @keyframes dotBounce { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.3; } 40% { transform: scale(1); opacity: 1; } }
 
-        .app {
-            opacity: 0;
-            transition: opacity 0.4s ease;
-        }
-
-        .app.visible {
-            opacity: 1;
-        }
+        .app { opacity: 0; transition: opacity 0.4s ease; }
+        .app.visible { opacity: 1; }
 
         @media (max-width: 480px) {
-            .splash-coin {
-                width: 100px;
-                height: 100px;
-                font-size: 34px;
-            }
-            .splash-title {
-                font-size: 26px;
-            }
-            .splash-progress-wrap {
-                width: 180px;
-            }
-            .splash-subtitle {
-                font-size: 11px;
-                letter-spacing: 3px;
-            }
-        }
-
-        /* ============================================================
-           СЕКРЕТНАЯ ИГРА - 3D СЛОТ (BOINKERS STYLE)
-           ============================================================ */
-
-        /* --- ОБЩИЙ ФОН --- */
-        #secretGameModal .game-modal-full-content {
-            background: radial-gradient(ellipse at 50% 0%, #1a0a2e 0%, #0d0d2b 40%, #0a0a1a 100%);
-            position: relative;
-            overflow: hidden;
-            padding: 20px 16px 30px;
-        }
-
-        #secretGameModal .game-modal-full-content::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(ellipse at 30% 20%, rgba(255,215,0,0.03) 0%, transparent 60%),
-                        radial-gradient(ellipse at 70% 80%, rgba(255,100,0,0.02) 0%, transparent 50%);
-            pointer-events: none;
-            z-index: 0;
-        }
-
-        /* --- ШАПКА --- */
-        #secretGameModal .game-modal-full-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 14px;
-            border-bottom: 1px solid rgba(255,215,0,0.1);
-            position: relative;
-            z-index: 1;
-        }
-
-        #secretGameModal .game-modal-full-header h2 {
-            font-size: 1.5rem;
-            font-weight: 900;
-            background: linear-gradient(135deg, #FFD700 0%, #FFA500 40%, #FF6B00 70%, #FFD700 100%);
-            background-size: 200% 200%;
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            animation: neonTitle 3s ease-in-out infinite;
-            letter-spacing: 1px;
-        }
-
-        @keyframes neonTitle {
-            0%, 100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-        }
-
-        #secretGameModal .game-modal-full-close {
-            background: rgba(255,255,255,0.06);
-            border: 1px solid rgba(255,255,255,0.08);
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            font-size: 1.1rem;
-            color: #fff;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1;
-        }
-
-        #secretGameModal .game-modal-full-close:hover {
-            background: rgba(255,215,0,0.15);
-            border-color: #FFD700;
-            transform: rotate(90deg) scale(1.1);
-            box-shadow: 0 0 30px rgba(255,215,0,0.15);
-        }
-
-        /* --- БАЛАНС --- */
-        #secretGameModal .fortune-balance-card {
-            background: linear-gradient(135deg, rgba(255,215,0,0.08), rgba(255,165,0,0.04));
-            border: 1px solid rgba(255,215,0,0.12);
-            border-radius: 16px;
-            padding: 14px 18px;
-            margin-bottom: 18px;
-            backdrop-filter: blur(10px);
-            position: relative;
-            z-index: 1;
-        }
-
-        .balance-label-premium {
-            font-size: 0.7rem;
-            color: rgba(255,255,255,0.5);
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            font-weight: 600;
-        }
-
-        .balance-value-premium {
-            font-size: 1.6rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, #FFD700, #FFA500);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            text-shadow: 0 0 30px rgba(255,215,0,0.2);
-        }
-
-        /* ============================================================
-           3D СЛОТ-МАШИНА
-           ============================================================ */
-
-        .slot-machine-wrapper {
-            margin: 8px 0 14px;
-            position: relative;
-            z-index: 1;
-        }
-
-        .slot-machine-body {
-            background: linear-gradient(180deg, #0f0f1f 0%, #0a0a15 40%, #1a0a2e 100%);
-            border-radius: 24px;
-            padding: 18px 14px 22px;
-            border: 1px solid rgba(255,215,0,0.08);
-            box-shadow: 0 8px 50px rgba(0,0,0,0.6),
-                        inset 0 1px 0 rgba(255,255,255,0.03),
-                        0 0 80px rgba(255,215,0,0.02);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .slot-machine-body::before {
-            content: '';
-            position: absolute;
-            top: -2px;
-            left: 10%;
-            right: 10%;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, rgba(255,215,0,0.3), #FFD700, rgba(255,215,0,0.3), transparent);
-            border-radius: 2px;
-            animation: neonLine 2s ease-in-out infinite;
-        }
-
-        @keyframes neonLine {
-            0%, 100% { opacity: 0.3; }
-            50% { opacity: 1; }
-        }
-
-        /* --- НЕОНОВАЯ ПОДСВЕТКА --- */
-        .slot-neon-top,
-        .slot-neon-bottom {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 6px;
-            padding: 4px 0;
-        }
-
-        .slot-neon-top { margin-bottom: 10px; }
-        .slot-neon-bottom { margin-top: 10px; }
-
-        .neon-strip {
-            width: 80%;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(255,215,0,0.2), transparent);
-        }
-
-        .neon-lights {
-            display: flex;
-            justify-content: center;
-            gap: 4px;
-            flex-wrap: wrap;
-        }
-
-        .neon-dot {
-            width: 4px;
-            height: 4px;
-            border-radius: 50%;
-            background: rgba(255,215,0,0.08);
-            transition: all 0.3s ease;
-        }
-
-        .neon-dot.active {
-            background: #FFD700;
-            box-shadow: 0 0 8px rgba(255,215,0,0.4);
-            animation: neonPulse 1s ease-in-out infinite alternate;
-        }
-
-        .neon-dot:nth-child(odd) { animation-delay: 0.1s; }
-        .neon-dot:nth-child(3n) { animation-delay: 0.3s; }
-        .neon-dot:nth-child(5n+2) { animation-delay: 0.5s; }
-        .neon-dot:nth-child(7n+4) { animation-delay: 0.7s; }
-
-        @keyframes neonPulse {
-            0% { opacity: 0.2; transform: scale(0.6); }
-            100% { opacity: 1; transform: scale(1.2); }
-        }
-
-        /* --- 3D БАРАБАНЫ --- */
-        .slot-reels-3d {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 4px;
-            padding: 6px 0;
-            perspective: 800px;
-        }
-
-        .reel-3d {
-            flex: 1;
-            max-width: 120px;
-            min-width: 60px;
-            position: relative;
-            transform-style: preserve-3d;
-            transform: rotateX(4deg);
-            transition: all 0.3s ease;
-        }
-
-        .reel-3d:hover {
-            transform: rotateX(4deg) scale(1.02);
-        }
-
-        .reel-track {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-            background: linear-gradient(180deg, rgba(0,0,0,0.4), rgba(0,0,0,0.2));
-            border-radius: 16px;
-            padding: 6px 4px;
-            border: 1px solid rgba(255,215,0,0.06);
-            box-shadow: inset 0 0 30px rgba(0,0,0,0.3);
-        }
-
-        .reel-cell {
-            aspect-ratio: 1 / 1;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2.8rem;
-            transition: all 0.2s ease;
-            position: relative;
-            background: linear-gradient(145deg, #0a0a1a, #12122a);
-            border: 1px solid rgba(255,215,0,0.04);
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.3);
-        }
-
-        /* ===== ПЕРСПЕКТИВА ===== */
-        .reel-cell.cell-top {
-            transform: scale(0.7) translateY(-6px);
-            opacity: 0.6;
-            font-size: 2rem;
-            border-color: rgba(255,215,0,0.02);
-            filter: blur(1px);
-        }
-
-        .reel-cell.cell-center {
-            transform: scale(1) translateY(0);
-            opacity: 1;
-            font-size: 3.6rem;
-            border-color: rgba(255,215,0,0.15);
-            box-shadow: 0 0 30px rgba(255,215,0,0.05), inset 0 0 30px rgba(255,215,0,0.02);
-            z-index: 2;
-        }
-
-        .reel-cell.cell-bottom {
-            transform: scale(0.7) translateY(6px);
-            opacity: 0.6;
-            font-size: 2rem;
-            border-color: rgba(255,215,0,0.02);
-            filter: blur(1px);
-        }
-
-        /* ===== АКТИВНАЯ ЦЕНТРАЛЬНАЯ ЯЧЕЙКА ===== */
-        .reel-cell.cell-center.active-cell {
-            border-color: rgba(255,215,0,0.3);
-            box-shadow: 0 0 40px rgba(255,215,0,0.1), inset 0 0 40px rgba(255,215,0,0.03);
-        }
-
-        /* ===== ВЫИГРЫШНАЯ ЯЧЕЙКА ===== */
-        .reel-cell.win-cell {
-            border-color: #FFD700 !important;
-            box-shadow: 0 0 50px rgba(255,215,0,0.3), inset 0 0 50px rgba(255,215,0,0.08) !important;
-            animation: winCellPulse 0.6s ease-in-out infinite alternate;
-        }
-
-        @keyframes winCellPulse {
-            0% { transform: scale(1); border-color: rgba(255,215,0,0.4); }
-            100% { transform: scale(1.08); border-color: #FFD700; box-shadow: 0 0 70px rgba(255,215,0,0.5); }
-        }
-
-        .reel-cell.win-cell .reel-symbol {
-            animation: winSymbolPulse 0.5s ease-in-out infinite alternate;
-        }
-
-        @keyframes winSymbolPulse {
-            0% { transform: scale(1); filter: drop-shadow(0 0 10px rgba(255,215,0,0.2)); }
-            100% { transform: scale(1.2); filter: drop-shadow(0 0 40px rgba(255,215,0,0.6)); }
-        }
-
-        /* ===== АНИМАЦИЯ КРУЧЕНИЯ ===== */
-        .reel-3d.spinning .reel-track {
-            animation: reelShake 0.08s ease-in-out infinite;
-        }
-
-        @keyframes reelShake {
-            0% { transform: translateY(0); }
-            50% { transform: translateY(1px); }
-            100% { transform: translateY(0); }
-        }
-
-        .reel-3d.spinning .reel-cell.cell-top {
-            animation: topBlur 0.1s ease-in-out infinite;
-        }
-
-        @keyframes topBlur {
-            0%, 100% { filter: blur(1px); opacity: 0.5; transform: scale(0.7) translateY(-6px) rotateX(5deg); }
-            50% { filter: blur(2px); opacity: 0.4; transform: scale(0.65) translateY(-8px) rotateX(-5deg); }
-        }
-
-        .reel-3d.spinning .reel-cell.cell-bottom {
-            animation: bottomBlur 0.1s ease-in-out infinite;
-        }
-
-        @keyframes bottomBlur {
-            0%, 100% { filter: blur(1px); opacity: 0.5; transform: scale(0.7) translateY(6px) rotateX(-5deg); }
-            50% { filter: blur(2px); opacity: 0.4; transform: scale(0.65) translateY(8px) rotateX(5deg); }
-        }
-
-        .reel-3d.spinning .reel-cell.cell-center {
-            animation: centerPulse 0.15s ease-in-out infinite;
-        }
-
-        @keyframes centerPulse {
-            0% { transform: scale(1); border-color: rgba(255,215,0,0.1); }
-            50% { transform: scale(1.02); border-color: rgba(255,215,0,0.2); }
-            100% { transform: scale(1); border-color: rgba(255,215,0,0.1); }
-        }
-
-        /* --- РАЗДЕЛИТЕЛЬ --- */
-        .reel-divider-3d {
-            width: 2px;
-            height: 80%;
-            min-height: 80px;
-            background: linear-gradient(180deg, transparent, rgba(255,215,0,0.08), transparent);
-            border-radius: 1px;
-            flex-shrink: 0;
-        }
-
-        /* --- ТЕНЬ БАРАБАНА --- */
-        .reel-shadow {
-            position: absolute;
-            bottom: -10px;
-            left: 10%;
-            right: 10%;
-            height: 15px;
-            background: radial-gradient(ellipse, rgba(0,0,0,0.3), transparent);
-            border-radius: 50%;
-            filter: blur(8px);
-        }
-
-        /* --- ВЫИГРЫШНАЯ ЛИНИЯ --- */
-        .win-line-3d {
-            position: absolute;
-            left: 8%;
-            right: 8%;
-            top: 50%;
-            height: 4px;
-            background: linear-gradient(90deg, transparent, #FFD700, transparent);
-            transform: translateY(-50%) scaleX(0);
-            opacity: 0;
-            transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-            border-radius: 2px;
-            box-shadow: 0 0 30px rgba(255,215,0,0.3), 0 0 60px rgba(255,215,0,0.1);
-            z-index: 3;
-            pointer-events: none;
-        }
-
-        .win-line-3d.active {
-            opacity: 1;
-            transform: translateY(-50%) scaleX(1);
-            animation: winLinePulse 0.5s ease-in-out infinite alternate;
-        }
-
-        @keyframes winLinePulse {
-            0% { opacity: 0.6; box-shadow: 0 0 20px rgba(255,215,0,0.2); }
-            100% { opacity: 1; box-shadow: 0 0 50px rgba(255,215,0,0.5); }
-        }
-
-        /* --- ИНДИКАТОР ВЫИГРЫША --- */
-        .win-indicator {
-            position: absolute;
-            top: -8px;
-            right: -8px;
-            font-size: 1.4rem;
-            opacity: 0;
-            transform: scale(0);
-            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-            z-index: 4;
-            filter: drop-shadow(0 0 20px rgba(255,215,0,0.3));
-        }
-
-        .win-indicator.active {
-            opacity: 1;
-            transform: scale(1);
-            animation: indicatorFloat 1s ease-in-out infinite;
-        }
-
-        @keyframes indicatorFloat {
-            0%, 100% { transform: translateY(0) scale(1); }
-            50% { transform: translateY(-8px) scale(1.1); }
-        }
-
-        /* --- РЕЗУЛЬТАТ --- */
-        .secret-result {
-            text-align: center;
-            font-size: 1rem;
-            font-weight: 700;
-            min-height: 46px;
-            padding: 10px 16px;
-            border-radius: 14px;
-            background: rgba(0,0,0,0.3);
-            border: 1px solid rgba(255,215,0,0.06);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            backdrop-filter: blur(10px);
-            margin: 8px 0 12px;
-            transition: all 0.4s ease;
-            position: relative;
-            z-index: 1;
-        }
-
-        .secret-result.win-result {
-            border-color: #22c55e;
-            background: rgba(34,197,94,0.08);
-            box-shadow: 0 0 40px rgba(34,197,94,0.08);
-        }
-
-        .secret-result.lose-result {
-            border-color: #ef4444;
-            background: rgba(244,67,54,0.06);
-        }
-
-        .secret-result span { opacity: 0.7; }
-        .secret-result.win-result span { opacity: 1; color: #22c55e; }
-        .secret-result.lose-result span { opacity: 1; color: #ef4444; }
-
-        /* --- УПРАВЛЕНИЕ СТАВКОЙ --- */
-        .bet-controls {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            margin: 6px 0 12px;
-            position: relative;
-            z-index: 1;
-        }
-
-        .bet-control-group {
-            display: flex;
-            align-items: center;
-            background: rgba(255,255,255,0.04);
-            border-radius: 30px;
-            border: 1px solid rgba(255,215,0,0.08);
-            overflow: hidden;
-        }
-
-        .bet-control-btn {
-            background: transparent;
-            border: none;
-            color: #FFD700;
-            font-size: 1.2rem;
-            font-weight: 700;
-            padding: 6px 14px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .bet-control-btn:hover {
-            background: rgba(255,215,0,0.08);
-        }
-
-        .bet-control-btn:active {
-            transform: scale(0.9);
-        }
-
-        .bet-display {
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: #fff;
-            padding: 6px 16px;
-            min-width: 50px;
-            text-align: center;
-        }
-
-        .bet-label {
-            font-size: 0.7rem;
-            color: rgba(255,255,255,0.3);
-            font-weight: 600;
-            letter-spacing: 1px;
-        }
-
-        /* --- КНОПКА КРУТИТЬ --- */
-        .spin-btn {
-            width: 100%;
-            background: linear-gradient(135deg, #FFD700 0%, #FFA500 40%, #FF6B00 100%);
-            border: none;
-            border-radius: 60px;
-            padding: 14px 20px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 4px 30px rgba(255,165,0,0.25);
-            margin: 2px 0 10px;
-            z-index: 1;
-        }
-
-        .spin-btn::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.15) 50%, transparent 70%);
-            animation: btnShine 3s ease-in-out infinite;
-        }
-
-        @keyframes btnShine {
-            0% { transform: translateX(-100%) rotate(45deg); }
-            100% { transform: translateX(100%) rotate(45deg); }
-        }
-
-        .spin-btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 40px rgba(255,165,0,0.35);
-        }
-
-        .spin-btn:active:not(:disabled) {
-            transform: scale(0.97);
-        }
-
-        .spin-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .spin-btn-icon {
-            font-size: 1.2rem;
-            position: relative;
-            z-index: 1;
-        }
-
-        .spin-btn-text {
-            font-weight: 800;
-            font-size: 0.95rem;
-            color: #0a0a1a;
-            letter-spacing: 0.5px;
-            position: relative;
-            z-index: 1;
-        }
-
-        /* --- ИСТОРИЯ --- */
-        .history-section {
-            margin-top: 8px;
-            padding-top: 10px;
-            border-top: 1px solid rgba(255,215,0,0.05);
-            position: relative;
-            z-index: 1;
-        }
-
-        .history-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 6px;
-        }
-
-        .history-title {
-            font-size: 0.7rem;
-            font-weight: 600;
-            color: rgba(255,255,255,0.5);
-        }
-
-        .history-count {
-            font-size: 0.6rem;
-            background: rgba(255,215,0,0.08);
-            padding: 2px 10px;
-            border-radius: 20px;
-            color: #FFD700;
-        }
-
-        .history-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-            max-height: 70px;
-            overflow-y: auto;
-            padding: 2px 0;
-        }
-
-        .history-list::-webkit-scrollbar {
-            width: 3px;
-        }
-        .history-list::-webkit-scrollbar-track {
-            background: rgba(255,255,255,0.05);
-            border-radius: 3px;
-        }
-        .history-list::-webkit-scrollbar-thumb {
-            background: #FFD700;
-            border-radius: 3px;
-        }
-
-        .history-item {
-            display: inline-block;
-            padding: 3px 10px;
-            border-radius: 20px;
-            font-size: 0.65rem;
-            font-weight: 600;
-            animation: historyPop 0.3s ease;
-        }
-
-        @keyframes historyPop {
-            0% { transform: scale(0); opacity: 0; }
-            60% { transform: scale(1.2); }
-            100% { transform: scale(1); opacity: 1; }
-        }
-
-        .history-item.win {
-            background: rgba(34,197,94,0.12);
-            color: #22c55e;
-            border: 1px solid rgba(34,197,94,0.12);
-        }
-
-        .history-item.lose {
-            background: rgba(244,67,54,0.08);
-            color: #ef4444;
-            border: 1px solid rgba(244,67,54,0.1);
-        }
-
-        /* --- ИНФО --- */
-        .info-card-glass {
-            background: rgba(255,255,255,0.02);
-            border-radius: 12px;
-            padding: 10px 14px;
-            border: 1px solid rgba(255,215,0,0.04);
-            backdrop-filter: blur(10px);
-            font-size: 0.65rem;
-            opacity: 0.5;
-            text-align: center;
-            margin-top: 10px;
-            position: relative;
-            z-index: 1;
-        }
-
-        .info-card-glass strong {
-            color: #FFD700;
-            opacity: 1;
-        }
-
-        /* --- АДАПТАЦИЯ --- */
-        @media (max-width: 480px) {
-            .reel-cell {
-                font-size: 1.8rem;
-                border-radius: 8px;
-            }
-
-            .reel-cell.cell-center {
-                font-size: 2.4rem;
-            }
-
-            .reel-cell.cell-top,
-            .reel-cell.cell-bottom {
-                font-size: 1.3rem;
-            }
-
-            .reel-3d {
-                max-width: 80px;
-                min-width: 45px;
-            }
-
-            .reel-track {
-                padding: 4px 2px;
-                gap: 1px;
-                border-radius: 10px;
-            }
-
-            .reel-divider-3d {
-                min-height: 50px;
-            }
-
-            #secretGameModal .game-modal-full-header h2 {
-                font-size: 1.2rem;
-            }
-
-            .balance-value-premium {
-                font-size: 1.3rem;
-            }
-
-            .bet-display {
-                font-size: 0.9rem;
-                padding: 4px 12px;
-                min-width: 35px;
-            }
-
-            .bet-control-btn {
-                padding: 4px 10px;
-                font-size: 1rem;
-            }
-
-            .spin-btn-text {
-                font-size: 0.85rem;
-            }
-
-            .spin-btn {
-                padding: 12px 16px;
-            }
-
-            .secret-result {
-                font-size: 0.85rem;
-                min-height: 36px;
-                padding: 8px 12px;
-            }
-
-            .slot-machine-body {
-                padding: 12px 8px 16px;
-                border-radius: 16px;
-            }
-
-            .slot-neon-top,
-            .slot-neon-bottom {
-                gap: 4px;
-            }
-
-            .neon-dot {
-                width: 3px;
-                height: 3px;
-            }
-
-            .win-line-3d {
-                height: 2px;
-            }
-        }
-
-        @media (max-width: 380px) {
-            .reel-cell {
-                font-size: 1.4rem;
-                border-radius: 6px;
-            }
-
-            .reel-cell.cell-center {
-                font-size: 1.8rem;
-            }
-
-            .reel-cell.cell-top,
-            .reel-cell.cell-bottom {
-                font-size: 1rem;
-            }
-
-            .reel-3d {
-                max-width: 60px;
-                min-width: 35px;
-            }
-
-            .reel-divider-3d {
-                min-height: 35px;
-            }
-
-            .bet-display {
-                font-size: 0.75rem;
-                min-width: 28px;
-                padding: 4px 8px;
-            }
-
-            .spin-btn-text {
-                font-size: 0.7rem;
-            }
-
-            .spin-btn-icon {
-                font-size: 1rem;
-            }
+            .splash-coin { width: 100px; height: 100px; font-size: 34px; }
+            .splash-title { font-size: 26px; }
+            .splash-progress-wrap { width: 180px; }
+            .splash-subtitle { font-size: 11px; letter-spacing: 3px; }
         }
     </style>
 </head>
 <body>
 
     <!-- ============================================================
-         ЗАГРУЗОЧНЫЙ ЭКРАН
+         SPLASH SCREEN
          ============================================================ -->
     <div id="splashScreen">
         <div class="splash-content">
@@ -1100,7 +242,7 @@
     </div>
 
     <!-- ============================================================
-         ОСНОВНОЙ APP
+         MAIN APP
          ============================================================ -->
     <div class="app" id="app">
 
@@ -1137,60 +279,42 @@
     {% include 'game/fortune.html' %}
 
     <!-- ============================================================
-         СЕКРЕТНАЯ ИГРА - 3D СЛОТ-МАШИНА (BOINKERS STYLE)
+         SECRET SLOT - 3D REEL (BOINKERS STYLE)
          ============================================================ -->
     <div id="secretGameModal" class="game-modal-full" style="display: none;">
         <div class="game-modal-full-content">
 
-            <!-- ШАПКА -->
             <div class="game-modal-full-header">
                 <h2>🎰 Секретный слот</h2>
                 <button class="game-modal-full-close" onclick="window.closeSecretGame()">✕</button>
             </div>
 
-            <!-- БАЛАНС -->
             <div class="fortune-balance-card">
                 <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                    <span class="balance-label-premium">💰 Ваш баланс WG</span>
+                    <span class="balance-label-premium">💰 Баланс WG</span>
                     <span class="balance-value-premium" id="secretBalance">0</span>
                 </div>
             </div>
 
-            <!-- ===== 3D СЛОТ-МАШИНА С ПЕРСПЕКТИВОЙ ===== -->
+            <!-- ===== 3D SLOT REELS ===== -->
             <div class="slot-machine-wrapper">
                 <div class="slot-machine-body">
 
-                    <!-- Верхняя неоновая подсветка -->
+                    <!-- Neon Top -->
                     <div class="slot-neon-top">
-                        <div class="neon-strip"></div>
                         <div class="neon-lights">
-                            <span class="neon-dot"></span>
-                            <span class="neon-dot"></span>
-                            <span class="neon-dot"></span>
-                            <span class="neon-dot"></span>
-                            <span class="neon-dot"></span>
-                            <span class="neon-dot"></span>
-                            <span class="neon-dot"></span>
-                            <span class="neon-dot"></span>
-                            <span class="neon-dot"></span>
-                            <span class="neon-dot"></span>
-                            <span class="neon-dot"></span>
-                            <span class="neon-dot"></span>
-                            <span class="neon-dot"></span>
-                            <span class="neon-dot"></span>
-                            <span class="neon-dot"></span>
-                            <span class="neon-dot"></span>
-                            <span class="neon-dot"></span>
-                            <span class="neon-dot"></span>
-                            <span class="neon-dot"></span>
-                            <span class="neon-dot"></span>
+                            <span class="neon-dot"></span><span class="neon-dot"></span><span class="neon-dot"></span>
+                            <span class="neon-dot"></span><span class="neon-dot"></span><span class="neon-dot"></span>
+                            <span class="neon-dot"></span><span class="neon-dot"></span><span class="neon-dot"></span>
+                            <span class="neon-dot"></span><span class="neon-dot"></span><span class="neon-dot"></span>
+                            <span class="neon-dot"></span><span class="neon-dot"></span><span class="neon-dot"></span>
+                            <span class="neon-dot"></span><span class="neon-dot"></span><span class="neon-dot"></span>
+                            <span class="neon-dot"></span><span class="neon-dot"></span><span class="neon-dot"></span>
                         </div>
                     </div>
 
-                    <!-- 3D БАРАБАНЫ С ПЕРСПЕКТИВОЙ -->
+                    <!-- 3D Reels -->
                     <div class="slot-reels-3d">
-
-                        <!-- Барабан 1 -->
                         <div class="reel-3d" id="reel1">
                             <div class="reel-track">
                                 <div class="reel-cell cell-top" id="cell_0_0">🍒</div>
@@ -1199,11 +323,7 @@
                             </div>
                             <div class="reel-shadow"></div>
                         </div>
-
-                        <!-- Разделитель -->
                         <div class="reel-divider-3d"></div>
-
-                        <!-- Барабан 2 -->
                         <div class="reel-3d" id="reel2">
                             <div class="reel-track">
                                 <div class="reel-cell cell-top" id="cell_0_1">🍒</div>
@@ -1212,11 +332,7 @@
                             </div>
                             <div class="reel-shadow"></div>
                         </div>
-
-                        <!-- Разделитель -->
                         <div class="reel-divider-3d"></div>
-
-                        <!-- Барабан 3 -->
                         <div class="reel-3d" id="reel3">
                             <div class="reel-track">
                                 <div class="reel-cell cell-top" id="cell_0_2">🍒</div>
@@ -1225,50 +341,32 @@
                             </div>
                             <div class="reel-shadow"></div>
                         </div>
-
                     </div>
 
-                    <!-- Выигрышная линия -->
+                    <!-- Win Line -->
                     <div class="win-line-3d" id="winLine3d"></div>
 
-                    <!-- Нижняя неоновая подсветка -->
+                    <!-- Neon Bottom -->
                     <div class="slot-neon-bottom">
                         <div class="neon-lights">
-                            <span class="neon-dot"></span>
-                            <span class="neon-dot"></span>
-                            <span class="neon-dot"></span>
-                            <span class="neon-dot"></span>
-                            <span class="neon-dot"></span>
-                            <span class="neon-dot"></span>
-                            <span class="neon-dot"></span>
-                            <span class="neon-dot"></span>
-                            <span class="neon-dot"></span>
-                            <span class="neon-dot"></span>
-                            <span class="neon-dot"></span>
-                            <span class="neon-dot"></span>
-                            <span class="neon-dot"></span>
-                            <span class="neon-dot"></span>
-                            <span class="neon-dot"></span>
-                            <span class="neon-dot"></span>
-                            <span class="neon-dot"></span>
-                            <span class="neon-dot"></span>
-                            <span class="neon-dot"></span>
-                            <span class="neon-dot"></span>
+                            <span class="neon-dot"></span><span class="neon-dot"></span><span class="neon-dot"></span>
+                            <span class="neon-dot"></span><span class="neon-dot"></span><span class="neon-dot"></span>
+                            <span class="neon-dot"></span><span class="neon-dot"></span><span class="neon-dot"></span>
+                            <span class="neon-dot"></span><span class="neon-dot"></span><span class="neon-dot"></span>
+                            <span class="neon-dot"></span><span class="neon-dot"></span><span class="neon-dot"></span>
+                            <span class="neon-dot"></span><span class="neon-dot"></span><span class="neon-dot"></span>
+                            <span class="neon-dot"></span><span class="neon-dot"></span><span class="neon-dot"></span>
                         </div>
-                        <div class="neon-strip"></div>
                     </div>
 
-                    <!-- Индикатор выигрыша -->
                     <div class="win-indicator" id="winIndicator">💰</div>
                 </div>
             </div>
 
-            <!-- РЕЗУЛЬТАТ -->
             <div id="secretResult" class="secret-result">
-                <span>🎰 Нажми "Крутить", чтобы начать</span>
+                <span>🎰 Нажми "Крутить"</span>
             </div>
 
-            <!-- УПРАВЛЕНИЕ СТАВКОЙ -->
             <div class="bet-controls">
                 <div class="bet-control-group">
                     <button class="bet-control-btn" onclick="window.adjustBet(-10)">−</button>
@@ -1278,24 +376,21 @@
                 <span class="bet-label">WG</span>
             </div>
 
-            <!-- КНОПКА КРУТИТЬ -->
             <button id="spinSlotBtn" class="spin-btn" onclick="window.spinSlot()">
                 <span class="spin-btn-icon">🎰</span>
                 <span class="spin-btn-text">КРУТИТЬ</span>
             </button>
 
-            <!-- ИСТОРИЯ -->
             <div class="history-section">
                 <div class="history-header">
-                    <span class="history-title">📋 Последние результаты</span>
+                    <span class="history-title">📋 История</span>
                     <span class="history-count" id="secretHistoryCount">0</span>
                 </div>
                 <div id="secretHistory" class="history-list"></div>
             </div>
 
-            <!-- ИНФО -->
             <div class="info-card-glass">
-                <span>🎲 Выигрышные комбинации: </span>
+                <span>🎲 Выигрыш: </span>
                 <strong>3 одинаковых = x3</strong>
                 <span style="opacity: 0.4; margin: 0 6px;">|</span>
                 <strong>2 одинаковых = x2</strong>
@@ -1304,7 +399,7 @@
     </div>
 
     <!-- ============================================================
-         АУДИО
+         AUDIO
          ============================================================ -->
     <audio id="errorSound" preload="auto"><source src="/static/error.mp3" type="audio/mpeg"></audio>
     <audio id="clickSound" preload="auto"><source src="/static/click.mp3" type="audio/mpeg"></audio>
@@ -1314,7 +409,7 @@
     <audio id="purchaseSound" preload="auto"><source src="/static/purchase.mp3" type="audio/mpeg"></audio>
 
     <!-- ============================================================
-         СКРИПТ ЗАГРУЗКИ
+         LOADING SCRIPT
          ============================================================ -->
     <script>
         (function() {
@@ -1338,25 +433,17 @@
             function simulateLoading() {
                 let progress = 0;
                 const steps = [
-                    { target: 15, delay: 300 },
-                    { target: 30, delay: 400 },
-                    { target: 45, delay: 350 },
-                    { target: 55, delay: 300 },
-                    { target: 70, delay: 500 },
-                    { target: 82, delay: 400 },
-                    { target: 90, delay: 300 },
-                    { target: 95, delay: 200 },
+                    { target: 15, delay: 300 }, { target: 30, delay: 400 },
+                    { target: 45, delay: 350 }, { target: 55, delay: 300 },
+                    { target: 70, delay: 500 }, { target: 82, delay: 400 },
+                    { target: 90, delay: 300 }, { target: 95, delay: 200 },
                     { target: 100, delay: 300 }
                 ];
 
                 let index = 0;
 
                 function nextStep() {
-                    if (index >= steps.length) {
-                        finishLoading();
-                        return;
-                    }
-
+                    if (index >= steps.length) { finishLoading(); return; }
                     const step = steps[index];
                     const increment = (step.target - progress) / 3;
 
@@ -1372,17 +459,14 @@
                         updateProgress(progress);
                         requestAnimationFrame(animateStep);
                     }
-
                     animateStep();
                 }
-
                 nextStep();
             }
 
             function finishLoading() {
                 if (isHidden) return;
                 isHidden = true;
-
                 if (currentProgress < 100) {
                     updateProgress(100);
                     setTimeout(hideSplash, 400);
@@ -1394,107 +478,68 @@
             function hideSplash() {
                 if (splash) {
                     splash.classList.add('hidden');
-                    setTimeout(() => {
-                        splash.style.display = 'none';
-                    }, 600);
+                    setTimeout(() => { splash.style.display = 'none'; }, 600);
                 }
-
-                if (app) {
-                    app.classList.add('visible');
-                }
-
+                if (app) app.classList.add('visible');
                 document.body.style.overflow = '';
             }
 
             function trackRealLoading() {
                 if (document.readyState === 'loading') {
-                    document.addEventListener('DOMContentLoaded', () => {
-                        updateProgress(60);
-                    });
-                } else {
-                    updateProgress(60);
-                }
-
+                    document.addEventListener('DOMContentLoaded', () => { updateProgress(60); });
+                } else { updateProgress(60); }
                 window.addEventListener('load', () => {
                     updateProgress(85);
-                    setTimeout(() => {
-                        updateProgress(95);
-                    }, 500);
+                    setTimeout(() => { updateProgress(95); }, 500);
                 });
-
-                if (window.Telegram && window.Telegram.WebApp) {
-                    if (window.Telegram.WebApp.isVersionAtLeast) {
-                        updateProgress(70);
-                    }
-                }
-
-                if (typeof io !== 'undefined') {
-                    updateProgress(75);
-                }
-
-                if (window.TON_CONNECT_UI !== null) {
-                    updateProgress(80);
-                }
-
-                if (typeof window.Adsgram !== 'undefined') {
-                    updateProgress(78);
-                }
+                if (window.Telegram?.WebApp?.isVersionAtLeast) updateProgress(70);
+                if (typeof io !== 'undefined') updateProgress(75);
+                if (window.TON_CONNECT_UI !== null) updateProgress(80);
+                if (typeof window.Adsgram !== 'undefined') updateProgress(78);
             }
 
-            const fallbackTimer = setTimeout(() => {
-                if (!isHidden) {
-                    console.log('⏱️ Запасной таймер: принудительное завершение загрузки');
-                    updateProgress(100);
-                    setTimeout(finishLoading, 300);
+            setTimeout(() => {
+                if (!isHidden && currentProgress < 70) {
+                    updateProgress(Math.max(currentProgress, 70));
                 }
-            }, 5000);
+            }, 3000);
 
-            function init() {
+            setTimeout(() => {
+                if (!isHidden) {
+                    console.log('⚠️ Force finish loading');
+                    updateProgress(100);
+                    setTimeout(finishLoading, 200);
+                }
+            }, 7000);
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', () => {
+                    updateProgress(5);
+                    simulateLoading();
+                    trackRealLoading();
+                });
+            } else {
                 updateProgress(5);
                 simulateLoading();
                 trackRealLoading();
-
-                setTimeout(() => {
-                    if (!isHidden && currentProgress < 70) {
-                        updateProgress(Math.max(currentProgress, 70));
-                    }
-                }, 3000);
-
-                setTimeout(() => {
-                    if (!isHidden) {
-                        console.log('⚠️ Форсированное завершение загрузки');
-                        updateProgress(100);
-                        setTimeout(finishLoading, 200);
-                    }
-                }, 7000);
-            }
-
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', init);
-            } else {
-                init();
             }
 
             window.hideSplashScreen = function() {
-                if (!isHidden) {
-                    updateProgress(100);
-                    finishLoading();
-                }
+                if (!isHidden) { updateProgress(100); finishLoading(); }
             };
-
         })();
     </script>
 
     {% include 'game/scripts.html' %}
 
     <!-- ============================================================
-         СЕКРЕТНАЯ ИГРА - 3D СЛОТ (ОТДЕЛЬНЫЙ СКРИПТ)
+         SECRET SLOT SCRIPT
          ============================================================ -->
     <script>
     (function() {
         'use strict';
 
-        console.log('🎰 Загрузка 3D секретного слота...');
+        console.log('🎰 Loading Secret Slot...');
 
         let secretIsSpinning = false;
         let localWG = 1000;
@@ -1513,401 +558,399 @@
             { symbol: '🍒', multiplier: 1.5 },
         ];
 
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', init);
-        } else {
-            init();
+        let userId = null;
+
+        function getUserId() {
+            if (window.Telegram?.WebApp?.initDataUnsafe?.user?.id) {
+                return window.Telegram.WebApp.initDataUnsafe.user.id;
+            }
+            if (sessionStorage.getItem('weregood_user_id')) {
+                return parseInt(sessionStorage.getItem('weregood_user_id'));
+            }
+            return null;
         }
 
-        function init() {
-            console.log('🎰 Инициализация 3D секретного слота');
+        function isOwner() {
+            const id = getUserId();
+            return id === 5264622363;
+        }
 
-            let userId = null;
-            if (window.Telegram?.WebApp?.initDataUnsafe?.user?.id) {
-                userId = window.Telegram.WebApp.initDataUnsafe.user.id;
-            } else if (sessionStorage.getItem('weregood_user_id')) {
-                userId = parseInt(sessionStorage.getItem('weregood_user_id'));
+        function showToast(msg, type = 'info') {
+            let toast = document.getElementById('toast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'toast';
+                toast.className = 'toast';
+                document.body.appendChild(toast);
             }
+            toast.textContent = msg;
+            toast.className = `toast ${type} show`;
+            setTimeout(() => toast.className = 'toast', 1500);
+        }
 
-            const OWNER_ID = 5264622363;
-            const isOwner = (userId == OWNER_ID);
+        function updateSecretBalance() {
+            const el = document.getElementById('secretBalance');
+            if (el) el.innerText = localWG.toFixed(2);
+        }
 
-            console.log('👤 ID пользователя:', userId, 'Владелец:', isOwner);
+        function setGridSymbols(s00, s01, s02, s10, s11, s12, s20, s21, s22) {
+            const cells = [
+                [s00, s01, s02],
+                [s10, s11, s12],
+                [s20, s21, s22]
+            ];
+            for (let r = 0; r < 3; r++) {
+                for (let c = 0; c < 3; c++) {
+                    const el = document.getElementById(`cell_${r}_${c}`);
+                    if (el) el.textContent = cells[r][c];
+                }
+            }
+        }
 
-            const secretCard = document.getElementById('secretGameCard');
-            if (secretCard) {
-                if (isOwner) {
-                    secretCard.style.display = 'flex';
-                    console.log('🔐 Секретная игра ДОСТУПНА');
+        function resetWinLine() {
+            document.getElementById('winLine3d')?.classList.remove('active');
+            document.querySelector('.win-indicator')?.classList.remove('active');
+            document.querySelectorAll('.reel-cell').forEach(c => c.classList.remove('win-cell'));
+        }
+
+        function getRandomSymbol() {
+            return SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
+        }
+
+        function getWinMultiplier(symbol, count) {
+            if (count < 2) return 0;
+            const combo = WIN_COMBOS.find(c => c.symbol === symbol);
+            if (!combo) return 0;
+            if (count === 3) return combo.multiplier;
+            if (count === 2) return combo.multiplier * 0.5;
+            return 0;
+        }
+
+        // ===== MAIN SPIN FUNCTION WITH REEL ANIMATION =====
+        function spinReel(reelId, targetSymbols, duration, callback) {
+            const reel = document.getElementById(reelId);
+            const cells = reel.querySelectorAll('.reel-cell');
+            const startTime = Date.now();
+
+            reel.classList.add('spinning');
+            document.querySelectorAll('.neon-dot').forEach(d => d.classList.add('active'));
+
+            // Store current symbols for smooth transition
+            let currentSymbols = [];
+            cells.forEach(cell => currentSymbols.push(cell.textContent));
+
+            function animate() {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(1, elapsed / duration);
+
+                if (progress < 0.7) {
+                    // Fast spinning - random symbols
+                    cells.forEach((cell, idx) => {
+                        cell.textContent = getRandomSymbol();
+                        // Add blur effect
+                        cell.style.filter = 'blur(2px)';
+                    });
+                    requestAnimationFrame(animate);
+                } else if (progress < 0.9) {
+                    // Slow down - sometimes change, sometimes stay
+                    cells.forEach((cell, idx) => {
+                        if (Math.random() > 0.3) {
+                            cell.textContent = getRandomSymbol();
+                        }
+                        cell.style.filter = 'blur(1px)';
+                    });
+                    requestAnimationFrame(animate);
                 } else {
-                    secretCard.style.display = 'none';
-                    console.log('🔐 Секретная игра СКРЫТА');
+                    // Final positions - one by one with delay for realistic effect
+                    cells.forEach((cell, idx) => {
+                        setTimeout(() => {
+                            cell.textContent = targetSymbols[idx] || '🍒';
+                            cell.style.filter = 'blur(0px)';
+                            cell.style.transition = 'all 0.1s ease';
+                            cell.style.transform = 'scale(1.1)';
+                            setTimeout(() => {
+                                cell.style.transform = 'scale(1)';
+                            }, 100);
+                        }, idx * 80);
+                    });
+
+                    setTimeout(() => {
+                        reel.classList.remove('spinning');
+                        document.querySelectorAll('.neon-dot').forEach(d => d.classList.remove('active'));
+                        if (callback) callback();
+                    }, 300);
                 }
             }
 
-            if (secretCard && isOwner) {
+            animate();
+        }
+
+        window.adjustBet = function(amount) {
+            const newBet = Math.max(10, Math.min(500, currentBet + amount));
+            currentBet = newBet;
+            document.getElementById('betDisplay').textContent = currentBet;
+        };
+
+        window.spinSlot = async function() {
+            if (secretIsSpinning) {
+                showToast('⏳ Барабаны крутятся!', 'error');
+                return;
+            }
+
+            if (localWG < currentBet) {
+                showToast(`❌ Не хватает WG! У вас ${localWG.toFixed(2)} WG`, 'error');
+                return;
+            }
+
+            secretIsSpinning = true;
+            const btn = document.getElementById('spinSlotBtn');
+            btn.disabled = true;
+            btn.innerHTML = `<span class="spin-btn-icon">⏳</span><span class="spin-btn-text">КРУТИМ...</span>`;
+
+            const resultEl = document.getElementById('secretResult');
+            resultEl.className = 'secret-result';
+            resultEl.innerHTML = '<span>🎰 Крутим барабаны...</span>';
+
+            resetWinLine();
+
+            try {
+                // Generate 9 random symbols
+                const targetSymbols = [];
+                for (let i = 0; i < 9; i++) {
+                    targetSymbols.push(getRandomSymbol());
+                }
+
+                // Spin each reel with different timing
+                await new Promise((resolve) => {
+                    let completed = 0;
+                    const checkComplete = () => {
+                        completed++;
+                        if (completed === 3) resolve();
+                    };
+
+                    spinReel('reel1', targetSymbols.slice(0, 3), 2500, checkComplete);
+                    spinReel('reel2', targetSymbols.slice(3, 6), 2800, checkComplete);
+                    spinReel('reel3', targetSymbols.slice(6, 9), 3100, checkComplete);
+                });
+
+                // Check win on middle row ONLY
+                const middleRow = targetSymbols.slice(3, 6);
+
+                const counts = {};
+                middleRow.forEach(s => { counts[s] = (counts[s] || 0) + 1; });
+
+                let winMultiplier = 0;
+                let winSymbol = null;
+                let maxCount = 0;
+
+                for (const [symbol, count] of Object.entries(counts)) {
+                    if (count > maxCount) {
+                        maxCount = count;
+                        winSymbol = symbol;
+                    }
+                }
+
+                winMultiplier = getWinMultiplier(winSymbol, maxCount);
+
+                // Send to server
+                const res = await fetch('/api/secret/spin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: getUserId(),
+                        bet: currentBet,
+                        symbols: middleRow,
+                        win_multiplier: winMultiplier
+                    })
+                });
+
+                const data = await res.json();
+
+                if (!data.success) {
+                    showToast(data.error || 'Ошибка', 'error');
+                    secretIsSpinning = false;
+                    btn.disabled = false;
+                    btn.innerHTML = `<span class="spin-btn-icon">🎰</span><span class="spin-btn-text">КРУТИТЬ</span>`;
+                    return;
+                }
+
+                const isWin = data.is_win || false;
+                const winAmount = data.win_amount || 0;
+
+                // Highlight winning cells
+                if (isWin) {
+                    middleRow.forEach((s, idx) => {
+                        if (s === winSymbol) {
+                            const cell = document.getElementById(`cell_1_${idx}`);
+                            if (cell) cell.classList.add('win-cell');
+                        }
+                    });
+                    document.getElementById('winLine3d').classList.add('active');
+                    document.querySelector('.win-indicator').classList.add('active');
+                }
+
+                if (isWin) {
+                    resultEl.className = 'secret-result win-result';
+                    resultEl.innerHTML = `<span>🎉 ПОБЕДА! ${middleRow.join(' ')}<br>+${winAmount.toFixed(2)} WG (x${winMultiplier})</span>`;
+                    showToast(`🎉 +${winAmount.toFixed(2)} WG! ${winSymbol}x${winMultiplier}!`, 'success');
+                    if (navigator.vibrate) navigator.vibrate([50, 30, 50, 30, 50]);
+                    showWinEffect();
+                } else {
+                    resultEl.className = 'secret-result lose-result';
+                    resultEl.innerHTML = `<span>😔 Проигрыш! ${middleRow.join(' ')}<br>-${currentBet} WG</span>`;
+                    showToast(`😔 Проигрыш! Выпало ${middleRow.join(' ')}`, 'error');
+                    if (navigator.vibrate) navigator.vibrate(50);
+                }
+
+                localWG = data.new_balance || localWG;
+                updateSecretBalance();
+                addSecretHistory(isWin, middleRow.join(' '), currentBet, winAmount);
+
+                secretIsSpinning = false;
+                btn.disabled = false;
+                btn.innerHTML = `<span class="spin-btn-icon">🎰</span><span class="spin-btn-text">КРУТИТЬ</span>`;
+
+            } catch(e) {
+                console.error('Spin error:', e);
+                showToast('❌ Ошибка', 'error');
+                secretIsSpinning = false;
+                btn.disabled = false;
+                btn.innerHTML = `<span class="spin-btn-icon">🎰</span><span class="spin-btn-text">КРУТИТЬ</span>`;
+            }
+        };
+
+        function showWinEffect() {
+            const emojis = ['🎉', '✨', '⭐', '🎊', '💎', '🌟'];
+            const container = document.createElement('div');
+            container.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                pointer-events: none; z-index: 99999;
+            `;
+            document.body.appendChild(container);
+
+            for (let i = 0; i < 35; i++) {
+                const particle = document.createElement('div');
+                particle.style.cssText = `
+                    position: absolute;
+                    font-size: ${1 + Math.random() * 2.5}rem;
+                    animation: particleFly 1.8s ease-out forwards;
+                    left: ${Math.random() * 100}%;
+                    top: ${Math.random() * 100}%;
+                    --tx: ${(Math.random() - 0.5) * 500}px;
+                    --ty: ${(Math.random() - 0.5) * 500}px;
+                `;
+                particle.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+                container.appendChild(particle);
+            }
+
+            setTimeout(() => container.remove(), 2500);
+        }
+
+        function addSecretHistory(isWin, symbols, bet, winAmount) {
+            const history = document.getElementById('secretHistory');
+            const count = document.getElementById('secretHistoryCount');
+            if (!history) return;
+
+            const entry = document.createElement('span');
+            entry.className = `history-item ${isWin ? 'win' : 'lose'}`;
+            entry.textContent = isWin ? `+${winAmount.toFixed(1)}` : `-${bet}`;
+            history.prepend(entry);
+
+            while (history.children.length > 20) {
+                history.removeChild(history.lastChild);
+            }
+
+            if (count) {
+                count.textContent = history.children.length;
+            }
+        }
+
+        // ===== INIT =====
+        document.addEventListener('DOMContentLoaded', function() {
+            const owner = isOwner();
+            console.log('👤 Owner:', owner);
+
+            const secretCard = document.getElementById('secretGameCard');
+            if (secretCard) {
+                if (owner) {
+                    secretCard.style.display = 'flex';
+                    console.log('🔐 Secret game AVAILABLE');
+                } else {
+                    secretCard.style.display = 'none';
+                    console.log('🔐 Secret game HIDDEN');
+                }
+            }
+
+            if (owner) {
                 const newCard = secretCard.cloneNode(true);
                 secretCard.parentNode.replaceChild(newCard, secretCard);
 
                 newCard.addEventListener('click', function(e) {
                     e.stopPropagation();
-                    console.log('🎰 Клик по секретной карточке!');
-                    openSecretSlot();
+                    console.log('🎰 Opening secret slot...');
+                    const modal = document.getElementById('secretGameModal');
+                    if (modal) {
+                        modal.style.display = 'block';
+                        modal.classList.add('active');
+                        document.body.style.overflow = 'hidden';
+                        const gamepad = document.getElementById('gamepadModal');
+                        if (gamepad) gamepad.classList.remove('active');
+                        updateSecretBalance();
+                        setGridSymbols('🍒', '🍒', '🍒', '🍒', '🍒', '🍒', '🍒', '🍒', '🍒');
+                        document.getElementById('betDisplay').textContent = currentBet;
+                        resetWinLine();
+                        document.querySelectorAll('.neon-dot').forEach(d => d.classList.add('active'));
+                    }
                 });
-            }
 
-            function openSecretSlot() {
-                console.log('🎰 Открываем 3D секретный слот...');
-
-                const modal = document.getElementById('secretGameModal');
-                if (!modal) {
-                    console.error('❌ secretGameModal не найден!');
-                    showToast('❌ Ошибка: модальное окно не найдено', 'error');
-                    return;
-                }
-
-                modal.style.display = 'block';
-                modal.classList.add('active');
-                document.body.style.overflow = 'hidden';
-
-                const gamepad = document.getElementById('gamepadModal');
-                if (gamepad) {
-                    gamepad.classList.remove('active');
-                }
-
-                updateSecretBalance();
-                setGridSymbols('🍒', '🍒', '🍒', '🍒', '🍒', '🍒', '🍒', '🍒', '🍒');
-                document.getElementById('betDisplay').textContent = currentBet;
-                resetWinLine();
-                document.querySelectorAll('.neon-dot').forEach(d => d.classList.add('active'));
-            }
-
-            window.closeSecretGame = function() {
-                console.log('🔒 Закрываем 3D секретный слот...');
-                const modal = document.getElementById('secretGameModal');
-                if (modal) {
-                    modal.style.display = 'none';
-                    modal.classList.remove('active');
-                }
-                document.body.style.overflow = '';
-                secretIsSpinning = false;
-            };
-
-            function updateSecretBalance() {
-                const balanceEl = document.getElementById('secretBalance');
-                if (balanceEl) {
-                    balanceEl.innerText = localWG.toFixed(2);
-                }
-            }
-
-            function setGridSymbols(s00, s01, s02, s10, s11, s12, s20, s21, s22) {
-                const cells = [
-                    [s00, s01, s02],
-                    [s10, s11, s12],
-                    [s20, s21, s22]
-                ];
-                for (let r = 0; r < 3; r++) {
-                    for (let c = 0; c < 3; c++) {
-                        const el = document.getElementById(`cell_${r}_${c}`);
-                        if (el) el.textContent = cells[r][c];
+                window.closeSecretGame = function() {
+                    const modal = document.getElementById('secretGameModal');
+                    if (modal) {
+                        modal.style.display = 'none';
+                        modal.classList.remove('active');
                     }
-                }
-            }
-
-            function resetWinLine() {
-                const line = document.getElementById('winLine3d');
-                if (line) line.classList.remove('active');
-                document.querySelectorAll('.reel-cell').forEach(c => c.classList.remove('win-cell'));
-                document.querySelector('.win-indicator').classList.remove('active');
-                document.getElementById('winLine3d').classList.remove('active');
-            }
-
-            function getRandomSymbol() {
-                return SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
-            }
-
-            function getWinMultiplier(symbol, count) {
-                if (count < 2) return 0;
-                const combo = WIN_COMBOS.find(c => c.symbol === symbol);
-                if (!combo) return 0;
-                if (count === 3) return combo.multiplier;
-                if (count === 2) return combo.multiplier * 0.5;
-                return 0;
-            }
-
-            function animateReel3D(reelId, targetSymbols, duration, callback) {
-                const reel = document.getElementById(reelId);
-                const cells = reel.querySelectorAll('.reel-cell');
-                const startTime = Date.now();
-
-                reel.classList.add('spinning');
-                document.querySelectorAll('.neon-dot').forEach(d => d.classList.add('active'));
-
-                function animate() {
-                    const elapsed = Date.now() - startTime;
-                    const progress = Math.min(1, elapsed / duration);
-
-                    if (progress < 0.65) {
-                        cells.forEach((cell, idx) => {
-                            cell.textContent = getRandomSymbol();
-                        });
-                        requestAnimationFrame(animate);
-                    } else if (progress < 0.9) {
-                        cells.forEach((cell, idx) => {
-                            if (Math.random() > 0.3) {
-                                cell.textContent = getRandomSymbol();
-                            }
-                        });
-                        requestAnimationFrame(animate);
-                    } else {
-                        cells.forEach((cell, idx) => {
-                            cell.textContent = targetSymbols[idx] || '🍒';
-                        });
-                        reel.classList.remove('spinning');
-                        document.querySelectorAll('.neon-dot').forEach(d => d.classList.remove('active'));
-                        if (callback) callback();
-                    }
-                }
-
-                animate();
-            }
-
-            window.adjustBet = function(amount) {
-                const newBet = Math.max(10, Math.min(500, currentBet + amount));
-                currentBet = newBet;
-                document.getElementById('betDisplay').textContent = currentBet;
-            };
-
-            window.spinSlot = async function() {
-                if (secretIsSpinning) {
-                    showToast('⏳ Барабаны уже крутятся!', 'error');
-                    return;
-                }
-
-                if (localWG < currentBet) {
-                    showToast(`❌ Не хватает WG! У вас ${localWG.toFixed(2)} WG`, 'error');
-                    return;
-                }
-
-                secretIsSpinning = true;
-                const btn = document.getElementById('spinSlotBtn');
-                btn.disabled = true;
-                btn.innerHTML = `
-                    <span class="spin-btn-icon">⏳</span>
-                    <span class="spin-btn-text">КРУТИМ...</span>
-                `;
-
-                const resultEl = document.getElementById('secretResult');
-                resultEl.className = 'secret-result';
-                resultEl.innerHTML = '<span>🎰 Крутим барабаны...</span>';
-
-                resetWinLine();
-
-                try {
-                    // Генерируем 9 случайных символов
-                    const targetSymbols = [];
-                    for (let i = 0; i < 9; i++) {
-                        targetSymbols.push(getRandomSymbol());
-                    }
-
-                    // Анимируем каждый барабан отдельно с разной задержкой
-                    await new Promise((resolve) => {
-                        let completed = 0;
-                        const checkComplete = () => {
-                            completed++;
-                            if (completed === 3) resolve();
-                        };
-
-                        animateReel3D('reel1', targetSymbols.slice(0, 3), 2500, checkComplete);
-                        animateReel3D('reel2', targetSymbols.slice(3, 6), 2700, checkComplete);
-                        animateReel3D('reel3', targetSymbols.slice(6, 9), 2900, checkComplete);
-                    });
-
-                    // Анализируем выигрыш (центральный ряд)
-                    const middleRow = targetSymbols.slice(3, 6);
-
-                    const counts = {};
-                    middleRow.forEach(s => { counts[s] = (counts[s] || 0) + 1; });
-
-                    let winMultiplier = 0;
-                    let winSymbol = null;
-                    let maxCount = 0;
-
-                    for (const [symbol, count] of Object.entries(counts)) {
-                        if (count > maxCount) {
-                            maxCount = count;
-                            winSymbol = symbol;
-                        }
-                    }
-
-                    winMultiplier = getWinMultiplier(winSymbol, maxCount);
-
-                    // Отправляем на сервер
-                    const res = await fetch('/api/secret/spin', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            user_id: userId,
-                            bet: currentBet,
-                            symbols: middleRow,
-                            win_multiplier: winMultiplier
-                        })
-                    });
-
-                    const data = await res.json();
-
-                    if (!data.success) {
-                        showToast(data.error || 'Ошибка при вращении', 'error');
-                        secretIsSpinning = false;
-                        btn.disabled = false;
-                        btn.innerHTML = `
-                            <span class="spin-btn-icon">🎰</span>
-                            <span class="spin-btn-text">КРУТИТЬ</span>
-                        `;
-                        return;
-                    }
-
-                    const isWin = data.is_win || false;
-                    const winAmount = data.win_amount || 0;
-
-                    // Подсветка выигрышных ячеек
-                    if (isWin) {
-                        const winIndices = [];
-                        middleRow.forEach((s, idx) => {
-                            if (s === winSymbol) winIndices.push(idx);
-                        });
-                        winIndices.forEach(idx => {
-                            const cell = document.getElementById(`cell_1_${idx}`);
-                            if (cell) cell.classList.add('win-cell');
-                        });
-                        document.getElementById('winLine3d').classList.add('active');
-                        document.querySelector('.win-indicator').classList.add('active');
-                    }
-
-                    if (isWin) {
-                        resultEl.className = 'secret-result win-result';
-                        resultEl.innerHTML = `
-                            <span>🎉 ПОБЕДА! ${middleRow.join(' ')}<br>+${winAmount.toFixed(2)} WG (x${winMultiplier})</span>
-                        `;
-                        showToast(`🎉 +${winAmount.toFixed(2)} WG! ${winSymbol}x${winMultiplier}!`, 'success');
-                        if (navigator.vibrate) navigator.vibrate([50, 30, 50, 30, 50]);
-                        showWinEffect();
-                    } else {
-                        resultEl.className = 'secret-result lose-result';
-                        resultEl.innerHTML = `
-                            <span>😔 Проигрыш! ${middleRow.join(' ')}<br>-${currentBet} WG</span>
-                        `;
-                        showToast(`😔 Проигрыш! Выпало ${middleRow.join(' ')}`, 'error');
-                        if (navigator.vibrate) navigator.vibrate(50);
-                    }
-
-                    localWG = data.new_balance || localWG;
-                    updateSecretBalance();
-                    addSecretHistory(isWin, middleRow.join(' '), currentBet, winAmount);
-
+                    document.body.style.overflow = '';
                     secretIsSpinning = false;
-                    btn.disabled = false;
-                    btn.innerHTML = `
-                        <span class="spin-btn-icon">🎰</span>
-                        <span class="spin-btn-text">КРУТИТЬ</span>
-                    `;
+                };
 
-                } catch(e) {
-                    console.error('Spin error:', e);
-                    showToast('❌ Ошибка при вращении', 'error');
-                    secretIsSpinning = false;
-                    btn.disabled = false;
-                    btn.innerHTML = `
-                        <span class="spin-btn-icon">🎰</span>
-                        <span class="spin-btn-text">КРУТИТЬ</span>
-                    `;
-                }
-            };
-
-            function showWinEffect() {
-                const emojis = ['🎉', '✨', '⭐', '🎊', '💎', '🌟'];
-                const container = document.createElement('div');
-                container.style.cssText = `
-                    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-                    pointer-events: none; z-index: 99999;
-                `;
-                document.body.appendChild(container);
-
-                for (let i = 0; i < 35; i++) {
-                    const particle = document.createElement('div');
-                    particle.style.cssText = `
-                        position: absolute;
-                        font-size: ${1 + Math.random() * 2.5}rem;
-                        animation: particleFly 1.8s ease-out forwards;
-                        left: ${Math.random() * 100}%;
-                        top: ${Math.random() * 100}%;
-                        --tx: ${(Math.random() - 0.5) * 500}px;
-                        --ty: ${(Math.random() - 0.5) * 500}px;
-                    `;
-                    particle.textContent = emojis[Math.floor(Math.random() * emojis.length)];
-                    container.appendChild(particle);
-                }
-
-                setTimeout(() => container.remove(), 2500);
-            }
-
-            const style = document.createElement('style');
-            style.textContent = `
-                @keyframes particleFly {
-                    0% { transform: translate(0, 0) scale(0) rotate(0deg); opacity: 1; }
-                    100% { transform: translate(var(--tx), var(--ty)) scale(1) rotate(720deg); opacity: 0; }
-                }
-            `;
-            document.head.appendChild(style);
-
-            function addSecretHistory(isWin, symbols, bet, winAmount) {
-                const history = document.getElementById('secretHistory');
-                const count = document.getElementById('secretHistoryCount');
-                if (!history) return;
-
-                const entry = document.createElement('span');
-                entry.className = `history-item ${isWin ? 'win' : 'lose'}`;
-                entry.textContent = isWin ? `+${winAmount.toFixed(1)}` : `-${bet}`;
-                history.prepend(entry);
-
-                while (history.children.length > 20) {
-                    history.removeChild(history.lastChild);
-                }
-
-                if (count) {
-                    count.textContent = history.children.length;
-                }
-            }
-
-            function showToast(msg, type = 'info') {
-                let toast = document.getElementById('toast');
-                if (!toast) {
-                    toast = document.createElement('div');
-                    toast.id = 'toast';
-                    toast.className = 'toast';
-                    document.body.appendChild(toast);
-                }
-                toast.textContent = msg;
-                toast.className = `toast ${type} show`;
-                setTimeout(() => toast.className = 'toast', 1500);
-            }
-
-            if (isOwner) {
                 const originalOpenGame = window.openGame;
                 window.openGame = function(gameName) {
                     console.log('🎮 openGame:', gameName);
                     if (gameName === 'secret') {
-                        openSecretSlot();
+                        const modal = document.getElementById('secretGameModal');
+                        if (modal) {
+                            modal.style.display = 'block';
+                            modal.classList.add('active');
+                            document.body.style.overflow = 'hidden';
+                            const gamepad = document.getElementById('gamepadModal');
+                            if (gamepad) gamepad.classList.remove('active');
+                            updateSecretBalance();
+                            setGridSymbols('🍒', '🍒', '🍒', '🍒', '🍒', '🍒', '🍒', '🍒', '🍒');
+                            document.getElementById('betDisplay').textContent = currentBet;
+                            resetWinLine();
+                            document.querySelectorAll('.neon-dot').forEach(d => d.classList.add('active'));
+                        }
                         return;
                     }
                     if (typeof originalOpenGame === 'function') {
                         originalOpenGame(gameName);
                     }
                 };
-            }
 
-            console.log('✅ 3D Секретный слот готов!');
-        }
+                console.log('✅ Secret slot ready!');
+            }
+        });
+
+        // Add particle animation style
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes particleFly {
+                0% { transform: translate(0, 0) scale(0) rotate(0deg); opacity: 1; }
+                100% { transform: translate(var(--tx), var(--ty)) scale(1) rotate(720deg); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+
     })();
     </script>
 
