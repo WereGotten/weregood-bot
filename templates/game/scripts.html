@@ -4129,15 +4129,18 @@ async function loadTonWalletStatus() {
     if (gameName === 'fortune') {
         const fortuneModal = document.getElementById('fortuneModal');
         if (fortuneModal) {
-            if (typeof preCacheWheel === 'function') {
-                preCacheWheel();
-            }
+            cacheFortuneDOM();
             fortuneModal.classList.add('active');
             document.body.style.overflow = 'hidden';
-            closeGamepad();
+            preCacheWheel();
+            if (typeof closeGamepad === 'function') closeGamepad();
+            startFortunePolling();
+            startFortuneTimer();
+            initFortuneTabs();
+            initBetPresets();
         }
     } else if (gameName === 'secret') {
-        // ===== ВОТ ЭТОТ БЛОК ДОБАВЬ! =====
+        // ===== ЭТОТ БЛОК ДОБАВЬ! =====
         console.log('🔐 Вызов openSecretGame()');
         if (typeof openSecretGame === 'function') {
             openSecretGame();
