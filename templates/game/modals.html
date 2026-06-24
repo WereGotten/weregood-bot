@@ -204,56 +204,33 @@
         <!-- Шапка -->
         <div class="case-header">
             <button class="case-back-btn" onclick="closeCase()">←</button>
-            <h2 id="caseTitle">📦 Обычный кейс</h2>
-            <span class="premium-badge">✦ PREMIUM</span>
+            <h2 id="caseTitle">Обычный кейс</h2>
+            <div class="case-header-right">
+                <span class="case-price" id="casePriceDisplay">500</span>
+                <span class="case-count" id="caseCount">0</span>
+            </div>
         </div>
 
         <!-- БАРАБАН -->
         <div class="case-slot-wrapper">
             <div class="case-slot-machine">
-                <!-- Верхняя подсветка -->
                 <div class="case-slot-top-glow"></div>
-
-                <!-- Барабан -->
                 <div class="case-slot-window" id="caseSlotWindow">
-                    <div class="case-slot-track" id="caseSlotTrack">
-                        <!-- Генерируется через JS -->
-                    </div>
-                    <!-- Указатель -->
+                    <div class="case-slot-track" id="caseSlotTrack"></div>
                     <div class="case-slot-pointer"></div>
-                    <!-- Боковые тени -->
                     <div class="case-slot-shadow-left"></div>
                     <div class="case-slot-shadow-right"></div>
-                    <!-- Центральное свечение -->
                     <div class="case-slot-center-glow"></div>
                 </div>
-
-                <!-- Нижняя подсветка -->
                 <div class="case-slot-bottom-glow"></div>
             </div>
         </div>
 
-        <!-- ИНФОРМАЦИЯ -->
-        <div class="case-info">
-            <div class="case-price">
-                <span class="case-info-icon">💰</span>
-                <span>Цена: <span id="casePriceDisplay">500</span> WG</span>
-            </div>
-            <div class="case-count">
-                <span class="case-info-icon">🎫</span>
-                <span>Кейсов: <span id="caseCount">0</span></span>
-            </div>
-        </div>
-
-        <!-- КНОПКИ -->
+        <!-- КНОПКА ОТКРЫТЬ -->
         <div class="case-actions">
             <button class="case-spin-btn" id="caseSpinBtn" onclick="spinCase()">
                 <span class="btn-icon">🎰</span>
                 <span class="btn-text">ОТКРЫТЬ</span>
-            </button>
-            <button class="case-buy-btn" onclick="buyCase()">
-                <span class="btn-icon">💰</span>
-                <span class="btn-text">Купить</span>
             </button>
         </div>
 

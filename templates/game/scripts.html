@@ -7014,7 +7014,7 @@ function translateElement(el, key) {
 setTimeout(loadLanguageSettings, 500);
 
     // ================================================================
-// КЕЙСЫ - ОПТИМИЗИРОВАННАЯ ВЕРСИЯ
+// КЕЙСЫ - С РЕДКОСТЯМИ
 // ================================================================
 
 let currentCaseId = 1;
@@ -7025,16 +7025,16 @@ let animationFrame = null;
 
 const caseData = {
     1: {
-        name: '📦 Обычный кейс',
+        name: 'Обычный кейс',
         price: 500,
         rewards: [
-            { icon: '/static/diamond.png', value: '50 LP' },
-            { icon: '/static/wallet.png', value: '10 WG' },
-            { icon: '/static/diamond.png', value: '100 LP' },
-            { icon: '/static/trophy.png', value: 'Улучшение' },
-            { icon: '/static/wallet.png', value: '500 WG' },
-            { icon: '/static/ticket.png', value: 'Билет' },
-            { icon: '/static/lightning.png', value: '+30 энергии' }
+            { icon: '/static/wallet.png', value: '10 WG', rarity: 'common' },
+            { icon: '/static/lightning.png', value: '+30 энергии', rarity: 'common' },
+            { icon: '/static/ticket.png', value: 'Билет', rarity: 'rare' },
+            { icon: '/static/trophy.png', value: 'Улучшение', rarity: 'rare' },
+            { icon: '/static/wallet.png', value: '500 WG', rarity: 'epic' },
+            { icon: '/static/diamond.png', value: '50 LP', rarity: 'epic' },
+            { icon: '/static/diamond.png', value: '100 LP', rarity: 'legendary' }
         ]
     }
 };
@@ -7048,7 +7048,7 @@ function openCase(caseId) {
     const page = document.getElementById('casePage');
     if (!page) return;
 
-    document.getElementById('caseTitle').textContent = '📦 ' + caseInfo.name;
+    document.getElementById('caseTitle').textContent = caseInfo.name;
     document.getElementById('casePriceDisplay').textContent = caseInfo.price;
 
     renderRewardsGrid(caseInfo.rewards);
@@ -7084,7 +7084,7 @@ function renderSlotTrack(rewards) {
         for (let i = 0; i < rewards.length; i++) {
             const reward = rewards[i];
             html += `
-                <div class="case-slot-item" data-index="${i}" data-cycle="${cycle}">
+                <div class="case-slot-item rarity-${reward.rarity}" data-index="${i}" data-cycle="${cycle}">
                     <img src="${reward.icon}" class="item-icon" alt="${reward.value}" loading="lazy">
                     <span class="item-value">${reward.value}</span>
                 </div>
@@ -7102,7 +7102,7 @@ function renderRewardsGrid(rewards) {
     let html = '';
     rewards.forEach(reward => {
         html += `
-            <div class="case-reward-card">
+            <div class="case-reward-card rarity-${reward.rarity}">
                 <img src="${reward.icon}" class="reward-icon" alt="${reward.value}" loading="lazy">
                 <span class="reward-value">${reward.value}</span>
             </div>
@@ -7131,9 +7131,9 @@ function spinCase() {
     const caseInfo = caseData[currentCaseId];
     if (!caseInfo) return;
 
+    // Если нет кейсов — показываем окно покупки
     if (caseCount <= 0) {
-        showToast('❌ У вас нет кейсов! Купите сначала.', 'error');
-        triggerHaptic('medium');
+        showBuyCaseModal();
         return;
     }
 
@@ -7240,7 +7240,7 @@ function spinCase() {
             if (distance > 60 && speed > 10) {
                 const blurAmount = Math.min(2, (distance - 60) / 50);
                 el.style.filter = `blur(${blurAmount}px)`;
-                el.style.opacity = Math.max(0.25, 1 - (distance / 350));
+                el.style.opacity = Math.max(0.2, 1 - (distance / 350));
                 el.style.transform = `scale(${Math.max(0.85, 1 - (distance / 500))})`;
             } else {
                 el.style.filter = '';
@@ -7324,6 +7324,18 @@ function spinCase() {
     };
 }
 
+// ===== МОДАЛКА ПОКУПКИ КЕЙСА =====
+function showBuyCaseModal() {
+    const caseInfo = caseData[currentCaseId];
+    if (!caseInfo) return;
+
+    const message = `🎰 У вас нет кейсов!\n\n💰 Цена: ${caseInfo.price} WG\n\nКупить кейс?`;
+
+    if (confirm(message)) {
+        buyCase();
+    }
+}
+
 // ===== ПОКУПКА =====
 function buyCase() {
     const caseInfo = caseData[currentCaseId];
@@ -7334,8 +7346,6 @@ function buyCase() {
         return;
     }
 
-    if (!confirm(`Купить ${caseInfo.name} за ${caseInfo.price} WG?`)) return;
-
     localWG -= caseInfo.price;
     updateUI();
 
@@ -7343,7 +7353,7 @@ function buyCase() {
     localStorage.setItem('weregood_cases', caseCount.toString());
     updateCaseCount();
 
-    showToast(`✅ ${caseInfo.name} куплен! Нажмите "ОТКРЫТЬ"`, 'success');
+    showToast(`✅ Кейс куплен! Нажмите "ОТКРЫТЬ"`, 'success');
     triggerHaptic('light');
     syncData(true);
 }
