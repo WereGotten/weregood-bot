@@ -6359,22 +6359,8 @@ body.light-theme .star-upgrade-card {
 }
 
 /* ============================================================
-   КЕЙСЫ - ПОЛНЫЙ ДИЗАЙН
+   КЕЙСЫ - НОВЫЙ ДИЗАЙН С АНИМАЦИЕЙ
    ============================================================ */
-
-/* ===== КАРТОЧКА КЕЙСА В МЕНЮ ===== */
-.case-card {
-    transition: all 0.2s ease;
-}
-
-.case-card:hover {
-    transform: translateX(6px);
-    border-color: rgba(255, 215, 0, 0.3) !important;
-}
-
-.case-card:active {
-    transform: scale(0.98);
-}
 
 /* ===== СТРАНИЦА КЕЙСА ===== */
 .case-page {
@@ -6385,44 +6371,39 @@ body.light-theme .star-upgrade-card {
     bottom: 0;
     max-width: 500px;
     margin: 0 auto;
-    background: linear-gradient(145deg, #0a0a1a, #0d0d25);
+    background: linear-gradient(160deg, #0a0a1a 0%, #0d0d25 100%);
     z-index: 300;
     transform: translateX(100%);
     transition: transform 0.35s cubic-bezier(0.2, 0.9, 0.4, 1.1);
     overflow-y: auto;
-    padding: 0 20px 30px;
+    padding: 0 16px 30px;
 }
 
 .case-page.active {
     transform: translateX(0);
 }
 
-.case-page-content {
-    min-height: 100vh;
-    padding-bottom: 20px;
-}
-
 /* ===== ШАПКА ===== */
 .case-header {
     display: flex;
     align-items: center;
-    gap: 16px;
-    padding: 20px 0 16px;
-    border-bottom: 1px solid rgba(255, 215, 0, 0.08);
-    margin-bottom: 20px;
+    gap: 14px;
+    padding: 16px 0 14px;
+    border-bottom: 1px solid rgba(255, 215, 0, 0.1);
+    margin-bottom: 16px;
     position: sticky;
     top: 0;
-    background: linear-gradient(145deg, #0a0a1a, #0d0d25);
+    background: linear-gradient(160deg, #0a0a1a 0%, #0d0d25 100%);
     z-index: 10;
 }
 
 .case-back-btn {
     background: rgba(255, 255, 255, 0.06);
     border: none;
-    width: 40px;
-    height: 40px;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     color: #fff;
     cursor: pointer;
     display: flex;
@@ -6437,197 +6418,176 @@ body.light-theme .star-upgrade-card {
 }
 
 .case-header h2 {
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 700;
     color: #FFD700;
     margin: 0;
 }
 
-/* ===== ОСНОВНАЯ ЗОНА ===== */
-.case-main {
+/* ===== СЛОТ ДЛЯ КЕЙСА ===== */
+.case-slot-container {
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 24px;
+    padding: 16px;
+    border: 2px solid rgba(255, 215, 0, 0.12);
+    margin-bottom: 16px;
+    position: relative;
+}
+
+.case-slot-window {
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 16px;
+    height: 140px;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.case-slot-window::before,
+.case-slot-window::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 30px;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.case-slot-window::before {
+    top: 0;
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.9), transparent);
+}
+
+.case-slot-window::after {
+    bottom: 0;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
+}
+
+.case-slot-pointer {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #FFD700;
+    font-size: 1.8rem;
+    z-index: 10;
+    text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+    pointer-events: none;
+    animation: pointerPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pointerPulse {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.7; }
+    50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+}
+
+.case-slot-reel {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    padding: 10px 0 20px;
+    transition: none;
+    will-change: transform;
+    transform: translateY(0);
 }
 
-/* ===== КЕЙС С АНИМАЦИЕЙ ===== */
-.case-box {
-    width: 200px;
-    height: 200px;
-    border-radius: 50%;
-    background: linear-gradient(145deg, rgba(255, 215, 0, 0.12), rgba(255, 165, 0, 0.05));
-    border: 3px solid rgba(255, 215, 0, 0.3);
+.case-slot-reel.spinning {
+    animation: slotSpin 0.08s linear infinite;
+}
+
+@keyframes slotSpin {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(-70px); }
+}
+
+.case-slot-reel.stopping {
+    transition: transform 0.6s cubic-bezier(0.15, 0.85, 0.35, 1.15);
+}
+
+/* ===== СИМВОЛ В БАРАБАНЕ ===== */
+.case-slot-item {
+    height: 70px;
     display: flex;
     align-items: center;
     justify-content: center;
-    position: relative;
-    margin-bottom: 20px;
-    box-shadow: 0 0 60px rgba(255, 215, 0, 0.08);
-    transition: all 0.3s ease;
+    gap: 12px;
+    padding: 0 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.7);
 }
 
-.case-box.spinning {
-    animation: caseSpin 0.6s ease-in-out infinite;
-    border-color: #FFD700;
-    box-shadow: 0 0 80px rgba(255, 215, 0, 0.2);
+.case-slot-item .item-icon {
+    font-size: 2rem;
 }
 
-@keyframes caseSpin {
-    0% { transform: rotate(0deg) scale(1); }
-    25% { transform: rotate(5deg) scale(1.03); }
-    75% { transform: rotate(-5deg) scale(1.03); }
-    100% { transform: rotate(0deg) scale(1); }
+.case-slot-item .item-value {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #fff;
 }
 
-.case-box.opened {
-    animation: caseOpen 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+.case-slot-item.highlight {
+    background: rgba(255, 215, 0, 0.15);
+    border-color: rgba(255, 215, 0, 0.2);
 }
 
-@keyframes caseOpen {
-    0% { transform: scale(1) rotate(0deg); }
-    50% { transform: scale(1.2) rotate(10deg); }
-    100% { transform: scale(1) rotate(0deg); }
+.case-slot-item.highlight .item-value {
+    color: #FFD700;
 }
 
-.case-box-inner {
-    position: relative;
-    width: 100%;
-    height: 100%;
+/* ===== ИНФОРМАЦИЯ О КЕЙСЕ ===== */
+.case-info {
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    justify-content: center;
-}
-
-.case-icon {
-    font-size: 5rem;
-    transition: all 0.3s ease;
-}
-
-.case-box.spinning .case-icon {
-    animation: iconBounce 0.3s ease-in-out infinite alternate;
-}
-
-@keyframes iconBounce {
-    0% { transform: scale(1); }
-    100% { transform: scale(1.1); }
-}
-
-/* ===== БЛЁСТКИ ===== */
-.case-sparkles {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.case-box.spinning .case-sparkles {
-    opacity: 1;
-}
-
-.case-sparkles span {
-    position: absolute;
-    font-size: 1.2rem;
-    animation: sparkleFloat 1.5s ease-in-out infinite;
-}
-
-.case-sparkles span:nth-child(1) { top: 5%; left: 10%; animation-delay: 0s; }
-.case-sparkles span:nth-child(2) { top: 15%; right: 8%; animation-delay: 0.3s; }
-.case-sparkles span:nth-child(3) { bottom: 20%; left: 5%; animation-delay: 0.6s; }
-.case-sparkles span:nth-child(4) { bottom: 10%; right: 12%; animation-delay: 0.9s; }
-.case-sparkles span:nth-child(5) { top: 45%; left: 0%; animation-delay: 0.2s; }
-.case-sparkles span:nth-child(6) { top: 40%; right: 0%; animation-delay: 0.7s; }
-
-@keyframes sparkleFloat {
-    0%, 100% { opacity: 0; transform: translateY(0) scale(0.5); }
-    50% { opacity: 1; transform: translateY(-10px) scale(1); }
-}
-
-/* ===== НАГРАДЫ (ПРЕВЬЮ) ===== */
-.case-rewards-preview {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 10px;
-    margin: 10px 0 16px;
-    width: 100%;
-    max-width: 380px;
-}
-
-.case-reward-item {
+    padding: 12px 16px;
     background: rgba(255, 255, 255, 0.04);
     border-radius: 16px;
-    padding: 10px 14px;
-    text-align: center;
-    min-width: 70px;
-    border: 1px solid rgba(255, 255, 255, 0.04);
-    transition: all 0.3s ease;
+    margin-bottom: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.case-reward-item.central {
-    background: rgba(255, 215, 0, 0.08);
-    border-color: rgba(255, 215, 0, 0.2);
-    transform: scale(1.08);
-    box-shadow: 0 0 30px rgba(255, 215, 0, 0.05);
+.case-price {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.6);
 }
 
-.case-reward-item .case-reward-icon {
-    font-size: 1.6rem;
-    display: block;
-    margin-bottom: 4px;
-}
-
-.case-reward-item .case-reward-value {
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.8);
-}
-
-.case-reward-item.central .case-reward-value {
+.case-price span {
     color: #FFD700;
+    font-weight: 700;
 }
 
-/* ===== СТРЕЛКА ===== */
-.case-arrow-down {
-    font-size: 2.5rem;
+.case-count {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.case-count span {
     color: #FFD700;
-    animation: arrowPulse 1.5s ease-in-out infinite;
-    margin: 6px 0 12px;
-    text-shadow: 0 0 30px rgba(255, 215, 0, 0.2);
+    font-weight: 700;
 }
 
-@keyframes arrowPulse {
-    0%, 100% { transform: translateY(0); opacity: 0.6; }
-    50% { transform: translateY(8px); opacity: 1; }
-}
-
-/* ===== КНОПКИ УПРАВЛЕНИЯ ===== */
-.case-controls {
+/* ===== КНОПКИ ===== */
+.case-actions {
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-    width: 100%;
-    max-width: 350px;
+    gap: 10px;
+    margin-bottom: 16px;
 }
 
 .case-spin-btn {
-    width: 100%;
-    padding: 16px;
+    flex: 2;
+    padding: 14px;
     border: none;
     border-radius: 60px;
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 700;
     background: linear-gradient(135deg, #FFD700, #FFA500);
     color: #0a0a1a;
     cursor: pointer;
     transition: all 0.15s ease;
     box-shadow: 0 4px 20px rgba(255, 215, 0, 0.25);
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
 }
 
 .case-spin-btn:active {
@@ -6640,141 +6600,118 @@ body.light-theme .star-upgrade-card {
     transform: none !important;
 }
 
-.case-counters {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    padding: 6px 4px;
-    font-size: 0.85rem;
-    color: rgba(255, 255, 255, 0.6);
-}
-
-.case-counters strong {
-    color: #FFD700;
-    font-weight: 700;
-}
-
 .case-buy-btn {
+    flex: 1;
+    padding: 14px;
+    border: none;
+    border-radius: 60px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.06);
     color: #FFD700;
     cursor: pointer;
-    padding: 6px 16px;
-    border-radius: 30px;
-    background: rgba(255, 215, 0, 0.1);
     border: 1px solid rgba(255, 215, 0, 0.15);
-    font-weight: 600;
-    font-size: 0.8rem;
     transition: all 0.15s ease;
 }
 
 .case-buy-btn:active {
-    transform: scale(0.95);
-    background: rgba(255, 215, 0, 0.2);
+    transform: scale(0.97);
+    background: rgba(255, 215, 0, 0.1);
 }
 
-/* ===== СПИСОК ВСЕХ НАГРАД ===== */
+/* ===== СПИСОК НАГРАД ===== */
 .case-rewards-list {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 10px;
-    margin-top: 20px;
-    padding-top: 16px;
+    gap: 8px;
+    margin-top: 8px;
+    padding-top: 12px;
     border-top: 1px solid rgba(255, 255, 255, 0.04);
 }
 
-.case-rewards-list .case-reward-item {
+.case-reward-item {
     background: rgba(255, 255, 255, 0.03);
-    border-radius: 14px;
-    padding: 12px 6px;
+    border-radius: 12px;
+    padding: 10px 6px;
     text-align: center;
     border: 1px solid rgba(255, 255, 255, 0.03);
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
 }
 
-.case-rewards-list .case-reward-item:hover {
-    background: rgba(255, 215, 0, 0.05);
-    border-color: rgba(255, 215, 0, 0.1);
-}
-
-.case-rewards-list .case-reward-icon {
-    font-size: 1.8rem;
+.case-reward-item .reward-icon {
+    font-size: 1.6rem;
     display: block;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
 }
 
-.case-rewards-list .case-reward-value {
+.case-reward-item .reward-value {
     font-size: 0.6rem;
     font-weight: 600;
     color: rgba(255, 255, 255, 0.7);
 }
 
+.case-reward-item.active {
+    background: rgba(255, 215, 0, 0.15);
+    border-color: #FFD700;
+    transform: scale(1.05);
+}
+
+.case-reward-item.active .reward-value {
+    color: #FFD700;
+}
+
 /* ===== АДАПТАЦИЯ ===== */
 @media (max-width: 480px) {
-    .case-box {
-        width: 160px;
-        height: 160px;
+    .case-slot-window {
+        height: 120px;
     }
-    .case-icon {
-        font-size: 3.8rem;
+    .case-slot-item {
+        height: 60px;
+        font-size: 0.9rem;
     }
-    .case-rewards-preview {
+    .case-slot-item .item-icon {
+        font-size: 1.6rem;
+    }
+    .case-slot-item .item-value {
+        font-size: 0.85rem;
+    }
+    .case-rewards-list {
+        grid-template-columns: repeat(4, 1fr);
         gap: 6px;
     }
     .case-reward-item {
-        padding: 8px 10px;
-        min-width: 60px;
+        padding: 8px 4px;
     }
-    .case-reward-item .case-reward-icon {
+    .case-reward-item .reward-icon {
         font-size: 1.3rem;
     }
-    .case-reward-item .case-reward-value {
-        font-size: 0.6rem;
+    .case-reward-item .reward-value {
+        font-size: 0.5rem;
     }
-    .case-rewards-list {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 8px;
-    }
-    .case-rewards-list .case-reward-icon {
-        font-size: 1.5rem;
-    }
-    .case-arrow-down {
-        font-size: 2rem;
-    }
-    .case-spin-btn {
-        padding: 14px;
-        font-size: 1rem;
+    .case-info {
+        flex-direction: column;
+        gap: 6px;
+        align-items: stretch;
+        text-align: center;
     }
 }
 
 @media (max-width: 380px) {
-    .case-box {
-        width: 130px;
-        height: 130px;
+    .case-slot-window {
+        height: 100px;
     }
-    .case-icon {
-        font-size: 3rem;
+    .case-slot-item {
+        height: 50px;
+        font-size: 0.8rem;
+        gap: 8px;
     }
-    .case-rewards-preview {
-        gap: 4px;
+    .case-slot-item .item-icon {
+        font-size: 1.3rem;
     }
-    .case-reward-item {
-        padding: 6px 6px;
-        min-width: 50px;
-    }
-    .case-reward-item .case-reward-icon {
-        font-size: 1.1rem;
-    }
-    .case-reward-item .case-reward-value {
-        font-size: 0.5rem;
+    .case-slot-item .item-value {
+        font-size: 0.7rem;
     }
     .case-rewards-list {
         grid-template-columns: repeat(3, 1fr);
-        gap: 6px;
-    }
-    .case-rewards-list .case-reward-item {
-        padding: 8px 4px;
-    }
-    .case-rewards-list .case-reward-icon {
-        font-size: 1.2rem;
     }
 }

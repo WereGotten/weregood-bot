@@ -7014,11 +7014,14 @@ function translateElement(el, key) {
 setTimeout(loadLanguageSettings, 500);
 
     // ================================================================
-// КЕЙСЫ - ПОЛНАЯ ЛОГИКА
+// КЕЙСЫ - С АНИМАЦИЕЙ ПРОКРУТКИ
 // ================================================================
 
-let currentCaseId = 0;
-let caseData = {
+let currentCaseId = 1; // Пока только 1 кейс
+let isCaseSpinning = false;
+
+// ДАННЫЕ КЕЙСА
+const caseData = {
     1: {
         name: '📦 Обычный кейс',
         icon: '📦',
@@ -7033,58 +7036,13 @@ let caseData = {
             { icon: '🎫', value: 'Билет' },
             { icon: '⚡', value: '+30 энергии' }
         ]
-    },
-    2: {
-        name: '🎁 Редкий кейс',
-        icon: '🎁',
-        price: 1000,
-        rewards: [
-            { icon: '💎', value: '100 LP' },
-            { icon: '⭐', value: '50 WG' },
-            { icon: '💎', value: '200 LP' },
-            { icon: '🏆', value: 'Улучшение' },
-            { icon: '💰', value: '1000 WG' },
-            { icon: '👑', value: 'Префикс' },
-            { icon: '🎫', value: 'Билет' },
-            { icon: '⚡', value: '+50 энергии' }
-        ]
-    },
-    3: {
-        name: '💎 Легендарный кейс',
-        icon: '💎',
-        price: 2500,
-        rewards: [
-            { icon: '💎', value: '200 LP' },
-            { icon: '⭐', value: '100 WG' },
-            { icon: '💎', value: '500 LP' },
-            { icon: '🏆', value: 'Легенда' },
-            { icon: '💰', value: '2500 WG' },
-            { icon: '👑', value: 'Префикс' },
-            { icon: '🎫', value: '3 билета' },
-            { icon: '⚡', value: '+100 энергии' }
-        ]
-    },
-    4: {
-        name: '👑 Королевский кейс',
-        icon: '👑',
-        price: 5000,
-        rewards: [
-            { icon: '💎', value: '500 LP' },
-            { icon: '⭐', value: '500 WG' },
-            { icon: '💎', value: '1000 LP' },
-            { icon: '🏆', value: 'Легенда' },
-            { icon: '💰', value: '5000 WG' },
-            { icon: '👑', value: 'Префикс' },
-            { icon: '🎫', value: '5 билетов' },
-            { icon: '⚡', value: '+200 энергии' }
-        ]
     }
 };
 
 // ===== ОТКРЫТИЕ КЕЙСА =====
 function openCase(caseId) {
-    currentCaseId = caseId;
-    const caseInfo = caseData[caseId];
+    currentCaseId = caseId || 1;
+    const caseInfo = caseData[currentCaseId];
     if (!caseInfo) return;
 
     const page = document.getElementById('casePage');
@@ -7094,142 +7052,154 @@ function openCase(caseId) {
     const title = document.getElementById('caseTitle');
     if (title) title.textContent = caseInfo.name;
 
-    // Обновляем иконку
-    const icon = document.getElementById('caseIcon');
-    if (icon) icon.textContent = caseInfo.icon;
+    // Обновляем цену
+    const priceDisplay = document.getElementById('casePriceDisplay');
+    if (priceDisplay) priceDisplay.textContent = caseInfo.price;
 
-    // Обновляем количество кейсов (временно)
-    const count = document.getElementById('caseCount');
-    if (count) count.textContent = Math.floor(Math.random() * 5) + 1;
+    // Обновляем список наград
+    renderRewardsList(caseInfo.rewards);
 
-    // Обновляем награды
-    updateCaseRewards(caseInfo.rewards);
+    // Обновляем количество кейсов
+    updateCaseCount();
+
+    // Сбрасываем состояние
+    const reel = document.getElementById('caseSlotReel');
+    if (reel) {
+        reel.classList.remove('spinning', 'stopping');
+        reel.style.transform = 'translateY(0px)';
+    }
 
     // Открываем страницу
     page.classList.add('active');
     document.body.style.overflow = 'hidden';
-
-    // Сбрасываем анимацию
-    const box = document.getElementById('caseBox');
-    if (box) {
-        box.classList.remove('spinning', 'opened');
-    }
-
-    // Останавливаем скролл страницы
-    const mainContent = document.querySelector('.main-content');
-    if (mainContent) mainContent.style.overflow = 'hidden';
 }
 
-// ===== ОБНОВЛЕНИЕ НАГРАД =====
-function updateCaseRewards(rewards) {
-    // Обновляем превью (5 штук)
-    const previewContainer = document.getElementById('caseRewardsPreview');
-    if (previewContainer) {
-        let html = '';
-        // Берём первые 5 наград, среднюю делаем центральной
-        const displayRewards = rewards.slice(0, 5);
-        displayRewards.forEach((reward, index) => {
-            const isCentral = index === 2;
-            html += `
-                <div class="case-reward-item ${isCentral ? 'central' : ''}">
-                    <div class="case-reward-icon">${reward.icon}</div>
-                    <div class="case-reward-value">${reward.value}</div>
-                </div>
-            `;
-        });
-        previewContainer.innerHTML = html;
-    }
-
-    // Обновляем полный список
+// ===== ОТРИСОВКА НАГРАД В БАРАБАНЕ =====
+function renderRewardsList(rewards) {
+    // Полный список наград (внизу)
     const listContainer = document.getElementById('caseRewardsList');
     if (listContainer) {
         let html = '';
         rewards.forEach(reward => {
             html += `
                 <div class="case-reward-item">
-                    <div class="case-reward-icon">${reward.icon}</div>
-                    <div class="case-reward-value">${reward.value}</div>
+                    <span class="reward-icon">${reward.icon}</span>
+                    <span class="reward-value">${reward.value}</span>
                 </div>
             `;
         });
         listContainer.innerHTML = html;
     }
+
+    // Барабан (показываем 7 элементов)
+    const reel = document.getElementById('caseSlotReel');
+    if (reel) {
+        // Создаём расширенный список для плавной прокрутки
+        let html = '';
+        // Добавляем несколько дублей для бесконечной прокрутки
+        const extendedRewards = [...rewards, ...rewards, ...rewards, ...rewards, ...rewards];
+        for (let i = 0; i < 15; i++) {
+            const idx = i % rewards.length;
+            const reward = rewards[idx];
+            const isHighlight = i === 7; // средний элемент
+            html += `
+                <div class="case-slot-item ${isHighlight ? 'highlight' : ''}" data-index="${idx}">
+                    <span class="item-icon">${reward.icon}</span>
+                    <span class="item-value">${reward.value}</span>
+                </div>
+            `;
+        }
+        reel.innerHTML = html;
+    }
 }
 
-// ===== ЗАКРЫТИЕ КЕЙСА =====
-function closeCase() {
-    const page = document.getElementById('casePage');
-    if (page) {
-        page.classList.remove('active');
-        document.body.style.overflow = '';
-
-        // Восстанавливаем скролл
-        const mainContent = document.querySelector('.main-content');
-        if (mainContent) mainContent.style.overflow = '';
+// ===== ОБНОВЛЕНИЕ КОЛИЧЕСТВА КЕЙСОВ =====
+function updateCaseCount() {
+    const count = document.getElementById('caseCount');
+    if (count) {
+        // Получаем количество кейсов из localStorage или считаем
+        let caseCount = parseInt(localStorage.getItem('weregood_cases') || '0');
+        count.textContent = caseCount;
     }
 }
 
 // ===== ВРАЩЕНИЕ КЕЙСА =====
 function spinCase() {
-    const box = document.getElementById('caseBox');
+    if (isCaseSpinning) return;
+
+    const caseInfo = caseData[currentCaseId];
+    if (!caseInfo) return;
+
+    // Проверяем, есть ли кейсы
+    let caseCount = parseInt(localStorage.getItem('weregood_cases') || '0');
+    if (caseCount <= 0) {
+        showToast('❌ У вас нет кейсов! Купите сначала.', 'error');
+        return;
+    }
+
+    const reel = document.getElementById('caseSlotReel');
     const spinBtn = document.getElementById('caseSpinBtn');
+    if (!reel || !spinBtn) return;
 
-    if (!box || !spinBtn) return;
-
-    // Блокируем кнопку
+    isCaseSpinning = true;
     spinBtn.disabled = true;
-    spinBtn.textContent = '⏳ ВРАЩЕНИЕ...';
+    spinBtn.textContent = '⏳ КРУТИТСЯ...';
+
+    // Убираем подсветку с предыдущих наград
+    document.querySelectorAll('.case-reward-item').forEach(el => {
+        el.classList.remove('active');
+    });
 
     // Запускаем анимацию
-    box.classList.add('spinning');
+    reel.classList.remove('stopping');
+    reel.classList.add('spinning');
 
-    // Через 3 секунды показываем результат
+    // Через 2 секунды начинаем остановку
     setTimeout(() => {
-        // Останавливаем анимацию
-        box.classList.remove('spinning');
-        box.classList.add('opened');
+        // Выбираем случайную награду
+        const randomIndex = Math.floor(Math.random() * caseInfo.rewards.length);
+        const winReward = caseInfo.rewards[randomIndex];
 
-        // Генерируем случайную награду
-        const caseInfo = caseData[currentCaseId];
-        if (caseInfo && caseInfo.rewards.length > 0) {
-            const randomIndex = Math.floor(Math.random() * caseInfo.rewards.length);
-            const reward = caseInfo.rewards[randomIndex];
+        // Рассчитываем позицию остановки
+        // Каждый элемент высотой 70px, нам нужно чтобы выигрышный оказался по центру
+        const itemHeight = 70;
+        const targetPosition = -(7 * itemHeight) + (randomIndex * itemHeight);
 
-            // Показываем результат
-            showToast(`🎉 Вы выиграли: ${reward.icon} ${reward.value}!`, 'success');
+        // Останавливаем с плавной анимацией
+        reel.classList.remove('spinning');
+        reel.classList.add('stopping');
+        reel.style.transform = `translateY(${targetPosition}px)`;
 
-            // Обновляем награды (подсвечиваем выигранную)
-            const items = document.querySelectorAll('.case-rewards-list .case-reward-item');
+        // Ждём окончания анимации
+        setTimeout(() => {
+            reel.classList.remove('stopping');
+
+            // Подсвечиваем выигрышную награду в списке
+            const items = document.querySelectorAll('.case-reward-item');
             items.forEach((item, index) => {
                 if (index === randomIndex) {
-                    item.style.background = 'rgba(255,215,0,0.2)';
-                    item.style.borderColor = '#FFD700';
-                    item.style.transform = 'scale(1.05)';
-                } else {
-                    item.style.background = '';
-                    item.style.borderColor = '';
-                    item.style.transform = '';
+                    item.classList.add('active');
                 }
             });
 
-            // Обновляем центральную награду в превью
-            const previewItems = document.querySelectorAll('.case-rewards-preview .case-reward-item');
-            previewItems.forEach((item, index) => {
-                item.classList.remove('central');
-                if (index === 2) {
-                    item.classList.add('central');
-                    const icon = item.querySelector('.case-reward-icon');
-                    const value = item.querySelector('.case-reward-value');
-                    if (icon) icon.textContent = reward.icon;
-                    if (value) value.textContent = reward.value;
-                }
-            });
-        }
+            // Списываем кейс
+            const newCount = caseCount - 1;
+            localStorage.setItem('weregood_cases', newCount.toString());
+            updateCaseCount();
 
-        // Разблокируем кнопку
-        spinBtn.disabled = false;
-        spinBtn.textContent = '🎰 КРУТИТЬ';
-    }, 3000);
+            // Начисляем награду (временная логика)
+            showToast(`🎉 Вы выиграли: ${winReward.icon} ${winReward.value}!`, 'success');
+
+            // Здесь будет логика начисления награды на сервер
+            // await claimCaseReward(currentCaseId, randomIndex);
+
+            isCaseSpinning = false;
+            spinBtn.disabled = false;
+            spinBtn.textContent = '🎰 ОТКРЫТЬ';
+
+        }, 700);
+
+    }, 2500);
 }
 
 // ===== ПОКУПКА КЕЙСА =====
@@ -7247,21 +7217,35 @@ function buyCase() {
 
     // Списываем WG
     localWG -= caseInfo.price;
-
-    // Обновляем UI
     updateUI();
 
-    // Обновляем количество кейсов
-    const count = document.getElementById('caseCount');
-    if (count) {
-        const currentCount = parseInt(count.textContent) || 0;
-        count.textContent = currentCount + 1;
-    }
+    // Добавляем кейс
+    let caseCount = parseInt(localStorage.getItem('weregood_cases') || '0');
+    caseCount++;
+    localStorage.setItem('weregood_cases', caseCount.toString());
+    updateCaseCount();
 
-    showToast(`✅ ${caseInfo.name} куплен! Нажмите "КРУТИТЬ" чтобы открыть`, 'success');
+    showToast(`✅ ${caseInfo.name} куплен! Нажмите "ОТКРЫТЬ"`, 'success');
 
     // Синхронизируем с сервером
     syncData(true);
+}
+
+// ===== ЗАКРЫТИЕ КЕЙСА =====
+function closeCase() {
+    const page = document.getElementById('casePage');
+    if (page) {
+        page.classList.remove('active');
+        document.body.style.overflow = '';
+
+        // Сбрасываем анимацию
+        const reel = document.getElementById('caseSlotReel');
+        if (reel) {
+            reel.classList.remove('spinning', 'stopping');
+            reel.style.transform = 'translateY(0px)';
+        }
+        isCaseSpinning = false;
+    }
 }
 
 </script>
