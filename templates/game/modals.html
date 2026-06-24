@@ -1,7 +1,4 @@
-<!-- МОДАЛЬНЫЕ ОКНА -->
-
-<!-- БИЛЕТЫ -->
-<div id="ticketsPage" class="tickets-page">
+<div id="ticketsPage" class="tickets-page modal-overlay">
     <div class="tickets-header">
         <button class="back-btn" onclick="closeTicketsPage()">←</button>
         <h2 data-lang="my_tickets_title">🎫 Мои билеты</h2>
@@ -12,10 +9,9 @@
     </div>
 </div>
 
-<!-- ПРОФИЛЬ ИГРОКА -->
-<div id="playerModal" class="player-modal">
-    <div class="player-modal-content">
-        <div class="player-modal-close" onclick="closePlayerModal()">✕</div>
+<div id="playerModal" class="modal-overlay">
+    <div class="modal-content player-modal-content">
+        <div class="modal-close" onclick="closePlayerModal()">✕</div>
         <div class="player-profile-header">
             <div class="player-avatar" id="playerModalAvatar">👤</div>
             <div class="player-info">
@@ -38,8 +34,7 @@
     </div>
 </div>
 
-<!-- ЛИДЕРБОРД -->
-<div id="leaderboardPage" class="leaderboard-page">
+<div id="leaderboardPage" class="leaderboard-page modal-overlay">
     <div class="leaderboard-header">
         <button class="back-btn" onclick="closeLeaderboard()">←</button>
         <h2 data-lang="leaderboard_title">🏆 Таблица лидеров</h2>
@@ -47,7 +42,7 @@
     <div class="daily-timer-container" id="dailyTimerContainer">
         <div class="daily-timer-icon">⏰</div>
         <div class="daily-timer-info">
-            <div class="daily-timer-label" data-lang="daily_timer_label">До окончания дня и раздачи наград:</div>
+            <div class="daily-timer-label" data-lang="daily_timer_label">До окончания дня:</div>
             <div class="daily-timer-value" id="dailyLeaderboardTimer">-- : -- : --</div>
         </div>
     </div>
@@ -56,197 +51,91 @@
         <button class="leaderboard-tab" data-period="week" data-lang="top_week">📅 Топ недели</button>
         <button class="leaderboard-tab" data-period="month" data-lang="top_month">📆 Топ месяца</button>
     </div>
-    <div class="coming-soon" id="comingSoonMsg" style="display: none;">
-        <div class="coming-soon-icon">🔄</div>
-        <div class="coming-soon-title" data-lang="coming_soon_title">Скоро появится!</div>
-        <div class="coming-soon-text" data-lang="coming_soon_text">Топ недели и месяца будут добавлены в ближайшие дни</div>
-        <div class="coming-soon-progress"><div class="progress-bar"></div></div>
-    </div>
     <div class="leaderboard-list" id="leaderboardList" data-lang="loading">Загрузка...</div>
 </div>
 
-<!-- ВЫВОД USDT -->
-<div id="withdrawalModal" class="withdrawal-modal">
-    <div class="withdrawal-modal-content">
-        <div class="withdrawal-header">
+<div id="withdrawalModal" class="modal-overlay">
+    <div class="modal-content withdrawal-modal-content">
+        <div class="modal-header">
             <h2 data-lang="withdraw">💸 Вывод USDT</h2>
             <button class="modal-close" onclick="closeWithdrawalModal()">✕</button>
         </div>
         <div class="withdrawal-tabs">
-            <div class="withdrawal-tab active" data-withdrawal-tab="new" data-lang="new_withdrawal">📤 Новый вывод</div>
+            <div class="withdrawal-tab active" data-withdrawal-tab="new" data-lang="new_withdrawal">📤 Новый</div>
             <div class="withdrawal-tab" data-withdrawal-tab="history" data-lang="withdrawal_history">📋 История</div>
         </div>
         <div id="withdrawalNew" class="withdrawal-tab-content active">
             <div class="withdrawal-balance-card">
-                <div class="withdrawal-balance-label" data-lang="your_balance_usdt">Ваш баланс USDT</div>
-                <div class="withdrawal-balance-value" id="withdrawalBalance">0</div>
+                <span data-lang="your_balance_usdt">Ваш баланс USDT</span>
+                <div id="withdrawalBalance">0</div>
             </div>
-            <div class="form-group"><label data-lang="withdrawal_amount">💰 Сумма вывода</label><input type="number" class="form-input" id="withdrawalAmount" step="0.01" data-lang-attr="min_2_usdt" data-lang-attr-name="placeholder" placeholder="Минимум 2 USDT"></div>
-            <div class="form-group"><label data-lang="wallet_address">🏦 Адрес кошелька</label><input type="text" class="form-input" id="withdrawalAddress" placeholder="TRC20 / ERC20 / BEP20 адрес"></div>
-            <div class="form-group"><label data-lang="network">🌐 Сеть</label><select class="form-select" id="withdrawalNetwork"><option value="TRC20">TRC20 (TRON) - рекомендуем</option><option value="ERC20">ERC20 (Ethereum)</option><option value="BEP20">BEP20 (BSC)</option></select></div>
-            <button class="withdrawal-submit-btn" onclick="createWithdrawal()" data-lang="send_request">📤 Отправить заявку</button>
+            <div class="form-group">
+                <input type="number" class="form-input" id="withdrawalAmount" placeholder="Минимум 2 USDT">
+                <input type="text" class="form-input" id="withdrawalAddress" placeholder="Адрес кошелька">
+                <select class="form-select" id="withdrawalNetwork">
+                    <option value="TRC20">TRC20 (TRON)</option>
+                    <option value="ERC20">ERC20 (Ethereum)</option>
+                </select>
+            </div>
+            <button class="withdrawal-submit-btn" onclick="createWithdrawal()" data-lang="send_request">📤 Отправить</button>
         </div>
-        <div id="withdrawalHistory" class="withdrawal-tab-content" style="display: none;"><div id="withdrawalHistoryList"></div></div>
+        <div id="withdrawalHistory" class="withdrawal-tab-content" style="display:none"><div id="withdrawalHistoryList"></div></div>
     </div>
 </div>
 
-<!-- ЕЖЕДНЕВНЫЕ НАГРАДЫ -->
-<div id="dailyModal" class="daily-modal">
-    <div class="daily-modal-content">
-        <div class="daily-modal-header"><h2 data-lang="daily_rewards">📅 Ежедневные награды</h2><button class="daily-modal-close" onclick="closeDailyModal()">✕</button></div>
-        <div class="daily-timer" data-lang="next_reward">⏳ Следующая награда через: <span id="dailyTimerValue">--:--:--</span></div>
+<div id="dailyModal" class="modal-overlay">
+    <div class="modal-content daily-modal-content">
+        <div class="modal-header"><h2 data-lang="daily_rewards">📅 Награды</h2><button class="modal-close" onclick="closeDailyModal()">✕</button></div>
         <div class="daily-rewards-grid" id="dailyRewardsGrid"></div>
-        <div class="daily-recover" id="dailyRecover" style="display: none;"><button class="daily-recover-btn" onclick="recoverDailyStreak()" data-lang="recover_streak">⭐ Восстановить прогресс за 20 Stars</button></div>
-        <button class="daily-claim-btn" id="dailyClaimBtn" onclick="claimDailyReward()" data-lang="claim_reward"><img src="/static/calendar.png" alt="Забрать награду"> Забрать награду</button>
+        <button class="daily-claim-btn" id="dailyClaimBtn" onclick="claimDailyReward()">Забрать награду</button>
     </div>
 </div>
 
-<!-- ПРОМОКОДЫ -->
-<div id="promoModal" class="promo-modal">
-    <div class="promo-modal-content">
-        <div class="promo-modal-header"><h2 data-lang="activate_promo">🎫 Активация промокода</h2><button class="promo-modal-close" onclick="closePromoModal()">✕</button></div>
-        <div class="promo-info"><div class="promo-reward" id="promoReward"></div><div class="promo-remaining" id="promoRemaining"></div></div>
-        <input type="text" class="promo-input" id="promoCodeInput" data-lang-attr="enter_promo" data-lang-attr-name="placeholder" placeholder="Введите промокод" maxlength="30">
-        <button class="promo-activate-btn" id="activatePromoBtn" data-lang="activate">🎁 Активировать</button>
-        <div id="promoMessage" class="promo-message"></div>
+<div id="promoModal" class="modal-overlay">
+    <div class="modal-content promo-modal-content">
+        <div class="modal-header"><h2 data-lang="activate_promo">🎫 Промокод</h2><button class="modal-close" onclick="closePromoModal()">✕</button></div>
+        <input type="text" class="form-input" id="promoCodeInput" placeholder="Введите код">
+        <button class="promo-activate-btn" id="activatePromoBtn">🎁 Активировать</button>
     </div>
 </div>
 
-<!-- ЗАДАНИЯ -->
-<div id="tasksModal" class="tasks-modal">
-    <div class="tasks-modal-content">
-        <div class="tasks-modal-header">
-            <h2 data-lang="available_tasks">📋 Доступные задания</h2>
-            <button class="tasks-modal-close" onclick="closeTasksModal()">✕</button>
-        </div>
-        <div class="tasks-list" id="tasksList"><div class="loading" data-lang="loading">Загрузка...</div></div>
-    </div>
-</div>
-
-<!-- ДЕТАЛИ ЗАДАНИЯ -->
-<div id="taskDetailModal" class="task-detail-modal">
-    <div class="task-detail-modal-content">
-        <div class="task-detail-header">
-            <div class="task-detail-avatar" id="taskDetailAvatar">📢</div>
-            <h3 id="taskDetailTitle"></h3>
-            <div style="font-size:0.7rem; opacity:0.5; margin-top:4px;" id="taskDetailType"></div>
-        </div>
-        <div class="task-detail-info">
-            <div class="task-detail-reward">
-                <span data-lang="task_reward">🎁 Награда:</span>
-                <strong id="taskDetailReward"></strong>
-            </div>
-            <div class="task-detail-limit">
-                <span data-lang="task_remaining">📊 Осталось:</span>
-                <span id="taskDetailRemaining"></span>
-            </div>
-            <div class="task-detail-link" id="taskDetailLink" style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.05);">
-                <span style="font-size:0.65rem; opacity:0.5;" data-lang="task_link">🔗 Ссылка:</span>
-                <span id="taskDetailLinkValue" style="font-size:0.7rem; word-break:break-all; color:#FFD700;"></span>
-            </div>
-        </div>
-        <div class="task-detail-buttons" id="taskDetailButtons">
-            <!-- Кнопки генерируются в JS -->
-        </div>
-        <button class="task-detail-close" onclick="closeTaskDetailModal()" data-lang="close">Закрыть</button>
-    </div>
-</div>
-
-<!-- ДОСТИЖЕНИЯ -->
-<div id="achievementsModal" class="achievements-modal">
-    <div class="achievements-modal-content">
-        <div class="achievements-header"><h2 data-lang="achievements_title">🏆 Достижения</h2><button class="achievements-close" onclick="closeAchievementsModal()">✕</button></div>
-        <div class="achievements-stats"><div class="achievements-stats-value" id="completedAchievementsCount">0</div><div class="achievements-stats-label" data-lang="completed_of">выполнено из <span id="totalAchievementsCount">10</span></div></div>
-        <div class="achievements-tabs"><button class="achievements-tab active" data-achievements-tab="list" data-lang="achievements_list">📋 Список достижений</button><button class="achievements-tab" data-achievements-tab="top" data-lang="top_players">🏆 Топ игроков</button></div>
-        <div id="achievementsListTab" class="achievements-tab-content active"><div class="achievements-list" id="achievementsList"></div></div>
-        <div id="achievementsTopTab" class="achievements-tab-content" style="display: none;"><div class="achievements-top-list" id="achievementsTopList"></div></div>
-    </div>
-</div>
-
-<!-- ТУТОРИАЛ -->
-<div id="tutorialOverlay" class="tutorial-overlay">
-    <div id="tutorialHighlight" class="tutorial-highlight"></div>
-    <div id="tutorialTooltip" class="tutorial-tooltip">
-        <p id="tutorialText"></p>
-        <div style="display: flex; gap: 8px; margin-top: 8px;"><button class="tutorial-next" id="tutorialNextBtn" style="flex: 2;" data-lang="next">Далее →</button><button class="tutorial-skip" id="tutorialSkipBtn" style="flex: 1;" data-lang="skip">Пропустить</button></div>
-    </div>
-</div>
-
-<!-- ПРЕФИКСЫ -->
-<div id="prefixModal" class="prefix-modal">
-    <div class="prefix-modal-content"><div class="close-prefix-modal" onclick="closePrefixModal()">✕</div><h3 data-lang="select_prefix">🏷️ Выберите префикс</h3><div class="prefix-list" id="prefixList"></div></div>
-</div>
-
-<!-- ТОСТ -->
 <div id="toast" class="toast"></div>
 
-<!-- КОНКУРС -->
-<div id="contestPage" class="contest-page"></div>
-
-<!-- МОДАЛКА ВСЕХ РЕФЕРАЛОВ -->
-<div id="allReferralsModal" class="all-referrals-modal">
-    <div class="all-referrals-modal-content">
-        <div class="all-referrals-header">
-            <h3 data-lang="all_referrals">👥 Все приглашённые рефералы</h3>
-            <button class="all-referrals-close" onclick="closeAllReferralsModal()">✕</button>
-        </div>
-        <div class="all-referrals-list" id="allReferralsList">
-            <div class="empty-state" data-lang="loading">Загрузка...</div>
-        </div>
+<div id="tutorialOverlay" class="tutorial-overlay">
+    <div id="tutorialHighlight"></div>
+    <div id="tutorialTooltip">
+        <p id="tutorialText"></p>
+        <button id="tutorialNextBtn" data-lang="next">Далее</button>
     </div>
 </div>
 
-<!-- ============================================================
-     СТРАНИЦА ОТКРЫТИЯ КЕЙСА (КАРУСЕЛЬ)
-     ============================================================ -->
 <div id="casePage" class="case-page">
     <div class="case-page-content">
-        <!-- Шапка -->
         <div class="case-header">
             <button class="case-back-btn" onclick="closeCase()">←</button>
-            <h2 id="caseTitle">📦 Обычный кейс</h2>
-            <div style="flex: 1;"></div>
+            <h2 id="caseTitle">📦 Кейс</h2>
         </div>
 
-        <!-- КАРУСЕЛЬ С АНИМАЦИЕЙ -->
         <div class="case-carousel-container">
             <div class="case-carousel-window">
-                <!-- Верхняя тень -->
                 <div class="case-shadow-top"></div>
-
-                <!-- Лента с предметами -->
-                <div class="case-carousel-track" id="caseCarouselTrack">
-                    <!-- Генерируется через JS -->
-                </div>
-
-                <!-- Центральный указатель -->
+                <div class="case-carousel-track" id="caseCarouselTrack"></div>
                 <div class="case-carousel-pointer">▼</div>
-
-                <!-- Нижняя тень -->
                 <div class="case-shadow-bottom"></div>
-
-                <!-- Подсветка центрального слота -->
                 <div class="case-slot-glow"></div>
             </div>
         </div>
 
-        <!-- ИНФОРМАЦИЯ -->
         <div class="case-info">
-            <div class="case-price">💰 Цена: <span id="casePriceDisplay">500</span> WG</div>
-            <div class="case-count">🎫 Кейсов: <span id="caseCount">0</span></div>
+            <div>💰 Цена: <span id="casePriceDisplay">0</span> WG</div>
+            <div>🎫 Доступно: <span id="caseCount">0</span></div>
         </div>
 
-        <!-- КНОПКИ -->
         <div class="case-actions">
-            <button class="case-spin-btn" id="caseSpinBtn" onclick="spinCase()">
-                🎰 ОТКРЫТЬ
-            </button>
-            <button class="case-buy-btn" onclick="buyCase()">
-                💰 Купить
-            </button>
+            <button class="case-spin-btn" id="caseSpinBtn" onclick="spinCase()">🎰 ОТКРЫТЬ</button>
+            <button class="case-buy-btn" onclick="buyCase()">💰 Купить</button>
         </div>
 
-        <!-- СПИСОК НАГРАД -->
         <div class="case-rewards-list" id="caseRewardsList"></div>
     </div>
 </div>
