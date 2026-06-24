@@ -1,6 +1,4 @@
-<!-- ============================================================
-     КОЛЕСО ФОРТУНЫ
-     ============================================================ -->
+<!-- КОЛЕСО ФОРТУНЫ -->
 <div id="wheelOverlay" class="wheel-overlay">
     <div class="wheel-container">
         <div class="wheel-title" data-lang="wheel_title">🎡 КОЛЕСО ФОРТУНЫ 🎡</div>
@@ -13,18 +11,16 @@
     </div>
 </div>
 
-<!-- ============================================================
-     ГЕЙМПАД МЕНЮ (ИГРОВОЙ ЦЕНТР)
-     ============================================================ -->
+<!-- ГЕЙМПАД МЕНЮ -->
 <div id="gamepadModal" class="gamepad-modal">
     <div class="gamepad-modal-content">
         <div class="gamepad-header">
             <h2 data-lang="game_center">🎮 Игровой центр</h2>
             <button class="gamepad-close" onclick="closeGamepad()">✕</button>
         </div>
-
         <div class="gamepad-games">
-            <!-- 1. КОМАНДНАЯ ФОРТУНА -->
+
+            <!-- Фортуна -->
             <div class="game-card" onclick="openGame('fortune')">
                 <div class="game-card-icon">🎲</div>
                 <div class="game-card-info">
@@ -34,17 +30,17 @@
                 <div class="game-card-arrow">→</div>
             </div>
 
-            <!-- 2. СЕКРЕТНАЯ СЛОТ-МАШИНА (только для админа) -->
-            <div id="secretSlotGame" class="game-card" style="display: none; border: 2px solid #FFD700; background: rgba(255,215,0,0.05);" onclick="openGame('slot')">
+            <!-- СЕКРЕТНАЯ ИГРА (ТОЛЬКО ДЛЯ ВЛАДЕЛЬЦА) -->
+            <div id="secretGameCard" class="game-card" style="display: none; border: 2px solid #FFD700; background: rgba(255,215,0,0.05);">
                 <div class="game-card-icon">🎰</div>
                 <div class="game-card-info">
-                    <h3>🔐 Слот-машина</h3>
-                    <p>🎰 Секретная игра для избранных</p>
+                    <h3>🔐 Секретная игра</h3>
+                    <p>🎰 Слот-машина для избранных</p>
                 </div>
                 <div class="game-card-arrow">→</div>
             </div>
 
-            <!-- 3. СКОРО... -->
+            <!-- Скоро -->
             <div class="game-card coming-soon">
                 <div class="game-card-icon">❓</div>
                 <div class="game-card-info">
@@ -53,17 +49,15 @@
                 </div>
                 <div class="game-card-arrow">🔒</div>
             </div>
-        </div>
 
+        </div>
         <div class="gamepad-footer">
             <p data-lang="new_games_here">✨ Новые игры будут появляться здесь</p>
         </div>
     </div>
 </div>
 
-<!-- ============================================================
-     МОДАЛЬНОЕ ОКНО КОМАНДНОЙ ФОРТУНЫ
-     ============================================================ -->
+<!-- МОДАЛЬНОЕ ОКНО КОМАНДНОЙ ФОРТУНЫ -->
 <div id="fortuneModal" class="game-modal-full">
     <div class="game-modal-full-content">
         <div class="game-modal-full-header">
@@ -71,15 +65,12 @@
             <button class="game-modal-full-close" onclick="closeFortuneGame()">✕</button>
         </div>
 
-        <!-- ВКЛАДКИ -->
         <div class="fortune-tabs">
             <button class="fortune-tab active" data-fortune-tab="play" data-lang="fortune_play">🎮 Играть</button>
             <button class="fortune-tab" data-fortune-tab="history" data-lang="fortune_history">📜 Моя история</button>
         </div>
 
-        <!-- ===== ВКЛАДКА "ИГРАТЬ" ===== -->
         <div id="fortunePlayTab" class="fortune-tab-content active">
-            <!-- ТАЙМЕР -->
             <div class="fortune-timer-card">
                 <div class="timer-label" data-lang="round_ends">⏱️ ДО КОНЦА РАУНДА</div>
                 <div class="timer-value-premium" id="fortuneTimer">05:00</div>
@@ -88,13 +79,11 @@
                 </div>
             </div>
 
-            <!-- БАЛАНС -->
             <div class="fortune-balance-card">
                 <span class="balance-label-premium" data-lang="your_balance_wg">💰 Ваш баланс WG:</span>
                 <span class="balance-value-premium" id="fortuneUserBalance">0</span>
             </div>
 
-            <!-- КОМАНДА ЖЁЛТЫХ -->
             <div class="team-card-premium" id="teamYellowCard">
                 <div class="team-header-premium">
                     <div class="team-icon-premium">🟡</div>
@@ -112,7 +101,6 @@
                 <button class="bet-btn-premium bet-btn-yellow" id="betBtnYellow" data-team="yellow" data-lang="bet_yellow">💰 Сделать ставку на Жёлтых</button>
             </div>
 
-            <!-- КОМАНДА КРАСНЫХ -->
             <div class="team-card-premium" id="teamRedCard">
                 <div class="team-header-premium">
                     <div class="team-icon-premium">🔴</div>
@@ -131,7 +119,6 @@
             </div>
         </div>
 
-        <!-- ===== ВКЛАДКА "ИСТОРИЯ" ===== -->
         <div id="fortuneHistoryTab" class="fortune-tab-content">
             <div class="history-list-premium" id="fortuneHistoryList">
                 <div class="empty-state-premium" data-lang="no_history">📭 У вас пока нет истории игр</div>
@@ -140,27 +127,22 @@
     </div>
 </div>
 
-<!-- ============================================================
-     МОДАЛЬНОЕ ОКНО ДЛЯ СТАВКИ
-     ============================================================ -->
+<!-- МОДАЛЬНОЕ ОКНО ДЛЯ СТАВКИ -->
 <div id="betModal" class="bet-modal">
     <div class="bet-modal-content-premium">
         <div class="bet-modal-header">
             <h3 data-lang="place_bet">💰 Сделать ставку</h3>
             <button class="bet-modal-close" onclick="closeBetModal()">✕</button>
         </div>
-
         <div class="bet-team-info" id="betTeamInfo">
             <span class="bet-team-icon">🟡</span>
             <span class="bet-team-name" data-lang="team_yellow">Команда Жёлтых</span>
         </div>
-
         <div class="bet-balance">
             <span data-lang="your_balance">💰 Ваш баланс:</span>
             <strong id="betUserBalance">0</strong>
             <span>WG</span>
         </div>
-
         <div class="bet-input-group">
             <label data-lang="bet_amount">Сумма ставки (мин. 10 WG)</label>
             <input type="number" id="betAmount" class="bet-input" data-lang-attr="bet_amount_placeholder" data-lang-attr-name="placeholder" placeholder="100" min="10" step="10">
@@ -171,53 +153,7 @@
                 <div class="bet-preset-premium" data-multiplier="1" data-lang="bet_100">100%</div>
             </div>
         </div>
-
         <div class="bet-info" style="display: none;"></div>
         <button class="bet-submit-btn" id="submitBetBtn" data-lang="confirm_bet">🎲 Подтвердить ставку</button>
-    </div>
-</div>
-
-<!-- ============================================================
-     СЛОТ-МАШИНА (СЕКРЕТНАЯ ИГРА)
-     ============================================================ -->
-<div id="slotModal" class="game-modal-full">
-    <div class="game-modal-full-content">
-        <div class="game-modal-full-header">
-            <h2>🎰 Секретная слот-машина</h2>
-            <button class="game-modal-full-close" onclick="closeSlotGame()">✕</button>
-        </div>
-
-        <!-- БАЛАНС -->
-        <div class="slot-balance-card">
-            <div class="slot-balance-row">
-                <span>💰 Баланс WG:</span>
-                <span class="slot-balance-value" id="slotBalanceDisplay">0</span>
-            </div>
-            <div class="slot-balance-row">
-                <span>🎫 Стоимость вращения:</span>
-                <span class="slot-cost-display">10 WG</span>
-            </div>
-        </div>
-
-        <!-- БАРАБАНЫ -->
-        <div class="slot-reels-container">
-            <div class="slot-reels">
-                <div class="slot-reel" id="slotReel1">
-                    <div class="slot-reel-inner" id="slotReelInner1"></div>
-                </div>
-                <div class="slot-reel" id="slotReel2">
-                    <div class="slot-reel-inner" id="slotReelInner2"></div>
-                </div>
-                <div class="slot-reel" id="slotReel3">
-                    <div class="slot-reel-inner" id="slotReelInner3"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- КНОПКА -->
-        <button class="slot-spin-btn" id="slotSpinBtn">🎰 КРУТИТЬ</button>
-
-        <!-- РЕЗУЛЬТАТ -->
-        <div class="slot-result" id="slotResult"></div>
     </div>
 </div>
