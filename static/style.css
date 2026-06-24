@@ -6359,7 +6359,7 @@ body.light-theme .star-upgrade-card {
 }
 
 /* ============================================================
-   КЕЙСЫ - НОВЫЙ ДИЗАЙН С АНИМАЦИЕЙ
+   КЕЙСЫ - КАРУСЕЛЬ С ФИЗИКОЙ
    ============================================================ */
 
 /* ===== СТРАНИЦА КЕЙСА ===== */
@@ -6424,119 +6424,150 @@ body.light-theme .star-upgrade-card {
     margin: 0;
 }
 
-/* ===== СЛОТ ДЛЯ КЕЙСА ===== */
-.case-slot-container {
+/* ===== КОНТЕЙНЕР КАРУСЕЛИ ===== */
+.case-carousel-container {
     background: rgba(0, 0, 0, 0.5);
     border-radius: 24px;
-    padding: 16px;
-    border: 2px solid rgba(255, 215, 0, 0.12);
+    padding: 12px;
+    border: 2px solid rgba(255, 215, 0, 0.1);
     margin-bottom: 16px;
     position: relative;
+    box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.3);
 }
 
-.case-slot-window {
-    background: rgba(0, 0, 0, 0.6);
+.case-carousel-window {
+    background: rgba(0, 0, 0, 0.7);
     border-radius: 16px;
-    height: 140px;
+    height: 160px;
     overflow: hidden;
     position: relative;
     border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.case-slot-window::before,
-.case-slot-window::after {
-    content: '';
+/* ТЕНИ */
+.case-shadow-top,
+.case-shadow-bottom {
     position: absolute;
     left: 0;
     right: 0;
-    height: 30px;
+    height: 40px;
     pointer-events: none;
     z-index: 5;
 }
 
-.case-slot-window::before {
+.case-shadow-top {
     top: 0;
     background: linear-gradient(to bottom, rgba(0, 0, 0, 0.9), transparent);
 }
 
-.case-slot-window::after {
+.case-shadow-bottom {
     bottom: 0;
     background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
 }
 
-.case-slot-pointer {
+/* ===== УКАЗАТЕЛЬ ===== */
+.case-carousel-pointer {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
     color: #FFD700;
-    font-size: 1.8rem;
+    font-size: 2rem;
     z-index: 10;
-    text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+    text-shadow: 0 0 30px rgba(255, 215, 0, 0.5), 0 0 60px rgba(255, 215, 0, 0.2);
     pointer-events: none;
     animation: pointerPulse 1.5s ease-in-out infinite;
 }
 
 @keyframes pointerPulse {
-    0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.7; }
+    0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
     50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
 }
 
-.case-slot-reel {
+/* ===== ПОДСВЕТКА ЦЕНТРАЛЬНОГО СЛОТА ===== */
+.case-slot-glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80%;
+    height: 80%;
+    background: radial-gradient(ellipse, rgba(255, 215, 0, 0.06), transparent 70%);
+    pointer-events: none;
+    z-index: 1;
+    border-radius: 50%;
+}
+
+/* ===== ЛЕНТА КАРУСЕЛИ ===== */
+.case-carousel-track {
     display: flex;
     flex-direction: column;
     transition: none;
     will-change: transform;
     transform: translateY(0);
+    /* GPU акселерация */
+    transform: translate3d(0, 0, 0);
 }
 
-.case-slot-reel.spinning {
-    animation: slotSpin 0.08s linear infinite;
+.case-carousel-track.spinning {
+    animation: carouselSpin 0.06s linear infinite;
 }
 
-@keyframes slotSpin {
+@keyframes carouselSpin {
     0% { transform: translateY(0); }
-    100% { transform: translateY(-70px); }
+    100% { transform: translateY(-80px); }
 }
 
-.case-slot-reel.stopping {
-    transition: transform 0.6s cubic-bezier(0.15, 0.85, 0.35, 1.15);
+.case-carousel-track.stopping {
+    transition: transform 1.2s cubic-bezier(0.15, 0.85, 0.35, 1.15);
 }
 
-/* ===== СИМВОЛ В БАРАБАНЕ ===== */
-.case-slot-item {
-    height: 70px;
+/* ===== ЭЛЕМЕНТ В ЛЕНТЕ ===== */
+.case-carousel-item {
+    height: 80px;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 12px;
-    padding: 0 16px;
+    gap: 14px;
+    padding: 0 20px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.7);
+    transition: all 0.2s ease;
 }
 
-.case-slot-item .item-icon {
-    font-size: 2rem;
+.case-carousel-item .item-icon {
+    font-size: 2.2rem;
+    transition: all 0.3s ease;
 }
 
-.case-slot-item .item-value {
+.case-carousel-item .item-value {
     font-size: 1rem;
-    font-weight: 700;
-    color: #fff;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.6);
+    transition: all 0.3s ease;
 }
 
-.case-slot-item.highlight {
-    background: rgba(255, 215, 0, 0.15);
+/* ===== АКТИВНЫЙ (ВЫИГРЫШНЫЙ) ЭЛЕМЕНТ ===== */
+.case-carousel-item.active {
+    background: rgba(255, 215, 0, 0.12);
     border-color: rgba(255, 215, 0, 0.2);
 }
 
-.case-slot-item.highlight .item-value {
+.case-carousel-item.active .item-value {
     color: #FFD700;
+    font-weight: 700;
 }
 
-/* ===== ИНФОРМАЦИЯ О КЕЙСЕ ===== */
+.case-carousel-item.active .item-icon {
+    transform: scale(1.15);
+}
+
+/* ===== РАЗМЫТИЕ ПРИ ДВИЖЕНИИ ===== */
+.case-carousel-item.blurred {
+    filter: blur(1.5px);
+    opacity: 0.5;
+}
+
+/* ===== ИНФОРМАЦИЯ ===== */
 .case-info {
     display: flex;
     justify-content: space-between;
@@ -6586,11 +6617,29 @@ body.light-theme .star-upgrade-card {
     color: #0a0a1a;
     cursor: pointer;
     transition: all 0.15s ease;
-    box-shadow: 0 4px 20px rgba(255, 215, 0, 0.25);
+    box-shadow: 0 4px 25px rgba(255, 215, 0, 0.25);
     letter-spacing: 0.5px;
+    position: relative;
+    overflow: hidden;
 }
 
-.case-spin-btn:active {
+.case-spin-btn::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.2), transparent 60%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.case-spin-btn:hover:not(:disabled)::before {
+    opacity: 1;
+}
+
+.case-spin-btn:active:not(:disabled) {
     transform: scale(0.97);
 }
 
@@ -6654,6 +6703,7 @@ body.light-theme .star-upgrade-card {
     background: rgba(255, 215, 0, 0.15);
     border-color: #FFD700;
     transform: scale(1.05);
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.1);
 }
 
 .case-reward-item.active .reward-value {
@@ -6662,17 +6712,18 @@ body.light-theme .star-upgrade-card {
 
 /* ===== АДАПТАЦИЯ ===== */
 @media (max-width: 480px) {
-    .case-slot-window {
-        height: 120px;
+    .case-carousel-window {
+        height: 130px;
     }
-    .case-slot-item {
-        height: 60px;
-        font-size: 0.9rem;
+    .case-carousel-item {
+        height: 65px;
+        gap: 10px;
+        padding: 0 14px;
     }
-    .case-slot-item .item-icon {
-        font-size: 1.6rem;
+    .case-carousel-item .item-icon {
+        font-size: 1.8rem;
     }
-    .case-slot-item .item-value {
+    .case-carousel-item .item-value {
         font-size: 0.85rem;
     }
     .case-rewards-list {
@@ -6697,18 +6748,18 @@ body.light-theme .star-upgrade-card {
 }
 
 @media (max-width: 380px) {
-    .case-slot-window {
-        height: 100px;
+    .case-carousel-window {
+        height: 110px;
     }
-    .case-slot-item {
-        height: 50px;
+    .case-carousel-item {
+        height: 55px;
         font-size: 0.8rem;
         gap: 8px;
     }
-    .case-slot-item .item-icon {
-        font-size: 1.3rem;
+    .case-carousel-item .item-icon {
+        font-size: 1.5rem;
     }
-    .case-slot-item .item-value {
+    .case-carousel-item .item-value {
         font-size: 0.7rem;
     }
     .case-rewards-list {

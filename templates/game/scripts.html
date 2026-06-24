@@ -7014,13 +7014,13 @@ function translateElement(el, key) {
 setTimeout(loadLanguageSettings, 500);
 
     // ================================================================
-// КЕЙСЫ - С АНИМАЦИЕЙ ПРОКРУТКИ
+// КЕЙСЫ - КАРУСЕЛЬ С ФИЗИКОЙ ЗАМЕДЛЕНИЯ
 // ================================================================
 
-let currentCaseId = 1; // Пока только 1 кейс
+let currentCaseId = 1;
 let isCaseSpinning = false;
+let caseCount = parseInt(localStorage.getItem('weregood_cases') || '0');
 
-// ДАННЫЕ КЕЙСА
 const caseData = {
     1: {
         name: '📦 Обычный кейс',
@@ -7039,6 +7039,23 @@ const caseData = {
     }
 };
 
+// ===== HAPTIC FEEDBACK =====
+function triggerHaptic(type = 'medium') {
+    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) {
+        try {
+            if (type === 'medium') {
+                window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
+            } else if (type === 'heavy') {
+                window.Telegram.WebApp.HapticFeedback.impactOccurred('heavy');
+            } else {
+                window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+            }
+        } catch(e) {}
+    } else if (navigator.vibrate) {
+        navigator.vibrate(type === 'heavy' ? 30 : 15);
+    }
+}
+
 // ===== ОТКРЫТИЕ КЕЙСА =====
 function openCase(caseId) {
     currentCaseId = caseId || 1;
@@ -7056,17 +7073,20 @@ function openCase(caseId) {
     const priceDisplay = document.getElementById('casePriceDisplay');
     if (priceDisplay) priceDisplay.textContent = caseInfo.price;
 
-    // Обновляем список наград
+    // Рендерим список наград
     renderRewardsList(caseInfo.rewards);
+
+    // Рендерим ленту карусели
+    renderCarousel(caseInfo.rewards);
 
     // Обновляем количество кейсов
     updateCaseCount();
 
     // Сбрасываем состояние
-    const reel = document.getElementById('caseSlotReel');
-    if (reel) {
-        reel.classList.remove('spinning', 'stopping');
-        reel.style.transform = 'translateY(0px)';
+    const track = document.getElementById('caseCarouselTrack');
+    if (track) {
+        track.classList.remove('spinning', 'stopping');
+        track.style.transform = 'translateY(0px)';
     }
 
     // Открываем страницу
@@ -7074,132 +7094,202 @@ function openCase(caseId) {
     document.body.style.overflow = 'hidden';
 }
 
-// ===== ОТРИСОВКА НАГРАД В БАРАБАНЕ =====
-function renderRewardsList(rewards) {
-    // Полный список наград (внизу)
-    const listContainer = document.getElementById('caseRewardsList');
-    if (listContainer) {
-        let html = '';
-        rewards.forEach(reward => {
-            html += `
-                <div class="case-reward-item">
-                    <span class="reward-icon">${reward.icon}</span>
-                    <span class="reward-value">${reward.value}</span>
-                </div>
-            `;
-        });
-        listContainer.innerHTML = html;
-    }
+// ===== РЕНДЕР ЛЕНТЫ КАРУСЕЛИ =====
+function renderCarousel(rewards) {
+    const track = document.getElementById('caseCarouselTrack');
+    if (!track) return;
 
-    // Барабан (показываем 7 элементов)
-    const reel = document.getElementById('caseSlotReel');
-    if (reel) {
-        // Создаём расширенный список для плавной прокрутки
-        let html = '';
-        // Добавляем несколько дублей для бесконечной прокрутки
-        const extendedRewards = [...rewards, ...rewards, ...rewards, ...rewards, ...rewards];
-        for (let i = 0; i < 15; i++) {
-            const idx = i % rewards.length;
-            const reward = rewards[idx];
-            const isHighlight = i === 7; // средний элемент
-            html += `
-                <div class="case-slot-item ${isHighlight ? 'highlight' : ''}" data-index="${idx}">
-                    <span class="item-icon">${reward.icon}</span>
-                    <span class="item-value">${reward.value}</span>
-                </div>
-            `;
-        }
-        reel.innerHTML = html;
+    // Создаём длинную ленту с дублями для бесконечной прокрутки
+    let html = '';
+    const itemsCount = 7; // Показываем 7 элементов одновременно
+    const totalItems = rewards.length * 10; // Достаточно для плавной анимации
+
+    for (let i = 0; i < totalItems; i++) {
+        const idx = i % rewards.length;
+        const reward = rewards[idx];
+        const isHighlight = i === Math.floor(totalItems / 2); // Центральный элемент
+        html += `
+            <div class="case-carousel-item ${isHighlight ? 'active' : ''}" data-index="${idx}">
+                <span class="item-icon">${reward.icon}</span>
+                <span class="item-value">${reward.value}</span>
+            </div>
+        `;
     }
+    track.innerHTML = html;
+}
+
+// ===== РЕНДЕР СПИСКА НАГРАД =====
+function renderRewardsList(rewards) {
+    const container = document.getElementById('caseRewardsList');
+    if (!container) return;
+
+    let html = '';
+    rewards.forEach(reward => {
+        html += `
+            <div class="case-reward-item">
+                <span class="reward-icon">${reward.icon}</span>
+                <span class="reward-value">${reward.value}</span>
+            </div>
+        `;
+    });
+    container.innerHTML = html;
 }
 
 // ===== ОБНОВЛЕНИЕ КОЛИЧЕСТВА КЕЙСОВ =====
 function updateCaseCount() {
-    const count = document.getElementById('caseCount');
-    if (count) {
-        // Получаем количество кейсов из localStorage или считаем
-        let caseCount = parseInt(localStorage.getItem('weregood_cases') || '0');
-        count.textContent = caseCount;
-    }
+    caseCount = parseInt(localStorage.getItem('weregood_cases') || '0');
+    const countEl = document.getElementById('caseCount');
+    if (countEl) countEl.textContent = caseCount;
 }
 
-// ===== ВРАЩЕНИЕ КЕЙСА =====
+// ===== ВРАЩЕНИЕ КАРУСЕЛИ =====
 function spinCase() {
     if (isCaseSpinning) return;
 
     const caseInfo = caseData[currentCaseId];
     if (!caseInfo) return;
 
-    // Проверяем, есть ли кейсы
-    let caseCount = parseInt(localStorage.getItem('weregood_cases') || '0');
+    // Проверяем наличие кейсов
     if (caseCount <= 0) {
         showToast('❌ У вас нет кейсов! Купите сначала.', 'error');
+        triggerHaptic('medium');
         return;
     }
 
-    const reel = document.getElementById('caseSlotReel');
+    const track = document.getElementById('caseCarouselTrack');
     const spinBtn = document.getElementById('caseSpinBtn');
-    if (!reel || !spinBtn) return;
+    if (!track || !spinBtn) return;
 
     isCaseSpinning = true;
     spinBtn.disabled = true;
-    spinBtn.textContent = '⏳ КРУТИТСЯ...';
+    spinBtn.textContent = '⏳ ВРАЩЕНИЕ...';
 
-    // Убираем подсветку с предыдущих наград
-    document.querySelectorAll('.case-reward-item').forEach(el => {
-        el.classList.remove('active');
-    });
+    // Убираем активные подсветки
+    document.querySelectorAll('.case-reward-item').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.case-carousel-item').forEach(el => el.classList.remove('active'));
+
+    // Получаем все элементы в ленте
+    const items = track.querySelectorAll('.case-carousel-item');
+    const itemHeight = 80; // Высота одного элемента
+    const totalItems = items.length;
+
+    // Выбираем случайный выигрышный индекс
+    const winIndex = Math.floor(Math.random() * caseInfo.rewards.length);
+
+    // Рассчитываем позицию остановки так, чтобы выигрышный элемент оказался в центре
+    // Центральный элемент = 3 (при 7 видимых элементах)
+    // Нужно найти элемент с нужным индексом и поставить его на позицию 3
+    let targetItemIndex = -1;
+    for (let i = 0; i < totalItems; i++) {
+        if (parseInt(items[i].dataset.index) === winIndex) {
+            targetItemIndex = i;
+            break;
+        }
+    }
+
+    // Если не нашли, берём случайный
+    if (targetItemIndex === -1) {
+        targetItemIndex = Math.floor(totalItems / 2);
+    }
+
+    // Добавляем дополнительные обороты для эффектности
+    const extraSpins = 3 + Math.random() * 3; // 3-6 дополнительных оборотов
+    const targetPosition = -(targetItemIndex * itemHeight) - (extraSpins * items.length * itemHeight);
+
+    // Активируем размытие для боковых элементов
+    function applyBlur() {
+        const allItems = track.querySelectorAll('.case-carousel-item');
+        allItems.forEach((el, idx) => {
+            // Получаем текущую позицию относительно центра
+            const rect = el.getBoundingClientRect();
+            const containerRect = track.parentElement.getBoundingClientRect();
+            const center = containerRect.top + containerRect.height / 2;
+            const elCenter = rect.top + rect.height / 2;
+            const distance = Math.abs(elCenter - center);
+
+            if (distance > 60) {
+                el.classList.add('blurred');
+            } else {
+                el.classList.remove('blurred');
+            }
+        });
+    }
+
+    // Вибрация при старте
+    triggerHaptic('medium');
 
     // Запускаем анимацию
-    reel.classList.remove('stopping');
-    reel.classList.add('spinning');
+    track.classList.remove('stopping');
+    track.classList.add('spinning');
 
-    // Через 2 секунды начинаем остановку
+    // Применяем размытие
+    const blurInterval = setInterval(applyBlur, 50);
+
+    // Через 2.5 секунды начинаем замедление
     setTimeout(() => {
-        // Выбираем случайную награду
-        const randomIndex = Math.floor(Math.random() * caseInfo.rewards.length);
-        const winReward = caseInfo.rewards[randomIndex];
+        track.classList.remove('spinning');
+        track.classList.add('stopping');
+        track.style.transform = `translateY(${targetPosition}px)`;
 
-        // Рассчитываем позицию остановки
-        // Каждый элемент высотой 70px, нам нужно чтобы выигрышный оказался по центру
-        const itemHeight = 70;
-        const targetPosition = -(7 * itemHeight) + (randomIndex * itemHeight);
+        // Вибрация при замедлении
+        triggerHaptic('light');
 
-        // Останавливаем с плавной анимацией
-        reel.classList.remove('spinning');
-        reel.classList.add('stopping');
-        reel.style.transform = `translateY(${targetPosition}px)`;
-
-        // Ждём окончания анимации
+        // Останавливаем размытие после окончания
         setTimeout(() => {
-            reel.classList.remove('stopping');
+            clearInterval(blurInterval);
 
-            // Подсвечиваем выигрышную награду в списке
-            const items = document.querySelectorAll('.case-reward-item');
-            items.forEach((item, index) => {
-                if (index === randomIndex) {
-                    item.classList.add('active');
+            // Убираем размытие со всех элементов
+            document.querySelectorAll('.case-carousel-item').forEach(el => {
+                el.classList.remove('blurred');
+            });
+
+            // Подсвечиваем выигрышный элемент в ленте
+            const allItems = track.querySelectorAll('.case-carousel-item');
+            allItems.forEach((el, idx) => {
+                if (parseInt(el.dataset.index) === winIndex) {
+                    // Проверяем, находится ли этот элемент в центре
+                    const rect = el.getBoundingClientRect();
+                    const containerRect = track.parentElement.getBoundingClientRect();
+                    const center = containerRect.top + containerRect.height / 2;
+                    const elCenter = rect.top + rect.height / 2;
+                    const distance = Math.abs(elCenter - center);
+
+                    if (distance < 50) {
+                        el.classList.add('active');
+                    }
                 }
             });
 
-            // Списываем кейс
-            const newCount = caseCount - 1;
-            localStorage.setItem('weregood_cases', newCount.toString());
-            updateCaseCount();
+            // Подсвечиваем выигрыш в списке наград
+            const rewardItems = document.querySelectorAll('.case-reward-item');
+            rewardItems.forEach((el, idx) => {
+                if (idx === winIndex) {
+                    el.classList.add('active');
+                }
+            });
 
-            // Начисляем награду (временная логика)
+            // Мощная вибрация при выпадении приза
+            triggerHaptic('heavy');
+
+            // Показываем результат
+            const winReward = caseInfo.rewards[winIndex];
             showToast(`🎉 Вы выиграли: ${winReward.icon} ${winReward.value}!`, 'success');
 
-            // Здесь будет логика начисления награды на сервер
-            // await claimCaseReward(currentCaseId, randomIndex);
+            // Списываем кейс
+            caseCount--;
+            localStorage.setItem('weregood_cases', caseCount.toString());
+            updateCaseCount();
+
+            // Здесь будет отправка на сервер
+            // await claimCaseReward(currentCaseId, winIndex);
 
             isCaseSpinning = false;
             spinBtn.disabled = false;
             spinBtn.textContent = '🎰 ОТКРЫТЬ';
 
-        }, 700);
+        }, 1200); // Время анимации остановки
 
-    }, 2500);
+    }, 2500); // Время вращения
 }
 
 // ===== ПОКУПКА КЕЙСА =====
@@ -7207,9 +7297,9 @@ function buyCase() {
     const caseInfo = caseData[currentCaseId];
     if (!caseInfo) return;
 
-    // Проверка баланса
     if (localWG < caseInfo.price) {
         showToast(`❌ Не хватает WG! Нужно ${caseInfo.price} WG`, 'error');
+        triggerHaptic('medium');
         return;
     }
 
@@ -7220,12 +7310,12 @@ function buyCase() {
     updateUI();
 
     // Добавляем кейс
-    let caseCount = parseInt(localStorage.getItem('weregood_cases') || '0');
     caseCount++;
     localStorage.setItem('weregood_cases', caseCount.toString());
     updateCaseCount();
 
     showToast(`✅ ${caseInfo.name} куплен! Нажмите "ОТКРЫТЬ"`, 'success');
+    triggerHaptic('light');
 
     // Синхронизируем с сервером
     syncData(true);
@@ -7239,10 +7329,10 @@ function closeCase() {
         document.body.style.overflow = '';
 
         // Сбрасываем анимацию
-        const reel = document.getElementById('caseSlotReel');
-        if (reel) {
-            reel.classList.remove('spinning', 'stopping');
-            reel.style.transform = 'translateY(0px)';
+        const track = document.getElementById('caseCarouselTrack');
+        if (track) {
+            track.classList.remove('spinning', 'stopping');
+            track.style.transform = 'translateY(0px)';
         }
         isCaseSpinning = false;
     }

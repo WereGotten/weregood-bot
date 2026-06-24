@@ -197,7 +197,7 @@
 </div>
 
 <!-- ============================================================
-     СТРАНИЦА ОТКРЫТИЯ КЕЙСА
+     СТРАНИЦА ОТКРЫТИЯ КЕЙСА (КАРУСЕЛЬ)
      ============================================================ -->
 <div id="casePage" class="case-page">
     <div class="case-page-content">
@@ -208,13 +208,25 @@
             <div style="flex: 1;"></div>
         </div>
 
-        <!-- СЛОТ С АНИМАЦИЕЙ ПРОКРУТКИ -->
-        <div class="case-slot-container">
-            <div class="case-slot-window">
-                <div class="case-slot-reel" id="caseSlotReel">
+        <!-- КАРУСЕЛЬ С АНИМАЦИЕЙ -->
+        <div class="case-carousel-container">
+            <div class="case-carousel-window">
+                <!-- Верхняя тень -->
+                <div class="case-shadow-top"></div>
+
+                <!-- Лента с предметами -->
+                <div class="case-carousel-track" id="caseCarouselTrack">
                     <!-- Генерируется через JS -->
                 </div>
-                <div class="case-slot-pointer">▼</div>
+
+                <!-- Центральный указатель -->
+                <div class="case-carousel-pointer">▼</div>
+
+                <!-- Нижняя тень -->
+                <div class="case-shadow-bottom"></div>
+
+                <!-- Подсветка центрального слота -->
+                <div class="case-slot-glow"></div>
             </div>
         </div>
 
