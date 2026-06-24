@@ -6359,10 +6359,10 @@ body.light-theme .star-upgrade-card {
 }
 
 /* ============================================================
-   КЕЙСЫ - ПРЕМИУМ ДИЗАЙН 2026
+   КЕЙСЫ - ПРЕМИУМ ДИЗАЙН 2026 (ОПТИМИЗИРОВАННЫЙ)
    ============================================================ */
 
-/* ===== СТРАНИЦА КЕЙСА ===== */
+/* ===== СТРАНИЦА ===== */
 .case-page {
     position: fixed;
     top: 0;
@@ -6371,311 +6371,257 @@ body.light-theme .star-upgrade-card {
     bottom: 0;
     max-width: 500px;
     margin: 0 auto;
-    background: radial-gradient(ellipse at 50% 20%, #16163a, #0a0a14 70%, #050510);
+    background: radial-gradient(ellipse at 50% 20%, #12122e, #070714 70%, #04040e);
     z-index: 300;
     transform: translateX(100%);
-    transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     overflow-y: auto;
-    padding: 0 20px 30px;
+    padding: 0 16px 30px;
+    will-change: transform;
 }
 
 .case-page.active {
     transform: translateX(0);
 }
 
-/* ===== ДЕКОРАТИВНЫЙ ФОН ===== */
-.case-page::before {
-    content: '';
-    position: fixed;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(ellipse at 50% 40%, rgba(255, 215, 0, 0.02), transparent 60%);
-    pointer-events: none;
-    z-index: 0;
-}
-
 /* ===== ШАПКА ===== */
 .case-header {
     display: flex;
     align-items: center;
-    gap: 14px;
-    padding: 20px 0 18px;
-    margin-bottom: 24px;
+    gap: 12px;
+    padding: 16px 0 14px;
+    margin-bottom: 20px;
     position: sticky;
     top: 0;
-    background: rgba(5, 5, 16, 0.92);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
+    background: rgba(4, 4, 14, 0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     z-index: 10;
     border-bottom: 1px solid rgba(255, 215, 0, 0.06);
 }
 
 .case-back-btn {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    width: 44px;
-    height: 44px;
+    background: rgba(255, 255, 255, 0.04);
+    border: none;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     color: #fff;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.25s ease;
+    transition: transform 0.15s ease;
     flex-shrink: 0;
 }
 
 .case-back-btn:active {
     transform: scale(0.88);
-    background: rgba(255, 255, 255, 0.1);
 }
 
 .case-header h2 {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     font-weight: 800;
-    background: linear-gradient(135deg, #FFD700 0%, #FF8C00 50%, #FFD700 100%);
-    background-size: 200% 200%;
+    background: linear-gradient(135deg, #FFD700, #FF8C00);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
     margin: 0;
-    animation: goldShine 3s ease-in-out infinite;
-    letter-spacing: 0.5px;
-}
-
-@keyframes goldShine {
-    0%, 100% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
 }
 
 .case-header .premium-badge {
-    font-size: 0.6rem;
+    font-size: 0.55rem;
     font-weight: 700;
-    color: rgba(255, 215, 0, 0.3);
+    color: rgba(255, 215, 0, 0.25);
     letter-spacing: 2px;
     text-transform: uppercase;
     margin-left: auto;
-    border: 1px solid rgba(255, 215, 0, 0.08);
-    padding: 4px 12px;
+    border: 1px solid rgba(255, 215, 0, 0.06);
+    padding: 3px 10px;
     border-radius: 30px;
 }
 
-/* ===== КОНТЕЙНЕР КАРУСЕЛИ ===== */
-.case-carousel-container {
-    background: transparent;
-    border-radius: 32px;
-    padding: 0;
-    margin-bottom: 24px;
-    position: relative;
+/* ===== БАРАБАН ===== */
+.case-slot-wrapper {
+    padding: 0 4px;
+    margin-bottom: 20px;
 }
 
-/* ГЛОУ-ПОДЛОЖКА ПОД БАРАБАН */
-.case-carousel-container::before {
-    content: '';
+.case-slot-machine {
+    position: relative;
+    border-radius: 28px;
+    overflow: hidden;
+}
+
+/* ГЛОУ-ПОДЛОЖКИ */
+.case-slot-top-glow,
+.case-slot-bottom-glow {
     position: absolute;
-    top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%);
-    width: 90%;
-    height: 200px;
-    background: radial-gradient(ellipse, rgba(255, 215, 0, 0.04), transparent 70%);
+    transform: translateX(-50%);
+    width: 70%;
+    height: 40px;
     pointer-events: none;
     z-index: 0;
     filter: blur(20px);
 }
 
-.case-carousel-window {
-    background: rgba(0, 0, 0, 0.6);
-    border-radius: 28px;
-    height: 200px;
-    overflow: hidden;
+.case-slot-top-glow {
+    top: -10px;
+    background: radial-gradient(ellipse, rgba(255, 215, 0, 0.06), transparent);
+}
+
+.case-slot-bottom-glow {
+    bottom: -10px;
+    background: radial-gradient(ellipse, rgba(255, 215, 0, 0.04), transparent);
+}
+
+.case-slot-window {
     position: relative;
+    height: 190px;
+    background: rgba(0, 0, 0, 0.55);
+    border-radius: 28px;
+    overflow: hidden;
     border: 1px solid rgba(255, 215, 0, 0.04);
     box-shadow:
-        0 0 60px rgba(0, 0, 0, 0.5),
-        inset 0 0 100px rgba(0, 0, 0, 0.3),
-        inset 0 0 40px rgba(255, 215, 0, 0.02);
+        inset 0 0 80px rgba(0, 0, 0, 0.3),
+        0 0 40px rgba(0, 0, 0, 0.3);
     z-index: 1;
 }
 
-/* ===== ТЕНИ (ГРАДИЕНТНЫЕ) ===== */
-.case-shadow-left,
-.case-shadow-right {
+/* ===== ТЕНИ ===== */
+.case-slot-shadow-left,
+.case-slot-shadow-right {
     position: absolute;
     top: 0;
     bottom: 0;
-    width: 80px;
+    width: 60px;
     pointer-events: none;
     z-index: 5;
 }
 
-.case-shadow-left {
+.case-slot-shadow-left {
     left: 0;
-    background: linear-gradient(to right, rgba(0, 0, 0, 0.9), transparent 70%);
+    background: linear-gradient(to right, rgba(0, 0, 0, 0.8), transparent);
 }
 
-.case-shadow-right {
+.case-slot-shadow-right {
     right: 0;
-    background: linear-gradient(to left, rgba(0, 0, 0, 0.9), transparent 70%);
+    background: linear-gradient(to left, rgba(0, 0, 0, 0.8), transparent);
 }
 
 /* ===== УКАЗАТЕЛЬ ===== */
-.case-carousel-pointer {
+.case-slot-pointer {
     position: absolute;
     top: 0;
     left: 50%;
     transform: translateX(-50%);
-    width: 4px;
+    width: 3px;
     height: 100%;
     background: linear-gradient(to bottom,
-        transparent 0%,
-        rgba(255, 215, 0, 0.15) 20%,
+        transparent,
+        rgba(255, 215, 0, 0.3) 20%,
         #FFD700 40%,
         #FFD700 60%,
-        rgba(255, 215, 0, 0.15) 80%,
-        transparent 100%
+        rgba(255, 215, 0, 0.3) 80%,
+        transparent
     );
     z-index: 10;
-    box-shadow:
-        0 0 40px rgba(255, 215, 0, 0.15),
-        0 0 80px rgba(255, 215, 0, 0.05);
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.1);
     pointer-events: none;
     animation: pointerPulse 2s ease-in-out infinite;
 }
 
 @keyframes pointerPulse {
-    0%, 100% {
-        opacity: 0.6;
-        box-shadow: 0 0 30px rgba(255, 215, 0, 0.1);
-    }
-    50% {
-        opacity: 1;
-        box-shadow: 0 0 50px rgba(255, 215, 0, 0.25), 0 0 100px rgba(255, 215, 0, 0.08);
-    }
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
 }
 
-/* ===== ПОДСВЕТКА ЦЕНТРА ===== */
-.case-slot-glow {
+/* ===== ЦЕНТРАЛЬНОЕ СВЕЧЕНИЕ ===== */
+.case-slot-center-glow {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 180px;
-    height: 90%;
+    width: 140px;
+    height: 80%;
     background: radial-gradient(ellipse, rgba(255, 215, 0, 0.04), transparent 70%);
     pointer-events: none;
     z-index: 1;
-    border-radius: 50%;
 }
 
-/* ===== ЛЕНТА КАРУСЕЛИ ===== */
-.case-carousel-track {
+/* ===== ТРЕК (ЛЕНТА) ===== */
+.case-slot-track {
     display: flex;
     flex-direction: row;
-    will-change: transform;
-    transform: translate3d(0, 0, 0);
     height: 100%;
     align-items: center;
-    gap: 16px;
-    padding: 0 20px;
+    gap: 12px;
+    padding: 0 16px;
+    will-change: transform;
+    transform: translate3d(0, 0, 0);
 }
 
 /* ===== ЭЛЕМЕНТ В ЛЕНТЕ ===== */
-.case-carousel-item {
+.case-slot-item {
     flex-shrink: 0;
-    width: 130px;
-    height: 155px;
+    width: 110px;
+    height: 145px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 20px;
     border: 1px solid rgba(255, 255, 255, 0.04);
-    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-    padding: 16px 12px;
+    transition: all 0.3s ease;
+    padding: 12px 8px;
     position: relative;
-    backdrop-filter: blur(4px);
 }
 
-/* ГЛЯНЦЕВЫЙ ЭФФЕКТ */
-.case-carousel-item::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: 24px;
-    padding: 1px;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.06), transparent 60%);
-    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    pointer-events: none;
+.case-slot-item .item-icon {
+    width: 50px;
+    height: 50px;
+    object-fit: contain;
+    display: block;
+    transition: transform 0.3s ease;
 }
 
-.case-carousel-item::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 50%;
-    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.02), transparent);
-    border-radius: 24px 24px 0 0;
-    pointer-events: none;
-}
-
-.case-carousel-item .item-icon {
-    font-size: 3.2rem;
-    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
-}
-
-.case-carousel-item .item-value {
-    font-size: 0.85rem;
+.case-slot-item .item-value {
+    font-size: 0.75rem;
     font-weight: 700;
     color: rgba(255, 255, 255, 0.4);
     text-align: center;
-    transition: all 0.4s ease;
-    letter-spacing: 0.5px;
-    background: rgba(0, 0, 0, 0.2);
-    padding: 4px 12px;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 3px 12px;
     border-radius: 30px;
     backdrop-filter: blur(4px);
+    font-variant-numeric: tabular-nums;
 }
 
-/* ===== АКТИВНЫЙ (ВЫИГРЫШНЫЙ) ЭЛЕМЕНТ ===== */
-.case-carousel-item.active {
-    background: rgba(255, 215, 0, 0.06);
-    border-color: rgba(255, 215, 0, 0.2);
-    transform: scale(1.08);
-    box-shadow:
-        0 0 60px rgba(255, 215, 0, 0.06),
-        inset 0 0 60px rgba(255, 215, 0, 0.02);
+/* ===== АКТИВНЫЙ ЭЛЕМЕНТ ===== */
+.case-slot-item.active {
+    background: rgba(255, 215, 0, 0.05);
+    border-color: rgba(255, 215, 0, 0.15);
+    transform: scale(1.05);
 }
 
-.case-carousel-item.active::before {
-    background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 165, 0, 0.04));
-}
-
-.case-carousel-item.active .item-value {
+.case-slot-item.active .item-value {
     color: #FFD700;
-    background: rgba(255, 215, 0, 0.08);
-    border: 1px solid rgba(255, 215, 0, 0.1);
+    background: rgba(255, 215, 0, 0.06);
+    border: 1px solid rgba(255, 215, 0, 0.06);
 }
 
-.case-carousel-item.active .item-icon {
-    transform: scale(1.12);
-    filter: drop-shadow(0 0 30px rgba(255, 215, 0, 0.15));
+.case-slot-item.active .item-icon {
+    transform: scale(1.08);
 }
 
 /* ===== РАЗМЫТИЕ ===== */
-.case-carousel-item.blurred {
-    filter: blur(2px);
-    opacity: 0.3;
+.case-slot-item.blurred {
+    filter: blur(1.5px);
+    opacity: 0.25;
     transform: scale(0.85);
 }
 
@@ -6684,194 +6630,199 @@ body.light-theme .star-upgrade-card {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px 20px;
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: 24px;
-    margin-bottom: 20px;
+    padding: 14px 18px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 20px;
+    margin-bottom: 18px;
     border: 1px solid rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(10px);
 }
 
-.case-price {
+.case-info .case-info-icon {
     font-size: 0.9rem;
-    color: rgba(255, 255, 255, 0.4);
+    opacity: 0.5;
+    margin-right: 6px;
 }
 
-.case-price span {
-    color: #FFD700;
-    font-weight: 700;
-    font-size: 1.1rem;
-}
-
+.case-price,
 .case-count {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     color: rgba(255, 255, 255, 0.4);
+    display: flex;
+    align-items: center;
 }
 
-.case-count span {
+.case-price span:last-child,
+.case-count span:last-child {
     color: #FFD700;
     font-weight: 700;
-    font-size: 1.1rem;
 }
 
 /* ===== КНОПКИ ===== */
 .case-actions {
     display: flex;
-    gap: 14px;
-    margin-bottom: 20px;
+    gap: 12px;
+    margin-bottom: 18px;
 }
 
 .case-spin-btn {
     flex: 2;
-    padding: 18px 24px;
+    padding: 16px 20px;
     border: none;
     border-radius: 60px;
-    font-size: 1.1rem;
-    font-weight: 800;
-    background: linear-gradient(135deg, #FFD700 0%, #F5A623 40%, #FFD700 100%);
-    background-size: 200% 200%;
+    background: linear-gradient(135deg, #FFD700, #F5A623);
     color: #0a0a1a;
     cursor: pointer;
-    transition: all 0.25s ease;
-    box-shadow: 0 4px 40px rgba(255, 215, 0, 0.2);
-    letter-spacing: 0.5px;
-    position: relative;
-    overflow: hidden;
-    animation: btnShine 3s ease-in-out infinite;
-}
-
-@keyframes btnShine {
-    0%, 100% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-}
-
-.case-spin-btn::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), transparent 50%);
-    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: transform 0.15s ease, box-shadow 0.2s ease;
+    box-shadow: 0 4px 30px rgba(255, 215, 0, 0.15);
 }
 
 .case-spin-btn:active:not(:disabled) {
     transform: scale(0.95);
-    box-shadow: 0 2px 20px rgba(255, 215, 0, 0.15);
+    box-shadow: 0 2px 15px rgba(255, 215, 0, 0.1);
 }
 
 .case-spin-btn:disabled {
     opacity: 0.3;
     cursor: not-allowed;
     transform: none !important;
-    animation: none;
+}
+
+.case-spin-btn .btn-icon {
+    font-size: 1.2rem;
+}
+
+.case-spin-btn .btn-text {
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
 }
 
 .case-buy-btn {
     flex: 1;
-    padding: 18px 24px;
+    padding: 16px 20px;
     border: none;
     border-radius: 60px;
-    font-size: 0.95rem;
-    font-weight: 700;
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(255, 255, 255, 0.03);
     color: #FFD700;
     cursor: pointer;
-    border: 1px solid rgba(255, 215, 0, 0.08);
-    transition: all 0.25s ease;
-    letter-spacing: 0.3px;
+    border: 1px solid rgba(255, 215, 0, 0.06);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: transform 0.15s ease;
 }
 
 .case-buy-btn:active {
     transform: scale(0.95);
-    background: rgba(255, 215, 0, 0.06);
 }
 
-/* ===== СПИСОК НАГРАД (2 В РЯД) ===== */
-.case-rewards-list {
+.case-buy-btn .btn-icon {
+    font-size: 1rem;
+}
+
+.case-buy-btn .btn-text {
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+/* ===== СЕТКА НАГРАД (2 В РЯД) ===== */
+.case-rewards-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 10px;
-    margin-top: 4px;
-    padding-top: 16px;
+    padding-top: 14px;
     border-top: 1px solid rgba(255, 255, 255, 0.03);
 }
 
-.case-reward-item {
+.case-reward-card {
     background: rgba(255, 255, 255, 0.02);
     border-radius: 18px;
-    padding: 14px 12px;
+    padding: 16px 12px;
     text-align: center;
     border: 1px solid rgba(255, 255, 255, 0.03);
-    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-    cursor: default;
+    transition: all 0.3s ease;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    gap: 12px;
+    gap: 6px;
 }
 
-.case-reward-item .reward-icon {
-    font-size: 2rem;
-    flex-shrink: 0;
+.case-reward-card .reward-icon {
+    width: 44px;
+    height: 44px;
+    object-fit: contain;
+    display: block;
 }
 
-.case-reward-item .reward-value {
+.case-reward-card .reward-value {
     font-size: 0.8rem;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.5);
-    transition: color 0.4s ease;
-}
-
-.case-reward-item.active {
-    background: rgba(255, 215, 0, 0.06);
-    border-color: rgba(255, 215, 0, 0.15);
-    transform: scale(1.03);
-    box-shadow: 0 0 30px rgba(255, 215, 0, 0.04);
-}
-
-.case-reward-item.active .reward-value {
-    color: #FFD700;
     font-weight: 700;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.case-reward-card.active {
+    background: rgba(255, 215, 0, 0.05);
+    border-color: rgba(255, 215, 0, 0.12);
+    transform: scale(1.03);
+}
+
+.case-reward-card.active .reward-value {
+    color: #FFD700;
 }
 
 /* ===== АДАПТАЦИЯ ===== */
 @media (max-width: 480px) {
-    .case-carousel-window {
-        height: 170px;
+    .case-slot-window {
+        height: 160px;
         border-radius: 24px;
     }
-    .case-carousel-item {
-        width: 110px;
-        height: 135px;
-        padding: 12px 10px;
+    .case-slot-item {
+        width: 95px;
+        height: 125px;
+        padding: 10px 6px;
         gap: 6px;
     }
-    .case-carousel-item .item-icon {
-        font-size: 2.6rem;
+    .case-slot-item .item-icon {
+        width: 40px;
+        height: 40px;
     }
-    .case-carousel-item .item-value {
-        font-size: 0.75rem;
+    .case-slot-item .item-value {
+        font-size: 0.65rem;
+        padding: 2px 10px;
     }
-    .case-rewards-list {
+    .case-slot-shadow-left,
+    .case-slot-shadow-right {
+        width: 40px;
+    }
+    .case-rewards-grid {
         gap: 8px;
     }
-    .case-reward-item {
+    .case-reward-card {
         padding: 12px 10px;
         border-radius: 14px;
-        gap: 10px;
     }
-    .case-reward-item .reward-icon {
-        font-size: 1.6rem;
+    .case-reward-card .reward-icon {
+        width: 36px;
+        height: 36px;
     }
-    .case-reward-item .reward-value {
+    .case-reward-card .reward-value {
         font-size: 0.7rem;
     }
     .case-info {
-        padding: 14px 16px;
+        padding: 12px 14px;
         flex-direction: column;
-        gap: 6px;
+        gap: 4px;
         align-items: stretch;
         text-align: center;
-        border-radius: 20px;
+    }
+    .case-price,
+    .case-count {
+        justify-content: center;
     }
     .case-actions {
         flex-direction: column;
@@ -6879,59 +6830,54 @@ body.light-theme .star-upgrade-card {
     }
     .case-spin-btn {
         flex: none;
-        padding: 16px;
-        font-size: 1rem;
+        padding: 14px;
+    }
+    .case-spin-btn .btn-text {
+        font-size: 0.9rem;
     }
     .case-buy-btn {
         flex: none;
-        padding: 16px;
-    }
-    .case-shadow-left,
-    .case-shadow-right {
-        width: 50px;
+        padding: 14px;
     }
     .case-header h2 {
-        font-size: 1rem;
-    }
-    .case-header .premium-badge {
-        font-size: 0.5rem;
-        padding: 3px 10px;
+        font-size: 0.95rem;
     }
     .case-back-btn {
-        width: 38px;
-        height: 38px;
+        width: 34px;
+        height: 34px;
         font-size: 1rem;
     }
 }
 
 @media (max-width: 380px) {
-    .case-carousel-window {
-        height: 150px;
+    .case-slot-window {
+        height: 140px;
     }
-    .case-carousel-item {
-        width: 95px;
-        height: 115px;
-        padding: 10px 8px;
+    .case-slot-item {
+        width: 80px;
+        height: 105px;
+        padding: 8px 4px;
         gap: 4px;
     }
-    .case-carousel-item .item-icon {
-        font-size: 2.2rem;
+    .case-slot-item .item-icon {
+        width: 34px;
+        height: 34px;
     }
-    .case-carousel-item .item-value {
-        font-size: 0.65rem;
-        padding: 2px 10px;
+    .case-slot-item .item-value {
+        font-size: 0.55rem;
+        padding: 2px 8px;
     }
-    .case-rewards-list {
+    .case-rewards-grid {
         gap: 6px;
     }
-    .case-reward-item {
+    .case-reward-card {
         padding: 10px 8px;
-        gap: 8px;
     }
-    .case-reward-item .reward-icon {
-        font-size: 1.3rem;
+    .case-reward-card .reward-icon {
+        width: 30px;
+        height: 30px;
     }
-    .case-reward-item .reward-value {
+    .case-reward-card .reward-value {
         font-size: 0.6rem;
     }
 }

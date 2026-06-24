@@ -7014,43 +7014,30 @@ function translateElement(el, key) {
 setTimeout(loadLanguageSettings, 500);
 
     // ================================================================
-// КЕЙСЫ - ГОРИЗОНТАЛЬНАЯ КАРУСЕЛЬ С WAAPI
+// КЕЙСЫ - ОПТИМИЗИРОВАННАЯ ВЕРСИЯ
 // ================================================================
 
 let currentCaseId = 1;
 let isCaseSpinning = false;
 let caseCount = parseInt(localStorage.getItem('weregood_cases') || '0');
 let currentAnimation = null;
+let animationFrame = null;
 
 const caseData = {
     1: {
         name: '📦 Обычный кейс',
-        icon: '📦',
         price: 500,
         rewards: [
-            { icon: '💎', value: '50 LP' },
-            { icon: '⭐', value: '10 WG' },
-            { icon: '💎', value: '100 LP' },
-            { icon: '🏆', value: 'Улучшение' },
-            { icon: '💰', value: '500 WG' },
-            { icon: '👑', value: 'Префикс' },
-            { icon: '🎫', value: 'Билет' },
-            { icon: '⚡', value: '+30 энергии' }
+            { icon: '/static/diamond.png', value: '50 LP' },
+            { icon: '/static/wallet.png', value: '10 WG' },
+            { icon: '/static/diamond.png', value: '100 LP' },
+            { icon: '/static/trophy.png', value: 'Улучшение' },
+            { icon: '/static/wallet.png', value: '500 WG' },
+            { icon: '/static/ticket.png', value: 'Билет' },
+            { icon: '/static/lightning.png', value: '+30 энергии' }
         ]
     }
 };
-
-// ===== HAPTIC FEEDBACK =====
-function triggerHaptic(type = 'medium') {
-    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) {
-        try {
-            window.Telegram.WebApp.HapticFeedback.impactOccurred(type);
-        } catch(e) {}
-    } else if (navigator.vibrate) {
-        const duration = type === 'heavy' ? 30 : type === 'medium' ? 15 : 8;
-        navigator.vibrate(duration);
-    }
-}
 
 // ===== ОТКРЫТИЕ КЕЙСА =====
 function openCase(caseId) {
@@ -7061,54 +7048,44 @@ function openCase(caseId) {
     const page = document.getElementById('casePage');
     if (!page) return;
 
-    // Обновляем заголовок
-    const title = document.getElementById('caseTitle');
-    if (title) title.textContent = caseInfo.name;
+    document.getElementById('caseTitle').textContent = '📦 ' + caseInfo.name;
+    document.getElementById('casePriceDisplay').textContent = caseInfo.price;
 
-    // Обновляем цену
-    const priceDisplay = document.getElementById('casePriceDisplay');
-    if (priceDisplay) priceDisplay.textContent = caseInfo.price;
-
-    // Рендерим список наград
-    renderRewardsList(caseInfo.rewards);
-
-    // Рендерим ленту карусели
-    renderCarousel(caseInfo.rewards);
-
-    // Обновляем количество кейсов
+    renderRewardsGrid(caseInfo.rewards);
+    renderSlotTrack(caseInfo.rewards);
     updateCaseCount();
 
-    // Сбрасываем состояние анимации
-    const track = document.getElementById('caseCarouselTrack');
+    const track = document.getElementById('caseSlotTrack');
     if (track) {
         track.style.transform = 'translateX(0px)';
         if (currentAnimation) {
             currentAnimation.cancel();
             currentAnimation = null;
         }
+        if (animationFrame) {
+            cancelAnimationFrame(animationFrame);
+            animationFrame = null;
+        }
     }
 
-    // Открываем страницу
     page.classList.add('active');
     document.body.style.overflow = 'hidden';
 }
 
-// ===== РЕНДЕР ЛЕНТЫ КАРУСЕЛИ (ГОРИЗОНТАЛЬНАЯ) =====
-function renderCarousel(rewards) {
-    const track = document.getElementById('caseCarouselTrack');
+// ===== РЕНДЕР ТРЕКА =====
+function renderSlotTrack(rewards) {
+    const track = document.getElementById('caseSlotTrack');
     if (!track) return;
 
-    // Создаём длинную ленту с дублями для бесконечной прокрутки
-    const cycles = 20;
+    const cycles = 15;
     let html = '';
 
     for (let cycle = 0; cycle < cycles; cycle++) {
         for (let i = 0; i < rewards.length; i++) {
             const reward = rewards[i];
-            const isHighlight = (cycle === Math.floor(cycles / 2) && i === 0);
             html += `
-                <div class="case-carousel-item ${isHighlight ? 'active' : ''}" data-index="${i}" data-cycle="${cycle}">
-                    <span class="item-icon">${reward.icon}</span>
+                <div class="case-slot-item" data-index="${i}" data-cycle="${cycle}">
+                    <img src="${reward.icon}" class="item-icon" alt="${reward.value}" loading="lazy">
                     <span class="item-value">${reward.value}</span>
                 </div>
             `;
@@ -7117,79 +7094,76 @@ function renderCarousel(rewards) {
     track.innerHTML = html;
 }
 
-// ===== РЕНДЕР СПИСКА НАГРАД =====
-function renderRewardsList(rewards) {
-    const container = document.getElementById('caseRewardsList');
-    if (!container) return;
+// ===== РЕНДЕР СЕТКИ НАГРАД =====
+function renderRewardsGrid(rewards) {
+    const grid = document.getElementById('caseRewardsGrid');
+    if (!grid) return;
 
     let html = '';
     rewards.forEach(reward => {
         html += `
-            <div class="case-reward-item">
-                <span class="reward-icon">${reward.icon}</span>
+            <div class="case-reward-card">
+                <img src="${reward.icon}" class="reward-icon" alt="${reward.value}" loading="lazy">
                 <span class="reward-value">${reward.value}</span>
             </div>
         `;
     });
-    container.innerHTML = html;
+    grid.innerHTML = html;
 }
 
 // ===== ОБНОВЛЕНИЕ КОЛИЧЕСТВА КЕЙСОВ =====
 function updateCaseCount() {
     caseCount = parseInt(localStorage.getItem('weregood_cases') || '0');
-    const countEl = document.getElementById('caseCount');
-    if (countEl) countEl.textContent = caseCount;
+    document.getElementById('caseCount').textContent = caseCount;
 }
 
 // ===== ПОЛУЧЕНИЕ ШИРИНЫ ЭЛЕМЕНТА =====
 function getItemWidth() {
-    const firstItem = document.querySelector('.case-carousel-item');
-    if (!firstItem) return 108; // 100px + 8px gap
-    return firstItem.offsetWidth + 8;
+    const firstItem = document.querySelector('.case-slot-item');
+    if (!firstItem) return 122;
+    return firstItem.offsetWidth + 12;
 }
 
-// ===== ВРАЩЕНИЕ КАРУСЕЛИ (ГОРИЗОНТАЛЬНОЕ) =====
+// ===== ВРАЩЕНИЕ =====
 function spinCase() {
     if (isCaseSpinning) return;
 
     const caseInfo = caseData[currentCaseId];
     if (!caseInfo) return;
 
-    // Проверяем наличие кейсов
     if (caseCount <= 0) {
         showToast('❌ У вас нет кейсов! Купите сначала.', 'error');
         triggerHaptic('medium');
         return;
     }
 
-    const track = document.getElementById('caseCarouselTrack');
+    const track = document.getElementById('caseSlotTrack');
     const spinBtn = document.getElementById('caseSpinBtn');
     if (!track || !spinBtn) return;
 
-    // Отменяем предыдущую анимацию
     if (currentAnimation) {
         currentAnimation.cancel();
         currentAnimation = null;
     }
+    if (animationFrame) {
+        cancelAnimationFrame(animationFrame);
+        animationFrame = null;
+    }
 
     isCaseSpinning = true;
     spinBtn.disabled = true;
-    spinBtn.textContent = '⏳ ВРАЩЕНИЕ...';
+    spinBtn.querySelector('.btn-text').textContent = 'ВРАЩЕНИЕ...';
 
-    // Убираем активные подсветки
-    document.querySelectorAll('.case-reward-item').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.case-carousel-item').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.case-reward-card').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.case-slot-item').forEach(el => el.classList.remove('active'));
 
-    // Получаем все элементы в ленте
-    const items = track.querySelectorAll('.case-carousel-item');
+    const items = track.querySelectorAll('.case-slot-item');
     const itemWidth = getItemWidth();
     const itemsPerCycle = caseInfo.rewards.length;
     const totalItems = items.length;
 
-    // Выбираем случайный выигрышный индекс
     const winIndex = Math.floor(Math.random() * caseInfo.rewards.length);
 
-    // Находим элемент с выигрышным индексом в середине ленты
     const middleCycle = Math.floor(totalItems / itemsPerCycle / 2);
     let targetItemIndex = -1;
 
@@ -7216,47 +7190,45 @@ function spinCase() {
         targetItemIndex = Math.floor(totalItems / 2);
     }
 
-    // Рассчитываем позицию остановки
-    // Центр = 3 (при 7 видимых элементах)
     const centerOffset = 3;
     const targetPosition = -(targetItemIndex - centerOffset) * itemWidth;
 
-    // Добавляем дополнительные обороты для эффектности
     const extraCycles = 3 + Math.random() * 2;
     const extraOffset = extraCycles * itemsPerCycle * itemWidth;
     const finalPosition = targetPosition - extraOffset;
 
-    // Сохраняем текущую позицию для плавного старта
     const currentTransform = track.style.transform || 'translateX(0px)';
     const currentX = parseInt(currentTransform.replace('translateX(', '').replace('px)', '')) || 0;
 
-    // Вибрация при старте
     triggerHaptic('medium');
 
-    // ===== СОЗДАЁМ АНИМАЦИЮ ЧЕРЕЗ WAAPI =====
+    // ===== АНИМАЦИЯ =====
     const keyframes = [
         { transform: `translateX(${currentX}px)` },
         { transform: `translateX(${finalPosition}px)` }
     ];
 
     const options = {
-        duration: 4000 + Math.random() * 1000,
+        duration: 3500 + Math.random() * 800,
         easing: 'cubic-bezier(0.15, 0.85, 0.35, 1.15)',
         fill: 'forwards'
     };
 
     currentAnimation = track.animate(keyframes, options);
 
-    // ===== ЭФФЕКТ РАЗМЫТИЯ ВО ВРЕМЯ ДВИЖЕНИЯ =====
+    // ===== РАЗМЫТИЕ =====
+    let blurActive = true;
     let lastX = currentX;
-    let speed = 0;
-    let speedCheckInterval = setInterval(() => {
+
+    function applyBlur() {
+        if (!blurActive) return;
+
         const rect = track.getBoundingClientRect();
         const currentXPos = rect.left;
-        speed = Math.abs(currentXPos - lastX);
+        const speed = Math.abs(currentXPos - lastX);
         lastX = currentXPos;
 
-        const allItems = track.querySelectorAll('.case-carousel-item');
+        const allItems = track.querySelectorAll('.case-slot-item');
         const containerRect = track.parentElement.getBoundingClientRect();
         const center = containerRect.left + containerRect.width / 2;
 
@@ -7266,9 +7238,9 @@ function spinCase() {
             const distance = Math.abs(elCenter - center);
 
             if (distance > 60 && speed > 10) {
-                const blurAmount = Math.min(3, (distance - 60) / 40);
+                const blurAmount = Math.min(2, (distance - 60) / 50);
                 el.style.filter = `blur(${blurAmount}px)`;
-                el.style.opacity = Math.max(0.3, 1 - (distance / 350));
+                el.style.opacity = Math.max(0.25, 1 - (distance / 350));
                 el.style.transform = `scale(${Math.max(0.85, 1 - (distance / 500))})`;
             } else {
                 el.style.filter = '';
@@ -7276,13 +7248,21 @@ function spinCase() {
                 el.style.transform = '';
             }
         });
-    }, 50);
 
-    // ===== ОБРАБОТЧИК ОКОНЧАНИЯ АНИМАЦИИ =====
+        animationFrame = requestAnimationFrame(applyBlur);
+    }
+
+    animationFrame = requestAnimationFrame(applyBlur);
+
+    // ===== ЗАВЕРШЕНИЕ =====
     currentAnimation.onfinish = function() {
-        clearInterval(speedCheckInterval);
+        blurActive = false;
+        if (animationFrame) {
+            cancelAnimationFrame(animationFrame);
+            animationFrame = null;
+        }
 
-        document.querySelectorAll('.case-carousel-item').forEach(el => {
+        document.querySelectorAll('.case-slot-item').forEach(el => {
             el.style.filter = '';
             el.style.opacity = '';
             el.style.transform = '';
@@ -7290,13 +7270,12 @@ function spinCase() {
 
         track.style.transform = `translateX(${finalPosition}px)`;
 
-        // Находим элемент в центре
         const containerRect = track.parentElement.getBoundingClientRect();
         const center = containerRect.left + containerRect.width / 2;
         let closestItem = null;
         let closestDistance = Infinity;
 
-        track.querySelectorAll('.case-carousel-item').forEach(el => {
+        track.querySelectorAll('.case-slot-item').forEach(el => {
             const elRect = el.getBoundingClientRect();
             const elCenter = elRect.left + elRect.width / 2;
             const distance = Math.abs(elCenter - center);
@@ -7311,15 +7290,15 @@ function spinCase() {
             const winIndex = parseInt(closestItem.dataset.index);
             const winReward = caseInfo.rewards[winIndex];
 
-            const rewardItems = document.querySelectorAll('.case-reward-item');
-            rewardItems.forEach((el, idx) => {
+            const rewardCards = document.querySelectorAll('.case-reward-card');
+            rewardCards.forEach((el, idx) => {
                 if (idx === winIndex) {
                     el.classList.add('active');
                 }
             });
 
             triggerHaptic('heavy');
-            showToast(`🎉 Вы выиграли: ${winReward.icon} ${winReward.value}!`, 'success');
+            showToast(`🎉 Вы выиграли: ${winReward.value}!`, 'success');
 
             caseCount--;
             localStorage.setItem('weregood_cases', caseCount.toString());
@@ -7328,27 +7307,30 @@ function spinCase() {
 
         isCaseSpinning = false;
         spinBtn.disabled = false;
-        spinBtn.textContent = '🎰 ОТКРЫТЬ';
+        spinBtn.querySelector('.btn-text').textContent = 'ОТКРЫТЬ';
         currentAnimation = null;
     };
 
     currentAnimation.oncancel = function() {
-        clearInterval(speedCheckInterval);
+        blurActive = false;
+        if (animationFrame) {
+            cancelAnimationFrame(animationFrame);
+            animationFrame = null;
+        }
         isCaseSpinning = false;
         spinBtn.disabled = false;
-        spinBtn.textContent = '🎰 ОТКРЫТЬ';
+        spinBtn.querySelector('.btn-text').textContent = 'ОТКРЫТЬ';
         currentAnimation = null;
     };
 }
 
-// ===== ПОКУПКА КЕЙСА =====
+// ===== ПОКУПКА =====
 function buyCase() {
     const caseInfo = caseData[currentCaseId];
     if (!caseInfo) return;
 
     if (localWG < caseInfo.price) {
         showToast(`❌ Не хватает WG! Нужно ${caseInfo.price} WG`, 'error');
-        triggerHaptic('medium');
         return;
     }
 
@@ -7363,11 +7345,10 @@ function buyCase() {
 
     showToast(`✅ ${caseInfo.name} куплен! Нажмите "ОТКРЫТЬ"`, 'success');
     triggerHaptic('light');
-
     syncData(true);
 }
 
-// ===== ЗАКРЫТИЕ КЕЙСА =====
+// ===== ЗАКРЫТИЕ =====
 function closeCase() {
     const page = document.getElementById('casePage');
     if (page) {
@@ -7378,11 +7359,15 @@ function closeCase() {
             currentAnimation.cancel();
             currentAnimation = null;
         }
+        if (animationFrame) {
+            cancelAnimationFrame(animationFrame);
+            animationFrame = null;
+        }
 
-        const track = document.getElementById('caseCarouselTrack');
+        const track = document.getElementById('caseSlotTrack');
         if (track) {
             track.style.transform = 'translateX(0px)';
-            track.querySelectorAll('.case-carousel-item').forEach(el => {
+            track.querySelectorAll('.case-slot-item').forEach(el => {
                 el.style.filter = '';
                 el.style.opacity = '';
                 el.style.transform = '';
@@ -7390,6 +7375,18 @@ function closeCase() {
             });
         }
         isCaseSpinning = false;
+    }
+}
+
+// ===== HAPTIC =====
+function triggerHaptic(type = 'medium') {
+    if (window.Telegram?.WebApp?.HapticFeedback) {
+        try {
+            window.Telegram.WebApp.HapticFeedback.impactOccurred(type);
+        } catch(e) {}
+    } else if (navigator.vibrate) {
+        const duration = type === 'heavy' ? 30 : type === 'medium' ? 15 : 8;
+        navigator.vibrate(duration);
     }
 }
 
