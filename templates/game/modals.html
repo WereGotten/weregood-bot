@@ -195,3 +195,109 @@
         </div>
     </div>
 </div>
+
+<!-- ============================================================
+     СТРАНИЦА ОТКРЫТИЯ КЕЙСА
+     ============================================================ -->
+<div id="casePage" class="case-page">
+    <div class="case-page-content">
+        <!-- Шапка -->
+        <div class="case-header">
+            <button class="case-back-btn" onclick="closeCase()">←</button>
+            <h2 id="caseTitle">📦 Обычный кейс</h2>
+            <div style="flex: 1;"></div>
+        </div>
+
+        <!-- Основная зона -->
+        <div class="case-main">
+            <!-- Кейс с анимацией -->
+            <div class="case-box" id="caseBox">
+                <div class="case-box-inner" id="caseBoxInner">
+                    <div class="case-icon" id="caseIcon">📦</div>
+                    <div class="case-sparkles" id="caseSparkles">
+                        <span>✨</span>
+                        <span>✨</span>
+                        <span>✨</span>
+                        <span>✨</span>
+                        <span>✨</span>
+                        <span>✨</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Награды (превью) -->
+            <div class="case-rewards-preview" id="caseRewardsPreview">
+                <div class="case-reward-item">
+                    <div class="case-reward-icon">💎</div>
+                    <div class="case-reward-value">50 LP</div>
+                </div>
+                <div class="case-reward-item">
+                    <div class="case-reward-icon">⭐</div>
+                    <div class="case-reward-value">10 WG</div>
+                </div>
+                <div class="case-reward-item central">
+                    <div class="case-reward-icon">💎</div>
+                    <div class="case-reward-value">100 LP</div>
+                </div>
+                <div class="case-reward-item">
+                    <div class="case-reward-icon">🏆</div>
+                    <div class="case-reward-value">Улучшение</div>
+                </div>
+                <div class="case-reward-item">
+                    <div class="case-reward-icon">💰</div>
+                    <div class="case-reward-value">500 WG</div>
+                </div>
+            </div>
+
+            <!-- Жёлтая стрелка -->
+            <div class="case-arrow-down">↓</div>
+
+            <!-- Кнопки управления -->
+            <div class="case-controls">
+                <button class="case-spin-btn" id="caseSpinBtn" onclick="spinCase()">
+                    🎰 КРУТИТЬ
+                </button>
+                <div class="case-counters">
+                    <span>🎫 Кейсов: <strong id="caseCount">0</strong></span>
+                    <span class="case-buy-btn" onclick="buyCase()">💰 Купить</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Список всех наград -->
+        <div class="case-rewards-list" id="caseRewardsList">
+            <div class="case-reward-item">
+                <div class="case-reward-icon">💎</div>
+                <div class="case-reward-value">50 LP</div>
+            </div>
+            <div class="case-reward-item">
+                <div class="case-reward-icon">⭐</div>
+                <div class="case-reward-value">10 WG</div>
+            </div>
+            <div class="case-reward-item">
+                <div class="case-reward-icon">💎</div>
+                <div class="case-reward-value">100 LP</div>
+            </div>
+            <div class="case-reward-item">
+                <div class="case-reward-icon">🏆</div>
+                <div class="case-reward-value">Улучшение</div>
+            </div>
+            <div class="case-reward-item">
+                <div class="case-reward-icon">💰</div>
+                <div class="case-reward-value">500 WG</div>
+            </div>
+            <div class="case-reward-item">
+                <div class="case-reward-icon">👑</div>
+                <div class="case-reward-value">Префикс</div>
+            </div>
+            <div class="case-reward-item">
+                <div class="case-reward-icon">🎫</div>
+                <div class="case-reward-value">Билет</div>
+            </div>
+            <div class="case-reward-item">
+                <div class="case-reward-icon">⚡</div>
+                <div class="case-reward-value">+30 энергии</div>
+            </div>
+        </div>
+    </div>
+</div>

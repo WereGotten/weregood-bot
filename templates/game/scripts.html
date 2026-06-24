@@ -7013,4 +7013,156 @@ function translateElement(el, key) {
 // Загружаем язык при старте
 setTimeout(loadLanguageSettings, 500);
 
+    // ================================================================
+// КЕЙСЫ - ПОЛНАЯ ЛОГИКА
+// ================================================================
+
+let currentCaseId = 0;
+let caseData = {
+    1: {
+        name: '📦 Обычный кейс',
+        icon: '📦',
+        price: 500,
+        rewards: [
+            { icon: '💎', value: '50 LP' },
+            { icon: '⭐', value: '10 WG' },
+            { icon: '💎', value: '100 LP' },
+            { icon: '🏆', value: 'Улучшение' },
+            { icon: '💰', value: '500 WG' },
+            { icon: '👑', value: 'Префикс' },
+            { icon: '🎫', value: 'Билет' },
+            { icon: '⚡', value: '+30 энергии' }
+        ]
+    },
+    2: {
+        name: '🎁 Редкий кейс',
+        icon: '🎁',
+        price: 1000,
+        rewards: [
+            { icon: '💎', value: '100 LP' },
+            { icon: '⭐', value: '50 WG' },
+            { icon: '💎', value: '200 LP' },
+            { icon: '🏆', value: 'Улучшение' },
+            { icon: '💰', value: '1000 WG' },
+            { icon: '👑', value: 'Префикс' },
+            { icon: '🎫', value: 'Билет' },
+            { icon: '⚡', value: '+50 энергии' }
+        ]
+    },
+    3: {
+        name: '💎 Легендарный кейс',
+        icon: '💎',
+        price: 2500,
+        rewards: [
+            { icon: '💎', value: '200 LP' },
+            { icon: '⭐', value: '100 WG' },
+            { icon: '💎', value: '500 LP' },
+            { icon: '🏆', value: 'Легенда' },
+            { icon: '💰', value: '2500 WG' },
+            { icon: '👑', value: 'Префикс' },
+            { icon: '🎫', value: '3 билета' },
+            { icon: '⚡', value: '+100 энергии' }
+        ]
+    },
+    4: {
+        name: '👑 Королевский кейс',
+        icon: '👑',
+        price: 5000,
+        rewards: [
+            { icon: '💎', value: '500 LP' },
+            { icon: '⭐', value: '500 WG' },
+            { icon: '💎', value: '1000 LP' },
+            { icon: '🏆', value: 'Легенда' },
+            { icon: '💰', value: '5000 WG' },
+            { icon: '👑', value: 'Префикс' },
+            { icon: '🎫', value: '5 билетов' },
+            { icon: '⚡', value: '+200 энергии' }
+        ]
+    }
+};
+
+// ===== ОТКРЫТИЕ КЕЙСА =====
+function openCase(caseId) {
+    currentCaseId = caseId;
+    const caseInfo = caseData[caseId];
+    if (!caseInfo) return;
+
+    const page = document.getElementById('casePage');
+    if (!page) return;
+
+    // Обновляем заголовок
+    const title = document.getElementById('caseTitle');
+    if (title) title.textContent = caseInfo.name;
+
+    // Обновляем иконку
+    const icon = document.getElementById('caseIcon');
+    if (icon) icon.textContent = caseInfo.icon;
+
+    // Обновляем количество кейсов (временно)
+    const count = document.getElementById('caseCount');
+    if (count) count.textContent = Math.floor(Math.random() * 5) + 1;
+
+    // Обновляем награды
+    updateCaseRewards(caseInfo.rewards);
+
+    // Открываем страницу
+    page.classList.add('active');
+    document.body.style.overflow = 'hidden';
+
+    // Сбрасываем анимацию
+    const box = document.getElementById('caseBox');
+    if (box) {
+        box.classList.remove('spinning', 'opened');
+    }
+
+    // Останавливаем скролл страницы
+    const mainContent = document.querySelector('.main-content');
+    if (mainContent) mainContent.style.overflow = 'hidden';
+}
+
+// ===== ОБНОВЛЕНИЕ НАГРАД =====
+function updateCaseRewards(rewards) {
+    // Обновляем превью (5 штук)
+    const previewContainer = document.getElementById('caseRewardsPreview');
+    if (previewContainer) {
+        let html = '';
+        // Берём первые 5 наград, среднюю делаем центральной
+        const displayRewards = rewards.slice(0, 5);
+        displayRewards.forEach((reward, index) => {
+            const isCentral = index === 2;
+            html += `
+                <div class="case-reward-item ${isCentral ? 'central' : ''}">
+                    <div class="case-reward-icon">${reward.icon}</div>
+                    <div class="case-reward-value">${reward.value}</div>
+                </div>
+            `;
+        });
+        previewContainer.innerHTML = html;
+    }
+
+    // Обновляем полный список
+    const listContainer = document.getElementById('caseRewardsList');
+    if (listContainer) {
+        let html = '';
+        rewards.forEach(reward => {
+            html += `
+                <div class="case-reward-item">
+                    <div class="case-reward-icon">${reward.icon}</div>
+                    <div class="case-reward-value">${reward.value}</div>
+                </div>
+            `;
+        });
+        listContainer.innerHTML = html;
+    }
+}
+
+// ===== ЗАКРЫТИЕ КЕЙСА =====
+function closeCase() {
+    const page = document.getElementById('casePage');
+    if (page) {
+        page.classList.remove('active');
+        document.body.style.overflow = '';
+
+        // Восстанавливаем скролл
+        const mainContent
 </script>

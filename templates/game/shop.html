@@ -289,82 +289,100 @@
         </div>
     </div> <!-- shopStars -->
 
+    <!-- ==================== КЕЙСЫ ==================== -->
+<div id="shopCases" class="shop-pane">
+    <!-- ПРОВЕРКА ДОСТУПА: Обычные игроки видят "В разработке" -->
+    <div id="casesAccessDenied" style="display: none; text-align: center; padding: 50px 20px;">
+        <div style="font-size: 4rem; margin-bottom: 16px;">🔒</div>
+        <h2 style="color: #FFD700; margin-bottom: 12px; font-size: 1.4rem;">🎁 Кейсы в разработке!</h2>
+        <p style="color: rgba(255,255,255,0.6); font-size: 0.9rem; line-height: 1.8; max-width: 320px; margin: 0 auto;">
+            Мы работаем над этой функцией.<br>
+            Скоро здесь появятся крутые кейсы с наградами! 🚀
+        </p>
+        <div style="margin-top: 24px; display: flex; gap: 12px; justify-content: center;">
+            <span style="animation: pulse 1.5s infinite; font-size: 1.4rem;">⚡</span>
+            <span style="animation: pulse 1.5s infinite 0.3s; font-size: 1.4rem;">⚡</span>
+            <span style="animation: pulse 1.5s infinite 0.6s; font-size: 1.4rem;">⚡</span>
+        </div>
+    </div>
+
     <!-- ============================================================
-         КЕЙСЫ
+         КОНТЕНТ ДЛЯ АДМИНА (ТОЛЬКО ТЫ)
          ============================================================ -->
-    <div id="shopCases" class="shop-pane">
-        <!-- ПРОВЕРКА ДОСТУПА: Обычные игроки видят "В разработке" -->
-        <div id="casesAccessDenied" style="display: none; text-align: center; padding: 50px 20px;">
-            <div style="font-size: 4rem; margin-bottom: 16px;">🔒</div>
-            <h2 style="color: #FFD700; margin-bottom: 12px; font-size: 1.4rem;">🎁 Кейсы в разработке!</h2>
-            <p style="color: rgba(255,255,255,0.6); font-size: 0.9rem; line-height: 1.8; max-width: 320px; margin: 0 auto;">
-                Мы работаем над этой функцией.<br>
-                Скоро здесь появятся крутые кейсы с наградами! 🚀
-            </p>
-            <div style="margin-top: 24px; display: flex; gap: 12px; justify-content: center;">
-                <span style="animation: pulse 1.5s infinite; font-size: 1.4rem;">⚡</span>
-                <span style="animation: pulse 1.5s infinite 0.3s; font-size: 1.4rem;">⚡</span>
-                <span style="animation: pulse 1.5s infinite 0.6s; font-size: 1.4rem;">⚡</span>
+    <div id="casesAdminContent" style="display: none;">
+        <h2 class="section-title" style="margin-bottom: 20px;">
+            <span style="font-size: 28px;">🎁</span>
+            <span>Кейсы <span style="font-size: 0.6rem; color: rgba(255,255,255,0.3);">(DEV)</span></span>
+        </h2>
+
+        <!-- ===== ГРИД КЕЙСОВ (ГЛАВНОЕ МЕНЮ) ===== -->
+        <div id="casesGrid" style="display: flex; flex-direction: column; gap: 14px;">
+
+            <!-- Кейс 1: Обычный -->
+            <div class="case-card" onclick="openCase(1)" style="background: linear-gradient(135deg, rgba(255,215,0,0.08), rgba(255,165,0,0.03)); border-radius: 20px; padding: 16px 18px; border: 1px solid rgba(255,215,0,0.15); display: flex; align-items: center; gap: 16px; cursor: pointer; transition: all 0.2s ease;">
+                <div style="font-size: 3rem; flex-shrink: 0;">📦</div>
+                <div style="flex: 1;">
+                    <div style="font-weight: 700; color: #FFD700; font-size: 1.1rem;">Обычный кейс</div>
+                    <div style="font-size: 0.7rem; color: rgba(255,255,255,0.4);">Шанс на редкие предметы</div>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-size: 0.8rem; color: #FFD700; font-weight: 600;">500 WG</div>
+                    <div style="font-size: 0.65rem; color: rgba(255,255,255,0.3);">Купить →</div>
+                </div>
+            </div>
+
+            <!-- Кейс 2: Редкий -->
+            <div class="case-card" onclick="openCase(2)" style="background: linear-gradient(135deg, rgba(0,150,255,0.08), rgba(0,100,255,0.03)); border-radius: 20px; padding: 16px 18px; border: 1px solid rgba(0,150,255,0.15); display: flex; align-items: center; gap: 16px; cursor: pointer; transition: all 0.2s ease;">
+                <div style="font-size: 3rem; flex-shrink: 0;">🎁</div>
+                <div style="flex: 1;">
+                    <div style="font-weight: 700; color: #0096ff; font-size: 1.1rem;">Редкий кейс</div>
+                    <div style="font-size: 0.7rem; color: rgba(255,255,255,0.4);">Гарантированный редкий предмет</div>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-size: 0.8rem; color: #0096ff; font-weight: 600;">1 000 WG</div>
+                    <div style="font-size: 0.65rem; color: rgba(255,255,255,0.3);">Купить →</div>
+                </div>
+            </div>
+
+            <!-- Кейс 3: Легендарный -->
+            <div class="case-card" onclick="openCase(3)" style="background: linear-gradient(135deg, rgba(255,0,150,0.08), rgba(200,0,100,0.03)); border-radius: 20px; padding: 16px 18px; border: 1px solid rgba(255,0,150,0.15); display: flex; align-items: center; gap: 16px; cursor: pointer; transition: all 0.2s ease;">
+                <div style="font-size: 3rem; flex-shrink: 0;">💎</div>
+                <div style="flex: 1;">
+                    <div style="font-weight: 700; color: #ff0096; font-size: 1.1rem;">Легендарный кейс</div>
+                    <div style="font-size: 0.7rem; color: rgba(255,255,255,0.4);">Шанс на Легендарный предмет!</div>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-size: 0.8rem; color: #ff0096; font-weight: 600;">2 500 WG</div>
+                    <div style="font-size: 0.65rem; color: rgba(255,255,255,0.3);">Купить →</div>
+                </div>
+            </div>
+
+            <!-- Кейс 4: Королевский -->
+            <div class="case-card" onclick="openCase(4)" style="background: linear-gradient(135deg, rgba(255,200,0,0.08), rgba(200,150,0,0.03)); border-radius: 20px; padding: 16px 18px; border: 1px solid rgba(255,200,0,0.15); display: flex; align-items: center; gap: 16px; cursor: pointer; transition: all 0.2s ease;">
+                <div style="font-size: 3rem; flex-shrink: 0;">👑</div>
+                <div style="flex: 1;">
+                    <div style="font-weight: 700; color: #ffcc00; font-size: 1.1rem;">Королевский кейс</div>
+                    <div style="font-size: 0.7rem; color: rgba(255,255,255,0.4);">Только для избранных</div>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-size: 0.8rem; color: #ffcc00; font-weight: 600;">5 000 WG</div>
+                    <div style="font-size: 0.65rem; color: rgba(255,255,255,0.3);">Купить →</div>
+                </div>
             </div>
         </div>
 
-        <!-- КОНТЕНТ ДЛЯ АДМИНА (ТОЛЬКО ТЫ) -->
-        <div id="casesAdminContent" style="display: none;">
-            <h2 class="section-title">
-                <span style="font-size: 28px;">🎁</span>
-                <span>Кейсы <span style="font-size: 0.6rem; color: rgba(255,255,255,0.3);">(DEV)</span></span>
-            </h2>
-
-            <!-- ГРИД КЕЙСОВ -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0;">
-                <!-- Кейс 1: Обычный -->
-                <div style="background: linear-gradient(135deg, rgba(255,215,0,0.10), rgba(255,165,0,0.04)); border-radius: 20px; padding: 18px 14px; text-align: center; border: 1px solid rgba(255,215,0,0.2); cursor: pointer; transition: all 0.15s ease;" onclick="showToast('📦 Обычный кейс: пока в разработке', 'info')">
-                    <div style="font-size: 3rem; margin-bottom: 8px;">📦</div>
-                    <div style="font-weight: 700; color: #FFD700; font-size: 0.95rem;">Обычный кейс</div>
-                    <div style="font-size: 0.6rem; color: rgba(255,255,255,0.45); margin: 6px 0;">Шанс на редкие предметы</div>
-                    <div style="font-size: 0.75rem; background: rgba(255,215,0,0.12); padding: 4px 16px; border-radius: 20px; display: inline-block; color: #FFD700; font-weight: 600;">10 WG</div>
-                </div>
-
-                <!-- Кейс 2: Редкий -->
-                <div style="background: linear-gradient(135deg, rgba(0,150,255,0.10), rgba(0,100,255,0.04)); border-radius: 20px; padding: 18px 14px; text-align: center; border: 1px solid rgba(0,150,255,0.2); cursor: pointer; transition: all 0.15s ease;" onclick="showToast('🎁 Редкий кейс: пока в разработке', 'info')">
-                    <div style="font-size: 3rem; margin-bottom: 8px;">🎁</div>
-                    <div style="font-weight: 700; color: #0096ff; font-size: 0.95rem;">Редкий кейс</div>
-                    <div style="font-size: 0.6rem; color: rgba(255,255,255,0.45); margin: 6px 0;">Гарантированный редкий предмет</div>
-                    <div style="font-size: 0.75rem; background: rgba(0,150,255,0.12); padding: 4px 16px; border-radius: 20px; display: inline-block; color: #0096ff; font-weight: 600;">50 WG</div>
-                </div>
-
-                <!-- Кейс 3: Легендарный -->
-                <div style="background: linear-gradient(135deg, rgba(255,0,150,0.10), rgba(200,0,100,0.04)); border-radius: 20px; padding: 18px 14px; text-align: center; border: 1px solid rgba(255,0,150,0.2); cursor: pointer; transition: all 0.15s ease;" onclick="showToast('💎 Легендарный кейс: пока в разработке', 'info')">
-                    <div style="font-size: 3rem; margin-bottom: 8px;">💎</div>
-                    <div style="font-weight: 700; color: #ff0096; font-size: 0.95rem;">Легендарный кейс</div>
-                    <div style="font-size: 0.6rem; color: rgba(255,255,255,0.45); margin: 6px 0;">Шанс на Легендарный предмет!</div>
-                    <div style="font-size: 0.75rem; background: rgba(255,0,150,0.12); padding: 4px 16px; border-radius: 20px; display: inline-block; color: #ff0096; font-weight: 600;">150 WG</div>
-                </div>
-
-                <!-- Кейс 4: Королевский -->
-                <div style="background: linear-gradient(135deg, rgba(255,200,0,0.10), rgba(200,150,0,0.04)); border-radius: 20px; padding: 18px 14px; text-align: center; border: 1px solid rgba(255,200,0,0.2); cursor: pointer; transition: all 0.15s ease;" onclick="showToast('👑 Королевский кейс: пока в разработке', 'info')">
-                    <div style="font-size: 3rem; margin-bottom: 8px;">👑</div>
-                    <div style="font-weight: 700; color: #ffcc00; font-size: 0.95rem;">Королевский кейс</div>
-                    <div style="font-size: 0.6rem; color: rgba(255,255,255,0.45); margin: 6px 0;">Только для избранных</div>
-                    <div style="font-size: 0.75rem; background: rgba(255,200,0,0.12); padding: 4px 16px; border-radius: 20px; display: inline-block; color: #ffcc00; font-weight: 600;">500 WG</div>
-                </div>
+        <!-- DEV ИНФОРМАЦИЯ -->
+        <div style="background: rgba(255,215,0,0.05); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,215,0,0.10); margin-top: 16px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                <span style="font-size: 1.2rem;">🔧</span>
+                <span style="font-weight: 600; color: #FFD700; font-size: 0.9rem;">DEV информация</span>
             </div>
-
-            <!-- DEV ИНФОРМАЦИЯ -->
-            <div style="background: rgba(255,215,0,0.05); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,215,0,0.10); margin-top: 8px;">
-                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-                    <span style="font-size: 1.2rem;">🔧</span>
-                    <span style="font-weight: 600; color: #FFD700; font-size: 0.9rem;">DEV информация</span>
-                </div>
-                <div style="font-size: 0.7rem; color: rgba(255,255,255,0.5); line-height: 1.8;">
-                    <div>👤 ID: <span style="color: #FFD700; font-weight: 600;">5264622363</span></div>
-                    <div>📦 Всего кейсов: <span style="color: #FFD700;">4</span></div>
-                    <div>💡 Требуется реализовать: логику открытия, анимацию, дроп-таблицы</div>
-                    <div style="margin-top: 8px; padding: 10px 12px; background: rgba(0,0,0,0.35); border-radius: 10px; font-family: monospace; font-size: 0.6rem; color: rgba(255,255,255,0.6);">
-                        🎯 Награды: WG, LP, USDT, Улучшения, Скины, Префиксы
+            <div style="font-size: 0.7rem; color: rgba(255,255,255,0.5); line-height: 1.8;">
+                <div>👤 ID: <span style="color: #FFD700; font-weight: 600;">5264622363</span></div>
+                <div>📦 Всего кейсов: <span style="color: #FFD700;">4</span></div>
+                <div>💡 Нажми на любой кейс для просмотра</div>
                     </div>
                 </div>
             </div>
         </div>
-    </div> <!-- shopCases -->
-</div> <!-- tabShop -->
+    </div>
