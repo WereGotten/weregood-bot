@@ -7014,7 +7014,7 @@ function translateElement(el, key) {
 setTimeout(loadLanguageSettings, 500);
 
     // ================================================================
-// КЕЙСЫ - КАРУСЕЛЬ С WAAPI (Web Animations API)
+// КЕЙСЫ - ГОРИЗОНТАЛЬНАЯ КАРУСЕЛЬ С WAAPI
 // ================================================================
 
 let currentCaseId = 1;
@@ -7081,7 +7081,7 @@ function openCase(caseId) {
     // Сбрасываем состояние анимации
     const track = document.getElementById('caseCarouselTrack');
     if (track) {
-        track.style.transform = 'translateY(0px)';
+        track.style.transform = 'translateX(0px)';
         if (currentAnimation) {
             currentAnimation.cancel();
             currentAnimation = null;
@@ -7093,13 +7093,12 @@ function openCase(caseId) {
     document.body.style.overflow = 'hidden';
 }
 
-// ===== РЕНДЕР ЛЕНТЫ КАРУСЕЛИ =====
+// ===== РЕНДЕР ЛЕНТЫ КАРУСЕЛИ (ГОРИЗОНТАЛЬНАЯ) =====
 function renderCarousel(rewards) {
     const track = document.getElementById('caseCarouselTrack');
     if (!track) return;
 
     // Создаём длинную ленту с дублями для бесконечной прокрутки
-    // Используем 20 полных циклов для плавности
     const cycles = 20;
     let html = '';
 
@@ -7142,14 +7141,14 @@ function updateCaseCount() {
     if (countEl) countEl.textContent = caseCount;
 }
 
-// ===== ПОЛУЧЕНИЕ ВЫСОТЫ ЭЛЕМЕНТА =====
-function getItemHeight() {
+// ===== ПОЛУЧЕНИЕ ШИРИНЫ ЭЛЕМЕНТА =====
+function getItemWidth() {
     const firstItem = document.querySelector('.case-carousel-item');
-    if (!firstItem) return 80;
-    return firstItem.offsetHeight || 80;
+    if (!firstItem) return 108; // 100px + 8px gap
+    return firstItem.offsetWidth + 8;
 }
 
-// ===== ВРАЩЕНИЕ КАРУСЕЛИ (WAAPI) =====
+// ===== ВРАЩЕНИЕ КАРУСЕЛИ (ГОРИЗОНТАЛЬНОЕ) =====
 function spinCase() {
     if (isCaseSpinning) return;
 
@@ -7183,7 +7182,7 @@ function spinCase() {
 
     // Получаем все элементы в ленте
     const items = track.querySelectorAll('.case-carousel-item');
-    const itemHeight = getItemHeight();
+    const itemWidth = getItemWidth();
     const itemsPerCycle = caseInfo.rewards.length;
     const totalItems = items.length;
 
@@ -7191,7 +7190,6 @@ function spinCase() {
     const winIndex = Math.floor(Math.random() * caseInfo.rewards.length);
 
     // Находим элемент с выигрышным индексом в середине ленты
-    // Чтобы была возможность прокрутить много оборотов
     const middleCycle = Math.floor(totalItems / itemsPerCycle / 2);
     let targetItemIndex = -1;
 
@@ -7205,7 +7203,6 @@ function spinCase() {
         }
     }
 
-    // Если не нашли, берём первый подходящий
     if (targetItemIndex === -1) {
         for (let i = 0; i < totalItems; i++) {
             if (parseInt(items[i].dataset.index) === winIndex) {
@@ -7215,7 +7212,6 @@ function spinCase() {
         }
     }
 
-    // Если всё ещё не нашли, берём случайный
     if (targetItemIndex === -1) {
         targetItemIndex = Math.floor(totalItems / 2);
     }
@@ -7223,93 +7219,86 @@ function spinCase() {
     // Рассчитываем позицию остановки
     // Центр = 3 (при 7 видимых элементах)
     const centerOffset = 3;
-    const targetPosition = -(targetItemIndex - centerOffset) * itemHeight;
+    const targetPosition = -(targetItemIndex - centerOffset) * itemWidth;
 
-    // Добавляем дополнительные обороты для эффектности (3-5 полных циклов)
+    // Добавляем дополнительные обороты для эффектности
     const extraCycles = 3 + Math.random() * 2;
-    const extraOffset = extraCycles * itemsPerCycle * itemHeight;
+    const extraOffset = extraCycles * itemsPerCycle * itemWidth;
     const finalPosition = targetPosition - extraOffset;
 
     // Сохраняем текущую позицию для плавного старта
-    const currentTransform = track.style.transform || 'translateY(0px)';
-    const currentY = parseInt(currentTransform.replace('translateY(', '').replace('px)', '')) || 0;
+    const currentTransform = track.style.transform || 'translateX(0px)';
+    const currentX = parseInt(currentTransform.replace('translateX(', '').replace('px)', '')) || 0;
 
     // Вибрация при старте
     triggerHaptic('medium');
 
     // ===== СОЗДАЁМ АНИМАЦИЮ ЧЕРЕЗ WAAPI =====
-    // Ключевые кадры: от текущей позиции до финальной с физикой замедления
     const keyframes = [
-        { transform: `translateY(${currentY}px)` },
-        { transform: `translateY(${finalPosition}px)` }
+        { transform: `translateX(${currentX}px)` },
+        { transform: `translateX(${finalPosition}px)` }
     ];
 
-    // Кривая Безье для реалистичного замедления
-    // cubic-bezier(0.15, 0.85, 0.35, 1.15) даёт эффект "пружины" в конце
     const options = {
-        duration: 4000 + Math.random() * 1000, // 4-5 секунд
+        duration: 4000 + Math.random() * 1000,
         easing: 'cubic-bezier(0.15, 0.85, 0.35, 1.15)',
         fill: 'forwards'
     };
 
-    // Запускаем анимацию
     currentAnimation = track.animate(keyframes, options);
 
     // ===== ЭФФЕКТ РАЗМЫТИЯ ВО ВРЕМЯ ДВИЖЕНИЯ =====
-    // Функция обновления размытия в зависимости от скорости
-    let lastY = currentY;
+    let lastX = currentX;
     let speed = 0;
     let speedCheckInterval = setInterval(() => {
         const rect = track.getBoundingClientRect();
-        const currentYPos = rect.top;
-        speed = Math.abs(currentYPos - lastY);
-        lastY = currentYPos;
+        const currentXPos = rect.left;
+        speed = Math.abs(currentXPos - lastX);
+        lastX = currentXPos;
 
-        // Применяем размытие ко всем элементам в зависимости от их позиции
         const allItems = track.querySelectorAll('.case-carousel-item');
         const containerRect = track.parentElement.getBoundingClientRect();
-        const center = containerRect.top + containerRect.height / 2;
+        const center = containerRect.left + containerRect.width / 2;
 
         allItems.forEach(el => {
             const elRect = el.getBoundingClientRect();
-            const elCenter = elRect.top + elRect.height / 2;
+            const elCenter = elRect.left + elRect.width / 2;
             const distance = Math.abs(elCenter - center);
 
-            // Если элемент далеко от центра - размываем
-            if (distance > 50 && speed > 10) {
-                const blurAmount = Math.min(3, (distance - 50) / 30);
+            if (distance > 60 && speed > 10) {
+                const blurAmount = Math.min(3, (distance - 60) / 40);
                 el.style.filter = `blur(${blurAmount}px)`;
-                el.style.opacity = Math.max(0.4, 1 - (distance / 300));
+                el.style.opacity = Math.max(0.3, 1 - (distance / 350));
+                el.style.transform = `scale(${Math.max(0.85, 1 - (distance / 500))})`;
             } else {
                 el.style.filter = '';
                 el.style.opacity = '';
+                el.style.transform = '';
             }
         });
     }, 50);
 
     // ===== ОБРАБОТЧИК ОКОНЧАНИЯ АНИМАЦИИ =====
     currentAnimation.onfinish = function() {
-        // Останавливаем проверку скорости
         clearInterval(speedCheckInterval);
 
-        // Убираем размытие со всех элементов
         document.querySelectorAll('.case-carousel-item').forEach(el => {
             el.style.filter = '';
             el.style.opacity = '';
+            el.style.transform = '';
         });
 
-        // Фиксируем финальную позицию
-        track.style.transform = `translateY(${finalPosition}px)`;
+        track.style.transform = `translateX(${finalPosition}px)`;
 
         // Находим элемент в центре
         const containerRect = track.parentElement.getBoundingClientRect();
-        const center = containerRect.top + containerRect.height / 2;
+        const center = containerRect.left + containerRect.width / 2;
         let closestItem = null;
         let closestDistance = Infinity;
 
         track.querySelectorAll('.case-carousel-item').forEach(el => {
             const elRect = el.getBoundingClientRect();
-            const elCenter = elRect.top + elRect.height / 2;
+            const elCenter = elRect.left + elRect.width / 2;
             const distance = Math.abs(elCenter - center);
             if (distance < closestDistance) {
                 closestDistance = distance;
@@ -7317,13 +7306,11 @@ function spinCase() {
             }
         });
 
-        // Подсвечиваем выигрышный элемент
         if (closestItem) {
             closestItem.classList.add('active');
             const winIndex = parseInt(closestItem.dataset.index);
             const winReward = caseInfo.rewards[winIndex];
 
-            // Подсвечиваем в списке наград
             const rewardItems = document.querySelectorAll('.case-reward-item');
             rewardItems.forEach((el, idx) => {
                 if (idx === winIndex) {
@@ -7331,19 +7318,12 @@ function spinCase() {
                 }
             });
 
-            // Мощная вибрация при выпадении приза
             triggerHaptic('heavy');
-
-            // Показываем результат
             showToast(`🎉 Вы выиграли: ${winReward.icon} ${winReward.value}!`, 'success');
 
-            // Списываем кейс
             caseCount--;
             localStorage.setItem('weregood_cases', caseCount.toString());
             updateCaseCount();
-
-            // Здесь будет отправка на сервер
-            // await claimCaseReward(currentCaseId, winIndex);
         }
 
         isCaseSpinning = false;
@@ -7352,7 +7332,6 @@ function spinCase() {
         currentAnimation = null;
     };
 
-    // Обработчик ошибок анимации
     currentAnimation.oncancel = function() {
         clearInterval(speedCheckInterval);
         isCaseSpinning = false;
@@ -7375,11 +7354,9 @@ function buyCase() {
 
     if (!confirm(`Купить ${caseInfo.name} за ${caseInfo.price} WG?`)) return;
 
-    // Списываем WG
     localWG -= caseInfo.price;
     updateUI();
 
-    // Добавляем кейс
     caseCount++;
     localStorage.setItem('weregood_cases', caseCount.toString());
     updateCaseCount();
@@ -7387,7 +7364,6 @@ function buyCase() {
     showToast(`✅ ${caseInfo.name} куплен! Нажмите "ОТКРЫТЬ"`, 'success');
     triggerHaptic('light');
 
-    // Синхронизируем с сервером
     syncData(true);
 }
 
@@ -7398,19 +7374,18 @@ function closeCase() {
         page.classList.remove('active');
         document.body.style.overflow = '';
 
-        // Отменяем анимацию
         if (currentAnimation) {
             currentAnimation.cancel();
             currentAnimation = null;
         }
 
-        // Сбрасываем позицию
         const track = document.getElementById('caseCarouselTrack');
         if (track) {
-            track.style.transform = 'translateY(0px)';
+            track.style.transform = 'translateX(0px)';
             track.querySelectorAll('.case-carousel-item').forEach(el => {
                 el.style.filter = '';
                 el.style.opacity = '';
+                el.style.transform = '';
                 el.classList.remove('active');
             });
         }

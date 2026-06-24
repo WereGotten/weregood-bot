@@ -6359,7 +6359,7 @@ body.light-theme .star-upgrade-card {
 }
 
 /* ============================================================
-   КЕЙСЫ - КАРУСЕЛЬ С WAAPI
+   КЕЙСЫ - ГОРИЗОНТАЛЬНАЯ КАРУСЕЛЬ
    ============================================================ */
 
 /* ===== СТРАНИЦА КЕЙСА ===== */
@@ -6433,55 +6433,57 @@ body.light-theme .star-upgrade-card {
     margin-bottom: 16px;
     position: relative;
     box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
 }
 
 .case-carousel-window {
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(0, 0, 0, 0.6);
     border-radius: 16px;
-    height: 160px;
+    height: 120px;
     overflow: hidden;
     position: relative;
     border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-/* ===== ТЕНИ ===== */
-.case-shadow-top,
-.case-shadow-bottom {
+/* ===== ТЕНИ (БОКОВЫЕ) ===== */
+.case-shadow-left,
+.case-shadow-right {
     position: absolute;
-    left: 0;
-    right: 0;
-    height: 40px;
+    top: 0;
+    bottom: 0;
+    width: 50px;
     pointer-events: none;
     z-index: 5;
 }
 
-.case-shadow-top {
-    top: 0;
-    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.9), transparent);
+.case-shadow-left {
+    left: 0;
+    background: linear-gradient(to right, rgba(0, 0, 0, 0.9), transparent);
 }
 
-.case-shadow-bottom {
-    bottom: 0;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
+.case-shadow-right {
+    right: 0;
+    background: linear-gradient(to left, rgba(0, 0, 0, 0.9), transparent);
 }
 
-/* ===== УКАЗАТЕЛЬ ===== */
+/* ===== УКАЗАТЕЛЬ (ВЕРТИКАЛЬНАЯ ЧЕРТА) ===== */
 .case-carousel-pointer {
     position: absolute;
-    top: 50%;
+    top: 0;
     left: 50%;
-    transform: translate(-50%, -50%);
-    color: #FFD700;
-    font-size: 2rem;
+    transform: translateX(-50%);
+    width: 3px;
+    height: 100%;
+    background: linear-gradient(to bottom, transparent, #FFD700, transparent);
     z-index: 10;
-    text-shadow: 0 0 30px rgba(255, 215, 0, 0.5), 0 0 60px rgba(255, 215, 0, 0.2);
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.3), 0 0 60px rgba(255, 215, 0, 0.1);
     pointer-events: none;
     animation: pointerPulse 1.5s ease-in-out infinite;
 }
 
 @keyframes pointerPulse {
-    0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
-    50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+    0%, 100% { opacity: 0.6; box-shadow: 0 0 20px rgba(255, 215, 0, 0.2); }
+    50% { opacity: 1; box-shadow: 0 0 40px rgba(255, 215, 0, 0.4); }
 }
 
 /* ===== ПОДСВЕТКА ЦЕНТРАЛЬНОГО СЛОТА ===== */
@@ -6490,7 +6492,7 @@ body.light-theme .star-upgrade-card {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 80%;
+    width: 120px;
     height: 80%;
     background: radial-gradient(ellipse, rgba(255, 215, 0, 0.06), transparent 70%);
     pointer-events: none;
@@ -6498,44 +6500,54 @@ body.light-theme .star-upgrade-card {
     border-radius: 50%;
 }
 
-/* ===== ЛЕНТА КАРУСЕЛИ ===== */
+/* ===== ЛЕНТА КАРУСЕЛИ (ГОРИЗОНТАЛЬНАЯ) ===== */
 .case-carousel-track {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     will-change: transform;
     transform: translate3d(0, 0, 0);
-    /* GPU акселерация */
+    height: 100%;
+    align-items: center;
+    gap: 8px;
+    padding: 0 10px;
 }
 
 /* ===== ЭЛЕМЕНТ В ЛЕНТЕ ===== */
 .case-carousel-item {
-    height: 80px;
+    flex-shrink: 0;
+    width: 100px;
+    height: 90px;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 14px;
-    padding: 0 20px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-    transition: filter 0.1s ease, opacity 0.1s ease;
-    flex-shrink: 0;
+    gap: 4px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.06);
+    transition: all 0.3s ease;
+    padding: 8px;
 }
 
 .case-carousel-item .item-icon {
-    font-size: 2.2rem;
+    font-size: 2.4rem;
     transition: transform 0.3s ease;
 }
 
 .case-carousel-item .item-value {
-    font-size: 1rem;
+    font-size: 0.7rem;
     font-weight: 600;
     color: rgba(255, 255, 255, 0.6);
+    text-align: center;
     transition: color 0.3s ease;
 }
 
 /* ===== АКТИВНЫЙ (ВЫИГРЫШНЫЙ) ЭЛЕМЕНТ ===== */
 .case-carousel-item.active {
-    background: rgba(255, 215, 0, 0.12);
-    border-color: rgba(255, 215, 0, 0.2);
+    background: rgba(255, 215, 0, 0.15);
+    border-color: #FFD700;
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.15);
+    transform: scale(1.05);
 }
 
 .case-carousel-item.active .item-value {
@@ -6544,13 +6556,14 @@ body.light-theme .star-upgrade-card {
 }
 
 .case-carousel-item.active .item-icon {
-    transform: scale(1.15);
+    transform: scale(1.1);
 }
 
-/* ===== РАЗМЫТИЕ ПРИ ДВИЖЕНИИ (применяется через JS) ===== */
+/* ===== РАЗМЫТИЕ ПРИ ДВИЖЕНИИ ===== */
 .case-carousel-item.blurred {
-    filter: blur(2px);
-    opacity: 0.5;
+    filter: blur(1.5px);
+    opacity: 0.4;
+    transform: scale(0.9);
 }
 
 /* ===== ИНФОРМАЦИЯ ===== */
@@ -6699,18 +6712,18 @@ body.light-theme .star-upgrade-card {
 /* ===== АДАПТАЦИЯ ===== */
 @media (max-width: 480px) {
     .case-carousel-window {
-        height: 130px;
+        height: 100px;
     }
     .case-carousel-item {
-        height: 65px;
-        gap: 10px;
-        padding: 0 14px;
+        width: 80px;
+        height: 75px;
+        padding: 6px;
     }
     .case-carousel-item .item-icon {
         font-size: 1.8rem;
     }
     .case-carousel-item .item-value {
-        font-size: 0.85rem;
+        font-size: 0.6rem;
     }
     .case-rewards-list {
         grid-template-columns: repeat(4, 1fr);
@@ -6740,22 +6753,25 @@ body.light-theme .star-upgrade-card {
     .case-buy-btn {
         flex: none;
     }
+    .case-carousel-pointer {
+        width: 2px;
+    }
 }
 
 @media (max-width: 380px) {
     .case-carousel-window {
-        height: 110px;
+        height: 85px;
     }
     .case-carousel-item {
-        height: 55px;
-        font-size: 0.8rem;
-        gap: 8px;
+        width: 65px;
+        height: 65px;
+        padding: 4px;
     }
     .case-carousel-item .item-icon {
         font-size: 1.5rem;
     }
     .case-carousel-item .item-value {
-        font-size: 0.7rem;
+        font-size: 0.5rem;
     }
     .case-rewards-list {
         grid-template-columns: repeat(3, 1fr);
