@@ -7014,111 +7014,408 @@ function translateElement(el, key) {
 setTimeout(loadLanguageSettings, 500);
 
     // ================================================================
-// КЕЙСЫ - КАРУСЕЛЬ (Оптимизированная логика)
+// КЕЙСЫ - КАРУСЕЛЬ С WAAPI (Web Animations API)
 // ================================================================
 
 let currentCaseId = 1;
 let isCaseSpinning = false;
-const ITEM_HEIGHT = 80; // Высота одного элемента в CSS
+let caseCount = parseInt(localStorage.getItem('weregood_cases') || '0');
+let currentAnimation = null;
 
-// Вспомогательная функция для Haptic
+const caseData = {
+    1: {
+        name: '📦 Обычный кейс',
+        icon: '📦',
+        price: 500,
+        rewards: [
+            { icon: '💎', value: '50 LP' },
+            { icon: '⭐', value: '10 WG' },
+            { icon: '💎', value: '100 LP' },
+            { icon: '🏆', value: 'Улучшение' },
+            { icon: '💰', value: '500 WG' },
+            { icon: '👑', value: 'Префикс' },
+            { icon: '🎫', value: 'Билет' },
+            { icon: '⚡', value: '+30 энергии' }
+        ]
+    }
+};
+
+// ===== HAPTIC FEEDBACK =====
 function triggerHaptic(type = 'medium') {
-    if (window.Telegram?.WebApp?.HapticFeedback) {
-        window.Telegram.WebApp.HapticFeedback.impactOccurred(type);
+    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) {
+        try {
+            window.Telegram.WebApp.HapticFeedback.impactOccurred(type);
+        } catch(e) {}
     } else if (navigator.vibrate) {
-        navigator.vibrate(type === 'heavy' ? 30 : 15);
+        const duration = type === 'heavy' ? 30 : type === 'medium' ? 15 : 8;
+        navigator.vibrate(duration);
     }
 }
 
-// Рендер карусели
+// ===== ОТКРЫТИЕ КЕЙСА =====
+function openCase(caseId) {
+    currentCaseId = caseId || 1;
+    const caseInfo = caseData[currentCaseId];
+    if (!caseInfo) return;
+
+    const page = document.getElementById('casePage');
+    if (!page) return;
+
+    // Обновляем заголовок
+    const title = document.getElementById('caseTitle');
+    if (title) title.textContent = caseInfo.name;
+
+    // Обновляем цену
+    const priceDisplay = document.getElementById('casePriceDisplay');
+    if (priceDisplay) priceDisplay.textContent = caseInfo.price;
+
+    // Рендерим список наград
+    renderRewardsList(caseInfo.rewards);
+
+    // Рендерим ленту карусели
+    renderCarousel(caseInfo.rewards);
+
+    // Обновляем количество кейсов
+    updateCaseCount();
+
+    // Сбрасываем состояние анимации
+    const track = document.getElementById('caseCarouselTrack');
+    if (track) {
+        track.style.transform = 'translateY(0px)';
+        if (currentAnimation) {
+            currentAnimation.cancel();
+            currentAnimation = null;
+        }
+    }
+
+    // Открываем страницу
+    page.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+// ===== РЕНДЕР ЛЕНТЫ КАРУСЕЛИ =====
 function renderCarousel(rewards) {
     const track = document.getElementById('caseCarouselTrack');
-    // Генерируем достаточно элементов, чтобы создать эффект прокрутки
-    // Повторяем массив наград 20 раз
-    let html = '';
-    const repeatCount = 20;
+    if (!track) return;
 
-    for (let i = 0; i < rewards.length * repeatCount; i++) {
-        const reward = rewards[i % rewards.length];
-        html += `
-            <div class="case-carousel-item" data-index="${i % rewards.length}">
-                <span class="item-icon">${reward.icon}</span>
-                <span class="item-value">${reward.value}</span>
-            </div>
-        `;
+    // Создаём длинную ленту с дублями для бесконечной прокрутки
+    // Используем 20 полных циклов для плавности
+    const cycles = 20;
+    let html = '';
+
+    for (let cycle = 0; cycle < cycles; cycle++) {
+        for (let i = 0; i < rewards.length; i++) {
+            const reward = rewards[i];
+            const isHighlight = (cycle === Math.floor(cycles / 2) && i === 0);
+            html += `
+                <div class="case-carousel-item ${isHighlight ? 'active' : ''}" data-index="${i}" data-cycle="${cycle}">
+                    <span class="item-icon">${reward.icon}</span>
+                    <span class="item-value">${reward.value}</span>
+                </div>
+            `;
+        }
     }
     track.innerHTML = html;
-    track.style.transform = 'translateY(0px)';
 }
 
-// Главная функция вращения
-async function spinCase() {
-    if (isCaseSpinning || caseCount <= 0) return;
+// ===== РЕНДЕР СПИСКА НАГРАД =====
+function renderRewardsList(rewards) {
+    const container = document.getElementById('caseRewardsList');
+    if (!container) return;
 
-    isCaseSpinning = true;
+    let html = '';
+    rewards.forEach(reward => {
+        html += `
+            <div class="case-reward-item">
+                <span class="reward-icon">${reward.icon}</span>
+                <span class="reward-value">${reward.value}</span>
+            </div>
+        `;
+    });
+    container.innerHTML = html;
+}
+
+// ===== ОБНОВЛЕНИЕ КОЛИЧЕСТВА КЕЙСОВ =====
+function updateCaseCount() {
+    caseCount = parseInt(localStorage.getItem('weregood_cases') || '0');
+    const countEl = document.getElementById('caseCount');
+    if (countEl) countEl.textContent = caseCount;
+}
+
+// ===== ПОЛУЧЕНИЕ ВЫСОТЫ ЭЛЕМЕНТА =====
+function getItemHeight() {
+    const firstItem = document.querySelector('.case-carousel-item');
+    if (!firstItem) return 80;
+    return firstItem.offsetHeight || 80;
+}
+
+// ===== ВРАЩЕНИЕ КАРУСЕЛИ (WAAPI) =====
+function spinCase() {
+    if (isCaseSpinning) return;
+
+    const caseInfo = caseData[currentCaseId];
+    if (!caseInfo) return;
+
+    // Проверяем наличие кейсов
+    if (caseCount <= 0) {
+        showToast('❌ У вас нет кейсов! Купите сначала.', 'error');
+        triggerHaptic('medium');
+        return;
+    }
+
     const track = document.getElementById('caseCarouselTrack');
     const spinBtn = document.getElementById('caseSpinBtn');
+    if (!track || !spinBtn) return;
 
+    // Отменяем предыдущую анимацию
+    if (currentAnimation) {
+        currentAnimation.cancel();
+        currentAnimation = null;
+    }
+
+    isCaseSpinning = true;
     spinBtn.disabled = true;
     spinBtn.textContent = '⏳ ВРАЩЕНИЕ...';
 
-    // 1. Выбираем случайный индекс выигрыша
-    const rewards = caseData[currentCaseId].rewards;
-    const winIndex = Math.floor(Math.random() * rewards.length);
+    // Убираем активные подсветки
+    document.querySelectorAll('.case-reward-item').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.case-carousel-item').forEach(el => el.classList.remove('active'));
 
-    // 2. Рассчитываем позицию:
-    // Мы хотим, чтобы один из элементов в последней трети ленты стал выигрышным
-    // Центр окна карусели находится примерно на 3-й позиции от текущей
-    const totalItems = track.children.length;
-    const targetItemIndex = (Math.floor(totalItems / 2) + winIndex);
-    const targetY = -(targetItemIndex * ITEM_HEIGHT) + (window.innerWidth < 480 ? 65 : 80); // Поправка на центр
+    // Получаем все элементы в ленте
+    const items = track.querySelectorAll('.case-carousel-item');
+    const itemHeight = getItemHeight();
+    const itemsPerCycle = caseInfo.rewards.length;
+    const totalItems = items.length;
 
-    // 3. Запуск анимации
-    const animation = track.animate([
-        { transform: 'translateY(0px)', filter: 'blur(0px)' },
-        { transform: 'translateY(-100px)', filter: 'blur(2px)', offset: 0.1 },
-        { transform: `${targetY}px`, filter: 'blur(0px)' }
-    ], {
-        duration: 4000,
-        easing: 'cubic-bezier(0.1, 0.7, 0.1, 1)',
-        fill: 'forwards'
-    });
+    // Выбираем случайный выигрышный индекс
+    const winIndex = Math.floor(Math.random() * caseInfo.rewards.length);
 
+    // Находим элемент с выигрышным индексом в середине ленты
+    // Чтобы была возможность прокрутить много оборотов
+    const middleCycle = Math.floor(totalItems / itemsPerCycle / 2);
+    let targetItemIndex = -1;
+
+    for (let i = 0; i < totalItems; i++) {
+        const el = items[i];
+        const idx = parseInt(el.dataset.index);
+        const cycle = parseInt(el.dataset.cycle);
+        if (idx === winIndex && cycle >= middleCycle - 1 && cycle <= middleCycle + 1) {
+            targetItemIndex = i;
+            break;
+        }
+    }
+
+    // Если не нашли, берём первый подходящий
+    if (targetItemIndex === -1) {
+        for (let i = 0; i < totalItems; i++) {
+            if (parseInt(items[i].dataset.index) === winIndex) {
+                targetItemIndex = i;
+                break;
+            }
+        }
+    }
+
+    // Если всё ещё не нашли, берём случайный
+    if (targetItemIndex === -1) {
+        targetItemIndex = Math.floor(totalItems / 2);
+    }
+
+    // Рассчитываем позицию остановки
+    // Центр = 3 (при 7 видимых элементах)
+    const centerOffset = 3;
+    const targetPosition = -(targetItemIndex - centerOffset) * itemHeight;
+
+    // Добавляем дополнительные обороты для эффектности (3-5 полных циклов)
+    const extraCycles = 3 + Math.random() * 2;
+    const extraOffset = extraCycles * itemsPerCycle * itemHeight;
+    const finalPosition = targetPosition - extraOffset;
+
+    // Сохраняем текущую позицию для плавного старта
+    const currentTransform = track.style.transform || 'translateY(0px)';
+    const currentY = parseInt(currentTransform.replace('translateY(', '').replace('px)', '')) || 0;
+
+    // Вибрация при старте
     triggerHaptic('medium');
 
-    // 4. Ожидание завершения
-    await animation.finished;
+    // ===== СОЗДАЁМ АНИМАЦИЮ ЧЕРЕЗ WAAPI =====
+    // Ключевые кадры: от текущей позиции до финальной с физикой замедления
+    const keyframes = [
+        { transform: `translateY(${currentY}px)` },
+        { transform: `translateY(${finalPosition}px)` }
+    ];
 
-    // 5. Финализация
-    isCaseSpinning = false;
-    spinBtn.disabled = false;
-    spinBtn.textContent = '🎰 ОТКРЫТЬ';
+    // Кривая Безье для реалистичного замедления
+    // cubic-bezier(0.15, 0.85, 0.35, 1.15) даёт эффект "пружины" в конце
+    const options = {
+        duration: 4000 + Math.random() * 1000, // 4-5 секунд
+        easing: 'cubic-bezier(0.15, 0.85, 0.35, 1.15)',
+        fill: 'forwards'
+    };
 
-    // Подсветка результата
-    const winnerItem = track.children[targetItemIndex];
-    winnerItem.classList.add('active');
-    document.querySelectorAll('.case-reward-item')[winIndex].classList.add('active');
+    // Запускаем анимацию
+    currentAnimation = track.animate(keyframes, options);
 
-    triggerHaptic('heavy');
-    showToast(`🎉 Вы выиграли: ${rewards[winIndex].value}!`, 'success');
+    // ===== ЭФФЕКТ РАЗМЫТИЯ ВО ВРЕМЯ ДВИЖЕНИЯ =====
+    // Функция обновления размытия в зависимости от скорости
+    let lastY = currentY;
+    let speed = 0;
+    let speedCheckInterval = setInterval(() => {
+        const rect = track.getBoundingClientRect();
+        const currentYPos = rect.top;
+        speed = Math.abs(currentYPos - lastY);
+        lastY = currentYPos;
 
-    // Обновление состояния
-    caseCount--;
+        // Применяем размытие ко всем элементам в зависимости от их позиции
+        const allItems = track.querySelectorAll('.case-carousel-item');
+        const containerRect = track.parentElement.getBoundingClientRect();
+        const center = containerRect.top + containerRect.height / 2;
+
+        allItems.forEach(el => {
+            const elRect = el.getBoundingClientRect();
+            const elCenter = elRect.top + elRect.height / 2;
+            const distance = Math.abs(elCenter - center);
+
+            // Если элемент далеко от центра - размываем
+            if (distance > 50 && speed > 10) {
+                const blurAmount = Math.min(3, (distance - 50) / 30);
+                el.style.filter = `blur(${blurAmount}px)`;
+                el.style.opacity = Math.max(0.4, 1 - (distance / 300));
+            } else {
+                el.style.filter = '';
+                el.style.opacity = '';
+            }
+        });
+    }, 50);
+
+    // ===== ОБРАБОТЧИК ОКОНЧАНИЯ АНИМАЦИИ =====
+    currentAnimation.onfinish = function() {
+        // Останавливаем проверку скорости
+        clearInterval(speedCheckInterval);
+
+        // Убираем размытие со всех элементов
+        document.querySelectorAll('.case-carousel-item').forEach(el => {
+            el.style.filter = '';
+            el.style.opacity = '';
+        });
+
+        // Фиксируем финальную позицию
+        track.style.transform = `translateY(${finalPosition}px)`;
+
+        // Находим элемент в центре
+        const containerRect = track.parentElement.getBoundingClientRect();
+        const center = containerRect.top + containerRect.height / 2;
+        let closestItem = null;
+        let closestDistance = Infinity;
+
+        track.querySelectorAll('.case-carousel-item').forEach(el => {
+            const elRect = el.getBoundingClientRect();
+            const elCenter = elRect.top + elRect.height / 2;
+            const distance = Math.abs(elCenter - center);
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closestItem = el;
+            }
+        });
+
+        // Подсвечиваем выигрышный элемент
+        if (closestItem) {
+            closestItem.classList.add('active');
+            const winIndex = parseInt(closestItem.dataset.index);
+            const winReward = caseInfo.rewards[winIndex];
+
+            // Подсвечиваем в списке наград
+            const rewardItems = document.querySelectorAll('.case-reward-item');
+            rewardItems.forEach((el, idx) => {
+                if (idx === winIndex) {
+                    el.classList.add('active');
+                }
+            });
+
+            // Мощная вибрация при выпадении приза
+            triggerHaptic('heavy');
+
+            // Показываем результат
+            showToast(`🎉 Вы выиграли: ${winReward.icon} ${winReward.value}!`, 'success');
+
+            // Списываем кейс
+            caseCount--;
+            localStorage.setItem('weregood_cases', caseCount.toString());
+            updateCaseCount();
+
+            // Здесь будет отправка на сервер
+            // await claimCaseReward(currentCaseId, winIndex);
+        }
+
+        isCaseSpinning = false;
+        spinBtn.disabled = false;
+        spinBtn.textContent = '🎰 ОТКРЫТЬ';
+        currentAnimation = null;
+    };
+
+    // Обработчик ошибок анимации
+    currentAnimation.oncancel = function() {
+        clearInterval(speedCheckInterval);
+        isCaseSpinning = false;
+        spinBtn.disabled = false;
+        spinBtn.textContent = '🎰 ОТКРЫТЬ';
+        currentAnimation = null;
+    };
+}
+
+// ===== ПОКУПКА КЕЙСА =====
+function buyCase() {
+    const caseInfo = caseData[currentCaseId];
+    if (!caseInfo) return;
+
+    if (localWG < caseInfo.price) {
+        showToast(`❌ Не хватает WG! Нужно ${caseInfo.price} WG`, 'error');
+        triggerHaptic('medium');
+        return;
+    }
+
+    if (!confirm(`Купить ${caseInfo.name} за ${caseInfo.price} WG?`)) return;
+
+    // Списываем WG
+    localWG -= caseInfo.price;
+    updateUI();
+
+    // Добавляем кейс
+    caseCount++;
     localStorage.setItem('weregood_cases', caseCount.toString());
     updateCaseCount();
+
+    showToast(`✅ ${caseInfo.name} куплен! Нажмите "ОТКРЫТЬ"`, 'success');
+    triggerHaptic('light');
+
+    // Синхронизируем с сервером
+    syncData(true);
 }
 
-// ===== УТИЛИТЫ =====
-function updateCaseCount() {
-    const countEl = document.getElementById('caseCount');
-    if (countEl) countEl.textContent = localStorage.getItem('weregood_cases') || '0';
-}
-
+// ===== ЗАКРЫТИЕ КЕЙСА =====
 function closeCase() {
-    document.getElementById('casePage').classList.remove('active');
-    document.getElementById('caseCarouselTrack').style.transform = 'translateY(0px)';
-    document.querySelectorAll('.active').forEach(el => el.classList.remove('active'));
-    isCaseSpinning = false;
+    const page = document.getElementById('casePage');
+    if (page) {
+        page.classList.remove('active');
+        document.body.style.overflow = '';
+
+        // Отменяем анимацию
+        if (currentAnimation) {
+            currentAnimation.cancel();
+            currentAnimation = null;
+        }
+
+        // Сбрасываем позицию
+        const track = document.getElementById('caseCarouselTrack');
+        if (track) {
+            track.style.transform = 'translateY(0px)';
+            track.querySelectorAll('.case-carousel-item').forEach(el => {
+                el.style.filter = '';
+                el.style.opacity = '';
+                el.classList.remove('active');
+            });
+        }
+        isCaseSpinning = false;
+    }
 }
 
 </script>
