@@ -6233,3 +6233,35 @@ body.light-theme .star-upgrade-card {
 .light-theme #splashScreen .splash-coin {
     background: linear-gradient(135deg, #FFD700, #F5A623);
 }
+/* ========== КЕЙСЫ ========== */
+#casesAccessDenied {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+/* Стили для кейсов в DEV режиме */
+#casesAdminContent .section-title {
+    margin-bottom: 20px;
+}
+
+#casesAdminContent .section-title img {
+    width: 30px;
+    height: 30px;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+/* Адаптация для мобильных */
+@media (max-width: 480px) {
+    #casesAdminContent .section-title {
+        font-size: 1.1rem;
+    }
+    #casesAdminContent .section-title img {
+        width: 24px;
+        height: 24px;
+    }
+}

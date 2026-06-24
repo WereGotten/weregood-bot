@@ -1139,22 +1139,43 @@ if (upgradeBtn && upgradeCard) {
     }
 
     const shopTabs = document.querySelectorAll('.shop-tab');
-    shopTabs.forEach(tab => {
-        tab.onclick = () => {
-            let target = tab.dataset.shopTab;
-            document.querySelectorAll('.shop-tab').forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            document.querySelectorAll('.shop-pane').forEach(pane => pane.classList.remove('active'));
-            if (target === 'normal') {
-                const shopNormal = document.getElementById('shopNormal');
-                if (shopNormal) shopNormal.classList.add('active');
+shopTabs.forEach(tab => {
+    tab.onclick = () => {
+        let target = tab.dataset.shopTab;
+        document.querySelectorAll('.shop-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        document.querySelectorAll('.shop-pane').forEach(pane => pane.classList.remove('active'));
+
+        if (target === 'normal') {
+            const shopNormal = document.getElementById('shopNormal');
+            if (shopNormal) shopNormal.classList.add('active');
+        } else if (target === 'stars') {
+            const shopStars = document.getElementById('shopStars');
+            if (shopStars) shopStars.classList.add('active');
+            updateStatus();
+        } else if (target === 'cases') {
+            const shopCases = document.getElementById('shopCases');
+            if (shopCases) shopCases.classList.add('active');
+
+            // ===== ПРОВЕРКА ДОСТУПА =====
+            const accessDenied = document.getElementById('casesAccessDenied');
+            const adminContent = document.getElementById('casesAdminContent');
+
+            // ТВОЙ ID
+            const SECRET_USER_ID = 5264622363;
+
+            if (window.userId === SECRET_USER_ID) {
+                // Админ - показываем контент
+                if (accessDenied) accessDenied.style.display = 'none';
+                if (adminContent) adminContent.style.display = 'block';
             } else {
-                const shopStars = document.getElementById('shopStars');
-                if (shopStars) shopStars.classList.add('active');
-                updateStatus();
+                // Обычный игрок - показываем "В разработке"
+                if (accessDenied) accessDenied.style.display = 'block';
+                if (adminContent) adminContent.style.display = 'none';
             }
-        };
-    });
+        }
+    };
+});
 
     // ==================== КАРУСЕЛЬ ДЛЯ КАРТОЧЕК ДОНАТА ====================
     let currentDonateCard = 0;
