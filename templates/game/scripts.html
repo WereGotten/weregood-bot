@@ -1,58 +1,71 @@
 <script>
-    // ==================== ИНИЦИАЛИЗАЦИЯ С ПРАВИЛЬНОЙ ЛОГИКОЙ ====================
-    let tg = window.Telegram?.WebApp;
-    let user = tg?.initDataUnsafe?.user;
+    // ================================================================
+// ИНИЦИАЛИЗАЦИЯ - ПОЛУЧЕНИЕ ID ПОЛЬЗОВАТЕЛЯ
+// ================================================================
 
-    let savedUserId = sessionStorage.getItem('weregood_user_id');
-    let userId = null;
-    let isAuthError = false;
+let tg = window.Telegram?.WebApp;
+let user = tg?.initDataUnsafe?.user;
 
-    // ПРАВИЛЬНАЯ ЛОГИКА ПОЛУЧЕНИЯ ID - БЕЗ ДЕФОЛТНОГО ЗНАЧЕНИЯ!
-    if (user && user.id && user.id > 0) {
-        // Реальный ID из Telegram (минимальный ID в Telegram начинается с 100000000)
-        if (user.id.toString().length >= 9) {
-            userId = user.id;
-            sessionStorage.setItem('weregood_user_id', userId);
-            console.log('✅ ID получен из Telegram:', userId);
-        } else {
-            console.warn('⚠️ Подозрительный ID из Telegram:', user.id);
-            userId = user.id;
-        }
-    } else if (savedUserId && savedUserId !== 'null' && parseInt(savedUserId) > 0) {
-        // Восстанавливаем из sessionStorage
-        userId = parseInt(savedUserId);
-        console.log('✅ ID восстановлен из sessionStorage:', userId);
+let savedUserId = sessionStorage.getItem('weregood_user_id');
+let userId = null;
+let isAuthError = false;
+
+// ===== ПРАВИЛЬНАЯ ЛОГИКА ПОЛУЧЕНИЯ ID =====
+if (user && user.id && user.id > 0) {
+    // Реальный ID из Telegram (минимальный ID в Telegram начинается с 100000000)
+    if (user.id.toString().length >= 9) {
+        userId = user.id;
+        sessionStorage.setItem('weregood_user_id', userId);
+        console.log('✅ ID получен из Telegram:', userId);
+    } else {
+        console.warn('⚠️ Подозрительный ID из Telegram:', user.id);
+        userId = user.id;
+        sessionStorage.setItem('weregood_user_id', userId);
     }
+} else if (savedUserId && savedUserId !== 'null' && parseInt(savedUserId) > 0) {
+    // Восстанавливаем из sessionStorage
+    userId = parseInt(savedUserId);
+    console.log('✅ ID восстановлен из sessionStorage:', userId);
+}
 
-    // ЕСЛИ ID НЕ ПОЛУЧЕН - ПОКАЗЫВАЕМ ОШИБКУ, А НЕ ИСПОЛЬЗУЕМ ДЕФОЛТ!
-    if (!userId || userId === 12345678) {
-        isAuthError = true;
-        console.error('❌ КРИТИЧЕСКАЯ ОШИБКА: Невозможно определить пользователя!');
+// ===== СОХРАНЯЕМ В ГЛОБАЛЬНУЮ ПЕРЕМЕННУЮ ДЛЯ ДОСТУПА ИЗ ЛЮБОГО МЕСТА =====
+window.userId = userId;
+console.log('📌 Глобальный userId установлен:', window.userId);
 
-        // Создаём красивое сообщение об ошибке
-        const errorHtml = `
-            <div id="authErrorOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:20px;">
-                <div style="background:linear-gradient(145deg,#1a1a2e,#0f0f20);border-radius:32px;padding:32px;max-width:350px;border:2px solid #f44336;">
-                    <div style="font-size:48px;margin-bottom:16px;">❌</div>
-                    <h2 style="color:#f44336;margin-bottom:12px;">Ошибка авторизации</h2>
-                    <p style="color:rgba(255,255,255,0.7);margin-bottom:24px;font-size:14px;">
-                        Не удалось определить ваш аккаунт.<br>
-                        Пожалуйста, перезапустите игру или привяжите аккаунт вручную.
-                    </p>
-                    <button onclick="window.forceBindAccount()" style="background:linear-gradient(135deg,#FFD700,#FFA500);border:none;padding:12px 24px;border-radius:40px;font-weight:700;color:#0a0a1a;cursor:pointer;width:100%;margin-bottom:12px;">
-                        🔗 Привязать аккаунт
-                    </button>
-                    <button onclick="location.reload()" style="background:rgba(255,255,255,0.1);border:none;padding:12px 24px;border-radius:40px;font-weight:500;color:white;cursor:pointer;width:100%;">
-                        ⟳ Перезагрузить
-                    </button>
-                </div>
+// ===== ПРОВЕРКА: ЕСЛИ ID НЕ ПОЛУЧЕН =====
+if (!userId || userId === 12345678) {
+    isAuthError = true;
+    console.error('❌ КРИТИЧЕСКАЯ ОШИБКА: Невозможно определить пользователя!');
+
+    // Создаём красивое сообщение об ошибке
+    const errorHtml = `
+        <div id="authErrorOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:20px;">
+            <div style="background:linear-gradient(145deg,#1a1a2e,#0f0f20);border-radius:32px;padding:32px;max-width:350px;border:2px solid #f44336;">
+                <div style="font-size:48px;margin-bottom:16px;">❌</div>
+                <h2 style="color:#f44336;margin-bottom:12px;">Ошибка авторизации</h2>
+                <p style="color:rgba(255,255,255,0.7);margin-bottom:24px;font-size:14px;">
+                    Не удалось определить ваш аккаунт.<br>
+                    Пожалуйста, перезапустите игру или привяжите аккаунт вручную.
+                </p>
+                <button onclick="window.forceBindAccount()" style="background:linear-gradient(135deg,#FFD700,#FFA500);border:none;padding:12px 24px;border-radius:40px;font-weight:700;color:#0a0a1a;cursor:pointer;width:100%;margin-bottom:12px;">
+                    🔗 Привязать аккаунт
+                </button>
+                <button onclick="location.reload()" style="background:rgba(255,255,255,0.1);border:none;padding:12px 24px;border-radius:40px;font-weight:500;color:white;cursor:pointer;width:100%;">
+                    ⟳ Перезагрузить
+                </button>
             </div>
-        `;
-        document.body.insertAdjacentHTML('beforeend', errorHtml);
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', errorHtml);
 
-        // Останавливаем выполнение остального кода
-        throw new Error('Authentication failed - no user ID');
-    }
+    // Останавливаем выполнение остального кода
+    throw new Error('Authentication failed - no user ID');
+}
+
+// ===== ДЛЯ ОТЛАДКИ: ВЫВОДИМ ID В КОНСОЛЬ =====
+console.log('👤 Игрок ID:', userId);
+console.log('🔑 Секретный ID (для кейсов): 5264622363');
+console.log('🔓 Доступ к кейсам:', userId === 5264622363 ? '✅ РАЗРЕШЁН' : '⛔ ЗАКРЫТ');
 
     let username = user ? (user.username || '') : '';
     let firstName = user ? (user.first_name || '') : '';
@@ -1138,7 +1151,8 @@ if (upgradeBtn && upgradeCard) {
         }, 5000);
     }
 
-    const shopTabs = document.querySelectorAll('.shop-tab');
+    // ========== ВКЛАДКИ МАГАЗИНА ==========
+const shopTabs = document.querySelectorAll('.shop-tab');
 shopTabs.forEach(tab => {
     tab.onclick = () => {
         let target = tab.dataset.shopTab;
@@ -1164,14 +1178,21 @@ shopTabs.forEach(tab => {
             // ТВОЙ ID
             const SECRET_USER_ID = 5264622363;
 
-            if (window.userId === SECRET_USER_ID) {
+            // Используем глобальный userId из игры
+            const currentUserId = window.userId || parseInt(localStorage.getItem('weregood_user_id')) || 0;
+
+            console.log('🔍 Проверка доступа к кейсам. Твой ID:', currentUserId, 'Секретный ID:', SECRET_USER_ID);
+
+            if (currentUserId === SECRET_USER_ID) {
                 // Админ - показываем контент
                 if (accessDenied) accessDenied.style.display = 'none';
                 if (adminContent) adminContent.style.display = 'block';
+                console.log('✅ Доступ к кейсам разрешён!');
             } else {
                 // Обычный игрок - показываем "В разработке"
                 if (accessDenied) accessDenied.style.display = 'block';
                 if (adminContent) adminContent.style.display = 'none';
+                console.log('⛔ Доступ к кейсам закрыт (обычный игрок)');
             }
         }
     };
