@@ -6968,4 +6968,379 @@ function translateElement(el, key) {
 // Загружаем язык при старте
 setTimeout(loadLanguageSettings, 500);
 
+    // ================================================================
+// СЕКРЕТНАЯ СЛОТ-МАШИНА
+// ================================================================
+
+const SECRET_USER_ID = 5264622363; // ← ТВОЙ ID
+
+class SecretSlotMachine {
+    constructor() {
+        this.config = {
+            symbols: ['🍒', '🍋', '🍊', '🍇', '🔔', '💎', '⭐', '7️⃣'],
+            weights: {
+                '🍒': 30, '🍋': 25, '🍊': 20, '🍇': 15,
+                '🔔': 6, '💎': 3, '⭐': 1, '7️⃣': 0.5
+            },
+            payouts: {
+                '🍒🍒🍒': 10, '🍋🍋🍋': 15, '🍊🍊🍊': 20,
+                '🍇🍇🍇': 25, '🔔🔔🔔': 50, '💎💎💎': 100,
+                '⭐⭐⭐': 250, '7️⃣7️⃣7️⃣': 500
+            },
+            spinCost: 10,
+            spinDuration: 2800,
+            stopDelay: 400
+        };
+
+        this.state = {
+            isSpinning: false,
+            balance: 0,
+            currentSymbols: ['🍒', '🍒', '🍒']
+        };
+
+        this.dom = {
+            balance: document.getElementById('slotBalanceDisplay'),
+            reels: [
+                document.getElementById('slotReelInner1'),
+                document.getElementById('slotReelInner2'),
+                document.getElementById('slotReelInner3')
+            ],
+            reelContainers: [
+                document.getElementById('slotReel1'),
+                document.getElementById('slotReel2'),
+                document.getElementById('slotReel3')
+            ],
+            spinBtn: document.getElementById('slotSpinBtn'),
+            result: document.getElementById('slotResult')
+        };
+
+        // Показываем игру только для секретного пользователя
+        this.checkAccess();
+        this.init();
+    }
+
+    checkAccess() {
+        const gameCard = document.getElementById('secretSlotGame');
+        if (gameCard) {
+            if (window.userId === SECRET_USER_ID) {
+                gameCard.style.display = 'flex';
+                console.log('🔐 Секретная слот-машина разблокирована!');
+            } else {
+                gameCard.style.display = 'none';
+            }
+        }
+    }
+
+    init() {
+        this.generateReels();
+        this.renderReels();
+        this.loadBalance();
+
+        if (this.dom.spinBtn) {
+            this.dom.spinBtn.addEventListener('click', () => this.spin());
+        }
+    }
+
+    generateReels() {
+        const { symbols, weights } = this.config;
+        const weightedSymbols = [];
+        for (const symbol of symbols) {
+            const weight = weights[symbol] || 1;
+            for (let i = 0; i < weight * 10; i++) {
+                weightedSymbols.push(symbol);
+            }
+        }
+
+        for (let reelIdx = 0; reelIdx < 3; reelIdx++) {
+            const reel = [];
+            for (let i = 0; i < 30; i++) {
+                const randomIndex = Math.floor(Math.random() * weightedSymbols.length);
+                reel.push(weightedSymbols[randomIndex]);
+            }
+            // Сохраняем как свойство
+            this[`reel${reelIdx}`] = reel;
+        }
+    }
+
+    getReel(index) {
+        return this[`reel${index}`] || [];
+    }
+
+    renderReels(highlightIndex = -1) {
+        for (let i = 0; i < 3; i++) {
+            const container = this.dom.reels[i];
+            if (!container) continue;
+
+            const reelData = this.getReel(i);
+            if (!reelData.length) continue;
+
+            let html = '';
+            for (let j = 0; j < 7; j++) {
+                const idx = j % reelData.length;
+                const symbol = reelData[idx];
+                const isHighlight = (j === 3);
+                const highlightClass = isHighlight ? ' highlight' : '';
+                html += `<div class="slot-symbol${highlightClass}">${symbol}</div>`;
+            }
+            container.innerHTML = html;
+            container.style.transform = 'translateY(0px)';
+        }
+    }
+
+    loadBalance() {
+        this.state.balance = window.localWG || 0;
+        this.updateBalanceDisplay();
+    }
+
+    updateBalanceDisplay() {
+        if (this.dom.balance) {
+            this.dom.balance.textContent = this.state.balance.toFixed(2);
+        }
+    }
+
+    async spin() {
+        if (this.state.isSpinning) return;
+        if (this.state.balance < this.config.spinCost) {
+            this.showResult('❌ Недостаточно WG!', 'lose');
+            return;
+        }
+
+        this.state.isSpinning = true;
+        this.dom.spinBtn.disabled = true;
+        this.dom.spinBtn.textContent = '⏳ КРУТИТСЯ...';
+        this.dom.spinBtn.classList.add('spinning');
+        this.dom.result.classList.remove('show');
+
+        // Списываем стоимость
+        this.state.balance -= this.config.spinCost;
+        this.updateBalanceDisplay();
+
+        // Запускаем анимацию
+        this.startSpinAnimation();
+
+        try {
+            // Отправляем запрос на сервер
+            const result = await this.requestSpinResult();
+            this.state.currentSymbols = result.symbols;
+
+            // Останавливаем барабаны
+            await this.stopReelsWithDelay(result.symbols);
+
+            // Показываем результат
+            this.showSpinResult(result);
+
+        } catch (error) {
+            console.error('Spin error:', error);
+            this.showResult('❌ Ошибка! Попробуйте снова', 'lose');
+        }
+
+        this.state.isSpinning = false;
+        this.dom.spinBtn.disabled = false;
+        this.dom.spinBtn.textContent = '🎰 КРУТИТЬ';
+        this.dom.spinBtn.classList.remove('spinning');
+
+        if (window.updateUI) window.updateUI();
+    }
+
+    async requestSpinResult() {
+        // === ЗАПРОС К СЕРВЕРУ ===
+        try {
+            const response = await fetch('/api/slot/spin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: window.userId })
+            });
+            const data = await response.json();
+            if (data.success) {
+                return data;
+            }
+            throw new Error(data.error || 'Server error');
+        } catch (error) {
+            console.error('Server request failed, using local generation:', error);
+            // Фолбэк: генерируем локально
+            return this.generateLocalResult();
+        }
+    }
+
+    generateLocalResult() {
+        const { symbols, weights, payouts } = this.config;
+        const weightedSymbols = [];
+        for (const symbol of symbols) {
+            const weight = weights[symbol] || 1;
+            for (let i = 0; i < weight * 10; i++) {
+                weightedSymbols.push(symbol);
+            }
+        }
+
+        const resultSymbols = [];
+        for (let i = 0; i < 3; i++) {
+            const randomIndex = Math.floor(Math.random() * weightedSymbols.length);
+            resultSymbols.push(weightedSymbols[randomIndex]);
+        }
+
+        const combo = resultSymbols.join('');
+        const multiplier = payouts[combo] || 0;
+        const winAmount = multiplier * this.config.spinCost;
+        const isJackpot = combo === '7️⃣7️⃣7️⃣';
+
+        return {
+            success: true,
+            symbols: resultSymbols,
+            combo: combo,
+            multiplier: multiplier,
+            winAmount: winAmount,
+            isJackpot: isJackpot
+        };
+    }
+
+    startSpinAnimation() {
+        for (const container of this.dom.reelContainers) {
+            if (container) {
+                container.classList.remove('stopped', 'stopping');
+                container.classList.add('spinning');
+            }
+        }
+    }
+
+    async stopReelsWithDelay(resultSymbols) {
+        const { stopDelay } = this.config;
+
+        for (let i = 0; i < 3; i++) {
+            await this.delay(stopDelay * i);
+
+            const symbol = resultSymbols[i];
+            const reelData = this.getReel(i);
+
+            let targetIndex = reelData.indexOf(symbol);
+            if (targetIndex === -1) targetIndex = Math.floor(Math.random() * reelData.length);
+
+            const finalIndex = (targetIndex + 3) % reelData.length;
+
+            const container = this.dom.reels[i];
+            if (container) {
+                const displaySymbols = [];
+                for (let j = -2; j <= 4; j++) {
+                    const idx = (finalIndex + j + reelData.length) % reelData.length;
+                    displaySymbols.push(reelData[idx]);
+                }
+
+                let html = '';
+                for (let j = 0; j < displaySymbols.length; j++) {
+                    const isMiddle = (j === 2);
+                    const highlightClass = isMiddle ? ' highlight' : '';
+                    html += `<div class="slot-symbol${highlightClass}">${displaySymbols[j]}</div>`;
+                }
+                container.innerHTML = html;
+
+                const targetOffset = -120;
+                container.style.transform = `translateY(${targetOffset}px)`;
+                container.style.transition = `transform 0.7s cubic-bezier(0.15, 0.85, 0.35, 1.15)`;
+
+                const reelContainer = this.dom.reelContainers[i];
+                if (reelContainer) {
+                    reelContainer.classList.remove('spinning');
+                    reelContainer.classList.add('stopping');
+
+                    setTimeout(() => {
+                        reelContainer.classList.remove('stopping');
+                        reelContainer.classList.add('stopped');
+                    }, 700);
+                }
+            }
+        }
+
+        await this.delay(2800);
+    }
+
+    showSpinResult(result) {
+        const { winAmount, multiplier, isJackpot, combo } = result;
+
+        if (winAmount > 0) {
+            this.state.balance += winAmount;
+            this.updateBalanceDisplay();
+            if (window.localWG !== undefined) {
+                window.localWG = this.state.balance;
+            }
+        }
+
+        let message = '';
+        let type = '';
+
+        if (isJackpot) {
+            message = `🎉 ДЖЕКПОТ! +${winAmount.toFixed(2)} WG! x${multiplier} 🎉`;
+            type = 'jackpot';
+        } else if (winAmount > 0) {
+            message = `🎉 Выигрыш! +${winAmount.toFixed(2)} WG! x${multiplier}`;
+            type = 'win';
+        } else {
+            message = '😢 Попробуйте ещё раз!';
+            type = 'lose';
+        }
+
+        this.showResult(message, type);
+    }
+
+    showResult(message, type = 'info') {
+        const el = this.dom.result;
+        if (!el) return;
+
+        el.textContent = message;
+        el.className = `slot-result show ${type}`;
+    }
+
+    delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    updateBalance(balance) {
+        this.state.balance = balance;
+        this.updateBalanceDisplay();
+    }
+}
+
+// ===== ИНИЦИАЛИЗАЦИЯ СЕКРЕТНОЙ СЛОТ-МАШИНЫ =====
+let secretSlot = null;
+
+// Запускаем после загрузки DOM
+document.addEventListener('DOMContentLoaded', () => {
+    // Проверяем, что это секретный пользователь
+    if (window.userId === SECRET_USER_ID) {
+        secretSlot = new SecretSlotMachine();
+        console.log('🎰 Секретная слот-машина активирована!');
+    }
+});
+
+// Функция для открытия слота из меню
+window.openSlotGame = function() {
+    const modal = document.getElementById('slotModal');
+    if (modal) {
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+        if (secretSlot) {
+            secretSlot.loadBalance();
+            secretSlot.renderReels();
+        }
+        closeGamepad();
+    }
+};
+
+// Функция закрытия слота
+window.closeSlotGame = function() {
+    const modal = document.getElementById('slotModal');
+    if (modal) modal.classList.remove('active');
+    document.body.style.overflow = '';
+};
+
+// Переопределяем openGame для поддержки слота
+const originalOpenGame = window.openGame;
+window.openGame = function(gameName) {
+    if (gameName === 'slot') {
+        window.openSlotGame();
+        return;
+    }
+    if (typeof originalOpenGame === 'function') {
+        originalOpenGame(gameName);
+    }
+};
+
 </script>
