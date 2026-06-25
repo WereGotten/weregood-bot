@@ -7014,7 +7014,7 @@ function translateElement(el, key) {
 setTimeout(loadLanguageSettings, 500);
 
     // ================================================================
-// КЕЙСЫ - ОПТИМИЗИРОВАННАЯ ВЕРСИЯ (БЕЗ ЛАГОВ)
+// КЕЙСЫ - МАКСИМАЛЬНАЯ ПЛАВНОСТЬ
 // ================================================================
 
 let currentCaseId = 1;
@@ -7073,6 +7073,7 @@ function renderSlotTrack(rewards) {
     const track = document.getElementById('caseSlotTrack');
     if (!track) return;
 
+    // 30 циклов для длинной ленты
     const cycles = 30;
     let html = '';
 
@@ -7120,7 +7121,7 @@ function getItemWidth() {
     return firstItem.offsetWidth + 14;
 }
 
-// ===== ВРАЩЕНИЕ (ОПТИМИЗИРОВАННОЕ) =====
+// ===== ВРАЩЕНИЕ (ЧИСТАЯ ПЛАВНОСТЬ) =====
 function spinCase() {
     if (isCaseSpinning) return;
 
@@ -7136,7 +7137,6 @@ function spinCase() {
     const spinBtn = document.getElementById('caseSpinBtn');
     if (!track || !spinBtn) return;
 
-    // Отменяем предыдущий таймаут
     if (spinTimeout) {
         clearTimeout(spinTimeout);
         spinTimeout = null;
@@ -7146,18 +7146,19 @@ function spinCase() {
     spinBtn.disabled = true;
     spinBtn.querySelector('.btn-text').textContent = 'ВРАЩЕНИЕ...';
 
+    // Убираем подсветку
     document.querySelectorAll('.case-reward-card').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.case-slot-item').forEach(el => el.classList.remove('active'));
 
     const items = track.querySelectorAll('.case-slot-item');
     const itemWidth = getItemWidth();
     const itemsPerCycle = caseInfo.rewards.length;
+    const totalItems = items.length;
 
-    // Выбираем случайный выигрышный индекс
+    // Выбираем случайный выигрыш
     const winIndex = Math.floor(Math.random() * caseInfo.rewards.length);
 
-    // Находим элемент с выигрышным индексом в середине ленты
-    const totalItems = items.length;
+    // Находим элемент в середине ленты
     const middleCycle = Math.floor(totalItems / itemsPerCycle / 2);
     let targetItemIndex = -1;
 
@@ -7188,68 +7189,32 @@ function spinCase() {
     const centerOffset = 3;
     const targetPosition = -(targetItemIndex - centerOffset) * itemWidth;
 
-    // Огромное количество оборотов для длительной анимации
-    const extraCycles = 20 + Math.floor(Math.random() * 8);
+    // Обороты для длительности (18-26 оборотов)
+    const extraCycles = 18 + Math.floor(Math.random() * 8);
     const extraOffset = extraCycles * itemsPerCycle * itemWidth;
     const finalPosition = targetPosition - extraOffset;
 
-    // Получаем текущую позицию
+    // Текущая позиция
     const currentTransform = track.style.transform || 'translateX(0px)';
     const currentX = parseInt(currentTransform.replace('translateX(', '').replace('px)', '')) || 0;
 
-    // Сбрасываем переход для мгновенного старта
+    // ===== ГЛАВНАЯ ХИТРОСТЬ: ДВА ЭТАПА =====
+    // 1. Мгновенный сброс на текущую позицию
     track.style.transition = 'none';
     track.style.transform = `translateX(${currentX}px)`;
 
     // Форсируем reflow
     void track.offsetHeight;
 
-    // ===== ЗАПУСКАЕМ АНИМАЦИЮ ЧЕРЕЗ CSS TRANSITION =====
-    // Длительность: 12-15 секунд
+    // 2. Плавный переход к финальной позиции
     const duration = 12000 + Math.random() * 3000;
-
-    // Устанавливаем переход с кривой замедления
     track.style.transition = `transform ${duration}ms cubic-bezier(0.08, 0.82, 0.17, 1)`;
     track.style.transform = `translateX(${finalPosition}px)`;
 
-    // Вибрация при старте
     triggerHaptic('medium');
-
-    // ===== ЭФФЕКТ РАЗМЫТИЯ (ПРОСТОЙ И БЫСТРЫЙ) =====
-    // Добавляем класс размытия всем элементам, кроме центральных
-    const applyBlurEffect = () => {
-        const allItems = track.querySelectorAll('.case-slot-item');
-        const containerRect = track.parentElement.getBoundingClientRect();
-        const center = containerRect.left + containerRect.width / 2;
-
-        allItems.forEach(el => {
-            const elRect = el.getBoundingClientRect();
-            const elCenter = elRect.left + elRect.width / 2;
-            const distance = Math.abs(elCenter - center);
-
-            if (distance > 70) {
-                el.classList.add('blurred');
-            } else {
-                el.classList.remove('blurred');
-            }
-        });
-    };
-
-    // Применяем размытие с интервалом (не каждый кадр!)
-    let blurInterval = setInterval(applyBlurEffect, 100);
-
-    // Первое применение сразу
-    setTimeout(applyBlurEffect, 50);
 
     // ===== ЗАВЕРШЕНИЕ =====
     const finishSpin = () => {
-        clearInterval(blurInterval);
-
-        // Убираем размытие
-        document.querySelectorAll('.case-slot-item').forEach(el => {
-            el.classList.remove('blurred');
-        });
-
         // Находим элемент в центре
         const containerRect = track.parentElement.getBoundingClientRect();
         const center = containerRect.left + containerRect.width / 2;
@@ -7267,7 +7232,7 @@ function spinCase() {
         });
 
         if (closestItem) {
-            // Подпрыгивание (байт)
+            // Байт (подпрыгивание)
             closestItem.classList.add('bounce');
             setTimeout(() => {
                 closestItem.classList.remove('bounce');
@@ -7277,7 +7242,7 @@ function spinCase() {
             const winIndex = parseInt(closestItem.dataset.index);
             const winReward = caseInfo.rewards[winIndex];
 
-            // Подсвечиваем карточку
+            // Подсветка карточки
             const rewardCards = document.querySelectorAll('.case-reward-card');
             rewardCards.forEach((el, idx) => {
                 if (idx === winIndex) {
@@ -7302,8 +7267,7 @@ function spinCase() {
         spinTimeout = null;
     };
 
-    // Устанавливаем таймаут на завершение
-    spinTimeout = setTimeout(finishSpin, duration + 500);
+    spinTimeout = setTimeout(finishSpin, duration + 300);
 }
 
 // ===== МОДАЛКА ПОКУПКИ =====
@@ -7418,12 +7382,11 @@ function closeCase() {
             track.style.transition = 'none';
             track.style.transform = 'translateX(0px)';
             track.querySelectorAll('.case-slot-item').forEach(el => {
-                el.classList.remove('active', 'bounce', 'blurred');
+                el.classList.remove('active', 'bounce');
             });
         }
         isCaseSpinning = false;
 
-        // Восстанавливаем кнопку
         const spinBtn = document.getElementById('caseSpinBtn');
         if (spinBtn) {
             spinBtn.disabled = false;
