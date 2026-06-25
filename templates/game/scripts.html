@@ -7014,7 +7014,7 @@ function translateElement(el, key) {
 setTimeout(loadLanguageSettings, 500);
 
     // ================================================================
-// КЕЙСЫ - С РЕДКОСТЯМИ
+// КЕЙСЫ - ФИНАЛЬНАЯ ВЕРСИЯ
 // ================================================================
 
 let currentCaseId = 1;
@@ -7077,7 +7077,8 @@ function renderSlotTrack(rewards) {
     const track = document.getElementById('caseSlotTrack');
     if (!track) return;
 
-    const cycles = 15;
+    // Больше циклов для длительной анимации
+    const cycles = 25;
     let html = '';
 
     for (let cycle = 0; cycle < cycles; cycle++) {
@@ -7120,8 +7121,8 @@ function updateCaseCount() {
 // ===== ПОЛУЧЕНИЕ ШИРИНЫ ЭЛЕМЕНТА =====
 function getItemWidth() {
     const firstItem = document.querySelector('.case-slot-item');
-    if (!firstItem) return 122;
-    return firstItem.offsetWidth + 12;
+    if (!firstItem) return 134;
+    return firstItem.offsetWidth + 14;
 }
 
 // ===== ВРАЩЕНИЕ =====
@@ -7131,7 +7132,6 @@ function spinCase() {
     const caseInfo = caseData[currentCaseId];
     if (!caseInfo) return;
 
-    // Если нет кейсов — показываем окно покупки
     if (caseCount <= 0) {
         showBuyCaseModal();
         return;
@@ -7162,8 +7162,10 @@ function spinCase() {
     const itemsPerCycle = caseInfo.rewards.length;
     const totalItems = items.length;
 
+    // Выбираем случайный выигрышный индекс
     const winIndex = Math.floor(Math.random() * caseInfo.rewards.length);
 
+    // Находим элемент с выигрышным индексом в середине ленты
     const middleCycle = Math.floor(totalItems / itemsPerCycle / 2);
     let targetItemIndex = -1;
 
@@ -7190,10 +7192,13 @@ function spinCase() {
         targetItemIndex = Math.floor(totalItems / 2);
     }
 
+    // Центр = 3 (при 7 видимых элементах)
     const centerOffset = 3;
     const targetPosition = -(targetItemIndex - centerOffset) * itemWidth;
 
-    const extraCycles = 3 + Math.random() * 2;
+    // ===== ГЛАВНОЕ: 12-15 секунд анимации =====
+    // Добавляем ОГРОМНОЕ количество оборотов для длительности
+    const extraCycles = 18 + Math.floor(Math.random() * 8); // 18-26 оборотов
     const extraOffset = extraCycles * itemsPerCycle * itemWidth;
     const finalPosition = targetPosition - extraOffset;
 
@@ -7202,15 +7207,19 @@ function spinCase() {
 
     triggerHaptic('medium');
 
-    // ===== АНИМАЦИЯ =====
+    // ===== АНИМАЦИЯ С ЗАМЕДЛЕНИЕМ =====
     const keyframes = [
         { transform: `translateX(${currentX}px)` },
         { transform: `translateX(${finalPosition}px)` }
     ];
 
+    // Длительность: 12-15 секунд
+    const duration = 12000 + Math.random() * 3000;
+
+    // Сложная кривая: быстрое начало, медленное завершение с байтом
     const options = {
-        duration: 3500 + Math.random() * 800,
-        easing: 'cubic-bezier(0.15, 0.85, 0.35, 1.15)',
+        duration: duration,
+        easing: 'cubic-bezier(0.08, 0.82, 0.17, 1)',
         fill: 'forwards'
     };
 
@@ -7219,10 +7228,12 @@ function spinCase() {
     // ===== РАЗМЫТИЕ =====
     let blurActive = true;
     let lastX = currentX;
+    let frameCount = 0;
 
     function applyBlur() {
         if (!blurActive) return;
 
+        frameCount++;
         const rect = track.getBoundingClientRect();
         const currentXPos = rect.left;
         const speed = Math.abs(currentXPos - lastX);
@@ -7232,16 +7243,19 @@ function spinCase() {
         const containerRect = track.parentElement.getBoundingClientRect();
         const center = containerRect.left + containerRect.width / 2;
 
+        // Увеличиваем размытие в зависимости от скорости
+        const blurFactor = Math.min(3, speed / 30);
+
         allItems.forEach(el => {
             const elRect = el.getBoundingClientRect();
             const elCenter = elRect.left + elRect.width / 2;
             const distance = Math.abs(elCenter - center);
 
-            if (distance > 60 && speed > 10) {
-                const blurAmount = Math.min(2, (distance - 60) / 50);
+            if (distance > 60 && speed > 5) {
+                const blurAmount = Math.min(2.5, blurFactor * (distance / 100));
                 el.style.filter = `blur(${blurAmount}px)`;
-                el.style.opacity = Math.max(0.2, 1 - (distance / 350));
-                el.style.transform = `scale(${Math.max(0.85, 1 - (distance / 500))})`;
+                el.style.opacity = Math.max(0.1, 1 - (distance / 400));
+                el.style.transform = `scale(${Math.max(0.8, 1 - (distance / 600))})`;
             } else {
                 el.style.filter = '';
                 el.style.opacity = '';
@@ -7254,6 +7268,9 @@ function spinCase() {
 
     animationFrame = requestAnimationFrame(applyBlur);
 
+    // ===== БАЙТ (ПОДПРЫГИВАНИЕ В КОНЦЕ) =====
+    let bounceTimeout = null;
+
     // ===== ЗАВЕРШЕНИЕ =====
     currentAnimation.onfinish = function() {
         blurActive = false;
@@ -7262,6 +7279,7 @@ function spinCase() {
             animationFrame = null;
         }
 
+        // Очищаем стили
         document.querySelectorAll('.case-slot-item').forEach(el => {
             el.style.filter = '';
             el.style.opacity = '';
@@ -7270,6 +7288,7 @@ function spinCase() {
 
         track.style.transform = `translateX(${finalPosition}px)`;
 
+        // Находим элемент в центре
         const containerRect = track.parentElement.getBoundingClientRect();
         const center = containerRect.left + containerRect.width / 2;
         let closestItem = null;
@@ -7286,10 +7305,17 @@ function spinCase() {
         });
 
         if (closestItem) {
+            // Добавляем эффект байта
+            closestItem.classList.add('bounce');
+            setTimeout(() => {
+                closestItem.classList.remove('bounce');
+            }, 500);
+
             closestItem.classList.add('active');
             const winIndex = parseInt(closestItem.dataset.index);
             const winReward = caseInfo.rewards[winIndex];
 
+            // Подсвечиваем карточку
             const rewardCards = document.querySelectorAll('.case-reward-card');
             rewardCards.forEach((el, idx) => {
                 if (idx === winIndex) {
@@ -7297,9 +7323,15 @@ function spinCase() {
                 }
             });
 
+            // Мощная вибрация
             triggerHaptic('heavy');
-            showToast(`🎉 Вы выиграли: ${winReward.value}!`, 'success');
 
+            // Задержка перед показом тоста для интриги
+            setTimeout(() => {
+                showToast(`🎉 Вы выиграли: ${winReward.value}!`, 'success');
+            }, 300);
+
+            // Списываем кейс
             caseCount--;
             localStorage.setItem('weregood_cases', caseCount.toString());
             updateCaseCount();
@@ -7307,7 +7339,7 @@ function spinCase() {
 
         isCaseSpinning = false;
         spinBtn.disabled = false;
-        spinBtn.querySelector('.btn-text').textContent = 'ОТКРЫТЬ';
+        spinBtn.querySelector('.btn-text').textContent = 'ОТКРЫТЬ КЕЙС';
         currentAnimation = null;
     };
 
@@ -7317,23 +7349,103 @@ function spinCase() {
             cancelAnimationFrame(animationFrame);
             animationFrame = null;
         }
+        if (bounceTimeout) {
+            clearTimeout(bounceTimeout);
+        }
         isCaseSpinning = false;
         spinBtn.disabled = false;
-        spinBtn.querySelector('.btn-text').textContent = 'ОТКРЫТЬ';
+        spinBtn.querySelector('.btn-text').textContent = 'ОТКРЫТЬ КЕЙС';
         currentAnimation = null;
     };
 }
 
-// ===== МОДАЛКА ПОКУПКИ КЕЙСА =====
+// ===== МОДАЛКА ПОКУПКИ =====
 function showBuyCaseModal() {
     const caseInfo = caseData[currentCaseId];
     if (!caseInfo) return;
 
-    const message = `🎰 У вас нет кейсов!\n\n💰 Цена: ${caseInfo.price} WG\n\nКупить кейс?`;
+    // Создаём кастомную модалку
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.85);
+        backdrop-filter: blur(12px);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: fadeIn 0.3s ease;
+    `;
+    overlay.id = 'buyCaseOverlay';
 
-    if (confirm(message)) {
-        buyCase();
-    }
+    overlay.innerHTML = `
+        <div style="
+            background: linear-gradient(145deg, #1a1a2e, #0f0f20);
+            border-radius: 28px;
+            padding: 32px 24px 28px;
+            max-width: 340px;
+            width: 90%;
+            text-align: center;
+            border: 1px solid rgba(255,215,0,0.1);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        ">
+            <div style="font-size: 3rem; margin-bottom: 8px;">🎰</div>
+            <h3 style="color: #FFD700; font-size: 1.2rem; margin-bottom: 6px;">У вас нет кейсов!</h3>
+            <p style="color: rgba(255,255,255,0.5); font-size: 0.85rem; margin-bottom: 16px;">
+                Купите кейс за <span style="color: #FFD700; font-weight: 700;">${caseInfo.price} WG</span>
+            </p>
+            <div style="display: flex; gap: 10px;">
+                <button onclick="buyCase(); document.getElementById('buyCaseOverlay').remove();" style="
+                    flex: 2;
+                    padding: 14px;
+                    border: none;
+                    border-radius: 60px;
+                    background: linear-gradient(135deg, #FFD700, #F5A623);
+                    color: #0a0a1a;
+                    font-weight: 700;
+                    font-size: 0.9rem;
+                    cursor: pointer;
+                    transition: transform 0.15s ease;
+                " onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'" onmousedown="this.style.transform='scale(0.96)'" onmouseup="this.style.transform='scale(1)'">
+                    💰 Купить
+                </button>
+                <button onclick="document.getElementById('buyCaseOverlay').remove();" style="
+                    flex: 1;
+                    padding: 14px;
+                    border: 1px solid rgba(255,255,255,0.06);
+                    border-radius: 60px;
+                    background: rgba(255,255,255,0.03);
+                    color: rgba(255,255,255,0.4);
+                    font-weight: 600;
+                    font-size: 0.85rem;
+                    cursor: pointer;
+                    transition: all 0.15s ease;
+                " onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='rgba(255,255,255,0.03)'" onmousedown="this.style.transform='scale(0.96)'" onmouseup="this.style.transform='scale(1)'">
+                    ✕
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    // Добавляем анимации
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes scaleIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+    `;
+    document.head.appendChild(style);
+
+    triggerHaptic('medium');
 }
 
 // ===== ПОКУПКА =====
@@ -7381,7 +7493,7 @@ function closeCase() {
                 el.style.filter = '';
                 el.style.opacity = '';
                 el.style.transform = '';
-                el.classList.remove('active');
+                el.classList.remove('active', 'bounce');
             });
         }
         isCaseSpinning = false;

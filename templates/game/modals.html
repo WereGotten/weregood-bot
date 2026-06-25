@@ -201,13 +201,24 @@
      ============================================================ -->
 <div id="casePage" class="case-page">
     <div class="case-page-content">
-        <!-- Шапка -->
+        <!-- ШАПКА -->
         <div class="case-header">
             <button class="case-back-btn" onclick="closeCase()">←</button>
-            <h2 id="caseTitle">Обычный кейс</h2>
-            <div class="case-header-right">
-                <span class="case-price" id="casePriceDisplay">500</span>
-                <span class="case-count" id="caseCount">0</span>
+            <div class="case-header-center">
+                <h2 id="caseTitle">Обычный кейс</h2>
+                <div class="case-header-stats">
+                    <div class="case-stat">
+                        <span class="stat-icon">💰</span>
+                        <span class="stat-value" id="casePriceDisplay">500</span>
+                        <span class="stat-label">WG</span>
+                    </div>
+                    <div class="case-stat-divider"></div>
+                    <div class="case-stat">
+                        <span class="stat-icon">🎫</span>
+                        <span class="stat-value" id="caseCount">0</span>
+                        <span class="stat-label">кейсов</span>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -230,11 +241,17 @@
         <div class="case-actions">
             <button class="case-spin-btn" id="caseSpinBtn" onclick="spinCase()">
                 <span class="btn-icon">🎰</span>
-                <span class="btn-text">ОТКРЫТЬ</span>
+                <span class="btn-text">ОТКРЫТЬ КЕЙС</span>
             </button>
         </div>
 
-        <!-- СПИСОК НАГРАД (2 В РЯД) -->
-        <div class="case-rewards-grid" id="caseRewardsGrid"></div>
+        <!-- СПИСОК НАГРАД -->
+        <div class="case-rewards-section">
+            <div class="case-rewards-header">
+                <span class="rewards-title">🎁 ВОЗМОЖНЫЕ НАГРАДЫ</span>
+                <span class="rewards-divider"></span>
+            </div>
+            <div class="case-rewards-grid" id="caseRewardsGrid"></div>
+        </div>
     </div>
 </div>
