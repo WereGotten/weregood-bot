@@ -6358,7 +6358,7 @@ body.light-theme .star-upgrade-card {
     }
 }
 /* ============================================================
-   КЕЙСЫ - ПРЕМИУМ ДИЗАЙН 2026 (ОПТИМИЗИРОВАННЫЙ)
+   КЕЙСЫ - ПРОСТАЯ РАБОЧАЯ ВЕРСИЯ
    ============================================================ */
 
 /* ===== СТРАНИЦА ===== */
@@ -6373,10 +6373,9 @@ body.light-theme .star-upgrade-card {
     background: radial-gradient(ellipse at 50% 20%, #12122e, #070714 60%, #03030a);
     z-index: 300;
     transform: translateX(100%);
-    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
     overflow-y: auto;
     padding: 0 16px 30px;
-    will-change: transform;
 }
 
 .case-page.active {
@@ -6490,7 +6489,19 @@ body.light-theme .star-upgrade-card {
     overflow: hidden;
 }
 
-.case-slot-top-glow,
+.case-slot-top-glow {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    height: 50px;
+    pointer-events: none;
+    z-index: 0;
+    filter: blur(30px);
+    top: -15px;
+    background: radial-gradient(ellipse, rgba(255, 215, 0, 0.04), transparent);
+}
+
 .case-slot-bottom-glow {
     position: absolute;
     left: 50%;
@@ -6500,14 +6511,6 @@ body.light-theme .star-upgrade-card {
     pointer-events: none;
     z-index: 0;
     filter: blur(30px);
-}
-
-.case-slot-top-glow {
-    top: -15px;
-    background: radial-gradient(ellipse, rgba(255, 215, 0, 0.04), transparent);
-}
-
-.case-slot-bottom-glow {
     bottom: -15px;
     background: radial-gradient(ellipse, rgba(255, 215, 0, 0.025), transparent);
 }
@@ -6519,14 +6522,22 @@ body.light-theme .star-upgrade-card {
     border-radius: 28px;
     overflow: hidden;
     border: 1px solid rgba(255, 215, 0, 0.03);
-    box-shadow:
-        inset 0 0 80px rgba(0, 0, 0, 0.4),
-        0 0 60px rgba(0, 0, 0, 0.3);
+    box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.4), 0 0 60px rgba(0, 0, 0, 0.3);
     z-index: 1;
 }
 
 /* ===== ТЕНИ ===== */
-.case-slot-shadow-left,
+.case-slot-shadow-left {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 60px;
+    pointer-events: none;
+    z-index: 5;
+    left: 0;
+    background: linear-gradient(to right, rgba(0, 0, 0, 0.9), transparent 60%);
+}
+
 .case-slot-shadow-right {
     position: absolute;
     top: 0;
@@ -6534,14 +6545,6 @@ body.light-theme .star-upgrade-card {
     width: 60px;
     pointer-events: none;
     z-index: 5;
-}
-
-.case-slot-shadow-left {
-    left: 0;
-    background: linear-gradient(to right, rgba(0, 0, 0, 0.9), transparent 60%);
-}
-
-.case-slot-shadow-right {
     right: 0;
     background: linear-gradient(to left, rgba(0, 0, 0, 0.9), transparent 60%);
 }
@@ -6554,14 +6557,7 @@ body.light-theme .star-upgrade-card {
     transform: translateX(-50%);
     width: 3px;
     height: 100%;
-    background: linear-gradient(to bottom,
-        transparent 0%,
-        rgba(255, 215, 0, 0.15) 15%,
-        #FFD700 35%,
-        #FFD700 65%,
-        rgba(255, 215, 0, 0.15) 85%,
-        transparent 100%
-    );
+    background: linear-gradient(to bottom, transparent 0%, rgba(255, 215, 0, 0.15) 15%, #FFD700 35%, #FFD700 65%, rgba(255, 215, 0, 0.15) 85%, transparent 100%);
     z-index: 10;
     box-shadow: 0 0 40px rgba(255, 215, 0, 0.08);
     pointer-events: none;
@@ -6586,12 +6582,7 @@ body.light-theme .star-upgrade-card {
     z-index: 1;
 }
 
-/* ============================================================
-   КЕЙСЫ - 60 FPS ОПТИМИЗАЦИЯ
-   ============================================================ */
-
-/* ===== ГЛАВНЫЙ ТРЕК — ВЫНОСИМ В ОТДЕЛЬНЫЙ СЛОЙ ===== */
-#caseSlotTrack,
+/* ===== ТРЕК ===== */
 .case-slot-track {
     display: flex;
     flex-direction: row;
@@ -6600,18 +6591,9 @@ body.light-theme .star-upgrade-card {
     gap: 12px;
     padding: 0 16px;
     will-change: transform;
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-    perspective: 1000px;
-    -webkit-perspective: 1000px;
-    contain: content;
-    transform: translate3d(0, 0, 0);
-    -webkit-transform: translate3d(0, 0, 0);
-    transform-style: preserve-3d;
-    -webkit-transform-style: preserve-3d;
 }
 
-/* ===== КАЖДЫЙ ЭЛЕМЕНТ — ПРЕДОТВРАЩАЕМ РАЗМЫТИЕ ===== */
+/* ===== ЭЛЕМЕНТ В ЛЕНТЕ ===== */
 .case-slot-item {
     flex-shrink: 0;
     width: 110px;
@@ -6626,14 +6608,6 @@ body.light-theme .star-upgrade-card {
     border: 2px solid rgba(255, 255, 255, 0.04);
     padding: 12px 8px;
     position: relative;
-    will-change: transform;
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-    content-visibility: auto;
-    contain: layout style paint;
-    transform: translateZ(0);
-    -webkit-transform: translateZ(0);
-    transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s ease;
 }
 
 /* Глянцевый эффект */
@@ -6649,16 +6623,11 @@ body.light-theme .star-upgrade-card {
     pointer-events: none;
 }
 
-/* ===== ИКОНКИ — БЕЗ ЗАДЕРЖЕК ===== */
 .case-slot-item .item-icon {
     width: 44px;
     height: 44px;
     object-fit: contain;
     display: block;
-    image-rendering: -webkit-optimize-contrast;
-    image-rendering: crisp-edges;
-    -webkit-transform: translateZ(0);
-    transform: translateZ(0);
     transition: transform 0.3s ease;
 }
 
@@ -6905,7 +6874,6 @@ body.light-theme .star-upgrade-card {
    КЕЙСЫ - МИНИМАЛИСТИЧНЫЙ ДИЗАЙН (МЕНЮ)
    ============================================================ */
 
-/* ===== ЗАГОЛОВОК ===== */
 .cases-header {
     display: flex;
     justify-content: space-between;
@@ -6918,195 +6886,3 @@ body.light-theme .star-upgrade-card {
 .cases-header-left {
     display: flex;
     align-items: center;
-    gap: 10px;
-}
-
-.cases-header-icon {
-    font-size: 1.4rem;
-    line-height: 1;
-}
-
-.cases-header-title {
-    font-size: 1rem;
-    font-weight: 700;
-    color: #fff;
-    margin: 0;
-    letter-spacing: 0.3px;
-}
-
-.cases-header-right {
-    display: flex;
-    align-items: center;
-}
-
-.cases-count {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.3);
-    background: rgba(255, 255, 255, 0.04);
-    padding: 2px 12px;
-    border-radius: 30px;
-}
-
-/* ===== СПИСОК КЕЙСОВ ===== */
-.cases-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-/* ===== КАРТОЧКА КЕЙСА ===== */
-.case-item {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 12px 14px;
-    background: rgba(255, 255, 255, 0.02);
-    border-radius: 14px;
-    border: 1px solid rgba(255, 255, 255, 0.04);
-    cursor: pointer;
-    transition: all 0.15s ease;
-}
-
-.case-item:active {
-    transform: scale(0.97);
-    background: rgba(255, 215, 0, 0.04);
-    border-color: rgba(255, 215, 0, 0.08);
-}
-
-.case-item-icon {
-    font-size: 1.8rem;
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.case-item-info {
-    flex: 1;
-    min-width: 0;
-}
-
-.case-item-name {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: #fff;
-    line-height: 1.2;
-}
-
-.case-item-desc {
-    font-size: 0.6rem;
-    color: rgba(255, 255, 255, 0.25);
-    margin-top: 1px;
-}
-
-.case-item-price {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: #FFD700;
-    white-space: nowrap;
-}
-
-.case-item-arrow {
-    font-size: 1.2rem;
-    color: rgba(255, 255, 255, 0.1);
-    transition: transform 0.2s ease;
-    line-height: 1;
-}
-
-.case-item:active .case-item-arrow {
-    transform: translateX(4px);
-    color: rgba(255, 215, 0, 0.3);
-}
-
-/* ============================================================
-   АДАПТАЦИЯ
-   ============================================================ */
-@media (max-width: 480px) {
-    .case-slot-window {
-        height: 170px;
-        border-radius: 24px;
-    }
-    .case-slot-item {
-        width: 95px;
-        height: 130px;
-        padding: 10px 6px;
-        gap: 6px;
-    }
-    .case-slot-item .item-icon {
-        width: 38px;
-        height: 38px;
-    }
-    .case-slot-item .item-value {
-        font-size: 0.6rem;
-        padding: 2px 10px;
-    }
-    .case-slot-shadow-left,
-    .case-slot-shadow-right {
-        width: 40px;
-    }
-    .case-rewards-grid {
-        gap: 8px;
-    }
-    .case-reward-card {
-        padding: 10px 8px;
-        border-radius: 14px;
-    }
-    .case-reward-card .reward-icon {
-        width: 30px;
-        height: 30px;
-    }
-    .case-reward-card .reward-value {
-        font-size: 0.55rem;
-    }
-    .case-header-center h2 {
-        font-size: 0.9rem;
-    }
-    .case-header-stats {
-        font-size: 0.6rem;
-        gap: 8px;
-    }
-    .case-stat .stat-value {
-        font-size: 0.7rem;
-    }
-    .case-back-btn {
-        width: 34px;
-        height: 34px;
-        font-size: 0.9rem;
-    }
-    .case-spin-btn {
-        padding: 15px 20px;
-    }
-    .case-spin-btn .btn-text {
-        font-size: 0.9rem;
-    }
-    .case-spin-btn .btn-icon {
-        font-size: 1rem;
-    }
-    .rewards-title {
-        font-size: 0.5rem;
-    }
-    .case-item {
-        padding: 10px 12px;
-        gap: 12px;
-    }
-    .case-item-icon {
-        font-size: 1.5rem;
-        width: 34px;
-        height: 34px;
-    }
-    .case-item-name {
-        font-size: 0.8rem;
-    }
-    .case-item-price {
-        font-size: 0.7rem;
-    }
-    .cases-header-title {
-        font-size: 0.9rem;
-    }
-    .cases-header-icon {
-        font-size: 1.2rem;
-    }
-}
