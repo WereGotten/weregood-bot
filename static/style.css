@@ -6358,7 +6358,7 @@ body.light-theme .star-upgrade-card {
     }
 }
 /* ============================================================
-   КЕЙСЫ - ПРЕМИУМ ДИЗАЙН 2026 (ФИНАЛ)
+   КЕЙСЫ - ПРЕМИУМ ДИЗАЙН 2026
    ============================================================ */
 
 /* ===== СТРАНИЦА ===== */
@@ -6370,10 +6370,10 @@ body.light-theme .star-upgrade-card {
     bottom: 0;
     max-width: 500px;
     margin: 0 auto;
-    background: radial-gradient(ellipse at 50% 15%, #12122e, #070714 60%, #03030a);
+    background: radial-gradient(ellipse at 50% 20%, #12122e, #070714 60%, #03030a);
     z-index: 300;
     transform: translateX(100%);
-    transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
     overflow-y: auto;
     padding: 0 16px 30px;
     will-change: transform;
@@ -6388,11 +6388,11 @@ body.light-theme .star-upgrade-card {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 14px 0 16px;
+    padding: 16px 0 14px;
     margin-bottom: 16px;
     position: sticky;
     top: 0;
-    background: rgba(3, 3, 10, 0.95);
+    background: rgba(3, 3, 10, 0.92);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
     z-index: 10;
@@ -6436,7 +6436,7 @@ body.light-theme .star-upgrade-card {
     background-clip: text;
     color: transparent;
     margin: 0;
-    letter-spacing: 0.3px;
+    letter-spacing: 0.5px;
 }
 
 .case-header-stats {
@@ -6466,7 +6466,10 @@ body.light-theme .star-upgrade-card {
 
 .case-stat .stat-label {
     color: rgba(255, 255, 255, 0.2);
-    font-size: 0.6rem;
+    font-size: 0.55rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .case-stat-divider {
@@ -6478,7 +6481,7 @@ body.light-theme .star-upgrade-card {
 /* ===== БАРАБАН ===== */
 .case-slot-wrapper {
     padding: 0 2px;
-    margin-bottom: 18px;
+    margin-bottom: 16px;
 }
 
 .case-slot-machine {
@@ -6511,13 +6514,13 @@ body.light-theme .star-upgrade-card {
 
 .case-slot-window {
     position: relative;
-    height: 210px;
-    background: rgba(0, 0, 0, 0.65);
+    height: 200px;
+    background: rgba(0, 0, 0, 0.6);
     border-radius: 28px;
     overflow: hidden;
     border: 1px solid rgba(255, 215, 0, 0.03);
     box-shadow:
-        inset 0 0 100px rgba(0, 0, 0, 0.4),
+        inset 0 0 80px rgba(0, 0, 0, 0.4),
         0 0 60px rgba(0, 0, 0, 0.3);
     z-index: 1;
 }
@@ -6528,7 +6531,7 @@ body.light-theme .star-upgrade-card {
     position: absolute;
     top: 0;
     bottom: 0;
-    width: 70px;
+    width: 60px;
     pointer-events: none;
     z-index: 5;
 }
@@ -6576,7 +6579,7 @@ body.light-theme .star-upgrade-card {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 160px;
+    width: 140px;
     height: 80%;
     background: radial-gradient(ellipse, rgba(255, 215, 0, 0.03), transparent 70%);
     pointer-events: none;
@@ -6589,8 +6592,8 @@ body.light-theme .star-upgrade-card {
     flex-direction: row;
     height: 100%;
     align-items: center;
-    gap: 14px;
-    padding: 0 20px;
+    gap: 12px;
+    padding: 0 16px;
     will-change: transform;
     transform: translate3d(0, 0, 0);
     backface-visibility: hidden;
@@ -6600,19 +6603,19 @@ body.light-theme .star-upgrade-card {
 /* ===== ЭЛЕМЕНТ В ЛЕНТЕ ===== */
 .case-slot-item {
     flex-shrink: 0;
-    width: 120px;
-    height: 160px;
+    width: 110px;
+    height: 150px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 10px;
+    gap: 8px;
     background: rgba(255, 255, 255, 0.02);
-    border-radius: 24px;
+    border-radius: 20px;
     border: 2px solid rgba(255, 255, 255, 0.04);
-    padding: 14px 10px;
+    padding: 12px 8px;
     position: relative;
-    transition: border-color 0.4s ease, background 0.4s ease, transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s ease;
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
 }
@@ -6626,104 +6629,89 @@ body.light-theme .star-upgrade-card {
     right: 0;
     height: 45%;
     background: linear-gradient(to bottom, rgba(255, 255, 255, 0.03), transparent);
-    border-radius: 24px 24px 0 0;
+    border-radius: 20px 20px 0 0;
     pointer-events: none;
 }
 
-/* ===== РЕДКОСТИ ===== */
-.case-slot-item.rarity-common {
-    border-color: rgba(59, 130, 246, 0.2);
-    background: rgba(59, 130, 246, 0.03);
-}
-
-.case-slot-item.rarity-common .item-value {
-    color: rgba(59, 130, 246, 0.5);
-}
-
-.case-slot-item.rarity-rare {
-    border-color: rgba(139, 92, 246, 0.2);
-    background: rgba(139, 92, 246, 0.03);
-}
-
-.case-slot-item.rarity-rare .item-value {
-    color: rgba(139, 92, 246, 0.5);
-}
-
-.case-slot-item.rarity-epic {
-    border-color: rgba(239, 68, 68, 0.2);
-    background: rgba(239, 68, 68, 0.03);
-}
-
-.case-slot-item.rarity-epic .item-value {
-    color: rgba(239, 68, 68, 0.5);
-}
-
-.case-slot-item.rarity-legendary {
-    border-color: rgba(255, 215, 0, 0.2);
-    background: rgba(255, 215, 0, 0.03);
-}
-
-.case-slot-item.rarity-legendary .item-value {
-    color: rgba(255, 215, 0, 0.5);
-}
-
 .case-slot-item .item-icon {
-    width: 52px;
-    height: 52px;
+    width: 44px;
+    height: 44px;
     object-fit: contain;
     display: block;
-    transition: transform 0.4s ease;
+    transition: transform 0.3s ease;
 }
 
 .case-slot-item .item-value {
-    font-size: 0.8rem;
+    font-size: 0.7rem;
     font-weight: 700;
     text-align: center;
     background: rgba(0, 0, 0, 0.35);
-    padding: 4px 14px;
+    padding: 3px 12px;
     border-radius: 30px;
     backdrop-filter: blur(4px);
     font-variant-numeric: tabular-nums;
     transition: all 0.3s ease;
 }
 
-/* ===== АКТИВНЫЙ ===== */
+/* ===== РЕДКОСТИ ===== */
+.case-slot-item.rarity-common {
+    border-color: rgba(59, 130, 246, 0.15);
+    background: rgba(59, 130, 246, 0.02);
+}
+.case-slot-item.rarity-common .item-value {
+    color: rgba(59, 130, 246, 0.5);
+}
+
+.case-slot-item.rarity-rare {
+    border-color: rgba(139, 92, 246, 0.15);
+    background: rgba(139, 92, 246, 0.02);
+}
+.case-slot-item.rarity-rare .item-value {
+    color: rgba(139, 92, 246, 0.5);
+}
+
+.case-slot-item.rarity-epic {
+    border-color: rgba(239, 68, 68, 0.15);
+    background: rgba(239, 68, 68, 0.02);
+}
+.case-slot-item.rarity-epic .item-value {
+    color: rgba(239, 68, 68, 0.5);
+}
+
+.case-slot-item.rarity-legendary {
+    border-color: rgba(255, 215, 0, 0.15);
+    background: rgba(255, 215, 0, 0.02);
+}
+.case-slot-item.rarity-legendary .item-value {
+    color: rgba(255, 215, 0, 0.5);
+}
+
+/* ===== АКТИВНЫЙ ЭЛЕМЕНТ ===== */
 .case-slot-item.active {
     transform: scale(1.06);
-    box-shadow: 0 0 60px rgba(255, 215, 0, 0.04);
+    box-shadow: 0 0 40px rgba(255, 215, 0, 0.04);
 }
 
 .case-slot-item.active .item-value {
     color: #FFD700 !important;
     background: rgba(255, 215, 0, 0.08);
-    border: 1px solid rgba(255, 215, 0, 0.08);
+    border: 1px solid rgba(255, 215, 0, 0.06);
 }
 
 .case-slot-item.active .item-icon {
-    transform: scale(1.1);
+    transform: scale(1.08);
 }
 
-.case-slot-item.active.rarity-common {
-    border-color: rgba(59, 130, 246, 0.4);
-}
+.case-slot-item.active.rarity-common { border-color: rgba(59, 130, 246, 0.3); }
+.case-slot-item.active.rarity-rare { border-color: rgba(139, 92, 246, 0.3); }
+.case-slot-item.active.rarity-epic { border-color: rgba(239, 68, 68, 0.3); }
+.case-slot-item.active.rarity-legendary { border-color: rgba(255, 215, 0, 0.3); }
 
-.case-slot-item.active.rarity-rare {
-    border-color: rgba(139, 92, 246, 0.4);
-}
-
-.case-slot-item.active.rarity-epic {
-    border-color: rgba(239, 68, 68, 0.4);
-}
-
-.case-slot-item.active.rarity-legendary {
-    border-color: rgba(255, 215, 0, 0.4);
-}
-
-/* ===== БАУНС ===== */
+/* ===== БАЙТ ===== */
 @keyframes slotBounce {
     0% { transform: scale(1.06) translateX(0); }
-    20% { transform: scale(1.1) translateX(-10px); }
-    40% { transform: scale(1.08) translateX(6px); }
+    20% { transform: scale(1.1) translateX(-8px); }
+    40% { transform: scale(1.08) translateX(5px); }
     60% { transform: scale(1.06) translateX(-3px); }
     80% { transform: scale(1.06) translateX(2px); }
     100% { transform: scale(1.06) translateX(0); }
@@ -6733,15 +6721,9 @@ body.light-theme .star-upgrade-card {
     animation: slotBounce 0.5s ease;
 }
 
-/* ===== РАЗМЫТИЕ ===== */
-.case-slot-item.blurred {
-    opacity: 0.3;
-    transform: scale(0.85);
-}
-
 /* ===== КНОПКА ===== */
 .case-actions {
-    margin-bottom: 20px;
+    margin-bottom: 16px;
 }
 
 .case-spin-btn {
@@ -6760,6 +6742,7 @@ body.light-theme .star-upgrade-card {
     box-shadow: 0 4px 40px rgba(255, 215, 0, 0.12);
     position: relative;
     overflow: hidden;
+    font-family: inherit;
 }
 
 .case-spin-btn::after {
@@ -6786,7 +6769,7 @@ body.light-theme .star-upgrade-card {
 }
 
 .case-spin-btn .btn-text {
-    font-size: 1.05rem;
+    font-size: 1rem;
     font-weight: 800;
     letter-spacing: 0.8px;
 }
@@ -6804,7 +6787,7 @@ body.light-theme .star-upgrade-card {
 }
 
 .rewards-title {
-    font-size: 0.65rem;
+    font-size: 0.6rem;
     font-weight: 700;
     color: rgba(255, 255, 255, 0.15);
     letter-spacing: 1.5px;
@@ -6825,27 +6808,27 @@ body.light-theme .star-upgrade-card {
 
 .case-reward-card {
     background: rgba(255, 255, 255, 0.02);
-    border-radius: 18px;
-    padding: 14px 12px;
+    border-radius: 16px;
+    padding: 12px 10px;
     text-align: center;
     border: 2px solid rgba(255, 255, 255, 0.04);
     transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     cursor: default;
 }
 
 .case-reward-card .reward-icon {
-    width: 38px;
-    height: 38px;
+    width: 34px;
+    height: 34px;
     object-fit: contain;
     display: block;
 }
 
 .case-reward-card .reward-value {
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     font-weight: 700;
     color: rgba(255, 255, 255, 0.35);
     transition: color 0.4s ease;
@@ -6853,33 +6836,29 @@ body.light-theme .star-upgrade-card {
 
 /* ===== РЕДКОСТИ КАРТОЧЕК ===== */
 .case-reward-card.rarity-common {
-    border-color: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.08);
 }
-
 .case-reward-card.rarity-common .reward-value {
     color: rgba(59, 130, 246, 0.5);
 }
 
 .case-reward-card.rarity-rare {
-    border-color: rgba(139, 92, 246, 0.1);
+    border-color: rgba(139, 92, 246, 0.08);
 }
-
 .case-reward-card.rarity-rare .reward-value {
     color: rgba(139, 92, 246, 0.5);
 }
 
 .case-reward-card.rarity-epic {
-    border-color: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.08);
 }
-
 .case-reward-card.rarity-epic .reward-value {
     color: rgba(239, 68, 68, 0.5);
 }
 
 .case-reward-card.rarity-legendary {
-    border-color: rgba(255, 215, 0, 0.1);
+    border-color: rgba(255, 215, 0, 0.08);
 }
-
 .case-reward-card.rarity-legendary .reward-value {
     color: rgba(255, 215, 0, 0.5);
 }
@@ -6888,287 +6867,81 @@ body.light-theme .star-upgrade-card {
 .case-reward-card.active {
     transform: scale(1.04);
     background: rgba(255, 215, 0, 0.03);
-    box-shadow: 0 0 40px rgba(255, 215, 0, 0.03);
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.03);
 }
 
 .case-reward-card.active .reward-value {
     color: #FFD700 !important;
 }
 
-.case-reward-card.active.rarity-common {
-    border-color: rgba(59, 130, 246, 0.3);
-}
-
-.case-reward-card.active.rarity-rare {
-    border-color: rgba(139, 92, 246, 0.3);
-}
-
-.case-reward-card.active.rarity-epic {
-    border-color: rgba(239, 68, 68, 0.3);
-}
-
-.case-reward-card.active.rarity-legendary {
-    border-color: rgba(255, 215, 0, 0.3);
-}
-
-/* ============================================================
-   КОЛЕСО ФОРТУНЫ (ОПТИМИЗИРОВАННОЕ)
-   ============================================================ */
-
-#wheelOverlay {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.88);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    z-index: 9999;
-    justify-content: center;
-    align-items: center;
-    animation: wheelFadeIn 0.3s ease;
-}
-
-@keyframes wheelFadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-#wheelOverlay.active {
-    display: flex;
-}
-
-#wheelContainer {
-    position: relative;
-    width: 100%;
-    max-width: 400px;
-    margin: 0 auto;
-    padding: 0 16px;
-}
-
-#wheelCanvas {
-    width: 100%;
-    height: auto;
-    aspect-ratio: 1/1;
-    border-radius: 50%;
-    box-shadow:
-        0 0 60px rgba(255, 215, 0, 0.08),
-        0 0 120px rgba(255, 215, 0, 0.04),
-        inset 0 0 80px rgba(0, 0, 0, 0.2);
-    background: radial-gradient(circle at 30% 30%, #1a1a2e, #0a0a1a);
-    will-change: transform;
-    transform: translateZ(0);
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-}
-
-#wheelPointer {
-    position: absolute;
-    top: -14px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 2.8rem;
-    z-index: 10;
-    filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.15));
-    color: #FFD700;
-    text-shadow: 0 0 30px rgba(255, 215, 0, 0.1);
-    animation: pointerFloat 2s ease-in-out infinite;
-}
-
-@keyframes pointerFloat {
-    0%, 100% { transform: translateX(-50%) translateY(0); }
-    50% { transform: translateX(-50%) translateY(-4px); }
-}
+.case-reward-card.active.rarity-common { border-color: rgba(59, 130, 246, 0.25); }
+.case-reward-card.active.rarity-rare { border-color: rgba(139, 92, 246, 0.25); }
+.case-reward-card.active.rarity-epic { border-color: rgba(239, 68, 68, 0.25); }
+.case-reward-card.active.rarity-legendary { border-color: rgba(255, 215, 0, 0.25); }
 
 /* ===== АДАПТАЦИЯ ===== */
 @media (max-width: 480px) {
     .case-slot-window {
-        height: 175px;
+        height: 170px;
         border-radius: 24px;
     }
-
     .case-slot-item {
-        width: 105px;
-        height: 140px;
-        padding: 10px 8px;
-        gap: 8px;
+        width: 95px;
+        height: 130px;
+        padding: 10px 6px;
+        gap: 6px;
     }
-
     .case-slot-item .item-icon {
-        width: 42px;
-        height: 42px;
+        width: 38px;
+        height: 38px;
     }
-
     .case-slot-item .item-value {
-        font-size: 0.7rem;
-        padding: 3px 10px;
+        font-size: 0.6rem;
+        padding: 2px 10px;
     }
-
     .case-slot-shadow-left,
     .case-slot-shadow-right {
-        width: 45px;
+        width: 40px;
     }
-
     .case-rewards-grid {
         gap: 8px;
     }
-
     .case-reward-card {
-        padding: 12px 10px;
+        padding: 10px 8px;
         border-radius: 14px;
     }
-
     .case-reward-card .reward-icon {
-        width: 32px;
-        height: 32px;
+        width: 30px;
+        height: 30px;
     }
-
     .case-reward-card .reward-value {
-        font-size: 0.6rem;
+        font-size: 0.55rem;
     }
-
     .case-header-center h2 {
         font-size: 0.9rem;
     }
-
     .case-header-stats {
         font-size: 0.6rem;
         gap: 8px;
     }
-
     .case-stat .stat-value {
         font-size: 0.7rem;
     }
-
     .case-back-btn {
         width: 34px;
         height: 34px;
         font-size: 0.9rem;
     }
-
     .case-spin-btn {
         padding: 15px 20px;
     }
-
     .case-spin-btn .btn-text {
         font-size: 0.9rem;
     }
-
     .case-spin-btn .btn-icon {
         font-size: 1rem;
     }
-
     .rewards-title {
-        font-size: 0.55rem;
+        font-size: 0.5rem;
     }
-
-    #wheelPointer {
-        font-size: 2rem;
-        top: -10px;
-    }
-}
-
-@media (max-width: 380px) {
-    .case-slot-window {
-        height: 155px;
-    }
-
-    .case-slot-item {
-        width: 90px;
-        height: 120px;
-        padding: 8px 6px;
-        gap: 6px;
-    }
-
-    .case-slot-item .item-icon {
-        width: 36px;
-        height: 36px;
-    }
-
-    .case-slot-item .item-value {
-        font-size: 0.6rem;
-        padding: 2px 8px;
-    }
-
-    .case-rewards-grid {
-        gap: 6px;
-    }
-
-    .case-reward-card {
-        padding: 10px 8px;
-    }
-
-    .case-reward-card .reward-icon {
-        width: 28px;
-        height: 28px;
-    }
-
-    .case-reward-card .reward-value {
-        font-size: 0.55rem;
-    }
-
-    .case-header-stats {
-        gap: 6px;
-    }
-
-    .case-stat .stat-value {
-        font-size: 0.65rem;
-    }
-
-    #wheelContainer {
-        padding: 0 8px;
-    }
-}
-
-/* ===== ДОПОЛНИТЕЛЬНЫЕ АНИМАЦИИ ===== */
-@keyframes scaleIn {
-    from {
-        transform: scale(0.8);
-        opacity: 0;
-    }
-    to {
-        transform: scale(1);
-        opacity: 1;
-    }
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-.case-page .case-content {
-    animation: fadeIn 0.3s ease;
-}
-
-/* ===== GPU-АКСЕЛЕРАЦИЯ ===== */
-.case-slot-track {
-    will-change: transform;
-    transform: translate3d(0, 0, 0);
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-}
-
-.case-slot-item {
-    will-change: transform;
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-    /* Аппаратное ускорение для каждого элемента */
-    transform: translateZ(0);
-}
-
-/* ===== ПЛАВНОСТЬ АНИМАЦИИ ===== */
-.case-slot-track {
-    transition: transform 12000ms cubic-bezier(0.08, 0.82, 0.17, 1);
-}
-
-/* ===== ОПТИМИЗАЦИЯ ИЗОБРАЖЕНИЙ ===== */
-.case-slot-item .item-icon,
-.case-reward-card .reward-icon {
-    image-rendering: -webkit-optimize-contrast;
-    image-rendering: crisp-edges;
 }

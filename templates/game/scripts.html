@@ -7014,13 +7014,15 @@ function translateElement(el, key) {
 setTimeout(loadLanguageSettings, 500);
 
     // ================================================================
-// КЕЙСЫ - ОГРОМНЫЙ ЗАПАС ЭЛЕМЕНТОВ
+// КЕЙСЫ - МАКСИМАЛЬНАЯ ОПТИМИЗАЦИЯ
 // ================================================================
 
 let currentCaseId = 1;
 let isCaseSpinning = false;
 let caseCount = parseInt(localStorage.getItem('weregood_cases') || '0');
 let spinTimeout = null;
+let itemsCache = null;
+let itemWidthCache = null;
 
 const caseData = {
     1: {
@@ -7038,6 +7040,14 @@ const caseData = {
     }
 };
 
+// ===== ПРЕДЗАГРУЗКА ИЗОБРАЖЕНИЙ =====
+function preloadImages(rewards) {
+    rewards.forEach(reward => {
+        const img = new Image();
+        img.src = reward.icon;
+    });
+}
+
 // ===== ОТКРЫТИЕ КЕЙСА =====
 function openCase(caseId) {
     currentCaseId = caseId || 1;
@@ -7049,6 +7059,9 @@ function openCase(caseId) {
 
     document.getElementById('caseTitle').textContent = caseInfo.name;
     document.getElementById('casePriceDisplay').textContent = caseInfo.price;
+
+    // Предзагрузка изображений
+    preloadImages(caseInfo.rewards);
 
     renderRewardsGrid(caseInfo.rewards);
     renderSlotTrack(caseInfo.rewards);
@@ -7068,30 +7081,34 @@ function openCase(caseId) {
     document.body.style.overflow = 'hidden';
 }
 
-// ===== РЕНДЕР ТРЕКА (100 КЛОНОВ) =====
+// ===== РЕНДЕР ТРЕКА (С КЭШИРОВАНИЕМ) =====
 function renderSlotTrack(rewards) {
     const track = document.getElementById('caseSlotTrack');
     if (!track) return;
 
-    // Создаём базовый набор
-    let html = '';
-    for (let i = 0; i < rewards.length; i++) {
-        const reward = rewards[i];
-        html += `
-            <div class="case-slot-item rarity-${reward.rarity}" data-index="${i}">
-                <img src="${reward.icon}" class="item-icon" alt="${reward.value}" loading="lazy">
-                <span class="item-value">${reward.value}</span>
-            </div>
-        `;
+    // Кэшируем HTML
+    if (!itemsCache) {
+        let html = '';
+        for (let i = 0; i < rewards.length; i++) {
+            const reward = rewards[i];
+            html += `
+                <div class="case-slot-item rarity-${reward.rarity}" data-index="${i}">
+                    <img src="${reward.icon}" class="item-icon" alt="${reward.value}" loading="lazy" decoding="async">
+                    <span class="item-value">${reward.value}</span>
+                </div>
+            `;
+        }
+        itemsCache = html;
     }
 
-    // 100 КЛОНОВ = 700 ЭЛЕМЕНТОВ
+    // 100 клонов для бесконечной прокрутки
     let finalHtml = '';
     for (let cycle = 0; cycle < 100; cycle++) {
-        finalHtml += html;
+        finalHtml += itemsCache;
     }
 
     track.innerHTML = finalHtml;
+    itemWidthCache = null;
 }
 
 // ===== РЕНДЕР СЕТКИ НАГРАД =====
@@ -7103,7 +7120,7 @@ function renderRewardsGrid(rewards) {
     rewards.forEach(reward => {
         html += `
             <div class="case-reward-card rarity-${reward.rarity}">
-                <img src="${reward.icon}" class="reward-icon" alt="${reward.value}" loading="lazy">
+                <img src="${reward.icon}" class="reward-icon" alt="${reward.value}" loading="lazy" decoding="async">
                 <span class="reward-value">${reward.value}</span>
             </div>
         `;
@@ -7117,11 +7134,15 @@ function updateCaseCount() {
     document.getElementById('caseCount').textContent = caseCount;
 }
 
-// ===== ПОЛУЧЕНИЕ ШИРИНЫ ЭЛЕМЕНТА =====
+// ===== ПОЛУЧЕНИЕ ШИРИНЫ ЭЛЕМЕНТА (С КЭШИРОВАНИЕМ) =====
 function getItemWidth() {
+    if (itemWidthCache !== null) return itemWidthCache;
+
     const firstItem = document.querySelector('.case-slot-item');
-    if (!firstItem) return 134;
-    return firstItem.offsetWidth + 14;
+    if (!firstItem) return 122;
+
+    itemWidthCache = firstItem.offsetWidth + 12;
+    return itemWidthCache;
 }
 
 // ===== ВРАЩЕНИЕ =====
@@ -7157,16 +7178,14 @@ function spinCase() {
     const itemsPerCycle = caseInfo.rewards.length;
     const totalItems = items.length;
 
-    // Выбор выигрыша
     const winIndex = Math.floor(Math.random() * caseInfo.rewards.length);
 
-    // Ищем элемент в середине ленты
+    // Ищем в середине
     const middleIndex = Math.floor(totalItems / 2);
     let targetItemIndex = -1;
 
     for (let i = middleIndex; i < totalItems; i++) {
-        const idx = parseInt(items[i].dataset.index);
-        if (idx === winIndex) {
+        if (parseInt(items[i].dataset.index) === winIndex) {
             targetItemIndex = i;
             break;
         }
@@ -7174,8 +7193,7 @@ function spinCase() {
 
     if (targetItemIndex === -1) {
         for (let i = middleIndex; i >= 0; i--) {
-            const idx = parseInt(items[i].dataset.index);
-            if (idx === winIndex) {
+            if (parseInt(items[i].dataset.index) === winIndex) {
                 targetItemIndex = i;
                 break;
             }
@@ -7188,15 +7206,14 @@ function spinCase() {
 
     const centerOffset = 3;
     const targetPosition = -(targetItemIndex - centerOffset) * itemWidth;
-
-    // 25-30 оборотов
     const extraCycles = 25 + Math.floor(Math.random() * 5);
     const extraOffset = extraCycles * itemsPerCycle * itemWidth;
     const finalPosition = targetPosition - extraOffset;
 
-    // ЗАПУСК
+    // Запуск с 0
     track.style.transition = 'none';
     track.style.transform = 'translateX(0px)';
+    track.style.willChange = 'transform';
     void track.offsetHeight;
 
     const duration = 12000;
@@ -7205,7 +7222,6 @@ function spinCase() {
 
     triggerHaptic('medium');
 
-    // ЗАВЕРШЕНИЕ
     const finishSpin = () => {
         const containerRect = track.parentElement.getBoundingClientRect();
         const center = containerRect.left + containerRect.width / 2;
@@ -7257,6 +7273,10 @@ function spinCase() {
         spinBtn.disabled = false;
         spinBtn.querySelector('.btn-text').textContent = 'ОТКРЫТЬ КЕЙС';
         spinTimeout = null;
+
+        setTimeout(() => {
+            track.style.willChange = 'auto';
+        }, 1000);
     };
 
     spinTimeout = setTimeout(finishSpin, duration + 500);
@@ -7375,6 +7395,7 @@ function closeCase() {
         if (track) {
             track.style.transition = 'none';
             track.style.transform = 'translateX(0px)';
+            track.style.willChange = 'auto';
             track.querySelectorAll('.case-slot-item').forEach(el => {
                 el.classList.remove('active', 'bounce');
             });
