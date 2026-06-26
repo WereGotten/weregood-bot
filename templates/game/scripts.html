@@ -7014,7 +7014,7 @@ function translateElement(el, key) {
 setTimeout(loadLanguageSettings, 500);
 
     // ================================================================
-// КЕЙСЫ - МАКСИМАЛЬНАЯ ОПТИМИЗАЦИЯ
+// КЕЙСЫ - ПОЛНАЯ ВЕРСИЯ СО ЗВУКАМИ И ОПТИМИЗАЦИЕЙ
 // ================================================================
 
 let currentCaseId = 1;
@@ -7025,6 +7025,11 @@ let isCasePageOpen = false;
 let caseFpsInterval = null;
 let caseFpsFrames = 0;
 let caseFpsLastTime = 0;
+
+// ===== ЗВУКИ =====
+let caseTickInterval = null;
+let caseTickSpeed = 80;
+let caseTickTimer = null;
 
 // ===== ДАННЫЕ КЕЙСОВ =====
 const caseData = {
@@ -7094,7 +7099,126 @@ const caseData = {
     }
 };
 
-// ===== ПРЕДЗАГРУЗКА ВСЕХ ИЗОБРАЖЕНИЙ =====
+// ================================================================
+// ЗВУКИ
+// ================================================================
+
+function isSoundEnabled() {
+    const soundsToggle = document.getElementById('soundsToggle');
+    if (soundsToggle) {
+        return soundsToggle.checked;
+    }
+    return true;
+}
+
+function playCaseSound(soundId, volume = 0.5) {
+    if (!isSoundEnabled()) return;
+
+    const sound = document.getElementById(soundId);
+    if (!sound) return;
+
+    try {
+        sound.currentTime = 0;
+        sound.volume = volume;
+        sound.play().catch(e => {});
+    } catch(e) {}
+}
+
+function startTickSound() {
+    if (!isSoundEnabled()) return;
+    if (caseTickInterval) {
+        clearInterval(caseTickInterval);
+        caseTickInterval = null;
+    }
+
+    caseTickSpeed = 80;
+    let speedIncrease = 1.5;
+    let isFirst = true;
+
+    function playTick() {
+        if (!isSoundEnabled()) {
+            stopTickSound();
+            return;
+        }
+
+        playCaseSound('caseTickSound', 0.25);
+
+        if (!isFirst) {
+            caseTickSpeed = Math.max(18, caseTickSpeed - speedIncrease);
+            speedIncrease += 0.25;
+        }
+        isFirst = false;
+
+        if (caseTickInterval) {
+            clearInterval(caseTickInterval);
+            caseTickInterval = null;
+        }
+
+        caseTickInterval = setInterval(playTick, caseTickSpeed);
+    }
+
+    playTick();
+}
+
+function stopTickSound() {
+    if (caseTickInterval) {
+        clearInterval(caseTickInterval);
+        caseTickInterval = null;
+    }
+    if (caseTickTimer) {
+        clearTimeout(caseTickTimer);
+        caseTickTimer = null;
+    }
+}
+
+function playWinSound(rarity) {
+    if (!isSoundEnabled()) return;
+
+    const volumeMap = {
+        'common': 0.3,
+        'rare': 0.5,
+        'epic': 0.7,
+        'legendary': 1.0
+    };
+
+    const volume = volumeMap[rarity] || 0.5;
+
+    playCaseSound('caseOpenSound', 0.4);
+
+    setTimeout(() => {
+        playCaseSound('caseWinSound', volume);
+
+        if (rarity === 'legendary') {
+            setTimeout(() => {
+                playCaseSound('caseRaritySound', 0.8);
+                if (navigator.vibrate) {
+                    navigator.vibrate([50, 30, 50, 30, 100]);
+                }
+            }, 300);
+        }
+
+        if (rarity === 'epic') {
+            setTimeout(() => {
+                if (navigator.vibrate) {
+                    navigator.vibrate([30, 20, 40]);
+                }
+            }, 200);
+        }
+    }, 200);
+}
+
+function playBuyCaseSound() {
+    playCaseSound('caseOpenSound', 0.3);
+}
+
+function playFailSound() {
+    playCaseSound('caseFailSound', 0.4);
+}
+
+// ================================================================
+// ЗАГРУЗКА ИЗОБРАЖЕНИЙ
+// ================================================================
+
 let imagesPreloaded = false;
 let preloadPromise = null;
 
@@ -7108,7 +7232,6 @@ function preloadAllImages() {
             c.rewards.forEach(r => allIcons.add(r.icon));
         });
 
-        // Добавляем все возможные иконки
         const iconUrls = [
             ...allIcons,
             '/static/wallet.png',
@@ -7122,6 +7245,12 @@ function preloadAllImages() {
 
         let loaded = 0;
         const total = iconUrls.length;
+
+        if (total === 0) {
+            imagesPreloaded = true;
+            resolve();
+            return;
+        }
 
         iconUrls.forEach(src => {
             const img = new Image();
@@ -7142,22 +7271,21 @@ function preloadAllImages() {
             img.src = src;
         });
 
-        // Таймаут на случай ошибок
-        setTimeout(resolve, 2000);
+        setTimeout(resolve, 3000);
     });
 
     return preloadPromise;
 }
 
-// ===== ОТКРЫТИЕ КЕЙСА =====
+// ================================================================
+// ОСНОВНЫЕ ФУНКЦИИ
+// ================================================================
+
 async function openCase(caseId) {
     if (isCasePageOpen) return;
     isCasePageOpen = true;
 
-    // Показываем лоадер
     showCaseLoader(true);
-
-    // Предзагружаем картинки
     await preloadAllImages();
 
     currentCaseId = caseId || 1;
@@ -7175,18 +7303,15 @@ async function openCase(caseId) {
         return;
     }
 
-    // Обновляем информацию
     document.getElementById('caseTitle').textContent = `${caseInfo.icon} ${caseInfo.name}`;
     document.getElementById('casePriceDisplay').textContent = caseInfo.price;
 
-    // Стили для кейса
     const pageContent = page.querySelector('.case-content');
     if (pageContent) {
         pageContent.style.background = `linear-gradient(145deg, ${caseInfo.bgColor}, rgba(0,0,0,0.2))`;
         pageContent.style.borderColor = caseInfo.borderColor;
     }
 
-    // Рендерим только если нет контента
     if (!document.querySelector('.case-reward-card')) {
         renderRewardsGrid(caseInfo.rewards);
     }
@@ -7212,13 +7337,9 @@ async function openCase(caseId) {
         });
     }
 
-    // Скрываем лоадер
     showCaseLoader(false);
-
     page.classList.add('active');
     document.body.style.overflow = 'hidden';
-
-    // Запускаем мониторинг FPS
     startFpsMonitor();
 }
 
@@ -7231,7 +7352,7 @@ function showCaseLoader(show) {
             loader.style.cssText = `
                 position: fixed;
                 top: 0; left: 0; right: 0; bottom: 0;
-                background: rgba(0,0,0,0.8);
+                background: rgba(0,0,0,0.85);
                 display: flex;
                 align-items: center;
                 justify-content: center;
@@ -7245,7 +7366,6 @@ function showCaseLoader(show) {
             `;
             document.body.appendChild(loader);
 
-            // Добавляем стиль для спина
             if (!document.getElementById('caseLoaderStyle')) {
                 const style = document.createElement('style');
                 style.id = 'caseLoaderStyle';
@@ -7264,7 +7384,10 @@ function showCaseLoader(show) {
     }
 }
 
-// ===== РЕНДЕР ТРЕКА (ОДИН РАЗ) =====
+// ================================================================
+// РЕНДЕР
+// ================================================================
+
 let trackRendered = false;
 
 function renderSlotTrack(rewards) {
@@ -7274,8 +7397,7 @@ function renderSlotTrack(rewards) {
     const track = document.getElementById('caseSlotTrack');
     if (!track) return;
 
-    const cycles = 120; // Больше циклов
-    let html = '';
+    const cycles = 120;
     const fragment = document.createDocumentFragment();
     const temp = document.createElement('div');
 
@@ -7287,15 +7409,14 @@ function renderSlotTrack(rewards) {
             item.dataset.index = i;
             item.dataset.cycle = cycle;
 
-            // Используем инлайн SVG если картинка не загружена
             const img = document.createElement('img');
             img.className = 'item-icon';
             img.src = reward.icon;
             img.alt = reward.value;
             img.loading = 'eager';
             img.decoding = 'async';
-            img.style.width = '32px';
-            img.style.height = '32px';
+            img.style.width = '42px';
+            img.style.height = '42px';
             img.style.objectFit = 'contain';
 
             const span = document.createElement('span');
@@ -7308,14 +7429,12 @@ function renderSlotTrack(rewards) {
         }
     }
 
-    // Используем DocumentFragment для быстрой вставки
     while (temp.firstChild) {
         fragment.appendChild(temp.firstChild);
     }
     track.appendChild(fragment);
 }
 
-// ===== РЕНДЕР СЕТКИ НАГРАД (ОДИН РАЗ) =====
 let gridRendered = false;
 
 function renderRewardsGrid(rewards) {
@@ -7338,8 +7457,8 @@ function renderRewardsGrid(rewards) {
         img.alt = reward.value;
         img.loading = 'eager';
         img.decoding = 'async';
-        img.style.width = '40px';
-        img.style.height = '40px';
+        img.style.width = '36px';
+        img.style.height = '36px';
         img.style.objectFit = 'contain';
 
         const span = document.createElement('span');
@@ -7354,14 +7473,16 @@ function renderRewardsGrid(rewards) {
     grid.appendChild(fragment);
 }
 
-// ===== ОБНОВЛЕНИЕ КОЛИЧЕСТВА КЕЙСОВ =====
+// ================================================================
+// ВСПОМОГАТЕЛЬНЫЕ
+// ================================================================
+
 function updateCaseCount() {
     caseCount = parseInt(localStorage.getItem('weregood_cases') || '0');
     const el = document.getElementById('caseCount');
     if (el) el.textContent = caseCount;
 }
 
-// ===== ШИРИНА ЭЛЕМЕНТА =====
 let cachedItemWidth = null;
 
 function getItemWidth() {
@@ -7372,7 +7493,6 @@ function getItemWidth() {
     return cachedItemWidth;
 }
 
-// ===== FPS МОНИТОР =====
 function startFpsMonitor() {
     if (caseFpsInterval) return;
     caseFpsFrames = 0;
@@ -7384,7 +7504,6 @@ function startFpsMonitor() {
         if (diff > 0) {
             const fps = Math.round((caseFpsFrames / diff) * 1000);
             if (fps < 55) {
-                // Если FPS падает, применяем оптимизации
                 document.querySelectorAll('.case-slot-item img').forEach(img => {
                     img.style.imageRendering = 'auto';
                 });
@@ -7395,7 +7514,21 @@ function startFpsMonitor() {
     }, 1000);
 }
 
-// ===== ВРАЩЕНИЕ =====
+function triggerHaptic(type = 'medium') {
+    if (window.Telegram?.WebApp?.HapticFeedback) {
+        try {
+            window.Telegram.WebApp.HapticFeedback.impactOccurred(type);
+        } catch(e) {}
+    } else if (navigator.vibrate) {
+        const duration = type === 'heavy' ? 30 : type === 'medium' ? 15 : 8;
+        navigator.vibrate(duration);
+    }
+}
+
+// ================================================================
+// ВРАЩЕНИЕ
+// ================================================================
+
 function spinCase() {
     if (isCaseSpinning) return;
 
@@ -7403,6 +7536,7 @@ function spinCase() {
     if (!caseInfo) return;
 
     if (caseCount <= 0) {
+        playFailSound();
         showBuyCaseModal();
         return;
     }
@@ -7422,6 +7556,8 @@ function spinCase() {
 
     document.querySelectorAll('.case-reward-card').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.case-slot-item').forEach(el => el.classList.remove('active'));
+
+    startTickSound();
 
     const items = track.querySelectorAll('.case-slot-item');
     const itemWidth = getItemWidth();
@@ -7458,28 +7594,21 @@ function spinCase() {
 
     const centerOffset = 3;
     const targetPosition = -(targetItemIndex - centerOffset) * itemWidth;
-    const extraCycles = 30 + Math.floor(Math.random() * 10);
+    const extraCycles = 28 + Math.floor(Math.random() * 12);
     const extraOffset = extraCycles * itemsPerCycle * itemWidth;
     const finalPosition = targetPosition - extraOffset;
 
-    // Используем will-change для оптимизации
     track.style.willChange = 'transform';
-
-    // Сбрасываем позицию
     track.style.transition = 'none';
     track.style.transform = `translateX(0px)`;
     void track.offsetHeight;
 
-    // Запускаем анимацию с использованием requestAnimationFrame для максимальной плавности
-    const duration = 12000 + Math.random() * 3000;
-
-    // Используем CSS transition с оптимизированным easing
+    const duration = 10000 + Math.random() * 4000;
     track.style.transition = `transform ${duration}ms cubic-bezier(0.08, 0.82, 0.17, 1)`;
     track.style.transform = `translateX(${finalPosition}px)`;
 
     triggerHaptic('medium');
 
-    // Используем requestAnimationFrame для отслеживания прогресса
     let startTime = performance.now();
 
     function checkProgress() {
@@ -7492,7 +7621,7 @@ function spinCase() {
     }
 
     const finishSpin = () => {
-        // Снимаем will-change
+        stopTickSound();
         track.style.willChange = 'auto';
 
         const containerRect = track.parentElement.getBoundingClientRect();
@@ -7526,6 +7655,8 @@ function spinCase() {
                     el.classList.add('active');
                 }
             });
+
+            playWinSound(winReward.rarity);
 
             triggerHaptic('heavy');
 
@@ -7573,7 +7704,10 @@ function spinCase() {
     requestAnimationFrame(checkProgress);
 }
 
-// ===== МОДАЛКА ПОКУПКИ =====
+// ================================================================
+// МОДАЛКА ПОКУПКИ
+// ================================================================
+
 function showBuyCaseModal() {
     const caseInfo = caseData[currentCaseId];
     if (!caseInfo) return;
@@ -7649,13 +7783,17 @@ function showBuyCaseModal() {
     triggerHaptic('medium');
 }
 
-// ===== ПОКУПКА =====
+// ================================================================
+// ПОКУПКА
+// ================================================================
+
 function buyCase() {
     const caseInfo = caseData[currentCaseId];
     if (!caseInfo) return;
 
     if (localWG < caseInfo.price) {
         showToast(`❌ Не хватает WG! Нужно ${caseInfo.price} WG`, 'error');
+        playFailSound();
         return;
     }
 
@@ -7666,12 +7804,16 @@ function buyCase() {
     localStorage.setItem('weregood_cases', caseCount.toString());
     updateCaseCount();
 
+    playBuyCaseSound();
     showToast(`✅ Кейс куплен! Нажмите "ОТКРЫТЬ"`, 'success');
     triggerHaptic('light');
     syncData(true);
 }
 
-// ===== ЗАКРЫТИЕ =====
+// ================================================================
+// ЗАКРЫТИЕ
+// ================================================================
+
 function closeCase() {
     isCasePageOpen = false;
 
@@ -7679,6 +7821,8 @@ function closeCase() {
         clearInterval(caseFpsInterval);
         caseFpsInterval = null;
     }
+
+    stopTickSound();
 
     const page = document.getElementById('casePage');
     if (page) {
@@ -7709,38 +7853,22 @@ function closeCase() {
     }
 }
 
-// ===== HAPTIC =====
-function triggerHaptic(type = 'medium') {
-    if (window.Telegram?.WebApp?.HapticFeedback) {
-        try {
-            window.Telegram.WebApp.HapticFeedback.impactOccurred(type);
-        } catch(e) {}
-    } else if (navigator.vibrate) {
-        const duration = type === 'heavy' ? 30 : type === 'medium' ? 15 : 8;
-        navigator.vibrate(duration);
-    }
-}
+// ================================================================
+// ИНИЦИАЛИЗАЦИЯ
+// ================================================================
 
-// ===== ИНИЦИАЛИЗАЦИЯ =====
 function initCases() {
-    // Предзагружаем изображения в фоне
     preloadAllImages();
-
-    // Обновляем счётчик
     updateCaseCount();
-
-    // Проверяем доступ
     checkCasesAccess();
 }
 
-// ESC для закрытия
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         closeCase();
     }
 });
 
-// Запускаем при загрузке
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initCases);
 } else {
