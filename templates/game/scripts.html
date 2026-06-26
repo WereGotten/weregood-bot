@@ -7024,6 +7024,7 @@ let caseCount = parseInt(localStorage.getItem('weregood_cases') || '0');
 let spinTimeout = null;
 let cachedItemWidth = null;
 let audioCtx = null;
+let currentTrackPosition = 0; // Храним текущую позицию трека
 
 // ===== ДАННЫЕ КЕЙСА =====
 const caseData = {
@@ -7045,7 +7046,9 @@ const caseData = {
 // ===== ЗВУКИ ЧЕРЕЗ WEB AUDIO API =====
 function initAudio() {
     try {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
     } catch(e) {
         console.log('Web Audio API не поддерживается');
     }
@@ -7066,16 +7069,32 @@ function playBeep(frequency = 800, duration = 0.05, volume = 0.2) {
     } catch(e) {}
 }
 
+let spinSoundInterval = null;
+
 function playSpinSound() {
     const soundsToggle = document.getElementById('soundsToggle');
     const soundEnabled = soundsToggle ? soundsToggle.checked : true;
     if (!soundEnabled) return;
 
-    // Имитация звука вращения - быстрые щелчки
-    for (let i = 0; i < 8; i++) {
-        setTimeout(() => {
-            playBeep(600 + Math.random() * 400, 0.02, 0.08);
-        }, i * 80);
+    // Останавливаем предыдущий звук
+    stopSpinSound();
+
+    // Запускаем звук вращения - быстрые щелчки каждые 100мс
+    let count = 0;
+    spinSoundInterval = setInterval(() => {
+        playBeep(500 + Math.random() * 400, 0.03, 0.06);
+        count++;
+        // Меняем тональность для эффекта ускорения
+        if (count % 5 === 0) {
+            playBeep(700 + Math.random() * 300, 0.02, 0.04);
+        }
+    }, 80);
+}
+
+function stopSpinSound() {
+    if (spinSoundInterval) {
+        clearInterval(spinSoundInterval);
+        spinSoundInterval = null;
     }
 }
 
@@ -7085,11 +7104,11 @@ function playWinSound() {
     if (!soundEnabled) return;
 
     // Победный звук - восходящая последовательность
-    const notes = [523, 659, 784, 1047];
+    const notes = [523, 659, 784, 1047, 1319];
     notes.forEach((freq, i) => {
         setTimeout(() => {
-            playBeep(freq, 0.1, 0.25);
-        }, i * 120);
+            playBeep(freq, 0.12, 0.3);
+        }, i * 100);
     });
 }
 
@@ -7097,7 +7116,7 @@ function playClickSound() {
     const soundsToggle = document.getElementById('soundsToggle');
     const soundEnabled = soundsToggle ? soundsToggle.checked : true;
     if (!soundEnabled) return;
-    playBeep(900, 0.03, 0.15);
+    playBeep(900, 0.04, 0.15);
 }
 
 // ===== ОТКРЫТИЕ КЕЙСА =====
@@ -7118,6 +7137,8 @@ function openCase(caseId) {
 
     const track = document.getElementById('caseSlotTrack');
     if (track) {
+        // Сбрасываем позицию в начало
+        currentTrackPosition = 0;
         track.style.transform = 'translateX(0px)';
         track.style.transition = 'none';
         if (spinTimeout) {
@@ -7136,8 +7157,8 @@ function renderSlotTrack(rewards) {
     const track = document.getElementById('caseSlotTrack');
     if (!track) return;
 
-    // 60 циклов = 420 элементов, хватит на 20+ секунд
-    const cycles = 60;
+    // 80 циклов = 560 элементов, хватит на 30+ секунд
+    const cycles = 80;
     let html = '';
 
     for (let cycle = 0; cycle < cycles; cycle++) {
@@ -7153,6 +7174,7 @@ function renderSlotTrack(rewards) {
     }
     track.innerHTML = html;
     cachedItemWidth = null;
+    currentTrackPosition = 0;
 }
 
 // ===== РЕНДЕР СЕТКИ НАГРАД =====
@@ -7191,7 +7213,7 @@ function getItemWidth() {
     return cachedItemWidth;
 }
 
-// ===== ВРАЩЕНИЕ (МАКСИМАЛЬНАЯ ПЛАВНОСТЬ) =====
+// ===== ВРАЩЕНИЕ (ФИКС) =====
 function spinCase() {
     if (isCaseSpinning) return;
 
@@ -7233,20 +7255,21 @@ function spinCase() {
     // ===== ВЫБОР ВЫИГРЫША =====
     const winIndex = Math.floor(Math.random() * caseInfo.rewards.length);
 
-    // ===== ПОИСК ЦЕЛЕВОГО ЭЛЕМЕНТА =====
-    const middleCycle = Math.floor(totalItems / itemsPerCycle / 2);
+    // ===== НАХОДИМ ЭЛЕМЕНТ В ПОСЛЕДНЕЙ ТРЕТИ ЛЕНТЫ =====
+    const lastCycle = Math.floor(totalItems / itemsPerCycle) - 3;
     let targetItemIndex = -1;
 
     for (let i = 0; i < totalItems; i++) {
         const el = items[i];
         const idx = parseInt(el.dataset.index);
         const cycle = parseInt(el.dataset.cycle);
-        if (idx === winIndex && cycle >= middleCycle - 1 && cycle <= middleCycle + 1) {
+        if (idx === winIndex && cycle >= lastCycle - 2 && cycle <= lastCycle + 2) {
             targetItemIndex = i;
             break;
         }
     }
 
+    // Фолбэк
     if (targetItemIndex === -1) {
         for (let i = 0; i < totalItems; i++) {
             if (parseInt(items[i].dataset.index) === winIndex) {
@@ -7257,41 +7280,43 @@ function spinCase() {
     }
 
     if (targetItemIndex === -1) {
-        targetItemIndex = Math.floor(totalItems / 2);
+        targetItemIndex = totalItems - itemsPerCycle + winIndex;
     }
 
     // ===== РАСЧЁТ ПОЗИЦИИ =====
     const centerOffset = 3;
     const targetPosition = -(targetItemIndex - centerOffset) * itemWidth;
 
-    // ===== ОБОРОТЫ =====
-    const extraCycles = 20 + Math.floor(Math.random() * 10);
+    // ===== ОБОРОТЫ (30-40 для 12-15 секунд) =====
+    const extraCycles = 30 + Math.floor(Math.random() * 10);
     const extraOffset = extraCycles * itemsPerCycle * itemWidth;
     const finalPosition = targetPosition - extraOffset;
 
-    // ===== ТЕКУЩАЯ ПОЗИЦИЯ =====
-    const currentTransform = track.style.transform || 'translateX(0px)';
-    const currentX = parseInt(currentTransform.replace('translateX(', '').replace('px)', '')) || 0;
+    // ===== ВСЕГДА НАЧИНАЕМ С ТЕКУЩЕЙ ПОЗИЦИИ =====
+    const currentX = currentTrackPosition;
 
     // ===== ЗАПУСК АНИМАЦИИ =====
-    // Шаг 1: Мгновенный сброс
+    // Сброс
     track.style.transition = 'none';
     track.style.transform = `translateX(${currentX}px)`;
     track.style.willChange = 'transform';
 
-    // Шаг 2: Форсируем reflow
     void track.offsetHeight;
 
-    // Шаг 3: Плавный переход
+    // Запуск
     const duration = 12000 + Math.random() * 3000;
     track.style.transition = `transform ${duration}ms cubic-bezier(0.08, 0.82, 0.17, 1)`;
     track.style.transform = `translateX(${finalPosition}px)`;
 
-    // ===== ВИБРАЦИЯ =====
+    // Сохраняем финальную позицию для следующего раза
+    currentTrackPosition = finalPosition;
+
     triggerHaptic('medium');
 
     // ===== ЗАВЕРШЕНИЕ =====
     const finishSpin = () => {
+        stopSpinSound();
+
         // Находим элемент в центре
         const containerRect = track.parentElement.getBoundingClientRect();
         const center = containerRect.left + containerRect.width / 2;
@@ -7362,7 +7387,6 @@ function showBuyCaseModal() {
     const caseInfo = caseData[currentCaseId];
     if (!caseInfo) return;
 
-    // Удаляем старую
     const oldOverlay = document.getElementById('buyCaseOverlay');
     if (oldOverlay) oldOverlay.remove();
 
@@ -7468,6 +7492,8 @@ function closeCase() {
             spinTimeout = null;
         }
 
+        stopSpinSound();
+
         const track = document.getElementById('caseSlotTrack');
         if (track) {
             track.style.transition = 'none';
@@ -7477,6 +7503,9 @@ function closeCase() {
                 el.classList.remove('active', 'bounce');
             });
         }
+
+        // Сбрасываем позицию при закрытии
+        currentTrackPosition = 0;
         isCaseSpinning = false;
 
         const spinBtn = document.getElementById('caseSpinBtn');
