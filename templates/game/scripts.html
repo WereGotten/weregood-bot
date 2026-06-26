@@ -7014,38 +7014,63 @@ function translateElement(el, key) {
 setTimeout(loadLanguageSettings, 500);
 
     // ================================================================
-// КЕЙСЫ - МАКСИМАЛЬНАЯ ПЛАВНОСТЬ + ЗВУКИ
+// КЕЙСЫ - ПОЛНАЯ ВЕРСИЯ С МАКСИМАЛЬНОЙ ПЛАВНОСТЬЮ
 // ================================================================
 
+// ===== КОНФИГУРАЦИЯ =====
+const CASE_CONFIG = {
+    spinDuration: {
+        min: 12000,
+        max: 15000
+    },
+    extraCycles: {
+        min: 25,
+        max: 35
+    },
+    itemWidth: 134,
+    centerOffset: 3,
+    cyclesInTrack: 50
+};
+
+// ===== СОСТОЯНИЕ =====
 let currentCaseId = 1;
 let isCaseSpinning = false;
 let caseCount = parseInt(localStorage.getItem('weregood_cases') || '0');
 let spinTimeout = null;
+let spinStartTime = null;
+let currentAnimationId = null;
 let slotAudio = null;
 let winAudio = null;
+let clickAudio = null;
+let isAudioInitialized = false;
+let lastFrameTime = 0;
+let fpsCounter = 0;
+let currentFps = 60;
 
-// ===== ПРЕДЗАГРУЗКА ЗВУКОВ =====
-function initSlotSounds() {
+// ===== ЗВУКИ =====
+function initAudio() {
+    if (isAudioInitialized) return;
     try {
-        // Создаём звук вращения (тик-тик-тик)
-        slotAudio = new Audio();
-        slotAudio.src = '/static/slot_spin.mp3';
+        slotAudio = new Audio('/static/slot_spin.mp3');
         slotAudio.loop = true;
-        slotAudio.volume = 0.3;
+        slotAudio.volume = 0.25;
         slotAudio.preload = 'auto';
 
-        // Звук выигрыша
-        winAudio = new Audio();
-        winAudio.src = '/static/slot_win.mp3';
+        winAudio = new Audio('/static/slot_win.mp3');
         winAudio.volume = 0.5;
         winAudio.preload = 'auto';
+
+        clickAudio = new Audio('/static/click.mp3');
+        clickAudio.volume = 0.2;
+        clickAudio.preload = 'auto';
+
+        isAudioInitialized = true;
     } catch(e) {
         console.log('Audio init error:', e);
     }
 }
 
-// ===== ВОСПРОИЗВЕДЕНИЕ ЗВУКА =====
-function playSlotSound(type = 'spin') {
+function playSound(type) {
     try {
         const soundsToggle = document.getElementById('soundsToggle');
         const soundEnabled = soundsToggle ? soundsToggle.checked : true;
@@ -7057,11 +7082,14 @@ function playSlotSound(type = 'spin') {
         } else if (type === 'win' && winAudio) {
             winAudio.currentTime = 0;
             winAudio.play().catch(() => {});
+        } else if (type === 'click' && clickAudio) {
+            clickAudio.currentTime = 0;
+            clickAudio.play().catch(() => {});
         }
     } catch(e) {}
 }
 
-function stopSlotSound() {
+function stopSpinSound() {
     try {
         if (slotAudio) {
             slotAudio.pause();
@@ -7075,16 +7103,26 @@ const caseData = {
     1: {
         name: 'Обычный кейс',
         price: 500,
+        icon: '📦',
+        description: 'Шанс на крутые награды!',
         rewards: [
-            { icon: '/static/wallet.png', value: '10 WG', rarity: 'common' },
-            { icon: '/static/lightning.png', value: '+30 энергии', rarity: 'common' },
-            { icon: '/static/ticket.png', value: 'Билет', rarity: 'rare' },
-            { icon: '/static/trophy.png', value: 'Улучшение', rarity: 'rare' },
-            { icon: '/static/wallet.png', value: '500 WG', rarity: 'epic' },
-            { icon: '/static/diamond.png', value: '50 LP', rarity: 'epic' },
-            { icon: '/static/diamond.png', value: '100 LP', rarity: 'legendary' }
+            { icon: '/static/wallet.png', value: '10 WG', rarity: 'common', color: '#3b82f6' },
+            { icon: '/static/lightning.png', value: '+30 энергии', rarity: 'common', color: '#3b82f6' },
+            { icon: '/static/ticket.png', value: 'Билет', rarity: 'rare', color: '#8b5cf6' },
+            { icon: '/static/trophy.png', value: 'Улучшение', rarity: 'rare', color: '#8b5cf6' },
+            { icon: '/static/wallet.png', value: '500 WG', rarity: 'epic', color: '#ef4444' },
+            { icon: '/static/diamond.png', value: '50 LP', rarity: 'epic', color: '#ef4444' },
+            { icon: '/static/diamond.png', value: '100 LP', rarity: 'legendary', color: '#fbbf24' }
         ]
     }
+};
+
+// ===== RARITY LABELS =====
+const rarityLabels = {
+    'common': 'Обычный',
+    'rare': 'Редкий',
+    'epic': 'Эпический',
+    'legendary': 'Легендарный'
 };
 
 // ===== ОТКРЫТИЕ КЕЙСА =====
@@ -7096,28 +7134,36 @@ function openCase(caseId) {
     const page = document.getElementById('casePage');
     if (!page) return;
 
-    document.getElementById('caseTitle').textContent = caseInfo.name;
-    document.getElementById('casePriceDisplay').textContent = caseInfo.price;
+    // Обновляем UI
+    const titleEl = document.getElementById('caseTitle');
+    if (titleEl) titleEl.textContent = caseInfo.name;
 
+    const priceEl = document.getElementById('casePriceDisplay');
+    if (priceEl) priceEl.textContent = caseInfo.price;
+
+    // Рендерим
     renderRewardsGrid(caseInfo.rewards);
     renderSlotTrack(caseInfo.rewards);
     updateCaseCount();
 
+    // Сброс трека
     const track = document.getElementById('caseSlotTrack');
     if (track) {
-        track.style.transform = 'translateX(0px)';
         track.style.transition = 'none';
+        track.style.transform = 'translateX(0px)';
+        track.style.willChange = 'transform';
         if (spinTimeout) {
             clearTimeout(spinTimeout);
             spinTimeout = null;
         }
     }
 
+    // Открываем страницу
     page.classList.add('active');
     document.body.style.overflow = 'hidden';
 
     // Инициализируем звуки
-    initSlotSounds();
+    initAudio();
 }
 
 // ===== РЕНДЕР ТРЕКА (ОПТИМИЗИРОВАННЫЙ) =====
@@ -7125,13 +7171,8 @@ function renderSlotTrack(rewards) {
     const track = document.getElementById('caseSlotTrack');
     if (!track) return;
 
-    // 50 циклов = 350 элементов
-    const cycles = 50;
-    let html = '';
-
-    // Используем DocumentFragment для быстрой вставки
+    const cycles = CASE_CONFIG.cyclesInTrack;
     const fragment = document.createDocumentFragment();
-    const tempDiv = document.createElement('div');
 
     for (let cycle = 0; cycle < cycles; cycle++) {
         for (let i = 0; i < rewards.length; i++) {
@@ -7143,11 +7184,13 @@ function renderSlotTrack(rewards) {
             div.innerHTML = `
                 <img src="${reward.icon}" class="item-icon" alt="${reward.value}" loading="lazy" decoding="async">
                 <span class="item-value">${reward.value}</span>
+                <span class="item-rarity" style="display:none;">${rarityLabels[reward.rarity]}</span>
             `;
             fragment.appendChild(div);
         }
     }
 
+    track.innerHTML = '';
     track.appendChild(fragment);
 }
 
@@ -7157,11 +7200,13 @@ function renderRewardsGrid(rewards) {
     if (!grid) return;
 
     let html = '';
-    rewards.forEach(reward => {
+    rewards.forEach((reward, index) => {
+        const rarityClass = reward.rarity;
         html += `
-            <div class="case-reward-card rarity-${reward.rarity}">
+            <div class="case-reward-card rarity-${rarityClass}" data-index="${index}">
                 <img src="${reward.icon}" class="reward-icon" alt="${reward.value}" loading="lazy" decoding="async">
                 <span class="reward-value">${reward.value}</span>
+                <span class="reward-rarity-label">${rarityLabels[rarityClass]}</span>
             </div>
         `;
     });
@@ -7171,23 +7216,34 @@ function renderRewardsGrid(rewards) {
 // ===== ОБНОВЛЕНИЕ КОЛИЧЕСТВА КЕЙСОВ =====
 function updateCaseCount() {
     caseCount = parseInt(localStorage.getItem('weregood_cases') || '0');
-    document.getElementById('caseCount').textContent = caseCount;
+    const countEl = document.getElementById('caseCount');
+    if (countEl) countEl.textContent = caseCount;
 }
 
-// ===== ПОЛУЧЕНИЕ ШИРИНЫ ЭЛЕМЕНТА =====
+// ===== ПОЛУЧЕНИЕ ШИРИНЫ ЭЛЕМЕНТА (С КЭШИРОВАНИЕМ) =====
+let cachedItemWidth = null;
+
 function getItemWidth() {
+    if (cachedItemWidth !== null) return cachedItemWidth;
+
     const firstItem = document.querySelector('.case-slot-item');
-    if (!firstItem) return 134;
-    return firstItem.offsetWidth + 14;
+    if (!firstItem) return CASE_CONFIG.itemWidth;
+
+    const rect = firstItem.getBoundingClientRect();
+    const gap = 14;
+    cachedItemWidth = rect.width + gap;
+    return cachedItemWidth;
 }
 
 // ===== ВРАЩЕНИЕ (МАКСИМАЛЬНАЯ ПЛАВНОСТЬ) =====
 function spinCase() {
+    // Проверка на повторный вызов
     if (isCaseSpinning) return;
 
     const caseInfo = caseData[currentCaseId];
     if (!caseInfo) return;
 
+    // Проверка наличия кейсов
     if (caseCount <= 0) {
         showBuyCaseModal();
         return;
@@ -7197,33 +7253,36 @@ function spinCase() {
     const spinBtn = document.getElementById('caseSpinBtn');
     if (!track || !spinBtn) return;
 
+    // Отмена предыдущего таймаута
     if (spinTimeout) {
         clearTimeout(spinTimeout);
         spinTimeout = null;
     }
 
+    // Блокируем интерфейс
     isCaseSpinning = true;
     spinBtn.disabled = true;
     spinBtn.querySelector('.btn-text').textContent = 'ВРАЩЕНИЕ...';
 
-    // Убираем подсветку
+    // Сброс подсветки
     document.querySelectorAll('.case-reward-card').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.case-slot-item').forEach(el => {
-        el.classList.remove('active', 'bounce');
+        el.classList.remove('active', 'bounce', 'winning');
     });
 
-    // ===== ЗАПУСКАЕМ ЗВУК ВРАЩЕНИЯ =====
-    playSlotSound('spin');
+    // ===== ЗВУК ВРАЩЕНИЯ =====
+    playSound('spin');
 
+    // ===== ПОЛУЧАЕМ ЭЛЕМЕНТЫ =====
     const items = track.querySelectorAll('.case-slot-item');
     const itemWidth = getItemWidth();
     const itemsPerCycle = caseInfo.rewards.length;
     const totalItems = items.length;
 
-    // Выбираем случайный выигрыш
+    // ===== ВЫБОР ВЫИГРЫША =====
     const winIndex = Math.floor(Math.random() * caseInfo.rewards.length);
 
-    // Ищем элемент в середине ленты
+    // ===== ПОИСК ЦЕЛЕВОГО ЭЛЕМЕНТА =====
     const middleCycle = Math.floor(totalItems / itemsPerCycle / 2);
     let targetItemIndex = -1;
 
@@ -7237,6 +7296,7 @@ function spinCase() {
         }
     }
 
+    // Фолбэк: если не нашли
     if (targetItemIndex === -1) {
         for (let i = 0; i < totalItems; i++) {
             if (parseInt(items[i].dataset.index) === winIndex) {
@@ -7246,44 +7306,71 @@ function spinCase() {
         }
     }
 
+    // Фолбэк 2: берём середину
     if (targetItemIndex === -1) {
         targetItemIndex = Math.floor(totalItems / 2);
     }
 
-    // Центр = 3
-    const centerOffset = 3;
+    // ===== РАСЧЁТ ПОЗИЦИИ =====
+    const centerOffset = CASE_CONFIG.centerOffset;
     const targetPosition = -(targetItemIndex - centerOffset) * itemWidth;
 
-    // Обороты
-    const extraCycles = 25 + Math.floor(Math.random() * 10);
+    // ===== ОБОРОТЫ =====
+    const minCycles = CASE_CONFIG.extraCycles.min;
+    const maxCycles = CASE_CONFIG.extraCycles.max;
+    const extraCycles = minCycles + Math.floor(Math.random() * (maxCycles - minCycles + 1));
     const extraOffset = extraCycles * itemsPerCycle * itemWidth;
     const finalPosition = targetPosition - extraOffset;
 
-    // Текущая позиция
+    // ===== ТЕКУЩАЯ ПОЗИЦИЯ =====
     const currentTransform = track.style.transform || 'translateX(0px)';
     const currentX = parseInt(currentTransform.replace('translateX(', '').replace('px)', '')) || 0;
 
-    // ===== ЗАПУСК АНИМАЦИИ С ПОДГОТОВКОЙ =====
-    // 1. Мгновенный сброс
+    // ===== ЗАПУСК АНИМАЦИИ =====
+    // Сброс
     track.style.transition = 'none';
     track.style.transform = `translateX(${currentX}px)`;
     track.style.willChange = 'transform';
 
-    // 2. Форсируем reflow
+    // Форсируем reflow
     void track.offsetHeight;
 
-    // 3. Запускаем плавную анимацию
-    const duration = 12000 + Math.random() * 3000;
+    // Запуск
+    const duration = CASE_CONFIG.spinDuration.min + Math.random() * (CASE_CONFIG.spinDuration.max - CASE_CONFIG.spinDuration.min);
     track.style.transition = `transform ${duration}ms cubic-bezier(0.08, 0.82, 0.17, 1)`;
     track.style.transform = `translateX(${finalPosition}px)`;
 
-    // Вибрация
+    // ===== ВИБРАЦИЯ =====
     triggerHaptic('medium');
+
+    // ===== ОТСЛЕЖИВАНИЕ ПРОГРЕССА =====
+    const startTime = performance.now();
+    let lastProgress = 0;
+
+    function checkProgress() {
+        const elapsed = performance.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+
+        // Если прогресс > 0.85 — начинаем готовить финал
+        if (progress > 0.85 && lastProgress < 0.85) {
+            // Лёгкая вибрация перед остановкой
+            triggerHaptic('light');
+        }
+
+        lastProgress = progress;
+
+        if (progress < 1 && isCaseSpinning) {
+            requestAnimationFrame(checkProgress);
+        }
+    }
+
+    // Запускаем отслеживание
+    requestAnimationFrame(checkProgress);
 
     // ===== ЗАВЕРШЕНИЕ =====
     const finishSpin = () => {
         // Останавливаем звук
-        stopSlotSound();
+        stopSpinSound();
 
         // Находим элемент в центре
         const containerRect = track.parentElement.getBoundingClientRect();
@@ -7291,7 +7378,6 @@ function spinCase() {
         let closestItem = null;
         let closestDistance = Infinity;
 
-        // Используем более быстрый поиск
         const allItems = track.querySelectorAll('.case-slot-item');
         for (let i = 0; i < allItems.length; i++) {
             const el = allItems[i];
@@ -7305,17 +7391,19 @@ function spinCase() {
         }
 
         if (closestItem) {
-            // Байт
+            const winIndex = parseInt(closestItem.dataset.index);
+            const winReward = caseInfo.rewards[winIndex];
+
+            // ===== БАЙТ =====
             closestItem.classList.add('bounce');
             setTimeout(() => {
                 closestItem.classList.remove('bounce');
             }, 500);
 
-            closestItem.classList.add('active');
-            const winIndex = parseInt(closestItem.dataset.index);
-            const winReward = caseInfo.rewards[winIndex];
+            // ===== ПОДСВЕТКА =====
+            closestItem.classList.add('active', 'winning');
 
-            // Подсветка карточки
+            // Подсветка в списке
             const rewardCards = document.querySelectorAll('.case-reward-card');
             for (let i = 0; i < rewardCards.length; i++) {
                 if (i === winIndex) {
@@ -7323,31 +7411,34 @@ function spinCase() {
                 }
             }
 
-            // Звук выигрыша
-            playSlotSound('win');
+            // ===== ЗВУК ВЫИГРЫША =====
+            playSound('win');
             triggerHaptic('heavy');
 
+            // ===== ТОСТ =====
             setTimeout(() => {
                 showToast(`🎉 Вы выиграли: ${winReward.value}!`, 'success');
             }, 300);
 
+            // ===== СПИСЫВАЕМ КЕЙС =====
             caseCount--;
             localStorage.setItem('weregood_cases', caseCount.toString());
             updateCaseCount();
         }
 
+        // ===== РАЗБЛОКИРОВКА =====
         isCaseSpinning = false;
         spinBtn.disabled = false;
         spinBtn.querySelector('.btn-text').textContent = 'ОТКРЫТЬ КЕЙС';
         spinTimeout = null;
 
-        // Убираем will-change после анимации
+        // Убираем will-change
         setTimeout(() => {
             track.style.willChange = 'auto';
         }, 1000);
     };
 
-    spinTimeout = setTimeout(finishSpin, duration + 300);
+    spinTimeout = setTimeout(finishSpin, duration + 500);
 }
 
 // ===== МОДАЛКА ПОКУПКИ =====
@@ -7355,7 +7446,12 @@ function showBuyCaseModal() {
     const caseInfo = caseData[currentCaseId];
     if (!caseInfo) return;
 
+    // Удаляем старую модалку, если есть
+    const oldOverlay = document.getElementById('buyCaseOverlay');
+    if (oldOverlay) oldOverlay.remove();
+
     const overlay = document.createElement('div');
+    overlay.id = 'buyCaseOverlay';
     overlay.style.cssText = `
         position: fixed;
         top: 0; left: 0; right: 0; bottom: 0;
@@ -7367,7 +7463,6 @@ function showBuyCaseModal() {
         justify-content: center;
         animation: fadeIn 0.3s ease;
     `;
-    overlay.id = 'buyCaseOverlay';
 
     overlay.innerHTML = `
         <div style="
@@ -7381,10 +7476,13 @@ function showBuyCaseModal() {
             box-shadow: 0 20px 60px rgba(0,0,0,0.5);
             animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
         ">
-            <div style="font-size: 3rem; margin-bottom: 8px;">🎰</div>
+            <div style="font-size: 3.5rem; margin-bottom: 8px;">🎰</div>
             <h3 style="color: #FFD700; font-size: 1.2rem; margin-bottom: 6px;">У вас нет кейсов!</h3>
-            <p style="color: rgba(255,255,255,0.5); font-size: 0.85rem; margin-bottom: 16px;">
+            <p style="color: rgba(255,255,255,0.5); font-size: 0.85rem; margin-bottom: 6px;">
                 Купите кейс за <span style="color: #FFD700; font-weight: 700;">${caseInfo.price} WG</span>
+            </p>
+            <p style="color: rgba(255,255,255,0.2); font-size: 0.6rem; margin-bottom: 16px;">
+                ${caseInfo.description || ''}
             </p>
             <div style="display: flex; gap: 10px;">
                 <button onclick="buyCase(); document.getElementById('buyCaseOverlay').remove();" style="
@@ -7432,13 +7530,16 @@ function buyCase() {
         return;
     }
 
+    // Списываем WG
     localWG -= caseInfo.price;
     updateUI();
 
+    // Добавляем кейс
     caseCount++;
     localStorage.setItem('weregood_cases', caseCount.toString());
     updateCaseCount();
 
+    playSound('click');
     showToast(`✅ Кейс куплен! Нажмите "ОТКРЫТЬ"`, 'success');
     triggerHaptic('light');
     syncData(true);
@@ -7451,21 +7552,26 @@ function closeCase() {
         page.classList.remove('active');
         document.body.style.overflow = '';
 
+        // Очистка
         if (spinTimeout) {
             clearTimeout(spinTimeout);
             spinTimeout = null;
         }
 
-        stopSlotSound();
+        stopSpinSound();
 
         const track = document.getElementById('caseSlotTrack');
         if (track) {
             track.style.transition = 'none';
             track.style.transform = 'translateX(0px)';
             track.style.willChange = 'auto';
-            // Очищаем трек для освобождения памяти
-            track.innerHTML = '';
+            // Очищаем для освобождения памяти
+            setTimeout(() => {
+                track.innerHTML = '';
+                cachedItemWidth = null;
+            }, 100);
         }
+
         isCaseSpinning = false;
 
         const spinBtn = document.getElementById('caseSpinBtn');
@@ -7473,19 +7579,44 @@ function closeCase() {
             spinBtn.disabled = false;
             spinBtn.querySelector('.btn-text').textContent = 'ОТКРЫТЬ КЕЙС';
         }
+
+        // Убираем модалку покупки
+        const overlay = document.getElementById('buyCaseOverlay');
+        if (overlay) overlay.remove();
     }
 }
 
-// ===== HAPTIC =====
+// ===== HAPTIC FEEDBACK =====
 function triggerHaptic(type = 'medium') {
-    if (window.Telegram?.WebApp?.HapticFeedback) {
-        try {
+    try {
+        if (window.Telegram?.WebApp?.HapticFeedback) {
             window.Telegram.WebApp.HapticFeedback.impactOccurred(type);
-        } catch(e) {}
-    } else if (navigator.vibrate) {
-        const duration = type === 'heavy' ? 30 : type === 'medium' ? 15 : 8;
-        navigator.vibrate(duration);
-    }
+        } else if (navigator.vibrate) {
+            const durations = { light: 8, medium: 15, heavy: 30 };
+            const duration = durations[type] || 15;
+            navigator.vibrate(duration);
+        }
+    } catch(e) {}
+}
+
+// ===== ДОПОЛНИТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ РАСШИРЕНИЯ =====
+function getCaseRewards(caseId) {
+    const caseInfo = caseData[caseId] || caseData[1];
+    return caseInfo.rewards || [];
+}
+
+function getRarityColor(rarity) {
+    const colors = {
+        'common': '#3b82f6',
+        'rare': '#8b5cf6',
+        'epic': '#ef4444',
+        'legendary': '#fbbf24'
+    };
+    return colors[rarity] || '#ffffff';
+}
+
+function getRarityLabel(rarity) {
+    return rarityLabels[rarity] || rarity;
 }
 
 </script>
