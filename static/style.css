@@ -6357,7 +6357,6 @@ body.light-theme .star-upgrade-card {
         font-size: 0.7rem;
     }
 }
-
 /* ============================================================
    КЕЙСЫ - ПРЕМИУМ ДИЗАЙН 2026 (ФИНАЛ)
    ============================================================ */
@@ -6720,7 +6719,7 @@ body.light-theme .star-upgrade-card {
     border-color: rgba(255, 215, 0, 0.4);
 }
 
-/* ===== БАЙТ ===== */
+/* ===== БАУНС ===== */
 @keyframes slotBounce {
     0% { transform: scale(1.06) translateX(0); }
     20% { transform: scale(1.1) translateX(-10px); }
@@ -6734,7 +6733,7 @@ body.light-theme .star-upgrade-card {
     animation: slotBounce 0.5s ease;
 }
 
-/* ===== УБИРАЕМ РАЗМЫТИЕ ===== */
+/* ===== РАЗМЫТИЕ ===== */
 .case-slot-item.blurred {
     opacity: 0.3;
     transform: scale(0.85);
@@ -6912,124 +6911,31 @@ body.light-theme .star-upgrade-card {
     border-color: rgba(255, 215, 0, 0.3);
 }
 
-/* ===== АДАПТАЦИЯ ===== */
-@media (max-width: 480px) {
-    .case-slot-window {
-        height: 175px;
-        border-radius: 24px;
-    }
-    .case-slot-item {
-        width: 105px;
-        height: 140px;
-        padding: 10px 8px;
-        gap: 8px;
-    }
-    .case-slot-item .item-icon {
-        width: 42px;
-        height: 42px;
-    }
-    .case-slot-item .item-value {
-        font-size: 0.7rem;
-        padding: 3px 10px;
-    }
-    .case-slot-shadow-left,
-    .case-slot-shadow-right {
-        width: 45px;
-    }
-    .case-rewards-grid {
-        gap: 8px;
-    }
-    .case-reward-card {
-        padding: 12px 10px;
-        border-radius: 14px;
-    }
-    .case-reward-card .reward-icon {
-        width: 32px;
-        height: 32px;
-    }
-    .case-reward-card .reward-value {
-        font-size: 0.6rem;
-    }
-    .case-header-center h2 {
-        font-size: 0.9rem;
-    }
-    .case-header-stats {
-        font-size: 0.6rem;
-        gap: 8px;
-    }
-    .case-stat .stat-value {
-        font-size: 0.7rem;
-    }
-    .case-back-btn {
-        width: 34px;
-        height: 34px;
-        font-size: 0.9rem;
-    }
-    .case-spin-btn {
-        padding: 15px 20px;
-    }
-    .case-spin-btn .btn-text {
-        font-size: 0.9rem;
-    }
-    .case-spin-btn .btn-icon {
-        font-size: 1rem;
-    }
-    .rewards-title {
-        font-size: 0.55rem;
-    }
-}
+/* ============================================================
+   КОЛЕСО ФОРТУНЫ (ОПТИМИЗИРОВАННОЕ)
+   ============================================================ */
 
-@media (max-width: 380px) {
-    .case-slot-window {
-        height: 155px;
-    }
-    .case-slot-item {
-        width: 90px;
-        height: 120px;
-        padding: 8px 6px;
-        gap: 6px;
-    }
-    .case-slot-item .item-icon {
-        width: 36px;
-        height: 36px;
-    }
-    .case-slot-item .item-value {
-        font-size: 0.6rem;
-        padding: 2px 8px;
-    }
-    .case-rewards-grid {
-        gap: 6px;
-    }
-    .case-reward-card {
-        padding: 10px 8px;
-    }
-    .case-reward-card .reward-icon {
-        width: 28px;
-        height: 28px;
-    }
-    .case-reward-card .reward-value {
-        font-size: 0.55rem;
-    }
-    .case-header-stats {
-        gap: 6px;
-    }
-    .case-stat .stat-value {
-        font-size: 0.65rem;
-    }
-}
-/* Оверлей колеса */
 #wheelOverlay {
     display: none;
     position: fixed;
     top: 0;
     left: 0;
+    right: 0;
+    bottom: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0,0,0,0.85);
+    background: rgba(0, 0, 0, 0.88);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     z-index: 9999;
     justify-content: center;
     align-items: center;
-    backdrop-filter: blur(8px);
+    animation: wheelFadeIn 0.3s ease;
+}
+
+@keyframes wheelFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 #wheelOverlay.active {
@@ -7041,6 +6947,7 @@ body.light-theme .star-upgrade-card {
     width: 100%;
     max-width: 400px;
     margin: 0 auto;
+    padding: 0 16px;
 }
 
 #wheelCanvas {
@@ -7048,18 +6955,192 @@ body.light-theme .star-upgrade-card {
     height: auto;
     aspect-ratio: 1/1;
     border-radius: 50%;
-    box-shadow: 0 0 40px rgba(255,215,0,0.3);
-    background: radial-gradient(circle, #1a1a2e, #0a0a1a);
+    box-shadow:
+        0 0 60px rgba(255, 215, 0, 0.08),
+        0 0 120px rgba(255, 215, 0, 0.04),
+        inset 0 0 80px rgba(0, 0, 0, 0.2);
+    background: radial-gradient(circle at 30% 30%, #1a1a2e, #0a0a1a);
+    will-change: transform;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
 }
 
 #wheelPointer {
     position: absolute;
-    top: -10px;
+    top: -14px;
     left: 50%;
     transform: translateX(-50%);
-    font-size: 2.5rem;
+    font-size: 2.8rem;
     z-index: 10;
-    filter: drop-shadow(0 0 10px rgba(255,215,0,0.5));
+    filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.15));
     color: #FFD700;
-    text-shadow: 0 0 20px rgba(255,215,0,0.3);
+    text-shadow: 0 0 30px rgba(255, 215, 0, 0.1);
+    animation: pointerFloat 2s ease-in-out infinite;
+}
+
+@keyframes pointerFloat {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50% { transform: translateX(-50%) translateY(-4px); }
+}
+
+/* ===== АДАПТАЦИЯ ===== */
+@media (max-width: 480px) {
+    .case-slot-window {
+        height: 175px;
+        border-radius: 24px;
+    }
+
+    .case-slot-item {
+        width: 105px;
+        height: 140px;
+        padding: 10px 8px;
+        gap: 8px;
+    }
+
+    .case-slot-item .item-icon {
+        width: 42px;
+        height: 42px;
+    }
+
+    .case-slot-item .item-value {
+        font-size: 0.7rem;
+        padding: 3px 10px;
+    }
+
+    .case-slot-shadow-left,
+    .case-slot-shadow-right {
+        width: 45px;
+    }
+
+    .case-rewards-grid {
+        gap: 8px;
+    }
+
+    .case-reward-card {
+        padding: 12px 10px;
+        border-radius: 14px;
+    }
+
+    .case-reward-card .reward-icon {
+        width: 32px;
+        height: 32px;
+    }
+
+    .case-reward-card .reward-value {
+        font-size: 0.6rem;
+    }
+
+    .case-header-center h2 {
+        font-size: 0.9rem;
+    }
+
+    .case-header-stats {
+        font-size: 0.6rem;
+        gap: 8px;
+    }
+
+    .case-stat .stat-value {
+        font-size: 0.7rem;
+    }
+
+    .case-back-btn {
+        width: 34px;
+        height: 34px;
+        font-size: 0.9rem;
+    }
+
+    .case-spin-btn {
+        padding: 15px 20px;
+    }
+
+    .case-spin-btn .btn-text {
+        font-size: 0.9rem;
+    }
+
+    .case-spin-btn .btn-icon {
+        font-size: 1rem;
+    }
+
+    .rewards-title {
+        font-size: 0.55rem;
+    }
+
+    #wheelPointer {
+        font-size: 2rem;
+        top: -10px;
+    }
+}
+
+@media (max-width: 380px) {
+    .case-slot-window {
+        height: 155px;
+    }
+
+    .case-slot-item {
+        width: 90px;
+        height: 120px;
+        padding: 8px 6px;
+        gap: 6px;
+    }
+
+    .case-slot-item .item-icon {
+        width: 36px;
+        height: 36px;
+    }
+
+    .case-slot-item .item-value {
+        font-size: 0.6rem;
+        padding: 2px 8px;
+    }
+
+    .case-rewards-grid {
+        gap: 6px;
+    }
+
+    .case-reward-card {
+        padding: 10px 8px;
+    }
+
+    .case-reward-card .reward-icon {
+        width: 28px;
+        height: 28px;
+    }
+
+    .case-reward-card .reward-value {
+        font-size: 0.55rem;
+    }
+
+    .case-header-stats {
+        gap: 6px;
+    }
+
+    .case-stat .stat-value {
+        font-size: 0.65rem;
+    }
+
+    #wheelContainer {
+        padding: 0 8px;
+    }
+}
+
+/* ===== ДОПОЛНИТЕЛЬНЫЕ АНИМАЦИИ ===== */
+@keyframes scaleIn {
+    from {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.case-page .case-content {
+    animation: fadeIn 0.3s ease;
 }
