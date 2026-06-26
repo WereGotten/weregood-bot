@@ -6586,7 +6586,7 @@ body.light-theme .star-upgrade-card {
     z-index: 1;
 }
 
-/* ===== ТРЕК ===== */
+/* ===== МАКСИМАЛЬНАЯ ПЛАВНОСТЬ ===== */
 .case-slot-track {
     display: flex;
     flex-direction: row;
@@ -6598,9 +6598,10 @@ body.light-theme .star-upgrade-card {
     transform: translate3d(0, 0, 0);
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
+    /* Включаем аппаратное ускорение */
+    transform-style: preserve-3d;
 }
 
-/* ===== ЭЛЕМЕНТ В ЛЕНТЕ ===== */
 .case-slot-item {
     flex-shrink: 0;
     width: 110px;
@@ -6615,9 +6616,28 @@ body.light-theme .star-upgrade-card {
     border: 2px solid rgba(255, 255, 255, 0.04);
     padding: 12px 8px;
     position: relative;
-    transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s ease;
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
+    transform: translateZ(0);
+}
+
+.case-slot-item .item-icon {
+    width: 44px;
+    height: 44px;
+    object-fit: contain;
+    display: block;
+    image-rendering: -webkit-optimize-contrast;
+}
+
+.case-slot-item .item-value {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.35);
+    padding: 3px 12px;
+    border-radius: 30px;
+    backdrop-filter: blur(4px);
+    font-variant-numeric: tabular-nums;
 }
 
 /* Глянцевый эффект */
