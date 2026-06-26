@@ -292,93 +292,118 @@
     </div> <!-- shopStars -->
 
     <!-- ============================================================
-         КЕЙСЫ - ПРЕМИУМ ДИЗАЙН
-         ============================================================ -->
-    <div id="shopCases" class="shop-pane">
-        <!-- Обычные игроки видят "В разработке" -->
-        <div id="casesAccessDenied" style="display: none; text-align: center; padding: 50px 20px;">
-            <div style="font-size: 4rem; margin-bottom: 16px;">🔒</div>
-            <h2 style="color: #FFD700; margin-bottom: 12px; font-size: 1.4rem;">🎁 Кейсы в разработке!</h2>
-            <p style="color: rgba(255,255,255,0.6); font-size: 0.9rem; line-height: 1.8; max-width: 320px; margin: 0 auto;">
-                Мы работаем над этой функцией.<br>
-                Скоро здесь появятся крутые кейсы с наградами! 🚀
-            </p>
-            <div style="margin-top: 24px; display: flex; gap: 12px; justify-content: center;">
-                <span style="animation: pulse 1.5s infinite; font-size: 1.4rem;">⚡</span>
-                <span style="animation: pulse 1.5s infinite 0.3s; font-size: 1.4rem;">⚡</span>
-                <span style="animation: pulse 1.5s infinite 0.6s; font-size: 1.4rem;">⚡</span>
+     КЕЙСЫ - НОВЫЙ ДИЗАЙН
+     ============================================================ -->
+<div id="shopCases" class="shop-pane">
+    <!-- Обычные игроки видят "В разработке" -->
+    <div id="casesAccessDenied" style="display: none; text-align: center; padding: 50px 20px;">
+        <div style="font-size: 4rem; margin-bottom: 16px;">🔒</div>
+        <h2 style="color: #FFD700; margin-bottom: 12px; font-size: 1.4rem;">🎁 Кейсы в разработке!</h2>
+        <p style="color: rgba(255,255,255,0.6); font-size: 0.9rem; line-height: 1.8; max-width: 320px; margin: 0 auto;">
+            Мы работаем над этой функцией.<br>
+            Скоро здесь появятся крутые кейсы с наградами! 🚀
+        </p>
+        <div style="margin-top: 24px; display: flex; gap: 12px; justify-content: center;">
+            <span style="animation: pulse 1.5s infinite; font-size: 1.4rem;">⚡</span>
+            <span style="animation: pulse 1.5s infinite 0.3s; font-size: 1.4rem;">⚡</span>
+            <span style="animation: pulse 1.5s infinite 0.6s; font-size: 1.4rem;">⚡</span>
+        </div>
+    </div>
+
+    <!-- Контент для админа -->
+    <div id="casesAdminContent" style="display: none;">
+        <!-- ЗАГОЛОВОК -->
+        <div class="cases-header">
+            <div class="cases-header-left">
+                <span class="cases-header-icon">🎰</span>
+                <div>
+                    <h2 class="cases-header-title">Кейсы</h2>
+                    <p class="cases-header-sub">Открой свой lucky-кейс!</p>
+                </div>
+            </div>
+            <div class="cases-header-right">
+                <span class="cases-badge">✦ PREMIUM</span>
             </div>
         </div>
 
-        <!-- Контент для админа -->
-        <div id="casesAdminContent" style="display: none;">
-            <!-- ЗАГОЛОВОК -->
-            <div class="cases-header">
-                <div class="cases-header-left">
-                    <span class="cases-header-icon">🎰</span>
-                    <div>
-                        <h2 class="cases-header-title">Кейсы</h2>
-                        <p class="cases-header-sub">Открой свой lucky-кейс!</p>
+        <!-- СПИСОК КЕЙСОВ -->
+        <div class="cases-list">
+            <!-- Кейс 1: Обычный -->
+            <div class="case-item" onclick="openCase(1)">
+                <div class="case-item-left">
+                    <div class="case-item-icon">📦</div>
+                    <div class="case-item-info">
+                        <div class="case-item-name">Обычный кейс</div>
+                        <div class="case-item-desc">7 наград • от обычных до легендарных</div>
                     </div>
                 </div>
-                <div class="cases-header-right">
-                    <span class="cases-badge">✦ PREMIUM</span>
-                </div>
-            </div>
-
-            <!-- ГРИД КЕЙСОВ -->
-            <div class="cases-grid">
-                <!-- Обычный кейс -->
-                <div class="case-card-main" onclick="openCase(1)">
-                    <div class="case-card-glow"></div>
-                    <div class="case-card-content">
-                        <div class="case-card-icon">📦</div>
-                        <div class="case-card-info">
-                            <div class="case-card-name">Обычный кейс</div>
-                            <div class="case-card-desc">Шанс на крутые награды!</div>
-                        </div>
-                        <div class="case-card-price">
-                            <span class="price-value">500</span>
-                            <span class="price-label">WG</span>
-                        </div>
-                        <div class="case-card-arrow">→</div>
-                    </div>
-                    <div class="case-card-stats">
-                        <div class="case-stat-item">
-                            <span class="stat-dot" style="background: #3b82f6;"></span>
-                            <span>Обычные</span>
-                        </div>
-                        <div class="case-stat-item">
-                            <span class="stat-dot" style="background: #8b5cf6;"></span>
-                            <span>Редкие</span>
-                        </div>
-                        <div class="case-stat-item">
-                            <span class="stat-dot" style="background: #ef4444;"></span>
-                            <span>Эпические</span>
-                        </div>
-                        <div class="case-stat-item">
-                            <span class="stat-dot" style="background: #fbbf24;"></span>
-                            <span>Легендарные</span>
-                        </div>
-                    </div>
+                <div class="case-item-right">
+                    <div class="case-item-price">500 WG</div>
+                    <div class="case-item-arrow">→</div>
                 </div>
             </div>
 
-            <!-- ИНФО БЛОК -->
-            <div class="cases-info-block">
-                <div class="cases-info-item">
-                    <span class="info-icon">🎫</span>
-                    <div>
-                        <div class="info-label">Доступно кейсов</div>
-                        <div class="info-value" id="caseCountMain">0</div>
+            <!-- Кейс 2: Редкий -->
+            <div class="case-item" onclick="openCase(2)">
+                <div class="case-item-left">
+                    <div class="case-item-icon">🎁</div>
+                    <div class="case-item-info">
+                        <div class="case-item-name">Редкий кейс</div>
+                        <div class="case-item-desc">7 наград • улучшенный дроп</div>
                     </div>
                 </div>
-                <div class="cases-info-divider"></div>
-                <div class="cases-info-item">
-                    <span class="info-icon">💰</span>
-                    <div>
-                        <div class="info-label">Цена кейса</div>
-                        <div class="info-value">500 WG</div>
+                <div class="case-item-right">
+                    <div class="case-item-price">1 000 WG</div>
+                    <div class="case-item-arrow">→</div>
+                </div>
+            </div>
+
+            <!-- Кейс 3: Легендарный -->
+            <div class="case-item" onclick="openCase(3)">
+                <div class="case-item-left">
+                    <div class="case-item-icon">💎</div>
+                    <div class="case-item-info">
+                        <div class="case-item-name">Легендарный кейс</div>
+                        <div class="case-item-desc">7 наград • высокий шанс на легендарку</div>
+                    </div>
+                </div>
+                <div class="case-item-right">
+                    <div class="case-item-price">2 500 WG</div>
+                    <div class="case-item-arrow">→</div>
+                </div>
+            </div>
+
+            <!-- Кейс 4: Королевский -->
+            <div class="case-item" onclick="openCase(4)">
+                <div class="case-item-left">
+                    <div class="case-item-icon">👑</div>
+                    <div class="case-item-info">
+                        <div class="case-item-name">Королевский кейс</div>
+                        <div class="case-item-desc">7 наград • эксклюзивные призы</div>
+                    </div>
+                </div>
+                <div class="case-item-right">
+                    <div class="case-item-price">5 000 WG</div>
+                    <div class="case-item-arrow">→</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ИНФО БЛОК -->
+        <div class="cases-info-block">
+            <div class="cases-info-item">
+                <span class="info-icon">🎫</span>
+                <div>
+                    <div class="info-label">Доступно кейсов</div>
+                    <div class="info-value" id="caseCountMain">0</div>
+                </div>
+            </div>
+            <div class="cases-info-divider"></div>
+            <div class="cases-info-item">
+                <span class="info-icon">💰</span>
+                <div>
+                    <div class="info-label">Мин. цена</div>
+                    <div class="info-value">500 WG</div>
                     </div>
                 </div>
             </div>
