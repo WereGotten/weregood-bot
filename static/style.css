@@ -7144,3 +7144,31 @@ body.light-theme .star-upgrade-card {
 .case-page .case-content {
     animation: fadeIn 0.3s ease;
 }
+
+/* ===== GPU-АКСЕЛЕРАЦИЯ ===== */
+.case-slot-track {
+    will-change: transform;
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+.case-slot-item {
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    /* Аппаратное ускорение для каждого элемента */
+    transform: translateZ(0);
+}
+
+/* ===== ПЛАВНОСТЬ АНИМАЦИИ ===== */
+.case-slot-track {
+    transition: transform 12000ms cubic-bezier(0.08, 0.82, 0.17, 1);
+}
+
+/* ===== ОПТИМИЗАЦИЯ ИЗОБРАЖЕНИЙ ===== */
+.case-slot-item .item-icon,
+.case-reward-card .reward-icon {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+}

@@ -7014,31 +7014,67 @@ function translateElement(el, key) {
 setTimeout(loadLanguageSettings, 500);
 
     // ================================================================
-// КЕЙСЫ - ПОЛНАЯ ВЕРСИЯ СО ЗВУКАМИ И ОПТИМИЗАЦИЕЙ
+// КЕЙСЫ - МАКСИМАЛЬНАЯ ПЛАВНОСТЬ + ЗВУКИ
 // ================================================================
 
 let currentCaseId = 1;
 let isCaseSpinning = false;
 let caseCount = parseInt(localStorage.getItem('weregood_cases') || '0');
 let spinTimeout = null;
-let isCasePageOpen = false;
-let caseFpsInterval = null;
-let caseFpsFrames = 0;
-let caseFpsLastTime = 0;
+let slotAudio = null;
+let winAudio = null;
 
-// ===== ЗВУКИ =====
-let caseTickInterval = null;
-let caseTickSpeed = 80;
-let caseTickTimer = null;
+// ===== ПРЕДЗАГРУЗКА ЗВУКОВ =====
+function initSlotSounds() {
+    try {
+        // Создаём звук вращения (тик-тик-тик)
+        slotAudio = new Audio();
+        slotAudio.src = '/static/slot_spin.mp3';
+        slotAudio.loop = true;
+        slotAudio.volume = 0.3;
+        slotAudio.preload = 'auto';
 
-// ===== ДАННЫЕ КЕЙСОВ =====
+        // Звук выигрыша
+        winAudio = new Audio();
+        winAudio.src = '/static/slot_win.mp3';
+        winAudio.volume = 0.5;
+        winAudio.preload = 'auto';
+    } catch(e) {
+        console.log('Audio init error:', e);
+    }
+}
+
+// ===== ВОСПРОИЗВЕДЕНИЕ ЗВУКА =====
+function playSlotSound(type = 'spin') {
+    try {
+        const soundsToggle = document.getElementById('soundsToggle');
+        const soundEnabled = soundsToggle ? soundsToggle.checked : true;
+        if (!soundEnabled) return;
+
+        if (type === 'spin' && slotAudio) {
+            slotAudio.currentTime = 0;
+            slotAudio.play().catch(() => {});
+        } else if (type === 'win' && winAudio) {
+            winAudio.currentTime = 0;
+            winAudio.play().catch(() => {});
+        }
+    } catch(e) {}
+}
+
+function stopSlotSound() {
+    try {
+        if (slotAudio) {
+            slotAudio.pause();
+            slotAudio.currentTime = 0;
+        }
+    } catch(e) {}
+}
+
+// ===== ДАННЫЕ КЕЙСА =====
 const caseData = {
     1: {
         name: 'Обычный кейс',
         price: 500,
-        icon: '📦',
-        bgColor: 'rgba(255,215,0,0.08)',
-        borderColor: 'rgba(255,215,0,0.2)',
         rewards: [
             { icon: '/static/wallet.png', value: '10 WG', rarity: 'common' },
             { icon: '/static/lightning.png', value: '+30 энергии', rarity: 'common' },
@@ -7048,277 +7084,23 @@ const caseData = {
             { icon: '/static/diamond.png', value: '50 LP', rarity: 'epic' },
             { icon: '/static/diamond.png', value: '100 LP', rarity: 'legendary' }
         ]
-    },
-    2: {
-        name: 'Редкий кейс',
-        price: 1000,
-        icon: '🎁',
-        bgColor: 'rgba(0,150,255,0.08)',
-        borderColor: 'rgba(0,150,255,0.2)',
-        rewards: [
-            { icon: '/static/wallet.png', value: '50 WG', rarity: 'common' },
-            { icon: '/static/lightning.png', value: '+50 энергии', rarity: 'common' },
-            { icon: '/static/ticket.png', value: '3 билета', rarity: 'rare' },
-            { icon: '/static/trophy.png', value: 'Улучшение +1', rarity: 'rare' },
-            { icon: '/static/wallet.png', value: '1000 WG', rarity: 'epic' },
-            { icon: '/static/diamond.png', value: '100 LP', rarity: 'epic' },
-            { icon: '/static/diamond.png', value: '250 LP', rarity: 'legendary' }
-        ]
-    },
-    3: {
-        name: 'Легендарный кейс',
-        price: 2500,
-        icon: '💎',
-        bgColor: 'rgba(255,0,150,0.08)',
-        borderColor: 'rgba(255,0,150,0.2)',
-        rewards: [
-            { icon: '/static/wallet.png', value: '100 WG', rarity: 'common' },
-            { icon: '/static/lightning.png', value: '+100 энергии', rarity: 'common' },
-            { icon: '/static/ticket.png', value: '5 билетов', rarity: 'rare' },
-            { icon: '/static/trophy.png', value: 'Улучшение +2', rarity: 'rare' },
-            { icon: '/static/wallet.png', value: '2500 WG', rarity: 'epic' },
-            { icon: '/static/diamond.png', value: '200 LP', rarity: 'epic' },
-            { icon: '/static/diamond.png', value: '500 LP', rarity: 'legendary' }
-        ]
-    },
-    4: {
-        name: 'Королевский кейс',
-        price: 5000,
-        icon: '👑',
-        bgColor: 'rgba(255,200,0,0.08)',
-        borderColor: 'rgba(255,200,0,0.2)',
-        rewards: [
-            { icon: '/static/wallet.png', value: '200 WG', rarity: 'common' },
-            { icon: '/static/lightning.png', value: '+200 энергии', rarity: 'common' },
-            { icon: '/static/ticket.png', value: '10 билетов', rarity: 'rare' },
-            { icon: '/static/trophy.png', value: 'Улучшение +3', rarity: 'rare' },
-            { icon: '/static/wallet.png', value: '5000 WG', rarity: 'epic' },
-            { icon: '/static/diamond.png', value: '500 LP', rarity: 'epic' },
-            { icon: '/static/diamond.png', value: '1000 LP', rarity: 'legendary' }
-        ]
     }
 };
 
-// ================================================================
-// ЗВУКИ
-// ================================================================
-
-function isSoundEnabled() {
-    const soundsToggle = document.getElementById('soundsToggle');
-    if (soundsToggle) {
-        return soundsToggle.checked;
-    }
-    return true;
-}
-
-function playCaseSound(soundId, volume = 0.5) {
-    if (!isSoundEnabled()) return;
-
-    const sound = document.getElementById(soundId);
-    if (!sound) return;
-
-    try {
-        sound.currentTime = 0;
-        sound.volume = volume;
-        sound.play().catch(e => {});
-    } catch(e) {}
-}
-
-function startTickSound() {
-    if (!isSoundEnabled()) return;
-    if (caseTickInterval) {
-        clearInterval(caseTickInterval);
-        caseTickInterval = null;
-    }
-
-    caseTickSpeed = 80;
-    let speedIncrease = 1.5;
-    let isFirst = true;
-
-    function playTick() {
-        if (!isSoundEnabled()) {
-            stopTickSound();
-            return;
-        }
-
-        playCaseSound('caseTickSound', 0.25);
-
-        if (!isFirst) {
-            caseTickSpeed = Math.max(18, caseTickSpeed - speedIncrease);
-            speedIncrease += 0.25;
-        }
-        isFirst = false;
-
-        if (caseTickInterval) {
-            clearInterval(caseTickInterval);
-            caseTickInterval = null;
-        }
-
-        caseTickInterval = setInterval(playTick, caseTickSpeed);
-    }
-
-    playTick();
-}
-
-function stopTickSound() {
-    if (caseTickInterval) {
-        clearInterval(caseTickInterval);
-        caseTickInterval = null;
-    }
-    if (caseTickTimer) {
-        clearTimeout(caseTickTimer);
-        caseTickTimer = null;
-    }
-}
-
-function playWinSound(rarity) {
-    if (!isSoundEnabled()) return;
-
-    const volumeMap = {
-        'common': 0.3,
-        'rare': 0.5,
-        'epic': 0.7,
-        'legendary': 1.0
-    };
-
-    const volume = volumeMap[rarity] || 0.5;
-
-    playCaseSound('caseOpenSound', 0.4);
-
-    setTimeout(() => {
-        playCaseSound('caseWinSound', volume);
-
-        if (rarity === 'legendary') {
-            setTimeout(() => {
-                playCaseSound('caseRaritySound', 0.8);
-                if (navigator.vibrate) {
-                    navigator.vibrate([50, 30, 50, 30, 100]);
-                }
-            }, 300);
-        }
-
-        if (rarity === 'epic') {
-            setTimeout(() => {
-                if (navigator.vibrate) {
-                    navigator.vibrate([30, 20, 40]);
-                }
-            }, 200);
-        }
-    }, 200);
-}
-
-function playBuyCaseSound() {
-    playCaseSound('caseOpenSound', 0.3);
-}
-
-function playFailSound() {
-    playCaseSound('caseFailSound', 0.4);
-}
-
-// ================================================================
-// ЗАГРУЗКА ИЗОБРАЖЕНИЙ
-// ================================================================
-
-let imagesPreloaded = false;
-let preloadPromise = null;
-
-function preloadAllImages() {
-    if (imagesPreloaded) return Promise.resolve();
-    if (preloadPromise) return preloadPromise;
-
-    preloadPromise = new Promise((resolve) => {
-        const allIcons = new Set();
-        Object.values(caseData).forEach(c => {
-            c.rewards.forEach(r => allIcons.add(r.icon));
-        });
-
-        const iconUrls = [
-            ...allIcons,
-            '/static/wallet.png',
-            '/static/lightning.png',
-            '/static/ticket.png',
-            '/static/trophy.png',
-            '/static/diamond.png',
-            '/static/withdraw.png',
-            '/static/crown_icon.png'
-        ];
-
-        let loaded = 0;
-        const total = iconUrls.length;
-
-        if (total === 0) {
-            imagesPreloaded = true;
-            resolve();
-            return;
-        }
-
-        iconUrls.forEach(src => {
-            const img = new Image();
-            img.onload = () => {
-                loaded++;
-                if (loaded === total) {
-                    imagesPreloaded = true;
-                    resolve();
-                }
-            };
-            img.onerror = () => {
-                loaded++;
-                if (loaded === total) {
-                    imagesPreloaded = true;
-                    resolve();
-                }
-            };
-            img.src = src;
-        });
-
-        setTimeout(resolve, 3000);
-    });
-
-    return preloadPromise;
-}
-
-// ================================================================
-// ОСНОВНЫЕ ФУНКЦИИ
-// ================================================================
-
-async function openCase(caseId) {
-    if (isCasePageOpen) return;
-    isCasePageOpen = true;
-
-    showCaseLoader(true);
-    await preloadAllImages();
-
+// ===== ОТКРЫТИЕ КЕЙСА =====
+function openCase(caseId) {
     currentCaseId = caseId || 1;
     const caseInfo = caseData[currentCaseId];
-    if (!caseInfo) {
-        isCasePageOpen = false;
-        showCaseLoader(false);
-        return;
-    }
+    if (!caseInfo) return;
 
     const page = document.getElementById('casePage');
-    if (!page) {
-        isCasePageOpen = false;
-        showCaseLoader(false);
-        return;
-    }
+    if (!page) return;
 
-    document.getElementById('caseTitle').textContent = `${caseInfo.icon} ${caseInfo.name}`;
+    document.getElementById('caseTitle').textContent = caseInfo.name;
     document.getElementById('casePriceDisplay').textContent = caseInfo.price;
 
-    const pageContent = page.querySelector('.case-content');
-    if (pageContent) {
-        pageContent.style.background = `linear-gradient(145deg, ${caseInfo.bgColor}, rgba(0,0,0,0.2))`;
-        pageContent.style.borderColor = caseInfo.borderColor;
-    }
-
-    if (!document.querySelector('.case-reward-card')) {
-        renderRewardsGrid(caseInfo.rewards);
-    }
-    if (!document.querySelector('.case-slot-item')) {
-        renderSlotTrack(caseInfo.rewards);
-    }
-
+    renderRewardsGrid(caseInfo.rewards);
+    renderSlotTrack(caseInfo.rewards);
     updateCaseCount();
 
     const track = document.getElementById('caseSlotTrack');
@@ -7329,206 +7111,77 @@ async function openCase(caseId) {
             clearTimeout(spinTimeout);
             spinTimeout = null;
         }
-        track.querySelectorAll('.case-slot-item').forEach(el => {
-            el.classList.remove('active', 'bounce');
-        });
-        document.querySelectorAll('.case-reward-card').forEach(el => {
-            el.classList.remove('active');
-        });
     }
 
-    showCaseLoader(false);
     page.classList.add('active');
     document.body.style.overflow = 'hidden';
-    startFpsMonitor();
+
+    // Инициализируем звуки
+    initSlotSounds();
 }
 
-function showCaseLoader(show) {
-    let loader = document.getElementById('caseLoader');
-    if (show) {
-        if (!loader) {
-            loader = document.createElement('div');
-            loader.id = 'caseLoader';
-            loader.style.cssText = `
-                position: fixed;
-                top: 0; left: 0; right: 0; bottom: 0;
-                background: rgba(0,0,0,0.85);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                z-index: 10001;
-                flex-direction: column;
-                gap: 16px;
-            `;
-            loader.innerHTML = `
-                <div style="font-size: 2rem; animation: spin 1s linear infinite;">⚡</div>
-                <div style="color: rgba(255,255,255,0.6); font-size: 0.8rem;">Загрузка...</div>
-            `;
-            document.body.appendChild(loader);
-
-            if (!document.getElementById('caseLoaderStyle')) {
-                const style = document.createElement('style');
-                style.id = 'caseLoaderStyle';
-                style.textContent = `
-                    @keyframes spin {
-                        0% { transform: rotate(0deg); }
-                        100% { transform: rotate(360deg); }
-                    }
-                `;
-                document.head.appendChild(style);
-            }
-        }
-        loader.style.display = 'flex';
-    } else {
-        if (loader) loader.style.display = 'none';
-    }
-}
-
-// ================================================================
-// РЕНДЕР
-// ================================================================
-
-let trackRendered = false;
-
+// ===== РЕНДЕР ТРЕКА (ОПТИМИЗИРОВАННЫЙ) =====
 function renderSlotTrack(rewards) {
-    if (trackRendered) return;
-    trackRendered = true;
-
     const track = document.getElementById('caseSlotTrack');
     if (!track) return;
 
-    const cycles = 120;
+    // 50 циклов = 350 элементов
+    const cycles = 50;
+    let html = '';
+
+    // Используем DocumentFragment для быстрой вставки
     const fragment = document.createDocumentFragment();
-    const temp = document.createElement('div');
+    const tempDiv = document.createElement('div');
 
     for (let cycle = 0; cycle < cycles; cycle++) {
         for (let i = 0; i < rewards.length; i++) {
             const reward = rewards[i];
-            const item = document.createElement('div');
-            item.className = `case-slot-item rarity-${reward.rarity}`;
-            item.dataset.index = i;
-            item.dataset.cycle = cycle;
-
-            const img = document.createElement('img');
-            img.className = 'item-icon';
-            img.src = reward.icon;
-            img.alt = reward.value;
-            img.loading = 'eager';
-            img.decoding = 'async';
-            img.style.width = '42px';
-            img.style.height = '42px';
-            img.style.objectFit = 'contain';
-
-            const span = document.createElement('span');
-            span.className = 'item-value';
-            span.textContent = reward.value;
-
-            item.appendChild(img);
-            item.appendChild(span);
-            temp.appendChild(item);
+            const div = document.createElement('div');
+            div.className = `case-slot-item rarity-${reward.rarity}`;
+            div.dataset.index = i;
+            div.dataset.cycle = cycle;
+            div.innerHTML = `
+                <img src="${reward.icon}" class="item-icon" alt="${reward.value}" loading="lazy" decoding="async">
+                <span class="item-value">${reward.value}</span>
+            `;
+            fragment.appendChild(div);
         }
     }
 
-    while (temp.firstChild) {
-        fragment.appendChild(temp.firstChild);
-    }
     track.appendChild(fragment);
 }
 
-let gridRendered = false;
-
+// ===== РЕНДЕР СЕТКИ НАГРАД =====
 function renderRewardsGrid(rewards) {
-    if (gridRendered) return;
-    gridRendered = true;
-
     const grid = document.getElementById('caseRewardsGrid');
     if (!grid) return;
 
-    const fragment = document.createDocumentFragment();
-
-    rewards.forEach((reward, index) => {
-        const card = document.createElement('div');
-        card.className = `case-reward-card rarity-${reward.rarity}`;
-        card.dataset.index = index;
-
-        const img = document.createElement('img');
-        img.className = 'reward-icon';
-        img.src = reward.icon;
-        img.alt = reward.value;
-        img.loading = 'eager';
-        img.decoding = 'async';
-        img.style.width = '36px';
-        img.style.height = '36px';
-        img.style.objectFit = 'contain';
-
-        const span = document.createElement('span');
-        span.className = 'reward-value';
-        span.textContent = reward.value;
-
-        card.appendChild(img);
-        card.appendChild(span);
-        fragment.appendChild(card);
+    let html = '';
+    rewards.forEach(reward => {
+        html += `
+            <div class="case-reward-card rarity-${reward.rarity}">
+                <img src="${reward.icon}" class="reward-icon" alt="${reward.value}" loading="lazy" decoding="async">
+                <span class="reward-value">${reward.value}</span>
+            </div>
+        `;
     });
-
-    grid.appendChild(fragment);
+    grid.innerHTML = html;
 }
 
-// ================================================================
-// ВСПОМОГАТЕЛЬНЫЕ
-// ================================================================
-
+// ===== ОБНОВЛЕНИЕ КОЛИЧЕСТВА КЕЙСОВ =====
 function updateCaseCount() {
     caseCount = parseInt(localStorage.getItem('weregood_cases') || '0');
-    const el = document.getElementById('caseCount');
-    if (el) el.textContent = caseCount;
+    document.getElementById('caseCount').textContent = caseCount;
 }
 
-let cachedItemWidth = null;
-
+// ===== ПОЛУЧЕНИЕ ШИРИНЫ ЭЛЕМЕНТА =====
 function getItemWidth() {
-    if (cachedItemWidth) return cachedItemWidth;
     const firstItem = document.querySelector('.case-slot-item');
     if (!firstItem) return 134;
-    cachedItemWidth = firstItem.offsetWidth + 14;
-    return cachedItemWidth;
+    return firstItem.offsetWidth + 14;
 }
 
-function startFpsMonitor() {
-    if (caseFpsInterval) return;
-    caseFpsFrames = 0;
-    caseFpsLastTime = performance.now();
-
-    caseFpsInterval = setInterval(() => {
-        const now = performance.now();
-        const diff = now - caseFpsLastTime;
-        if (diff > 0) {
-            const fps = Math.round((caseFpsFrames / diff) * 1000);
-            if (fps < 55) {
-                document.querySelectorAll('.case-slot-item img').forEach(img => {
-                    img.style.imageRendering = 'auto';
-                });
-            }
-        }
-        caseFpsFrames = 0;
-        caseFpsLastTime = now;
-    }, 1000);
-}
-
-function triggerHaptic(type = 'medium') {
-    if (window.Telegram?.WebApp?.HapticFeedback) {
-        try {
-            window.Telegram.WebApp.HapticFeedback.impactOccurred(type);
-        } catch(e) {}
-    } else if (navigator.vibrate) {
-        const duration = type === 'heavy' ? 30 : type === 'medium' ? 15 : 8;
-        navigator.vibrate(duration);
-    }
-}
-
-// ================================================================
-// ВРАЩЕНИЕ
-// ================================================================
-
+// ===== ВРАЩЕНИЕ (МАКСИМАЛЬНАЯ ПЛАВНОСТЬ) =====
 function spinCase() {
     if (isCaseSpinning) return;
 
@@ -7536,7 +7189,6 @@ function spinCase() {
     if (!caseInfo) return;
 
     if (caseCount <= 0) {
-        playFailSound();
         showBuyCaseModal();
         return;
     }
@@ -7554,18 +7206,24 @@ function spinCase() {
     spinBtn.disabled = true;
     spinBtn.querySelector('.btn-text').textContent = 'ВРАЩЕНИЕ...';
 
+    // Убираем подсветку
     document.querySelectorAll('.case-reward-card').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.case-slot-item').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.case-slot-item').forEach(el => {
+        el.classList.remove('active', 'bounce');
+    });
 
-    startTickSound();
+    // ===== ЗАПУСКАЕМ ЗВУК ВРАЩЕНИЯ =====
+    playSlotSound('spin');
 
     const items = track.querySelectorAll('.case-slot-item');
     const itemWidth = getItemWidth();
     const itemsPerCycle = caseInfo.rewards.length;
     const totalItems = items.length;
 
+    // Выбираем случайный выигрыш
     const winIndex = Math.floor(Math.random() * caseInfo.rewards.length);
 
+    // Ищем элемент в середине ленты
     const middleCycle = Math.floor(totalItems / itemsPerCycle / 2);
     let targetItemIndex = -1;
 
@@ -7573,7 +7231,7 @@ function spinCase() {
         const el = items[i];
         const idx = parseInt(el.dataset.index);
         const cycle = parseInt(el.dataset.cycle);
-        if (idx === winIndex && cycle >= middleCycle - 2 && cycle <= middleCycle + 2) {
+        if (idx === winIndex && cycle >= middleCycle - 1 && cycle <= middleCycle + 1) {
             targetItemIndex = i;
             break;
         }
@@ -7592,44 +7250,51 @@ function spinCase() {
         targetItemIndex = Math.floor(totalItems / 2);
     }
 
+    // Центр = 3
     const centerOffset = 3;
     const targetPosition = -(targetItemIndex - centerOffset) * itemWidth;
-    const extraCycles = 28 + Math.floor(Math.random() * 12);
+
+    // Обороты
+    const extraCycles = 25 + Math.floor(Math.random() * 10);
     const extraOffset = extraCycles * itemsPerCycle * itemWidth;
     const finalPosition = targetPosition - extraOffset;
 
-    track.style.willChange = 'transform';
+    // Текущая позиция
+    const currentTransform = track.style.transform || 'translateX(0px)';
+    const currentX = parseInt(currentTransform.replace('translateX(', '').replace('px)', '')) || 0;
+
+    // ===== ЗАПУСК АНИМАЦИИ С ПОДГОТОВКОЙ =====
+    // 1. Мгновенный сброс
     track.style.transition = 'none';
-    track.style.transform = `translateX(0px)`;
+    track.style.transform = `translateX(${currentX}px)`;
+    track.style.willChange = 'transform';
+
+    // 2. Форсируем reflow
     void track.offsetHeight;
 
-    const duration = 10000 + Math.random() * 4000;
+    // 3. Запускаем плавную анимацию
+    const duration = 12000 + Math.random() * 3000;
     track.style.transition = `transform ${duration}ms cubic-bezier(0.08, 0.82, 0.17, 1)`;
     track.style.transform = `translateX(${finalPosition}px)`;
 
+    // Вибрация
     triggerHaptic('medium');
 
-    let startTime = performance.now();
-
-    function checkProgress() {
-        const elapsed = performance.now() - startTime;
-        if (elapsed < duration) {
-            requestAnimationFrame(checkProgress);
-        } else {
-            finishSpin();
-        }
-    }
-
+    // ===== ЗАВЕРШЕНИЕ =====
     const finishSpin = () => {
-        stopTickSound();
-        track.style.willChange = 'auto';
+        // Останавливаем звук
+        stopSlotSound();
 
+        // Находим элемент в центре
         const containerRect = track.parentElement.getBoundingClientRect();
         const center = containerRect.left + containerRect.width / 2;
         let closestItem = null;
         let closestDistance = Infinity;
 
-        track.querySelectorAll('.case-slot-item').forEach(el => {
+        // Используем более быстрый поиск
+        const allItems = track.querySelectorAll('.case-slot-item');
+        for (let i = 0; i < allItems.length; i++) {
+            const el = allItems[i];
             const elRect = el.getBoundingClientRect();
             const elCenter = elRect.left + elRect.width / 2;
             const distance = Math.abs(elCenter - center);
@@ -7637,27 +7302,29 @@ function spinCase() {
                 closestDistance = distance;
                 closestItem = el;
             }
-        });
+        }
 
         if (closestItem) {
+            // Байт
             closestItem.classList.add('bounce');
             setTimeout(() => {
                 closestItem.classList.remove('bounce');
             }, 500);
 
             closestItem.classList.add('active');
-            const winIdx = parseInt(closestItem.dataset.index);
-            const winReward = caseInfo.rewards[winIdx];
+            const winIndex = parseInt(closestItem.dataset.index);
+            const winReward = caseInfo.rewards[winIndex];
 
+            // Подсветка карточки
             const rewardCards = document.querySelectorAll('.case-reward-card');
-            rewardCards.forEach((el, idx) => {
-                if (idx === winIdx) {
-                    el.classList.add('active');
+            for (let i = 0; i < rewardCards.length; i++) {
+                if (i === winIndex) {
+                    rewardCards[i].classList.add('active');
                 }
-            });
+            }
 
-            playWinSound(winReward.rarity);
-
+            // Звук выигрыша
+            playSlotSound('win');
             triggerHaptic('heavy');
 
             setTimeout(() => {
@@ -7667,56 +7334,28 @@ function spinCase() {
             caseCount--;
             localStorage.setItem('weregood_cases', caseCount.toString());
             updateCaseCount();
-
-            if (winReward.value.includes('WG')) {
-                const wgAmount = parseInt(winReward.value);
-                if (!isNaN(wgAmount)) {
-                    localWG += wgAmount;
-                    updateUI();
-                    syncData(true);
-                }
-            }
-            if (winReward.value.includes('LP')) {
-                const lpAmount = parseInt(winReward.value);
-                if (!isNaN(lpAmount)) {
-                    localLP += lpAmount;
-                    updateUI();
-                    syncData(true);
-                }
-            }
-            if (winReward.value.includes('энергии')) {
-                const energyAmount = parseInt(winReward.value);
-                if (!isNaN(energyAmount)) {
-                    localEnergy = Math.min(localMaxEnergy, localEnergy + energyAmount);
-                    updateUI();
-                    syncData(true);
-                }
-            }
         }
 
         isCaseSpinning = false;
         spinBtn.disabled = false;
         spinBtn.querySelector('.btn-text').textContent = 'ОТКРЫТЬ КЕЙС';
         spinTimeout = null;
+
+        // Убираем will-change после анимации
+        setTimeout(() => {
+            track.style.willChange = 'auto';
+        }, 1000);
     };
 
     spinTimeout = setTimeout(finishSpin, duration + 300);
-    requestAnimationFrame(checkProgress);
 }
 
-// ================================================================
-// МОДАЛКА ПОКУПКИ
-// ================================================================
-
+// ===== МОДАЛКА ПОКУПКИ =====
 function showBuyCaseModal() {
     const caseInfo = caseData[currentCaseId];
     if (!caseInfo) return;
 
-    const existingOverlay = document.getElementById('buyCaseOverlay');
-    if (existingOverlay) existingOverlay.remove();
-
     const overlay = document.createElement('div');
-    overlay.id = 'buyCaseOverlay';
     overlay.style.cssText = `
         position: fixed;
         top: 0; left: 0; right: 0; bottom: 0;
@@ -7728,6 +7367,7 @@ function showBuyCaseModal() {
         justify-content: center;
         animation: fadeIn 0.3s ease;
     `;
+    overlay.id = 'buyCaseOverlay';
 
     overlay.innerHTML = `
         <div style="
@@ -7737,11 +7377,11 @@ function showBuyCaseModal() {
             max-width: 340px;
             width: 90%;
             text-align: center;
-            border: 1px solid ${caseInfo.borderColor};
+            border: 1px solid rgba(255,215,0,0.1);
             box-shadow: 0 20px 60px rgba(0,0,0,0.5);
             animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
         ">
-            <div style="font-size: 3rem; margin-bottom: 8px;">${caseInfo.icon}</div>
+            <div style="font-size: 3rem; margin-bottom: 8px;">🎰</div>
             <h3 style="color: #FFD700; font-size: 1.2rem; margin-bottom: 6px;">У вас нет кейсов!</h3>
             <p style="color: rgba(255,255,255,0.5); font-size: 0.85rem; margin-bottom: 16px;">
                 Купите кейс за <span style="color: #FFD700; font-weight: 700;">${caseInfo.price} WG</span>
@@ -7758,7 +7398,7 @@ function showBuyCaseModal() {
                     font-size: 0.9rem;
                     cursor: pointer;
                     transition: transform 0.15s ease;
-                " onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'" onmousedown="this.style.transform='scale(0.96)'" onmouseup="this.style.transform='scale(1)'">
+                ">
                     💰 Купить
                 </button>
                 <button onclick="document.getElementById('buyCaseOverlay').remove();" style="
@@ -7771,8 +7411,7 @@ function showBuyCaseModal() {
                     font-weight: 600;
                     font-size: 0.85rem;
                     cursor: pointer;
-                    transition: all 0.15s ease;
-                " onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='rgba(255,255,255,0.03)'" onmousedown="this.style.transform='scale(0.96)'" onmouseup="this.style.transform='scale(1)'">
+                ">
                     ✕
                 </button>
             </div>
@@ -7783,17 +7422,13 @@ function showBuyCaseModal() {
     triggerHaptic('medium');
 }
 
-// ================================================================
-// ПОКУПКА
-// ================================================================
-
+// ===== ПОКУПКА =====
 function buyCase() {
     const caseInfo = caseData[currentCaseId];
     if (!caseInfo) return;
 
     if (localWG < caseInfo.price) {
         showToast(`❌ Не хватает WG! Нужно ${caseInfo.price} WG`, 'error');
-        playFailSound();
         return;
     }
 
@@ -7804,26 +7439,13 @@ function buyCase() {
     localStorage.setItem('weregood_cases', caseCount.toString());
     updateCaseCount();
 
-    playBuyCaseSound();
     showToast(`✅ Кейс куплен! Нажмите "ОТКРЫТЬ"`, 'success');
     triggerHaptic('light');
     syncData(true);
 }
 
-// ================================================================
-// ЗАКРЫТИЕ
-// ================================================================
-
+// ===== ЗАКРЫТИЕ =====
 function closeCase() {
-    isCasePageOpen = false;
-
-    if (caseFpsInterval) {
-        clearInterval(caseFpsInterval);
-        caseFpsInterval = null;
-    }
-
-    stopTickSound();
-
     const page = document.getElementById('casePage');
     if (page) {
         page.classList.remove('active');
@@ -7834,14 +7456,15 @@ function closeCase() {
             spinTimeout = null;
         }
 
+        stopSlotSound();
+
         const track = document.getElementById('caseSlotTrack');
         if (track) {
-            track.style.willChange = 'auto';
             track.style.transition = 'none';
             track.style.transform = 'translateX(0px)';
-            track.querySelectorAll('.case-slot-item').forEach(el => {
-                el.classList.remove('active', 'bounce');
-            });
+            track.style.willChange = 'auto';
+            // Очищаем трек для освобождения памяти
+            track.innerHTML = '';
         }
         isCaseSpinning = false;
 
@@ -7853,26 +7476,16 @@ function closeCase() {
     }
 }
 
-// ================================================================
-// ИНИЦИАЛИЗАЦИЯ
-// ================================================================
-
-function initCases() {
-    preloadAllImages();
-    updateCaseCount();
-    checkCasesAccess();
-}
-
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-        closeCase();
+// ===== HAPTIC =====
+function triggerHaptic(type = 'medium') {
+    if (window.Telegram?.WebApp?.HapticFeedback) {
+        try {
+            window.Telegram.WebApp.HapticFeedback.impactOccurred(type);
+        } catch(e) {}
+    } else if (navigator.vibrate) {
+        const duration = type === 'heavy' ? 30 : type === 'medium' ? 15 : 8;
+        navigator.vibrate(duration);
     }
-});
-
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initCases);
-} else {
-    initCases();
 }
 
 </script>
