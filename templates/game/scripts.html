@@ -7014,7 +7014,7 @@ function translateElement(el, key) {
 setTimeout(loadLanguageSettings, 500);
 
     // ================================================================
-// КЕЙСЫ - ПОЛНАЯ ВЕРСИЯ С МАКСИМАЛЬНОЙ ПЛАВНОСТЬЮ
+// КЕЙСЫ - ФИНАЛЬНАЯ ВЕРСИЯ (ПОЛНАЯ)
 // ================================================================
 
 // ===== КОНФИГУРАЦИЯ =====
@@ -7024,12 +7024,12 @@ const CASE_CONFIG = {
         max: 15000
     },
     extraCycles: {
-        min: 25,
-        max: 35
+        min: 35,
+        max: 45
     },
     itemWidth: 134,
     centerOffset: 3,
-    cyclesInTrack: 50
+    cyclesInTrack: 80
 };
 
 // ===== СОСТОЯНИЕ =====
@@ -7037,15 +7037,11 @@ let currentCaseId = 1;
 let isCaseSpinning = false;
 let caseCount = parseInt(localStorage.getItem('weregood_cases') || '0');
 let spinTimeout = null;
-let spinStartTime = null;
-let currentAnimationId = null;
 let slotAudio = null;
 let winAudio = null;
 let clickAudio = null;
 let isAudioInitialized = false;
-let lastFrameTime = 0;
-let fpsCounter = 0;
-let currentFps = 60;
+let cachedItemWidth = null;
 
 // ===== ЗВУКИ =====
 function initAudio() {
@@ -7134,19 +7130,16 @@ function openCase(caseId) {
     const page = document.getElementById('casePage');
     if (!page) return;
 
-    // Обновляем UI
     const titleEl = document.getElementById('caseTitle');
     if (titleEl) titleEl.textContent = caseInfo.name;
 
     const priceEl = document.getElementById('casePriceDisplay');
     if (priceEl) priceEl.textContent = caseInfo.price;
 
-    // Рендерим
     renderRewardsGrid(caseInfo.rewards);
     renderSlotTrack(caseInfo.rewards);
     updateCaseCount();
 
-    // Сброс трека
     const track = document.getElementById('caseSlotTrack');
     if (track) {
         track.style.transition = 'none';
@@ -7158,19 +7151,17 @@ function openCase(caseId) {
         }
     }
 
-    // Открываем страницу
     page.classList.add('active');
     document.body.style.overflow = 'hidden';
-
-    // Инициализируем звуки
     initAudio();
 }
 
-// ===== РЕНДЕР ТРЕКА (ОПТИМИЗИРОВАННЫЙ) =====
+// ===== РЕНДЕР ТРЕКА (С БОЛЬШИМ ЗАПАСОМ) =====
 function renderSlotTrack(rewards) {
     const track = document.getElementById('caseSlotTrack');
     if (!track) return;
 
+    // 80 циклов = 80 * 7 = 560 элементов
     const cycles = CASE_CONFIG.cyclesInTrack;
     const fragment = document.createDocumentFragment();
 
@@ -7220,9 +7211,7 @@ function updateCaseCount() {
     if (countEl) countEl.textContent = caseCount;
 }
 
-// ===== ПОЛУЧЕНИЕ ШИРИНЫ ЭЛЕМЕНТА (С КЭШИРОВАНИЕМ) =====
-let cachedItemWidth = null;
-
+// ===== ПОЛУЧЕНИЕ ШИРИНЫ ЭЛЕМЕНТА =====
 function getItemWidth() {
     if (cachedItemWidth !== null) return cachedItemWidth;
 
@@ -7235,15 +7224,13 @@ function getItemWidth() {
     return cachedItemWidth;
 }
 
-// ===== ВРАЩЕНИЕ (МАКСИМАЛЬНАЯ ПЛАВНОСТЬ) =====
+// ===== ВРАЩЕНИЕ =====
 function spinCase() {
-    // Проверка на повторный вызов
     if (isCaseSpinning) return;
 
     const caseInfo = caseData[currentCaseId];
     if (!caseInfo) return;
 
-    // Проверка наличия кейсов
     if (caseCount <= 0) {
         showBuyCaseModal();
         return;
@@ -7253,50 +7240,43 @@ function spinCase() {
     const spinBtn = document.getElementById('caseSpinBtn');
     if (!track || !spinBtn) return;
 
-    // Отмена предыдущего таймаута
     if (spinTimeout) {
         clearTimeout(spinTimeout);
         spinTimeout = null;
     }
 
-    // Блокируем интерфейс
     isCaseSpinning = true;
     spinBtn.disabled = true;
     spinBtn.querySelector('.btn-text').textContent = 'ВРАЩЕНИЕ...';
 
-    // Сброс подсветки
     document.querySelectorAll('.case-reward-card').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.case-slot-item').forEach(el => {
         el.classList.remove('active', 'bounce', 'winning');
     });
 
-    // ===== ЗВУК ВРАЩЕНИЯ =====
     playSound('spin');
 
-    // ===== ПОЛУЧАЕМ ЭЛЕМЕНТЫ =====
     const items = track.querySelectorAll('.case-slot-item');
     const itemWidth = getItemWidth();
     const itemsPerCycle = caseInfo.rewards.length;
     const totalItems = items.length;
 
-    // ===== ВЫБОР ВЫИГРЫША =====
     const winIndex = Math.floor(Math.random() * caseInfo.rewards.length);
 
-    // ===== ПОИСК ЦЕЛЕВОГО ЭЛЕМЕНТА =====
-    const middleCycle = Math.floor(totalItems / itemsPerCycle / 2);
+    // Находим элемент в последней трети ленты
+    const lastCycle = Math.floor(totalItems / itemsPerCycle) - 3;
     let targetItemIndex = -1;
 
     for (let i = 0; i < totalItems; i++) {
         const el = items[i];
         const idx = parseInt(el.dataset.index);
         const cycle = parseInt(el.dataset.cycle);
-        if (idx === winIndex && cycle >= middleCycle - 1 && cycle <= middleCycle + 1) {
+        if (idx === winIndex && cycle >= lastCycle - 1 && cycle <= lastCycle + 1) {
             targetItemIndex = i;
             break;
         }
     }
 
-    // Фолбэк: если не нашли
     if (targetItemIndex === -1) {
         for (let i = 0; i < totalItems; i++) {
             if (parseInt(items[i].dataset.index) === winIndex) {
@@ -7306,73 +7286,55 @@ function spinCase() {
         }
     }
 
-    // Фолбэк 2: берём середину
     if (targetItemIndex === -1) {
-        targetItemIndex = Math.floor(totalItems / 2);
+        targetItemIndex = totalItems - itemsPerCycle + winIndex;
     }
 
-    // ===== РАСЧЁТ ПОЗИЦИИ =====
     const centerOffset = CASE_CONFIG.centerOffset;
     const targetPosition = -(targetItemIndex - centerOffset) * itemWidth;
 
-    // ===== ОБОРОТЫ =====
     const minCycles = CASE_CONFIG.extraCycles.min;
     const maxCycles = CASE_CONFIG.extraCycles.max;
     const extraCycles = minCycles + Math.floor(Math.random() * (maxCycles - minCycles + 1));
     const extraOffset = extraCycles * itemsPerCycle * itemWidth;
     const finalPosition = targetPosition - extraOffset;
 
-    // ===== ТЕКУЩАЯ ПОЗИЦИЯ =====
     const currentTransform = track.style.transform || 'translateX(0px)';
     const currentX = parseInt(currentTransform.replace('translateX(', '').replace('px)', '')) || 0;
 
-    // ===== ЗАПУСК АНИМАЦИИ =====
-    // Сброс
+    // Запуск анимации
     track.style.transition = 'none';
     track.style.transform = `translateX(${currentX}px)`;
     track.style.willChange = 'transform';
 
-    // Форсируем reflow
     void track.offsetHeight;
 
-    // Запуск
     const duration = CASE_CONFIG.spinDuration.min + Math.random() * (CASE_CONFIG.spinDuration.max - CASE_CONFIG.spinDuration.min);
     track.style.transition = `transform ${duration}ms cubic-bezier(0.08, 0.82, 0.17, 1)`;
     track.style.transform = `translateX(${finalPosition}px)`;
 
-    // ===== ВИБРАЦИЯ =====
     triggerHaptic('medium');
 
-    // ===== ОТСЛЕЖИВАНИЕ ПРОГРЕССА =====
+    // === ОТСЛЕЖИВАНИЕ ПРОГРЕССА ===
     const startTime = performance.now();
-    let lastProgress = 0;
-
-    function checkProgress() {
+    let progressInterval = setInterval(() => {
         const elapsed = performance.now() - startTime;
         const progress = Math.min(elapsed / duration, 1);
 
-        // Если прогресс > 0.85 — начинаем готовить финал
-        if (progress > 0.85 && lastProgress < 0.85) {
-            // Лёгкая вибрация перед остановкой
+        if (progress > 0.85 && progress < 0.95) {
             triggerHaptic('light');
         }
 
-        lastProgress = progress;
-
-        if (progress < 1 && isCaseSpinning) {
-            requestAnimationFrame(checkProgress);
+        if (progress >= 1) {
+            clearInterval(progressInterval);
         }
-    }
+    }, 500);
 
-    // Запускаем отслеживание
-    requestAnimationFrame(checkProgress);
-
-    // ===== ЗАВЕРШЕНИЕ =====
+    // === ЗАВЕРШЕНИЕ ===
     const finishSpin = () => {
-        // Останавливаем звук
+        clearInterval(progressInterval);
         stopSpinSound();
 
-        // Находим элемент в центре
         const containerRect = track.parentElement.getBoundingClientRect();
         const center = containerRect.left + containerRect.width / 2;
         let closestItem = null;
@@ -7394,16 +7356,14 @@ function spinCase() {
             const winIndex = parseInt(closestItem.dataset.index);
             const winReward = caseInfo.rewards[winIndex];
 
-            // ===== БАЙТ =====
+            // Байт
             closestItem.classList.add('bounce');
             setTimeout(() => {
                 closestItem.classList.remove('bounce');
             }, 500);
 
-            // ===== ПОДСВЕТКА =====
             closestItem.classList.add('active', 'winning');
 
-            // Подсветка в списке
             const rewardCards = document.querySelectorAll('.case-reward-card');
             for (let i = 0; i < rewardCards.length; i++) {
                 if (i === winIndex) {
@@ -7411,28 +7371,23 @@ function spinCase() {
                 }
             }
 
-            // ===== ЗВУК ВЫИГРЫША =====
             playSound('win');
             triggerHaptic('heavy');
 
-            // ===== ТОСТ =====
             setTimeout(() => {
                 showToast(`🎉 Вы выиграли: ${winReward.value}!`, 'success');
             }, 300);
 
-            // ===== СПИСЫВАЕМ КЕЙС =====
             caseCount--;
             localStorage.setItem('weregood_cases', caseCount.toString());
             updateCaseCount();
         }
 
-        // ===== РАЗБЛОКИРОВКА =====
         isCaseSpinning = false;
         spinBtn.disabled = false;
         spinBtn.querySelector('.btn-text').textContent = 'ОТКРЫТЬ КЕЙС';
         spinTimeout = null;
 
-        // Убираем will-change
         setTimeout(() => {
             track.style.willChange = 'auto';
         }, 1000);
@@ -7446,7 +7401,6 @@ function showBuyCaseModal() {
     const caseInfo = caseData[currentCaseId];
     if (!caseInfo) return;
 
-    // Удаляем старую модалку, если есть
     const oldOverlay = document.getElementById('buyCaseOverlay');
     if (oldOverlay) oldOverlay.remove();
 
@@ -7530,11 +7484,9 @@ function buyCase() {
         return;
     }
 
-    // Списываем WG
     localWG -= caseInfo.price;
     updateUI();
 
-    // Добавляем кейс
     caseCount++;
     localStorage.setItem('weregood_cases', caseCount.toString());
     updateCaseCount();
@@ -7552,7 +7504,6 @@ function closeCase() {
         page.classList.remove('active');
         document.body.style.overflow = '';
 
-        // Очистка
         if (spinTimeout) {
             clearTimeout(spinTimeout);
             spinTimeout = null;
@@ -7565,7 +7516,6 @@ function closeCase() {
             track.style.transition = 'none';
             track.style.transform = 'translateX(0px)';
             track.style.willChange = 'auto';
-            // Очищаем для освобождения памяти
             setTimeout(() => {
                 track.innerHTML = '';
                 cachedItemWidth = null;
@@ -7580,7 +7530,6 @@ function closeCase() {
             spinBtn.querySelector('.btn-text').textContent = 'ОТКРЫТЬ КЕЙС';
         }
 
-        // Убираем модалку покупки
         const overlay = document.getElementById('buyCaseOverlay');
         if (overlay) overlay.remove();
     }
@@ -7599,7 +7548,7 @@ function triggerHaptic(type = 'medium') {
     } catch(e) {}
 }
 
-// ===== ДОПОЛНИТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ РАСШИРЕНИЯ =====
+// ===== ДОПОЛНИТЕЛЬНЫЕ ФУНКЦИИ =====
 function getCaseRewards(caseId) {
     const caseInfo = caseData[caseId] || caseData[1];
     return caseInfo.rewards || [];
