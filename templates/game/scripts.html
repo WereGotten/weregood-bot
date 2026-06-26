@@ -7014,7 +7014,7 @@ function translateElement(el, key) {
 setTimeout(loadLanguageSettings, 500);
 
     // ================================================================
-// КЕЙСЫ - МАКСИМАЛЬНАЯ ОПТИМИЗАЦИЯ
+// КЕЙСЫ - АДАПТИВНАЯ ОПТИМИЗАЦИЯ
 // ================================================================
 
 let currentCaseId = 1;
@@ -7023,6 +7023,46 @@ let caseCount = parseInt(localStorage.getItem('weregood_cases') || '0');
 let spinTimeout = null;
 let itemsCache = null;
 let itemWidthCache = null;
+
+// ===== ДЕТЕКЦИЯ ПРОИЗВОДИТЕЛЬНОСТИ =====
+const isLowEndDevice = (() => {
+    // Проверяем по navigator
+    if (navigator.deviceMemory && navigator.deviceMemory < 4) return true;
+    if (navigator.hardwareConcurrency && navigator.hardwareConcurrency < 4) return true;
+
+    // Проверяем по userAgent
+    const ua = navigator.userAgent.toLowerCase();
+    if (ua.includes('android') && !ua.includes('chrome')) return true;
+    if (ua.includes('iphone') && !ua.includes('safari')) return true;
+
+    return false;
+})();
+
+// ===== АДАПТИВНЫЕ НАСТРОЙКИ =====
+const PERFORMANCE_CONFIG = isLowEndDevice ? {
+    cycles: 50,        // Меньше элементов
+    duration: 10000,   // Короче анимация
+    extraCyclesMin: 20,
+    extraCyclesMax: 25,
+    itemGap: 10,
+    itemWidth: 110,
+    itemHeight: 130,
+    iconSize: 36,
+    fontSize: '0.6rem'
+} : {
+    cycles: 100,
+    duration: 12000,
+    extraCyclesMin: 25,
+    extraCyclesMax: 30,
+    itemGap: 12,
+    itemWidth: 122,
+    itemHeight: 150,
+    iconSize: 44,
+    fontSize: '0.7rem'
+};
+
+console.log(`📱 Устройство: ${isLowEndDevice ? 'Слабое' : 'Мощное'}`);
+console.log(`⚙️ Настройки:`, PERFORMANCE_CONFIG);
 
 const caseData = {
     1: {
@@ -7045,6 +7085,7 @@ function preloadImages(rewards) {
     rewards.forEach(reward => {
         const img = new Image();
         img.src = reward.icon;
+        img.loading = 'eager';
     });
 }
 
@@ -7086,24 +7127,30 @@ function renderSlotTrack(rewards) {
     const track = document.getElementById('caseSlotTrack');
     if (!track) return;
 
+    const config = PERFORMANCE_CONFIG;
+
     // Кэшируем HTML
     if (!itemsCache) {
         let html = '';
         for (let i = 0; i < rewards.length; i++) {
             const reward = rewards[i];
             html += `
-                <div class="case-slot-item rarity-${reward.rarity}" data-index="${i}">
-                    <img src="${reward.icon}" class="item-icon" alt="${reward.value}" loading="lazy" decoding="async">
-                    <span class="item-value">${reward.value}</span>
+                <div class="case-slot-item rarity-${reward.rarity}" data-index="${i}" style="
+                    width: ${config.itemWidth}px;
+                    height: ${config.itemHeight}px;
+                ">
+                    <img src="${reward.icon}" class="item-icon" alt="${reward.value}"
+                         loading="lazy" decoding="async" style="width: ${config.iconSize}px; height: ${config.iconSize}px;">
+                    <span class="item-value" style="font-size: ${config.fontSize};">${reward.value}</span>
                 </div>
             `;
         }
         itemsCache = html;
     }
 
-    // 100 клонов для бесконечной прокрутки
+    // Адаптивное количество клонов
     let finalHtml = '';
-    for (let cycle = 0; cycle < 100; cycle++) {
+    for (let cycle = 0; cycle < config.cycles; cycle++) {
         finalHtml += itemsCache;
     }
 
@@ -7134,14 +7181,14 @@ function updateCaseCount() {
     document.getElementById('caseCount').textContent = caseCount;
 }
 
-// ===== ПОЛУЧЕНИЕ ШИРИНЫ ЭЛЕМЕНТА (С КЭШИРОВАНИЕМ) =====
+// ===== ПОЛУЧЕНИЕ ШИРИНЫ ЭЛЕМЕНТА =====
 function getItemWidth() {
     if (itemWidthCache !== null) return itemWidthCache;
 
     const firstItem = document.querySelector('.case-slot-item');
-    if (!firstItem) return 122;
+    if (!firstItem) return PERFORMANCE_CONFIG.itemWidth + PERFORMANCE_CONFIG.itemGap;
 
-    itemWidthCache = firstItem.offsetWidth + 12;
+    itemWidthCache = firstItem.offsetWidth + PERFORMANCE_CONFIG.itemGap;
     return itemWidthCache;
 }
 
@@ -7206,7 +7253,9 @@ function spinCase() {
 
     const centerOffset = 3;
     const targetPosition = -(targetItemIndex - centerOffset) * itemWidth;
-    const extraCycles = 25 + Math.floor(Math.random() * 5);
+
+    const config = PERFORMANCE_CONFIG;
+    const extraCycles = config.extraCyclesMin + Math.floor(Math.random() * (config.extraCyclesMax - config.extraCyclesMin + 1));
     const extraOffset = extraCycles * itemsPerCycle * itemWidth;
     const finalPosition = targetPosition - extraOffset;
 
@@ -7216,7 +7265,7 @@ function spinCase() {
     track.style.willChange = 'transform';
     void track.offsetHeight;
 
-    const duration = 12000;
+    const duration = config.duration;
     track.style.transition = `transform ${duration}ms cubic-bezier(0.08, 0.82, 0.17, 1)`;
     track.style.transform = `translateX(${finalPosition}px)`;
 
