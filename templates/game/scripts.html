@@ -7014,14 +7014,13 @@ function translateElement(el, key) {
 setTimeout(loadLanguageSettings, 500);
 
     // ================================================================
-// КЕЙСЫ - БЕСКОНЕЧНАЯ ЛЕНТА (ФИКС)
+// КЕЙСЫ - КАЖДЫЙ СПИН С НУЛЯ
 // ================================================================
 
 let currentCaseId = 1;
 let isCaseSpinning = false;
 let caseCount = parseInt(localStorage.getItem('weregood_cases') || '0');
 let spinTimeout = null;
-let currentTrackPosition = 0;
 
 const caseData = {
     1: {
@@ -7059,7 +7058,6 @@ function openCase(caseId) {
     if (track) {
         track.style.transform = 'translateX(0px)';
         track.style.transition = 'none';
-        currentTrackPosition = 0;
         if (spinTimeout) {
             clearTimeout(spinTimeout);
             spinTimeout = null;
@@ -7070,12 +7068,12 @@ function openCase(caseId) {
     document.body.style.overflow = 'hidden';
 }
 
-// ===== РЕНДЕР ТРЕКА (С КЛОНИРОВАНИЕМ) =====
+// ===== РЕНДЕР ТРЕКА =====
 function renderSlotTrack(rewards) {
     const track = document.getElementById('caseSlotTrack');
     if (!track) return;
 
-    // Создаём базовый набор элементов
+    // 50 клонов базового набора
     let html = '';
     for (let i = 0; i < rewards.length; i++) {
         const reward = rewards[i];
@@ -7087,7 +7085,6 @@ function renderSlotTrack(rewards) {
         `;
     }
 
-    // Клонируем 50 раз для бесконечной прокрутки
     let finalHtml = '';
     for (let cycle = 0; cycle < 50; cycle++) {
         finalHtml += html;
@@ -7126,7 +7123,7 @@ function getItemWidth() {
     return firstItem.offsetWidth + 14;
 }
 
-// ===== ВРАЩЕНИЕ =====
+// ===== ВРАЩЕНИЕ (ВСЕГДА С НУЛЯ) =====
 function spinCase() {
     if (isCaseSpinning) return;
 
@@ -7162,11 +7159,10 @@ function spinCase() {
     // Выбор выигрыша
     const winIndex = Math.floor(Math.random() * caseInfo.rewards.length);
 
-    // Ищем элемент в середине ленты (чтобы было куда крутиться)
+    // Ищем элемент в середине ленты
     const middleIndex = Math.floor(totalItems / 2);
     let targetItemIndex = -1;
 
-    // Ищем элемент с нужным индексом ближе к середине
     for (let i = middleIndex; i < totalItems; i++) {
         const idx = parseInt(items[i].dataset.index);
         if (idx === winIndex) {
@@ -7192,22 +7188,19 @@ function spinCase() {
     const centerOffset = 3;
     const targetPosition = -(targetItemIndex - centerOffset) * itemWidth;
 
-    // 20-25 оборотов для 12 секунд
-    const extraCycles = 20 + Math.floor(Math.random() * 5);
+    // 25-30 оборотов
+    const extraCycles = 25 + Math.floor(Math.random() * 5);
     const extraOffset = extraCycles * itemsPerCycle * itemWidth;
     const finalPosition = targetPosition - extraOffset;
 
-    // ЗАПУСК АНИМАЦИИ
+    // ===== ВСЕГДА НАЧИНАЕМ С 0 =====
     track.style.transition = 'none';
-    track.style.transform = `translateX(${currentTrackPosition}px)`;
+    track.style.transform = 'translateX(0px)';
     void track.offsetHeight;
 
     const duration = 12000;
     track.style.transition = `transform ${duration}ms cubic-bezier(0.08, 0.82, 0.17, 1)`;
     track.style.transform = `translateX(${finalPosition}px)`;
-
-    // Сохраняем позицию
-    currentTrackPosition = finalPosition;
 
     triggerHaptic('medium');
 
@@ -7382,7 +7375,6 @@ function closeCase() {
         if (track) {
             track.style.transition = 'none';
             track.style.transform = 'translateX(0px)';
-            currentTrackPosition = 0;
             track.querySelectorAll('.case-slot-item').forEach(el => {
                 el.classList.remove('active', 'bounce');
             });
