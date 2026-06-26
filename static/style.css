@@ -6946,7 +6946,7 @@ body.light-theme .star-upgrade-card {
     }
 }
 /* ============================================================
-   КЕЙСЫ - НОВЫЙ ДИЗАЙН
+   КЕЙСЫ - МИНИМАЛИСТИЧНЫЙ ДИЗАЙН
    ============================================================ */
 
 /* ===== ЗАГОЛОВОК ===== */
@@ -6954,48 +6954,41 @@ body.light-theme .star-upgrade-card {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 4px 0 16px;
-    margin-bottom: 16px;
-    border-bottom: 1px solid rgba(255, 215, 0, 0.06);
+    padding: 4px 0 14px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .cases-header-left {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
 }
 
 .cases-header-icon {
-    font-size: 1.8rem;
+    font-size: 1.4rem;
     line-height: 1;
 }
 
 .cases-header-title {
-    font-size: 1.1rem;
-    font-weight: 800;
-    background: linear-gradient(135deg, #FFD700, #FF8C00);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    margin: 0;
-    letter-spacing: 0.3px;
-}
-
-.cases-header-sub {
-    font-size: 0.6rem;
-    color: rgba(255, 255, 255, 0.2);
-    margin: 0;
-    letter-spacing: 0.3px;
-}
-
-.cases-badge {
-    font-size: 0.5rem;
+    font-size: 1rem;
     font-weight: 700;
-    color: rgba(255, 215, 0, 0.15);
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    border: 1px solid rgba(255, 215, 0, 0.05);
-    padding: 3px 10px;
+    color: #fff;
+    margin: 0;
+    letter-spacing: 0.3px;
+}
+
+.cases-header-right {
+    display: flex;
+    align-items: center;
+}
+
+.cases-count {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.04);
+    padding: 2px 12px;
     border-radius: 30px;
 }
 
@@ -7003,45 +6996,35 @@ body.light-theme .star-upgrade-card {
 .cases-list {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    margin-bottom: 18px;
+    gap: 8px;
 }
 
 /* ===== КАРТОЧКА КЕЙСА ===== */
 .case-item {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 14px 16px;
+    gap: 14px;
+    padding: 12px 14px;
     background: rgba(255, 255, 255, 0.02);
-    border-radius: 16px;
+    border-radius: 14px;
     border: 1px solid rgba(255, 255, 255, 0.04);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.15s ease;
 }
 
 .case-item:active {
     transform: scale(0.97);
     background: rgba(255, 215, 0, 0.04);
-}
-
-.case-item-left {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    flex: 1;
-    min-width: 0;
+    border-color: rgba(255, 215, 0, 0.08);
 }
 
 .case-item-icon {
-    font-size: 2rem;
-    width: 44px;
-    height: 44px;
+    font-size: 1.8rem;
+    width: 40px;
+    height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: 12px;
     flex-shrink: 0;
 }
 
@@ -7051,91 +7034,47 @@ body.light-theme .star-upgrade-card {
 }
 
 .case-item-name {
-    font-size: 0.9rem;
-    font-weight: 700;
+    font-size: 0.85rem;
+    font-weight: 600;
     color: #fff;
-    margin-bottom: 2px;
+    line-height: 1.2;
 }
 
 .case-item-desc {
     font-size: 0.6rem;
-    color: rgba(255, 255, 255, 0.3);
-}
-
-.case-item-right {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-shrink: 0;
+    color: rgba(255, 255, 255, 0.25);
+    margin-top: 1px;
 }
 
 .case-item-price {
     font-size: 0.8rem;
-    font-weight: 700;
+    font-weight: 600;
     color: #FFD700;
+    white-space: nowrap;
 }
 
 .case-item-arrow {
-    font-size: 0.9rem;
-    color: rgba(255, 255, 255, 0.15);
+    font-size: 1.2rem;
+    color: rgba(255, 255, 255, 0.1);
     transition: transform 0.2s ease;
+    line-height: 1;
 }
 
 .case-item:active .case-item-arrow {
     transform: translateX(4px);
-}
-
-/* ===== ИНФО БЛОК ===== */
-.cases-info-block {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 24px;
-    padding: 12px 16px;
-    background: rgba(255, 255, 255, 0.02);
-    border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.03);
-}
-
-.cases-info-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.cases-info-item .info-icon {
-    font-size: 1rem;
-    opacity: 0.4;
-}
-
-.cases-info-item .info-label {
-    font-size: 0.5rem;
-    color: rgba(255, 255, 255, 0.2);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.cases-info-item .info-value {
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: #FFD700;
-}
-
-.cases-info-divider {
-    width: 1px;
-    height: 24px;
-    background: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 215, 0, 0.3);
 }
 
 /* ===== АДАПТАЦИЯ ===== */
 @media (max-width: 480px) {
     .case-item {
-        padding: 12px 14px;
+        padding: 10px 12px;
+        gap: 12px;
     }
     .case-item-icon {
-        width: 36px;
-        height: 36px;
-        font-size: 1.6rem;
+        font-size: 1.5rem;
+        width: 34px;
+        height: 34px;
     }
     .case-item-name {
         font-size: 0.8rem;
@@ -7143,15 +7082,10 @@ body.light-theme .star-upgrade-card {
     .case-item-price {
         font-size: 0.7rem;
     }
-    .cases-info-block {
-        gap: 16px;
-        padding: 10px 14px;
-        flex-wrap: wrap;
-    }
     .cases-header-title {
-        font-size: 0.95rem;
+        font-size: 0.9rem;
     }
     .cases-header-icon {
-        font-size: 1.5rem;
+        font-size: 1.2rem;
     }
 }

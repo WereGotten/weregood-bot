@@ -292,7 +292,7 @@
     </div> <!-- shopStars -->
 
     <!-- ============================================================
-     КЕЙСЫ - НОВЫЙ ДИЗАЙН
+     КЕЙСЫ - МИНИМАЛИСТИЧНЫЙ ДИЗАЙН
      ============================================================ -->
 <div id="shopCases" class="shop-pane">
     <!-- Обычные игроки видят "В разработке" -->
@@ -316,95 +316,24 @@
         <div class="cases-header">
             <div class="cases-header-left">
                 <span class="cases-header-icon">🎰</span>
-                <div>
-                    <h2 class="cases-header-title">Кейсы</h2>
-                    <p class="cases-header-sub">Открой свой lucky-кейс!</p>
-                </div>
+                <span class="cases-header-title">Кейсы</span>
             </div>
             <div class="cases-header-right">
-                <span class="cases-badge">✦ PREMIUM</span>
+                <span class="cases-count" id="caseCountMain">0</span>
             </div>
         </div>
 
         <!-- СПИСОК КЕЙСОВ -->
         <div class="cases-list">
-            <!-- Кейс 1: Обычный -->
+            <!-- Обычный кейс -->
             <div class="case-item" onclick="openCase(1)">
-                <div class="case-item-left">
-                    <div class="case-item-icon">📦</div>
-                    <div class="case-item-info">
-                        <div class="case-item-name">Обычный кейс</div>
-                        <div class="case-item-desc">7 наград • от обычных до легендарных</div>
-                    </div>
+                <div class="case-item-icon">📦</div>
+                <div class="case-item-info">
+                    <div class="case-item-name">Обычный кейс</div>
+                    <div class="case-item-desc">7 наград</div>
                 </div>
-                <div class="case-item-right">
-                    <div class="case-item-price">500 WG</div>
-                    <div class="case-item-arrow">→</div>
-                </div>
-            </div>
-
-            <!-- Кейс 2: Редкий -->
-            <div class="case-item" onclick="openCase(2)">
-                <div class="case-item-left">
-                    <div class="case-item-icon">🎁</div>
-                    <div class="case-item-info">
-                        <div class="case-item-name">Редкий кейс</div>
-                        <div class="case-item-desc">7 наград • улучшенный дроп</div>
-                    </div>
-                </div>
-                <div class="case-item-right">
-                    <div class="case-item-price">1 000 WG</div>
-                    <div class="case-item-arrow">→</div>
-                </div>
-            </div>
-
-            <!-- Кейс 3: Легендарный -->
-            <div class="case-item" onclick="openCase(3)">
-                <div class="case-item-left">
-                    <div class="case-item-icon">💎</div>
-                    <div class="case-item-info">
-                        <div class="case-item-name">Легендарный кейс</div>
-                        <div class="case-item-desc">7 наград • высокий шанс на легендарку</div>
-                    </div>
-                </div>
-                <div class="case-item-right">
-                    <div class="case-item-price">2 500 WG</div>
-                    <div class="case-item-arrow">→</div>
-                </div>
-            </div>
-
-            <!-- Кейс 4: Королевский -->
-            <div class="case-item" onclick="openCase(4)">
-                <div class="case-item-left">
-                    <div class="case-item-icon">👑</div>
-                    <div class="case-item-info">
-                        <div class="case-item-name">Королевский кейс</div>
-                        <div class="case-item-desc">7 наград • эксклюзивные призы</div>
-                    </div>
-                </div>
-                <div class="case-item-right">
-                    <div class="case-item-price">5 000 WG</div>
-                    <div class="case-item-arrow">→</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ИНФО БЛОК -->
-        <div class="cases-info-block">
-            <div class="cases-info-item">
-                <span class="info-icon">🎫</span>
-                <div>
-                    <div class="info-label">Доступно кейсов</div>
-                    <div class="info-value" id="caseCountMain">0</div>
-                </div>
-            </div>
-            <div class="cases-info-divider"></div>
-            <div class="cases-info-item">
-                <span class="info-icon">💰</span>
-                <div>
-                    <div class="info-label">Мин. цена</div>
-                    <div class="info-value">500 WG</div>
-                    </div>
+                <div class="case-item-price">500 WG</div>
+                <div class="case-item-arrow">›</div>
                 </div>
             </div>
         </div>
