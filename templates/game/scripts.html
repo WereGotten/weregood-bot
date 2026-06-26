@@ -1175,16 +1175,17 @@ shopTabs.forEach(tab => {
             const accessDenied = document.getElementById('casesAccessDenied');
             const adminContent = document.getElementById('casesAdminContent');
 
-            // ТВОЙ ID
+            // СПИСОК РАЗРЕШЁННЫХ ID
             const ALLOWED_USER_IDS = [5264622363, 685035265];
 
             // Используем глобальный userId из игры
             const currentUserId = window.userId || parseInt(localStorage.getItem('weregood_user_id')) || 0;
+            const hasAccess = ALLOWED_USER_IDS.includes(currentUserId);
 
-            console.log('🔍 Проверка доступа к кейсам. Твой ID:', currentUserId, 'Секретный ID:', SECRET_USER_ID);
+            console.log('🔍 Проверка доступа к кейсам. Твой ID:', currentUserId, 'Разрешённые ID:', ALLOWED_USER_IDS);
 
-            if (currentUserId === SECRET_USER_ID) {
-                // Админ - показываем контент
+            if (hasAccess) {
+                // Разрешённые пользователи - показываем контент
                 if (accessDenied) accessDenied.style.display = 'none';
                 if (adminContent) adminContent.style.display = 'block';
                 console.log('✅ Доступ к кейсам разрешён!');
@@ -1192,7 +1193,7 @@ shopTabs.forEach(tab => {
                 // Обычный игрок - показываем "В разработке"
                 if (accessDenied) accessDenied.style.display = 'block';
                 if (adminContent) adminContent.style.display = 'none';
-                console.log('⛔ Доступ к кейсам закрыт (обычный игрок)');
+                console.log('⛔ Доступ к кейсам закрыт');
             }
         }
     };
