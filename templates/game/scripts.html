@@ -7014,7 +7014,7 @@ function translateElement(el, key) {
 setTimeout(loadLanguageSettings, 500);
 
     // ================================================================
-// КЕЙСЫ - КАЖДЫЙ СПИН С НУЛЯ
+// КЕЙСЫ - ОГРОМНЫЙ ЗАПАС ЭЛЕМЕНТОВ
 // ================================================================
 
 let currentCaseId = 1;
@@ -7068,12 +7068,12 @@ function openCase(caseId) {
     document.body.style.overflow = 'hidden';
 }
 
-// ===== РЕНДЕР ТРЕКА =====
+// ===== РЕНДЕР ТРЕКА (100 КЛОНОВ) =====
 function renderSlotTrack(rewards) {
     const track = document.getElementById('caseSlotTrack');
     if (!track) return;
 
-    // 50 клонов базового набора
+    // Создаём базовый набор
     let html = '';
     for (let i = 0; i < rewards.length; i++) {
         const reward = rewards[i];
@@ -7085,8 +7085,9 @@ function renderSlotTrack(rewards) {
         `;
     }
 
+    // 100 КЛОНОВ = 700 ЭЛЕМЕНТОВ
     let finalHtml = '';
-    for (let cycle = 0; cycle < 50; cycle++) {
+    for (let cycle = 0; cycle < 100; cycle++) {
         finalHtml += html;
     }
 
@@ -7123,7 +7124,7 @@ function getItemWidth() {
     return firstItem.offsetWidth + 14;
 }
 
-// ===== ВРАЩЕНИЕ (ВСЕГДА С НУЛЯ) =====
+// ===== ВРАЩЕНИЕ =====
 function spinCase() {
     if (isCaseSpinning) return;
 
@@ -7193,7 +7194,7 @@ function spinCase() {
     const extraOffset = extraCycles * itemsPerCycle * itemWidth;
     const finalPosition = targetPosition - extraOffset;
 
-    // ===== ВСЕГДА НАЧИНАЕМ С 0 =====
+    // ЗАПУСК
     track.style.transition = 'none';
     track.style.transform = 'translateX(0px)';
     void track.offsetHeight;
@@ -7206,7 +7207,6 @@ function spinCase() {
 
     // ЗАВЕРШЕНИЕ
     const finishSpin = () => {
-        // Находим элемент в центре
         const containerRect = track.parentElement.getBoundingClientRect();
         const center = containerRect.left + containerRect.width / 2;
         let closestItem = null;
