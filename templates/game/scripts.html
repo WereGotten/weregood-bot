@@ -7014,7 +7014,7 @@ function translateElement(el, key) {
 setTimeout(loadLanguageSettings, 500);
 
     // ================================================================
-// КЕЙСЫ - ПЛАВНЫЙ СТАРТ И ФИНИШ
+// КЕЙСЫ - ПОЛНАЯ ВЕРСИЯ С НОВЫМИ НАГРАДАМИ И ШАНСАМИ
 // ================================================================
 
 let currentCaseId = 1;
@@ -7059,21 +7059,48 @@ const PERFORMANCE_CONFIG = isLowEndDevice ? {
 
 console.log(`📱 Устройство: ${isLowEndDevice ? 'Слабое' : 'Мощное'}`);
 
+// ===== ДАННЫЕ КЕЙСА С НОВЫМИ НАГРАДАМИ =====
 const caseData = {
     1: {
         name: 'Обычный кейс',
-        price: 500,
+        price: 10000,
         rewards: [
-            { icon: '/static/wallet.png', value: '10 WG', rarity: 'common' },
-            { icon: '/static/lightning.png', value: '+30 энергии', rarity: 'common' },
-            { icon: '/static/ticket.png', value: 'Билет', rarity: 'rare' },
-            { icon: '/static/trophy.png', value: 'Улучшение', rarity: 'rare' },
-            { icon: '/static/wallet.png', value: '500 WG', rarity: 'epic' },
-            { icon: '/static/diamond.png', value: '50 LP', rarity: 'epic' },
-            { icon: '/static/diamond.png', value: '100 LP', rarity: 'legendary' }
+            // ===== COMMON (81%) =====
+            { icon: '/static/wallet.png', value: '2 000 WG', rarity: 'common', weight: 35 },
+            { icon: '/static/wallet.png', value: '5 000 WG', rarity: 'common', weight: 22 },
+            { icon: '/static/wallet.png', value: '10 000 WG', rarity: 'common', weight: 14 },
+            { icon: '/static/star_icon.png', value: 'Улучшение Новичок', rarity: 'common', weight: 10 },
+
+            // ===== RARE (13%) =====
+            { icon: '/static/lightning.png', value: '+3 лимита энергии', rarity: 'rare', weight: 6 },
+            { icon: '/static/lightning.png', value: '+5 лимита энергии', rarity: 'rare', weight: 4 },
+            { icon: '/static/diamond_icon.png', value: 'Улучшение Опытный', rarity: 'rare', weight: 3 },
+
+            // ===== EPIC (5.25%) =====
+            { icon: '/static/diamond.png', value: '10 LP Coin', rarity: 'epic', weight: 2 },
+            { icon: '/static/wallet.png', value: '30 000 WG', rarity: 'epic', weight: 1.5 },
+            { icon: '/static/lightning.png', value: '+10 лимита энергии', rarity: 'epic', weight: 1 },
+            { icon: '/static/crown_icon.png', value: 'Улучшение Мастер', rarity: 'epic', weight: 0.75 },
+
+            // ===== LEGENDARY (0.75%) =====
+            { icon: '/static/diamond.png', value: '50 LP Coin', rarity: 'legendary', weight: 0.75 }
         ]
     }
 };
+
+// ===== ФУНКЦИЯ ВЫБОРА С УЧЁТОМ ВЕСОВ =====
+function getWeightedRandom(rewards) {
+    const totalWeight = rewards.reduce((sum, r) => sum + r.weight, 0);
+    let random = Math.random() * totalWeight;
+
+    for (let i = 0; i < rewards.length; i++) {
+        random -= rewards[i].weight;
+        if (random <= 0) {
+            return i;
+        }
+    }
+    return rewards.length - 1;
+}
 
 // ===== ПРЕДЗАГРУЗКА ИЗОБРАЖЕНИЙ =====
 function preloadImages(rewards) {
@@ -7218,7 +7245,8 @@ function spinCase() {
     const itemsPerCycle = caseInfo.rewards.length;
     const totalItems = items.length;
 
-    const winIndex = Math.floor(Math.random() * caseInfo.rewards.length);
+    // ===== ВЫБОР НАГРАДЫ С УЧЁТОМ ВЕСОВ =====
+    const winIndex = getWeightedRandom(caseInfo.rewards);
 
     const middleIndex = Math.floor(totalItems / 2);
     let targetItemIndex = -1;
@@ -7252,27 +7280,21 @@ function spinCase() {
     const finalPosition = targetPosition - extraOffset;
 
     // ===== ПЛАВНЫЙ СТАРТ =====
-    // Сначала делаем небольшую задержку, чтобы элементы успели отрендериться
     const startDelay = isFirstSpin ? 150 : 50;
     isFirstSpin = false;
 
     setTimeout(() => {
-        // Запуск с 0
         track.style.transition = 'none';
         track.style.transform = 'translateX(0px)';
         track.style.willChange = 'transform';
         void track.offsetHeight;
 
-        // ===== ПЛАВНЫЙ ФИНИШ С ИНТРИГОЙ =====
-        // Используем кастомную кривую Безье для медленного завершения
-        // cubic-bezier(0.08, 0.82, 0.17, 1) - даёт интригующее замедление в конце
         const duration = config.duration;
         track.style.transition = `transform ${duration}ms cubic-bezier(0.08, 0.82, 0.17, 1)`;
         track.style.transform = `translateX(${finalPosition}px)`;
 
         triggerHaptic('medium');
 
-        // ===== ФИНАЛ =====
         const finishSpin = () => {
             const containerRect = track.parentElement.getBoundingClientRect();
             const center = containerRect.left + containerRect.width / 2;
@@ -7311,9 +7333,15 @@ function spinCase() {
 
                 triggerHaptic('heavy');
 
+                // Показываем тост с выигрышем
+                const rewardValue = winReward.value;
                 setTimeout(() => {
-                    showToast(`🎉 Вы выиграли: ${winReward.value}!`, 'success');
+                    showToast(`🎉 Вы выиграли: ${rewardValue}!`, 'success');
                 }, 300);
+
+                // ===== НАЧИСЛЕНИЕ НАГРАДЫ НА СЕРВЕРЕ =====
+                // Здесь будет запрос к серверу для начисления награды
+                // claimCaseReward(currentCaseId, winIndex);
 
                 caseCount--;
                 localStorage.setItem('weregood_cases', caseCount.toString());
