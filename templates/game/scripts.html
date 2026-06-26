@@ -7014,7 +7014,7 @@ function translateElement(el, key) {
 setTimeout(loadLanguageSettings, 500);
 
     // ================================================================
-// КЕЙСЫ - МАКСИМАЛЬНО ПРОСТАЯ И СТАБИЛЬНАЯ ВЕРСИЯ
+// КЕЙСЫ - ПРОСТАЯ И СТАБИЛЬНАЯ ВЕРСИЯ (12 СЕКУНД)
 // ================================================================
 
 let currentCaseId = 1;
@@ -7068,13 +7068,12 @@ function openCase(caseId) {
     document.body.style.overflow = 'hidden';
 }
 
-// ===== РЕНДЕР ТРЕКА =====
+// ===== РЕНДЕР ТРЕКА (70 ЦИКЛОВ = 490 ЭЛЕМЕНТОВ) =====
 function renderSlotTrack(rewards) {
     const track = document.getElementById('caseSlotTrack');
     if (!track) return;
 
-    // 100 циклов = 700 элементов - ОГРОМНЫЙ ЗАПАС
-    const cycles = 100;
+    const cycles = 70;
     let html = '';
 
     for (let cycle = 0; cycle < cycles; cycle++) {
@@ -7121,7 +7120,7 @@ function getItemWidth() {
     return firstItem.offsetWidth + 14;
 }
 
-// ===== ВРАЩЕНИЕ =====
+// ===== ВРАЩЕНИЕ (12 СЕКУНД) =====
 function spinCase() {
     if (isCaseSpinning) return;
 
@@ -7154,10 +7153,11 @@ function spinCase() {
     const itemsPerCycle = caseInfo.rewards.length;
     const totalItems = items.length;
 
+    // Выбор выигрыша
     const winIndex = Math.floor(Math.random() * caseInfo.rewards.length);
 
-    // Ищем элемент в конце ленты (последние 5 циклов)
-    const lastCycle = Math.floor(totalItems / itemsPerCycle) - 5;
+    // Ищем элемент в конце ленты
+    const lastCycle = Math.floor(totalItems / itemsPerCycle) - 3;
     let targetItemIndex = -1;
 
     for (let i = 0; i < totalItems; i++) {
@@ -7177,8 +7177,8 @@ function spinCase() {
     const centerOffset = 3;
     const targetPosition = -(targetItemIndex - centerOffset) * itemWidth;
 
-    // 40-50 оборотов
-    const extraCycles = 40 + Math.floor(Math.random() * 10);
+    // 30-35 оборотов для 12 секунд
+    const extraCycles = 30 + Math.floor(Math.random() * 5);
     const extraOffset = extraCycles * itemsPerCycle * itemWidth;
     const finalPosition = targetPosition - extraOffset;
 
@@ -7186,12 +7186,13 @@ function spinCase() {
     const currentTransform = track.style.transform || 'translateX(0px)';
     const currentX = parseInt(currentTransform.replace('translateX(', '').replace('px)', '')) || 0;
 
-    // ЗАПУСК
+    // ЗАПУСК АНИМАЦИИ
     track.style.transition = 'none';
     track.style.transform = `translateX(${currentX}px)`;
     void track.offsetHeight;
 
-    const duration = 14000 + Math.random() * 2000;
+    // 12 секунд
+    const duration = 12000;
     track.style.transition = `transform ${duration}ms cubic-bezier(0.08, 0.82, 0.17, 1)`;
     track.style.transform = `translateX(${finalPosition}px)`;
 
