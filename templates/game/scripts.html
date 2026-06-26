@@ -7073,8 +7073,10 @@ function renderSlotTrack(rewards) {
     const track = document.getElementById('caseSlotTrack');
     if (!track) return;
 
-    // 30 циклов для длинной ленты
-    const cycles = 30;
+    // ===== ГЛАВНОЕ: ОГРОМНОЕ КОЛИЧЕСТВО ПОВТОРЕНИЙ =====
+    // 50 циклов = 50 * 7 = 350 элементов
+    // Этого хватит на 30+ секунд прокрутки
+    const cycles = 60;
     let html = '';
 
     for (let cycle = 0; cycle < cycles; cycle++) {
@@ -7121,7 +7123,7 @@ function getItemWidth() {
     return firstItem.offsetWidth + 14;
 }
 
-// ===== ВРАЩЕНИЕ (ЧИСТАЯ ПЛАВНОСТЬ) =====
+// ===== ВРАЩЕНИЕ (ФИКС) =====
 function spinCase() {
     if (isCaseSpinning) return;
 
@@ -7146,7 +7148,6 @@ function spinCase() {
     spinBtn.disabled = true;
     spinBtn.querySelector('.btn-text').textContent = 'ВРАЩЕНИЕ...';
 
-    // Убираем подсветку
     document.querySelectorAll('.case-reward-card').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.case-slot-item').forEach(el => el.classList.remove('active'));
 
@@ -7158,7 +7159,7 @@ function spinCase() {
     // Выбираем случайный выигрыш
     const winIndex = Math.floor(Math.random() * caseInfo.rewards.length);
 
-    // Находим элемент в середине ленты
+    // ===== ИЩЕМ ЭЛЕМЕНТ В СЕРЕДИНЕ ЛЕНТЫ =====
     const middleCycle = Math.floor(totalItems / itemsPerCycle / 2);
     let targetItemIndex = -1;
 
@@ -7185,12 +7186,13 @@ function spinCase() {
         targetItemIndex = Math.floor(totalItems / 2);
     }
 
-    // Центр = 3
+    // Центр = 3 (при 7 видимых элементах)
     const centerOffset = 3;
     const targetPosition = -(targetItemIndex - centerOffset) * itemWidth;
 
-    // Обороты для длительности (18-26 оборотов)
-    const extraCycles = 18 + Math.floor(Math.random() * 8);
+    // ===== ГЛАВНОЕ: ДОБАВЛЯЕМ ОГРОМНОЕ КОЛИЧЕСТВО ОБОРОТОВ =====
+    // 25-35 оборотов для 12-15 секунд анимации
+    const extraCycles = 25 + Math.floor(Math.random() * 10);
     const extraOffset = extraCycles * itemsPerCycle * itemWidth;
     const finalPosition = targetPosition - extraOffset;
 
@@ -7198,15 +7200,12 @@ function spinCase() {
     const currentTransform = track.style.transform || 'translateX(0px)';
     const currentX = parseInt(currentTransform.replace('translateX(', '').replace('px)', '')) || 0;
 
-    // ===== ГЛАВНАЯ ХИТРОСТЬ: ДВА ЭТАПА =====
-    // 1. Мгновенный сброс на текущую позицию
+    // ===== ЗАПУСК АНИМАЦИИ =====
     track.style.transition = 'none';
     track.style.transform = `translateX(${currentX}px)`;
 
-    // Форсируем reflow
     void track.offsetHeight;
 
-    // 2. Плавный переход к финальной позиции
     const duration = 12000 + Math.random() * 3000;
     track.style.transition = `transform ${duration}ms cubic-bezier(0.08, 0.82, 0.17, 1)`;
     track.style.transform = `translateX(${finalPosition}px)`;
@@ -7215,7 +7214,6 @@ function spinCase() {
 
     // ===== ЗАВЕРШЕНИЕ =====
     const finishSpin = () => {
-        // Находим элемент в центре
         const containerRect = track.parentElement.getBoundingClientRect();
         const center = containerRect.left + containerRect.width / 2;
         let closestItem = null;
@@ -7232,7 +7230,6 @@ function spinCase() {
         });
 
         if (closestItem) {
-            // Байт (подпрыгивание)
             closestItem.classList.add('bounce');
             setTimeout(() => {
                 closestItem.classList.remove('bounce');
@@ -7242,7 +7239,6 @@ function spinCase() {
             const winIndex = parseInt(closestItem.dataset.index);
             const winReward = caseInfo.rewards[winIndex];
 
-            // Подсветка карточки
             const rewardCards = document.querySelectorAll('.case-reward-card');
             rewardCards.forEach((el, idx) => {
                 if (idx === winIndex) {
