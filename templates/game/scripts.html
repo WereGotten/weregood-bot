@@ -7014,7 +7014,7 @@ function translateElement(el, key) {
 setTimeout(loadLanguageSettings, 500);
 
     // ================================================================
-// КЕЙСЫ - АДАПТИВНАЯ ОПТИМИЗАЦИЯ
+// КЕЙСЫ - ПЛАВНЫЙ СТАРТ И ФИНИШ
 // ================================================================
 
 let currentCaseId = 1;
@@ -7023,27 +7023,23 @@ let caseCount = parseInt(localStorage.getItem('weregood_cases') || '0');
 let spinTimeout = null;
 let itemsCache = null;
 let itemWidthCache = null;
+let isFirstSpin = true;
 
 // ===== ДЕТЕКЦИЯ ПРОИЗВОДИТЕЛЬНОСТИ =====
 const isLowEndDevice = (() => {
-    // Проверяем по navigator
     if (navigator.deviceMemory && navigator.deviceMemory < 4) return true;
     if (navigator.hardwareConcurrency && navigator.hardwareConcurrency < 4) return true;
-
-    // Проверяем по userAgent
     const ua = navigator.userAgent.toLowerCase();
     if (ua.includes('android') && !ua.includes('chrome')) return true;
     if (ua.includes('iphone') && !ua.includes('safari')) return true;
-
     return false;
 })();
 
-// ===== АДАПТИВНЫЕ НАСТРОЙКИ =====
 const PERFORMANCE_CONFIG = isLowEndDevice ? {
-    cycles: 50,        // Меньше элементов
-    duration: 10000,   // Короче анимация
-    extraCyclesMin: 20,
-    extraCyclesMax: 25,
+    cycles: 60,
+    duration: 10000,
+    extraCyclesMin: 22,
+    extraCyclesMax: 27,
     itemGap: 10,
     itemWidth: 110,
     itemHeight: 130,
@@ -7052,8 +7048,8 @@ const PERFORMANCE_CONFIG = isLowEndDevice ? {
 } : {
     cycles: 100,
     duration: 12000,
-    extraCyclesMin: 25,
-    extraCyclesMax: 30,
+    extraCyclesMin: 28,
+    extraCyclesMax: 33,
     itemGap: 12,
     itemWidth: 122,
     itemHeight: 150,
@@ -7062,7 +7058,6 @@ const PERFORMANCE_CONFIG = isLowEndDevice ? {
 };
 
 console.log(`📱 Устройство: ${isLowEndDevice ? 'Слабое' : 'Мощное'}`);
-console.log(`⚙️ Настройки:`, PERFORMANCE_CONFIG);
 
 const caseData = {
     1: {
@@ -7100,8 +7095,9 @@ function openCase(caseId) {
 
     document.getElementById('caseTitle').textContent = caseInfo.name;
     document.getElementById('casePriceDisplay').textContent = caseInfo.price;
+    document.getElementById('caseCount').textContent = caseCount;
+    document.getElementById('caseCountMain').textContent = caseCount;
 
-    // Предзагрузка изображений
     preloadImages(caseInfo.rewards);
 
     renderRewardsGrid(caseInfo.rewards);
@@ -7122,14 +7118,13 @@ function openCase(caseId) {
     document.body.style.overflow = 'hidden';
 }
 
-// ===== РЕНДЕР ТРЕКА (С КЭШИРОВАНИЕМ) =====
+// ===== РЕНДЕР ТРЕКА =====
 function renderSlotTrack(rewards) {
     const track = document.getElementById('caseSlotTrack');
     if (!track) return;
 
     const config = PERFORMANCE_CONFIG;
 
-    // Кэшируем HTML
     if (!itemsCache) {
         let html = '';
         for (let i = 0; i < rewards.length; i++) {
@@ -7148,7 +7143,6 @@ function renderSlotTrack(rewards) {
         itemsCache = html;
     }
 
-    // Адаптивное количество клонов
     let finalHtml = '';
     for (let cycle = 0; cycle < config.cycles; cycle++) {
         finalHtml += itemsCache;
@@ -7179,20 +7173,19 @@ function renderRewardsGrid(rewards) {
 function updateCaseCount() {
     caseCount = parseInt(localStorage.getItem('weregood_cases') || '0');
     document.getElementById('caseCount').textContent = caseCount;
+    document.getElementById('caseCountMain').textContent = caseCount;
 }
 
 // ===== ПОЛУЧЕНИЕ ШИРИНЫ ЭЛЕМЕНТА =====
 function getItemWidth() {
     if (itemWidthCache !== null) return itemWidthCache;
-
     const firstItem = document.querySelector('.case-slot-item');
     if (!firstItem) return PERFORMANCE_CONFIG.itemWidth + PERFORMANCE_CONFIG.itemGap;
-
     itemWidthCache = firstItem.offsetWidth + PERFORMANCE_CONFIG.itemGap;
     return itemWidthCache;
 }
 
-// ===== ВРАЩЕНИЕ =====
+// ===== ВРАЩЕНИЕ (ПЛАВНЫЙ СТАРТ + ФИНИШ) =====
 function spinCase() {
     if (isCaseSpinning) return;
 
@@ -7227,7 +7220,6 @@ function spinCase() {
 
     const winIndex = Math.floor(Math.random() * caseInfo.rewards.length);
 
-    // Ищем в середине
     const middleIndex = Math.floor(totalItems / 2);
     let targetItemIndex = -1;
 
@@ -7259,76 +7251,88 @@ function spinCase() {
     const extraOffset = extraCycles * itemsPerCycle * itemWidth;
     const finalPosition = targetPosition - extraOffset;
 
-    // Запуск с 0
-    track.style.transition = 'none';
-    track.style.transform = 'translateX(0px)';
-    track.style.willChange = 'transform';
-    void track.offsetHeight;
+    // ===== ПЛАВНЫЙ СТАРТ =====
+    // Сначала делаем небольшую задержку, чтобы элементы успели отрендериться
+    const startDelay = isFirstSpin ? 150 : 50;
+    isFirstSpin = false;
 
-    const duration = config.duration;
-    track.style.transition = `transform ${duration}ms cubic-bezier(0.08, 0.82, 0.17, 1)`;
-    track.style.transform = `translateX(${finalPosition}px)`;
+    setTimeout(() => {
+        // Запуск с 0
+        track.style.transition = 'none';
+        track.style.transform = 'translateX(0px)';
+        track.style.willChange = 'transform';
+        void track.offsetHeight;
 
-    triggerHaptic('medium');
+        // ===== ПЛАВНЫЙ ФИНИШ С ИНТРИГОЙ =====
+        // Используем кастомную кривую Безье для медленного завершения
+        // cubic-bezier(0.08, 0.82, 0.17, 1) - даёт интригующее замедление в конце
+        const duration = config.duration;
+        track.style.transition = `transform ${duration}ms cubic-bezier(0.08, 0.82, 0.17, 1)`;
+        track.style.transform = `translateX(${finalPosition}px)`;
 
-    const finishSpin = () => {
-        const containerRect = track.parentElement.getBoundingClientRect();
-        const center = containerRect.left + containerRect.width / 2;
-        let closestItem = null;
-        let closestDistance = Infinity;
+        triggerHaptic('medium');
 
-        const allItems = track.querySelectorAll('.case-slot-item');
-        for (let i = 0; i < allItems.length; i++) {
-            const el = allItems[i];
-            const elRect = el.getBoundingClientRect();
-            const elCenter = elRect.left + elRect.width / 2;
-            const distance = Math.abs(elCenter - center);
-            if (distance < closestDistance) {
-                closestDistance = distance;
-                closestItem = el;
-            }
-        }
+        // ===== ФИНАЛ =====
+        const finishSpin = () => {
+            const containerRect = track.parentElement.getBoundingClientRect();
+            const center = containerRect.left + containerRect.width / 2;
+            let closestItem = null;
+            let closestDistance = Infinity;
 
-        if (closestItem) {
-            const winIndex = parseInt(closestItem.dataset.index);
-            const winReward = caseInfo.rewards[winIndex];
-
-            closestItem.classList.add('bounce');
-            setTimeout(() => {
-                closestItem.classList.remove('bounce');
-            }, 500);
-
-            closestItem.classList.add('active');
-
-            const rewardCards = document.querySelectorAll('.case-reward-card');
-            for (let i = 0; i < rewardCards.length; i++) {
-                if (i === winIndex) {
-                    rewardCards[i].classList.add('active');
+            const allItems = track.querySelectorAll('.case-slot-item');
+            for (let i = 0; i < allItems.length; i++) {
+                const el = allItems[i];
+                const elRect = el.getBoundingClientRect();
+                const elCenter = elRect.left + elRect.width / 2;
+                const distance = Math.abs(elCenter - center);
+                if (distance < closestDistance) {
+                    closestDistance = distance;
+                    closestItem = el;
                 }
             }
 
-            triggerHaptic('heavy');
+            if (closestItem) {
+                const winIndex = parseInt(closestItem.dataset.index);
+                const winReward = caseInfo.rewards[winIndex];
+
+                closestItem.classList.add('bounce');
+                setTimeout(() => {
+                    closestItem.classList.remove('bounce');
+                }, 500);
+
+                closestItem.classList.add('active');
+
+                const rewardCards = document.querySelectorAll('.case-reward-card');
+                for (let i = 0; i < rewardCards.length; i++) {
+                    if (i === winIndex) {
+                        rewardCards[i].classList.add('active');
+                    }
+                }
+
+                triggerHaptic('heavy');
+
+                setTimeout(() => {
+                    showToast(`🎉 Вы выиграли: ${winReward.value}!`, 'success');
+                }, 300);
+
+                caseCount--;
+                localStorage.setItem('weregood_cases', caseCount.toString());
+                updateCaseCount();
+            }
+
+            isCaseSpinning = false;
+            spinBtn.disabled = false;
+            spinBtn.querySelector('.btn-text').textContent = 'ОТКРЫТЬ КЕЙС';
+            spinTimeout = null;
 
             setTimeout(() => {
-                showToast(`🎉 Вы выиграли: ${winReward.value}!`, 'success');
-            }, 300);
+                track.style.willChange = 'auto';
+            }, 1000);
+        };
 
-            caseCount--;
-            localStorage.setItem('weregood_cases', caseCount.toString());
-            updateCaseCount();
-        }
+        spinTimeout = setTimeout(finishSpin, duration + 500);
 
-        isCaseSpinning = false;
-        spinBtn.disabled = false;
-        spinBtn.querySelector('.btn-text').textContent = 'ОТКРЫТЬ КЕЙС';
-        spinTimeout = null;
-
-        setTimeout(() => {
-            track.style.willChange = 'auto';
-        }, 1000);
-    };
-
-    spinTimeout = setTimeout(finishSpin, duration + 500);
+    }, startDelay);
 }
 
 // ===== МОДАЛКА ПОКУПКИ =====
