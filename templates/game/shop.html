@@ -11,6 +11,10 @@
             <img src="/static/star_small.png" alt="Донат">
             <span data-lang="star_shop">Донат</span>
         </div>
+        <div class="shop-tab" data-shop-tab="cases">
+            <span style="font-size: 20px;">🎁</span>
+            <span>Кейсы</span>
+        </div>
     </div>
 
     <!-- ============================================================
@@ -130,7 +134,7 @@
     </div>
 
     <!-- ============================================================
-         ЗВЁЗДНЫЙ МАГАЗИН (ДОНАТ)
+         ЗВЁЗДНЫЙ МАГАЗИН
          ============================================================ -->
     <div id="shopStars" class="shop-pane">
         <!-- Баланс звёзд -->
@@ -159,106 +163,114 @@
             </div>
         </div>
 
-        <!-- ============================================================
-             КАРТОЧКИ ДОНАТА (БЕЗ КЕЙСОВ И БЕЗ МЕГА-ЗВЕЗДЫ)
-             ============================================================ -->
+        <!-- Карусель донатных карточек -->
+        <div style="position: relative; margin-bottom: 20px;">
+            <button class="carousel-prev" id="donateCarouselPrev">←</button>
+            <button class="carousel-next" id="donateCarouselNext">→</button>
 
-        <!-- КАРТОЧКА 1: ЭНЕРГЕТИЧЕСКИЙ УСИЛИТЕЛЬ -->
-        <div class="star-upgrade-card" id="energyUpgradeCard">
-            <div class="star-upgrade-header">
-                <div class="star-upgrade-icon">
-                    <img src="/static/lightning.png" alt="Энергия" style="width: 32px; height: 32px;">
-                </div>
-                <div class="star-upgrade-title">
-                    <h3 data-lang="energy_booster">Энергетический усилитель</h3>
-                    <p data-lang="energy_booster_desc">Увеличивает лимит энергии</p>
-                </div>
-            </div>
-            <div class="star-upgrade-price">
-                <img src="/static/star_small.png" alt="Stars" style="width: 16px; height: 16px;">
-                <span data-lang="stars_27">27 Stars</span>
-            </div>
-            <div class="star-upgrade-desc">
-                <div class="star-upgrade-desc-item">
-                    <div class="desc-icon">
-                        <img src="/static/lightning.png" alt="Энергия" style="width: 30px; height: 30px;">
-                    </div>
-                    <div class="desc-text" data-lang="energy_booster_reward">+40 к макс. энергии</div>
-                    <div class="desc-value" data-lang="forever">навсегда</div>
-                </div>
-                <div class="star-upgrade-desc-item">
-                    <div class="desc-icon">
-                        <img src="/static/diamond.png" alt="LP" style="width: 30px; height: 30px;">
-                    </div>
-                    <div class="desc-text" data-lang="lp_boost_reward">+50 LP</div>
-                    <div class="desc-value" data-lang="to_balance">на баланс</div>
-                </div>
-            </div>
-            <div class="star-upgrade-progress">
-                <div class="progress-info">
-                    <span><span data-lang="bought">Куплено</span>: <span id="energyUpgradeCountProgress">0</span>/15</span>
-                    <span data-lang="next_upgrade">Следующий: +40 ⚡ +50 LP</span>
-                </div>
-                <div class="progress-bar-bg">
-                    <div class="progress-bar-fill" id="energyUpgradeProgressFill" style="width: 0%;"></div>
-                </div>
-            </div>
-            <button class="star-upgrade-btn btn-stars" id="energyUpgradeBtn" onclick="buyEnergyUpgrade()">
-                <img src="/static/star_small.png" alt="Stars" style="width: 16px; height: 16px;">
-                <span data-lang="buy_stars_27">Купить за 27 звёзд</span>
-            </button>
-            <button class="star-upgrade-btn btn-ton" id="tonDonateBtn" onclick="buyWithTon()">
-                💎 <span data-lang="buy_ton_020">Купить за 0.20 TON</span>
-            </button>
-        </div>
+            <div class="donate-carousel-container">
+                <div class="donate-carousel-track" id="donateCarouselTrack">
 
-        <!-- КАРТОЧКА 2: LP БУСТЕР -->
-        <div class="star-upgrade-card" id="lpBoostCard">
-            <div class="star-upgrade-header">
-                <div class="star-upgrade-icon">
-                    <img src="/static/diamond.png" alt="LP" style="width: 44px; height: 44px;">
-                </div>
-                <div class="star-upgrade-title">
-                    <h3 data-lang="lp_boost">LP Бустер</h3>
-                    <p data-lang="lp_boost_desc">Пополняет баланс LP</p>
-                </div>
-            </div>
-            <div class="star-upgrade-price">
-                <img src="/static/star_small.png" alt="Stars" style="width: 16px; height: 16px;">
-                <span data-lang="stars_22">22 Stars</span>
-            </div>
-            <div class="star-upgrade-desc">
-                <div class="star-upgrade-desc-item">
-                    <div class="desc-icon">
-                        <img src="/static/diamond.png" alt="LP" style="width: 36px; height: 36px;">
+                    <!-- ===== КАРТОЧКА 1: ЭНЕРГЕТИЧЕСКИЙ УСИЛИТЕЛЬ ===== -->
+                    <div class="star-upgrade-card" id="energyUpgradeCard">
+                        <div class="star-upgrade-header">
+                            <div class="star-upgrade-icon">
+                                <img src="/static/lightning.png" alt="Энергия" style="width: 32px; height: 32px;">
+                            </div>
+                            <div class="star-upgrade-title">
+                                <h3 data-lang="energy_booster">Энергетический усилитель</h3>
+                                <p data-lang="energy_booster_desc">Увеличивает лимит энергии</p>
+                            </div>
+                        </div>
+                        <div class="star-upgrade-price">
+                            <img src="/static/star_small.png" alt="Stars" style="width: 16px; height: 16px;">
+                            <span data-lang="stars_27">27 Stars</span>
+                        </div>
+                        <div class="star-upgrade-desc">
+                            <div class="star-upgrade-desc-item">
+                                <div class="desc-icon">
+                                    <img src="/static/lightning.png" alt="Энергия" style="width: 30px; height: 30px;">
+                                </div>
+                                <div class="desc-text" data-lang="energy_booster_reward">+40 к макс. энергии</div>
+                                <div class="desc-value" data-lang="forever">навсегда</div>
+                            </div>
+                            <div class="star-upgrade-desc-item">
+                                <div class="desc-icon">
+                                    <img src="/static/diamond.png" alt="LP" style="width: 30px; height: 30px;">
+                                </div>
+                                <div class="desc-text" data-lang="lp_boost_reward">+50 LP</div>
+                                <div class="desc-value" data-lang="to_balance">на баланс</div>
+                            </div>
+                        </div>
+                        <div class="star-upgrade-progress">
+                            <div class="progress-info">
+                                <span><span data-lang="bought">Куплено</span>: <span id="energyUpgradeCountProgress">0</span>/15</span>
+                                <span data-lang="next_upgrade">Следующий: +40 ⚡ +50 LP</span>
+                            </div>
+                            <div class="progress-bar-bg">
+                                <div class="progress-bar-fill" id="energyUpgradeProgressFill" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                        <button class="star-upgrade-btn btn-stars" id="energyUpgradeBtn" onclick="buyEnergyUpgrade()">
+                            <img src="/static/star_small.png" alt="Stars" style="width: 16px; height: 16px;">
+                            <span data-lang="buy_stars_27">Купить за 27 звёзд</span>
+                        </button>
+                        <button class="star-upgrade-btn btn-ton" id="tonDonateBtn" onclick="buyWithTon()">
+                            💎 <span data-lang="buy_ton_020">Купить за 0.20 TON</span>
+                        </button>
                     </div>
-                    <div class="desc-text" data-lang="lp_boost_reward">+50 LP</div>
-                    <div class="desc-value" data-lang="to_balance">на баланс</div>
-                </div>
-                <div class="star-upgrade-desc-item">
-                    <div class="desc-icon">
-                        <img src="/static/withdraw.png" alt="Безлимит" style="width: 30px; height: 30px;">
+
+                    <!-- ===== КАРТОЧКА 2: LP БУСТЕР ===== -->
+                    <div class="star-upgrade-card" id="lpBoostCard">
+                        <div class="star-upgrade-header">
+                            <div class="star-upgrade-icon">
+                                <img src="/static/diamond.png" alt="LP" style="width: 44px; height: 44px;">
+                            </div>
+                            <div class="star-upgrade-title">
+                                <h3 data-lang="lp_boost">LP Бустер</h3>
+                                <p data-lang="lp_boost_desc">Пополняет баланс LP</p>
+                            </div>
+                        </div>
+                        <div class="star-upgrade-price">
+                            <img src="/static/star_small.png" alt="Stars" style="width: 16px; height: 16px;">
+                            <span data-lang="stars_22">22 Stars</span>
+                        </div>
+                        <div class="star-upgrade-desc">
+                            <div class="star-upgrade-desc-item">
+                                <div class="desc-icon">
+                                    <img src="/static/diamond.png" alt="LP" style="width: 36px; height: 36px;">
+                                </div>
+                                <div class="desc-text" data-lang="lp_boost_reward">+50 LP</div>
+                                <div class="desc-value" data-lang="to_balance">на баланс</div>
+                            </div>
+                            <div class="star-upgrade-desc-item">
+                                <div class="desc-icon">
+                                    <img src="/static/withdraw.png" alt="Безлимит" style="width: 30px; height: 30px;">
+                                </div>
+                                <div class="desc-text" data-lang="unlimited_purchase">Безлимитная покупка</div>
+                                <div class="desc-value" data-lang="buy_anytime">покупай сколько хочешь</div>
+                            </div>
+                        </div>
+                        <div class="star-upgrade-progress">
+                            <div class="progress-info">
+                                <span><span data-lang="bought">Куплено</span>: <span id="lpBoostPurchaseCount">0</span> <span data-lang="times">раз</span></span>
+                                <span data-lang="instant_credit">Мгновенное зачисление</span>
+                            </div>
+                            <div class="progress-bar-bg">
+                                <div class="progress-bar-fill" style="width: 100%; background: linear-gradient(90deg, #FFD700, #FFA500);"></div>
+                            </div>
+                        </div>
+                        <button class="star-upgrade-btn btn-stars" id="lpBoostStarsBtn" onclick="buyLPBoostStars()">
+                            <img src="/static/star_small.png" alt="Stars" style="width: 16px; height: 16px;">
+                            <span data-lang="buy_stars_22">Купить за 22 звёзд</span>
+                        </button>
+                        <button class="star-upgrade-btn btn-ton" id="lpBoostTonBtn" onclick="buyLPBoostTon()">
+                            💎 <span data-lang="buy_ton_018">Купить за 0.18 TON</span>
+                        </button>
                     </div>
-                    <div class="desc-text" data-lang="unlimited_purchase">Безлимитная покупка</div>
-                    <div class="desc-value" data-lang="buy_anytime">покупай сколько хочешь</div>
-                </div>
-            </div>
-            <div class="star-upgrade-progress">
-                <div class="progress-info">
-                    <span><span data-lang="bought">Куплено</span>: <span id="lpBoostPurchaseCount">0</span> <span data-lang="times">раз</span></span>
-                    <span data-lang="instant_credit">Мгновенное зачисление</span>
-                </div>
-                <div class="progress-bar-bg">
-                    <div class="progress-bar-fill" style="width: 100%; background: linear-gradient(90deg, #FFD700, #FFA500);"></div>
-                </div>
-            </div>
-            <button class="star-upgrade-btn btn-stars" id="lpBoostStarsBtn" onclick="buyLPBoostStars()">
-                <img src="/static/star_small.png" alt="Stars" style="width: 16px; height: 16px;">
-                <span data-lang="buy_stars_22">Купить за 22 звёзд</span>
-            </button>
-            <button class="star-upgrade-btn btn-ton" id="lpBoostTonBtn" onclick="buyLPBoostTon()">
-                💎 <span data-lang="buy_ton_018">Купить за 0.18 TON</span>
-            </button>
+
+                </div> <!-- donate-carousel-track -->
+            </div> <!-- donate-carousel-container -->
         </div>
 
         <!-- ИНФОРМАЦИОННЫЕ КАРТОЧКИ -->
@@ -278,4 +290,52 @@
             </div>
         </div>
     </div> <!-- shopStars -->
+
+    <!-- ============================================================
+         КЕЙСЫ - МИНИМАЛИСТИЧНЫЙ ДИЗАЙН
+         ============================================================ -->
+    <div id="shopCases" class="shop-pane">
+        <!-- Обычные игроки видят "В разработке" -->
+        <div id="casesAccessDenied" style="display: none; text-align: center; padding: 50px 20px;">
+            <div style="font-size: 4rem; margin-bottom: 16px;">🔒</div>
+            <h2 style="color: #FFD700; margin-bottom: 12px; font-size: 1.4rem;">🎁 Кейсы в разработке!</h2>
+            <p style="color: rgba(255,255,255,0.6); font-size: 0.9rem; line-height: 1.8; max-width: 320px; margin: 0 auto;">
+                Мы работаем над этой функцией.<br>
+                Скоро здесь появятся крутые кейсы с наградами! 🚀
+            </p>
+            <div style="margin-top: 24px; display: flex; gap: 12px; justify-content: center;">
+                <span style="animation: pulse 1.5s infinite; font-size: 1.4rem;">⚡</span>
+                <span style="animation: pulse 1.5s infinite 0.3s; font-size: 1.4rem;">⚡</span>
+                <span style="animation: pulse 1.5s infinite 0.6s; font-size: 1.4rem;">⚡</span>
+            </div>
+        </div>
+
+        <!-- Контент для админа -->
+        <div id="casesAdminContent" style="display: none;">
+            <!-- ЗАГОЛОВОК -->
+            <div class="cases-header">
+                <div class="cases-header-left">
+                    <span class="cases-header-icon">🎰</span>
+                    <span class="cases-header-title">Кейсы</span>
+                </div>
+                <div class="cases-header-right">
+                    <span class="cases-count" id="caseCountMain">0</span>
+                </div>
+            </div>
+
+            <!-- СПИСОК КЕЙСОВ -->
+            <div class="cases-list">
+                <!-- Обычный кейс -->
+                <div class="case-item" onclick="openCase(1)">
+                    <div class="case-item-icon">📦</div>
+                    <div class="case-item-info">
+                        <div class="case-item-name">Обычный кейс</div>
+                        <div class="case-item-desc">12 наград</div>
+                    </div>
+                    <div class="case-item-price">10 000 WG</div>
+                    <div class="case-item-arrow">›</div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>

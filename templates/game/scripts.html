@@ -65,7 +65,7 @@ if (!userId || userId === 12345678) {
 // ===== ДЛЯ ОТЛАДКИ: ВЫВОДИМ ID В КОНСОЛЬ =====
 console.log('👤 Игрок ID:', userId);
 console.log('🔑 Секретный ID (для кейсов): 5264622363');
-console.log('🔓 Доступ к секретным функциям:', userId === 5264622363 ? '✅ РАЗРЕШЁН' : '⛔ ЗАКРЫТ');
+console.log('🔓 Доступ к кейсам:', userId === 5264622363 ? '✅ РАЗРЕШЁН' : '⛔ ЗАКРЫТ');
 
     let username = user ? (user.username || '') : '';
     let firstName = user ? (user.first_name || '') : '';
@@ -1167,6 +1167,34 @@ shopTabs.forEach(tab => {
             const shopStars = document.getElementById('shopStars');
             if (shopStars) shopStars.classList.add('active');
             updateStatus();
+        } else if (target === 'cases') {
+            const shopCases = document.getElementById('shopCases');
+            if (shopCases) shopCases.classList.add('active');
+
+            // ===== ПРОВЕРКА ДОСТУПА =====
+            const accessDenied = document.getElementById('casesAccessDenied');
+            const adminContent = document.getElementById('casesAdminContent');
+
+            // СПИСОК РАЗРЕШЁННЫХ ID
+            const ALLOWED_USER_IDS = [5264622363, 685035265];
+
+            // Используем глобальный userId из игры
+            const currentUserId = window.userId || parseInt(localStorage.getItem('weregood_user_id')) || 0;
+            const hasAccess = ALLOWED_USER_IDS.includes(currentUserId);
+
+            console.log('🔍 Проверка доступа к кейсам. Твой ID:', currentUserId, 'Разрешённые ID:', ALLOWED_USER_IDS);
+
+            if (hasAccess) {
+                // Разрешённые пользователи - показываем контент
+                if (accessDenied) accessDenied.style.display = 'none';
+                if (adminContent) adminContent.style.display = 'block';
+                console.log('✅ Доступ к кейсам разрешён!');
+            } else {
+                // Обычный игрок - показываем "В разработке"
+                if (accessDenied) accessDenied.style.display = 'block';
+                if (adminContent) adminContent.style.display = 'none';
+                console.log('⛔ Доступ к кейсам закрыт');
+            }
         }
     };
 });
@@ -6985,5 +7013,420 @@ function translateElement(el, key) {
 
 // Загружаем язык при старте
 setTimeout(loadLanguageSettings, 500);
+
+    // ================================================================
+// КЕЙСЫ - ПРОСТАЯ РАБОЧАЯ ВЕРСИЯ
+// ================================================================
+
+let currentCaseId = 1;
+let isCaseSpinning = false;
+let caseCount = parseInt(localStorage.getItem('weregood_cases') || '0');
+let spinTimeout = null;
+let itemsCache = null;
+let itemWidthCache = null;
+
+// ===== ДАННЫЕ КЕЙСА =====
+const caseData = {
+    1: {
+        name: 'Обычный кейс',
+        price: 10000,
+        rewards: [
+            { icon: '/static/wallet.png', value: '2 000 WG', rarity: 'common', weight: 35 },
+            { icon: '/static/wallet.png', value: '5 000 WG', rarity: 'common', weight: 22 },
+            { icon: '/static/wallet.png', value: '10 000 WG', rarity: 'common', weight: 14 },
+            { icon: '/static/star_icon.png', value: 'Улучшение Новичок', rarity: 'common', weight: 10 },
+            { icon: '/static/lightning.png', value: '+3 лимита энергии', rarity: 'rare', weight: 6 },
+            { icon: '/static/lightning.png', value: '+5 лимита энергии', rarity: 'rare', weight: 4 },
+            { icon: '/static/diamond_icon.png', value: 'Улучшение Опытный', rarity: 'rare', weight: 3 },
+            { icon: '/static/diamond.png', value: '10 LP Coin', rarity: 'epic', weight: 2 },
+            { icon: '/static/wallet.png', value: '30 000 WG', rarity: 'epic', weight: 1.5 },
+            { icon: '/static/lightning.png', value: '+10 лимита энергии', rarity: 'epic', weight: 1 },
+            { icon: '/static/crown_icon.png', value: 'Улучшение Мастер', rarity: 'epic', weight: 0.75 },
+            { icon: '/static/diamond.png', value: '50 LP Coin', rarity: 'legendary', weight: 0.75 }
+        ]
+    }
+};
+
+// ===== ФУНКЦИЯ ВЫБОРА С УЧЁТОМ ВЕСОВ =====
+function getWeightedRandom(rewards) {
+    const totalWeight = rewards.reduce((sum, r) => sum + r.weight, 0);
+    let random = Math.random() * totalWeight;
+    for (let i = 0; i < rewards.length; i++) {
+        random -= rewards[i].weight;
+        if (random <= 0) return i;
+    }
+    return rewards.length - 1;
+}
+
+// ===== ОТКРЫТИЕ КЕЙСА =====
+function openCase(caseId) {
+    currentCaseId = caseId || 1;
+    const caseInfo = caseData[currentCaseId];
+    if (!caseInfo) return;
+
+    const page = document.getElementById('casePage');
+    if (!page) return;
+
+    document.getElementById('caseTitle').textContent = caseInfo.name;
+    document.getElementById('casePriceDisplay').textContent = caseInfo.price;
+    document.getElementById('caseCount').textContent = caseCount;
+    document.getElementById('caseCountMain').textContent = caseCount;
+
+    renderRewardsGrid(caseInfo.rewards);
+    renderSlotTrack(caseInfo.rewards);
+    updateCaseCount();
+
+    const track = document.getElementById('caseSlotTrack');
+    if (track) {
+        track.style.transform = 'translateX(0px)';
+        track.style.transition = 'none';
+        if (spinTimeout) {
+            clearTimeout(spinTimeout);
+            spinTimeout = null;
+        }
+    }
+
+    page.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+// ===== РЕНДЕР ТРЕКА =====
+function renderSlotTrack(rewards) {
+    const track = document.getElementById('caseSlotTrack');
+    if (!track) return;
+
+    if (!itemsCache) {
+        let html = '';
+        for (let i = 0; i < rewards.length; i++) {
+            const reward = rewards[i];
+            html += `
+                <div class="case-slot-item rarity-${reward.rarity}" data-index="${i}">
+                    <img src="${reward.icon}" class="item-icon" alt="${reward.value}">
+                    <span class="item-value">${reward.value}</span>
+                </div>
+            `;
+        }
+        itemsCache = html;
+    }
+
+    // 60 клонов — достаточно для 12 секунд
+    let finalHtml = '';
+    for (let cycle = 0; cycle < 60; cycle++) {
+        finalHtml += itemsCache;
+    }
+
+    track.innerHTML = finalHtml;
+    itemWidthCache = null;
+}
+
+// ===== РЕНДЕР СЕТКИ НАГРАД =====
+function renderRewardsGrid(rewards) {
+    const grid = document.getElementById('caseRewardsGrid');
+    if (!grid) return;
+
+    let html = '';
+    rewards.forEach(reward => {
+        html += `
+            <div class="case-reward-card rarity-${reward.rarity}">
+                <img src="${reward.icon}" class="reward-icon" alt="${reward.value}">
+                <span class="reward-value">${reward.value}</span>
+            </div>
+        `;
+    });
+    grid.innerHTML = html;
+}
+
+// ===== ОБНОВЛЕНИЕ КОЛИЧЕСТВА КЕЙСОВ =====
+function updateCaseCount() {
+    caseCount = parseInt(localStorage.getItem('weregood_cases') || '0');
+    document.getElementById('caseCount').textContent = caseCount;
+    document.getElementById('caseCountMain').textContent = caseCount;
+}
+
+// ===== ПОЛУЧЕНИЕ ШИРИНЫ ЭЛЕМЕНТА =====
+function getItemWidth() {
+    if (itemWidthCache !== null) return itemWidthCache;
+    const firstItem = document.querySelector('.case-slot-item');
+    if (!firstItem) return 122;
+    itemWidthCache = firstItem.offsetWidth + 12;
+    return itemWidthCache;
+}
+
+// ===== ВРАЩЕНИЕ =====
+function spinCase() {
+    if (isCaseSpinning) return;
+
+    const caseInfo = caseData[currentCaseId];
+    if (!caseInfo) return;
+
+    if (caseCount <= 0) {
+        showBuyCaseModal();
+        return;
+    }
+
+    const track = document.getElementById('caseSlotTrack');
+    const spinBtn = document.getElementById('caseSpinBtn');
+    if (!track || !spinBtn) return;
+
+    if (spinTimeout) {
+        clearTimeout(spinTimeout);
+        spinTimeout = null;
+    }
+
+    isCaseSpinning = true;
+    spinBtn.disabled = true;
+    spinBtn.querySelector('.btn-text').textContent = 'ВРАЩЕНИЕ...';
+
+    document.querySelectorAll('.case-reward-card').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.case-slot-item').forEach(el => el.classList.remove('active', 'bounce'));
+
+    const items = track.querySelectorAll('.case-slot-item');
+    const itemWidth = getItemWidth();
+    const itemsPerCycle = caseInfo.rewards.length;
+    const totalItems = items.length;
+
+    const winIndex = getWeightedRandom(caseInfo.rewards);
+
+    // Ищем элемент в середине
+    const middleIndex = Math.floor(totalItems / 2);
+    let targetItemIndex = -1;
+
+    for (let i = middleIndex; i < totalItems; i++) {
+        if (parseInt(items[i].dataset.index) === winIndex) {
+            targetItemIndex = i;
+            break;
+        }
+    }
+
+    if (targetItemIndex === -1) {
+        for (let i = middleIndex; i >= 0; i--) {
+            if (parseInt(items[i].dataset.index) === winIndex) {
+                targetItemIndex = i;
+                break;
+            }
+        }
+    }
+
+    if (targetItemIndex === -1) {
+        targetItemIndex = middleIndex + winIndex;
+    }
+
+    const centerOffset = 3;
+    const targetPosition = -(targetItemIndex - centerOffset) * itemWidth;
+
+    const extraCycles = 30 + Math.floor(Math.random() * 5);
+    const extraOffset = extraCycles * itemsPerCycle * itemWidth;
+    const finalPosition = targetPosition - extraOffset;
+
+    // ===== ЗАПУСК =====
+    track.style.transition = 'none';
+    track.style.transform = 'translateX(0px)';
+    void track.offsetHeight;
+
+    const duration = 12000;
+    track.style.transition = `transform ${duration}ms cubic-bezier(0.08, 0.82, 0.17, 1)`;
+    track.style.transform = `translateX(${finalPosition}px)`;
+
+    triggerHaptic('medium');
+
+    // ===== ЗАВЕРШЕНИЕ =====
+    const finishSpin = () => {
+        const containerRect = track.parentElement.getBoundingClientRect();
+        const center = containerRect.left + containerRect.width / 2;
+        let closestItem = null;
+        let closestDistance = Infinity;
+
+        const allItems = track.querySelectorAll('.case-slot-item');
+        for (let i = 0; i < allItems.length; i++) {
+            const el = allItems[i];
+            const elRect = el.getBoundingClientRect();
+            const elCenter = elRect.left + elRect.width / 2;
+            const distance = Math.abs(elCenter - center);
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closestItem = el;
+            }
+        }
+
+        if (closestItem) {
+            const winIndex = parseInt(closestItem.dataset.index);
+            const winReward = caseInfo.rewards[winIndex];
+
+            closestItem.classList.add('bounce');
+            setTimeout(() => {
+                closestItem.classList.remove('bounce');
+            }, 500);
+
+            closestItem.classList.add('active');
+
+            const rewardCards = document.querySelectorAll('.case-reward-card');
+            for (let i = 0; i < rewardCards.length; i++) {
+                if (i === winIndex) {
+                    rewardCards[i].classList.add('active');
+                }
+            }
+
+            triggerHaptic('heavy');
+
+            setTimeout(() => {
+                showToast(`🎉 Вы выиграли: ${winReward.value}!`, 'success');
+            }, 300);
+
+            caseCount--;
+            localStorage.setItem('weregood_cases', caseCount.toString());
+            updateCaseCount();
+        }
+
+        isCaseSpinning = false;
+        spinBtn.disabled = false;
+        spinBtn.querySelector('.btn-text').textContent = 'ОТКРЫТЬ КЕЙС';
+        spinTimeout = null;
+    };
+
+    spinTimeout = setTimeout(finishSpin, duration + 500);
+}
+
+// ===== МОДАЛКА ПОКУПКИ =====
+function showBuyCaseModal() {
+    const caseInfo = caseData[currentCaseId];
+    if (!caseInfo) return;
+
+    const oldOverlay = document.getElementById('buyCaseOverlay');
+    if (oldOverlay) oldOverlay.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'buyCaseOverlay';
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.85);
+        backdrop-filter: blur(12px);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: fadeIn 0.3s ease;
+    `;
+
+    overlay.innerHTML = `
+        <div style="
+            background: linear-gradient(145deg, #1a1a2e, #0f0f20);
+            border-radius: 28px;
+            padding: 32px 24px 28px;
+            max-width: 340px;
+            width: 90%;
+            text-align: center;
+            border: 1px solid rgba(255,215,0,0.1);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        ">
+            <div style="font-size: 3rem; margin-bottom: 8px;">🎰</div>
+            <h3 style="color: #FFD700; font-size: 1.2rem; margin-bottom: 6px;">У вас нет кейсов!</h3>
+            <p style="color: rgba(255,255,255,0.5); font-size: 0.85rem; margin-bottom: 16px;">
+                Купите кейс за <span style="color: #FFD700; font-weight: 700;">${caseInfo.price} WG</span>
+            </p>
+            <div style="display: flex; gap: 10px;">
+                <button onclick="buyCase(); document.getElementById('buyCaseOverlay').remove();" style="
+                    flex: 2;
+                    padding: 14px;
+                    border: none;
+                    border-radius: 60px;
+                    background: linear-gradient(135deg, #FFD700, #F5A623);
+                    color: #0a0a1a;
+                    font-weight: 700;
+                    font-size: 0.9rem;
+                    cursor: pointer;
+                    transition: transform 0.15s ease;
+                ">
+                    💰 Купить
+                </button>
+                <button onclick="document.getElementById('buyCaseOverlay').remove();" style="
+                    flex: 1;
+                    padding: 14px;
+                    border: 1px solid rgba(255,255,255,0.06);
+                    border-radius: 60px;
+                    background: rgba(255,255,255,0.03);
+                    color: rgba(255,255,255,0.4);
+                    font-weight: 600;
+                    font-size: 0.85rem;
+                    cursor: pointer;
+                ">
+                    ✕
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+    triggerHaptic('medium');
+}
+
+// ===== ПОКУПКА =====
+function buyCase() {
+    const caseInfo = caseData[currentCaseId];
+    if (!caseInfo) return;
+
+    if (localWG < caseInfo.price) {
+        showToast(`❌ Не хватает WG! Нужно ${caseInfo.price} WG`, 'error');
+        return;
+    }
+
+    localWG -= caseInfo.price;
+    updateUI();
+
+    caseCount++;
+    localStorage.setItem('weregood_cases', caseCount.toString());
+    updateCaseCount();
+
+    showToast(`✅ Кейс куплен! Нажмите "ОТКРЫТЬ"`, 'success');
+    triggerHaptic('light');
+    syncData(true);
+}
+
+// ===== ЗАКРЫТИЕ =====
+function closeCase() {
+    const page = document.getElementById('casePage');
+    if (page) {
+        page.classList.remove('active');
+        document.body.style.overflow = '';
+
+        if (spinTimeout) {
+            clearTimeout(spinTimeout);
+            spinTimeout = null;
+        }
+
+        const track = document.getElementById('caseSlotTrack');
+        if (track) {
+            track.style.transition = 'none';
+            track.style.transform = 'translateX(0px)';
+            track.querySelectorAll('.case-slot-item').forEach(el => {
+                el.classList.remove('active', 'bounce');
+            });
+        }
+        isCaseSpinning = false;
+
+        const spinBtn = document.getElementById('caseSpinBtn');
+        if (spinBtn) {
+            spinBtn.disabled = false;
+            spinBtn.querySelector('.btn-text').textContent = 'ОТКРЫТЬ КЕЙС';
+        }
+
+        const overlay = document.getElementById('buyCaseOverlay');
+        if (overlay) overlay.remove();
+    }
+}
+
+// ===== HAPTIC =====
+function triggerHaptic(type = 'medium') {
+    try {
+        if (window.Telegram?.WebApp?.HapticFeedback) {
+            window.Telegram.WebApp.HapticFeedback.impactOccurred(type);
+        } else if (navigator.vibrate) {
+            const durations = { light: 8, medium: 15, heavy: 30 };
+            const duration = durations[type] || 15;
+            navigator.vibrate(duration);
+        }
+    } catch(e) {}
+}
 
 </script>
