@@ -4,34 +4,49 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
     <title>WereGood</title>
-
-    <!-- ===== ПРЕДЗАГРУЗКА КРИТИЧЕСКИХ РЕСУРСОВ ===== -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-
-    <!-- ===== ПРЕДЗАГРУЗКА ИКОНОК (КРИТИЧЕСКИЕ) ===== -->
-    <link rel="preload" as="image" href="/static/coin.png">
-    <link rel="preload" as="image" href="/static/wallet.png">
-    <link rel="preload" as="image" href="/static/diamond.png">
-    <link rel="preload" as="image" href="/static/lightning.png">
-    <link rel="preload" as="image" href="/static/home_normal.png">
-    <link rel="preload" as="image" href="/static/shop_normal.png">
-    <link rel="preload" as="image" href="/static/fire_normal.png">
-    <link rel="preload" as="image" href="/static/profile_normal.png">
-
-    <!-- ===== ОСНОВНОЙ CSS ===== -->
     <link rel="stylesheet" href="/static/style.css">
 
-    <!-- ===== CRITICAL CSS ДЛЯ БЫСТРОГО СТАРТА ===== -->
-    <style>
-        /* Базовые стили для splash screen */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
+    <script>
+        window.TON_CONNECT_UI = null;
+        const tonScript = document.createElement('script');
+        tonScript.src = 'https://unpkg.com/@tonconnect/ui@2.0.9/dist/tonconnect-ui.min.js';
+        tonScript.onload = function() {
+            if (window.TON_CONNECT_UI) console.log('TON Connect ready');
+            else if (window.tonconnect) window.TON_CONNECT_UI = window.tonconnect;
+            window.dispatchEvent(new Event('tonconnect-ready'));
+        };
+        tonScript.onerror = function() {
+            const btn = document.getElementById('tonDonateBtn');
+            if (btn) { btn.style.opacity = '0.5'; btn.disabled = true; }
+        };
+        document.head.appendChild(tonScript);
+    </script>
 
+    <!-- Telegram Mini Apps Analytics SDK -->
+    <script>
+        (function() {
+            if (window.Telegram && window.Telegram.WebApp) {
+                var script = document.createElement('script');
+                script.src = 'https://tganalytics.xyz/index.js';
+                script.onload = function() {
+                    window.telegramAnalytics.init({
+                        token: 'eyJhcHBfbmFtZSI6IndlcmVnb29kIiwiYXBwX3VybCI6Imh0dHBzOi8vdC5tZS9XZXJlR29vb2Rib3QiLCJhcHBfZG9tYWluIjoiaHR0cHM6Ly93ZXJlZ29vZC5ydS8ifQ==!/Jd1QUzU6q1h1gN60VfBz53M1flHZlcVC5pcyACO9tM='
+                    });
+                    window.telegramAnalytics.trackEvent('app_started');
+                };
+                document.head.appendChild(script);
+            }
+        })();
+    </script>
+
+    <style>
+        /* ============================================================
+           КАСТОМНЫЙ ЗАГРУЗОЧНЫЙ ЭКРАН (SPLASH SCREEN)
+           ============================================================ */
         #splashScreen {
             position: fixed;
             top: 0;
@@ -63,10 +78,17 @@
         }
 
         @keyframes splashFadeIn {
-            from { opacity: 0; transform: translateY(30px) scale(0.95); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
+            from {
+                opacity: 0;
+                transform: translateY(30px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
         }
 
+        /* ===== МОНЕТА С ПУЛЬСАЦИЕЙ ===== */
         .splash-coin {
             width: 120px;
             height: 120px;
@@ -79,11 +101,11 @@
             font-size: 42px;
             font-weight: 900;
             color: #0a0a1a;
-            box-shadow: 0 0 80px rgba(255, 215, 0, 0.25), 0 0 160px rgba(255, 215, 0, 0.08);
+            box-shadow: 0 0 80px rgba(255, 215, 0, 0.25),
+                        0 0 160px rgba(255, 215, 0, 0.08);
             animation: coinPulse 2s ease-in-out infinite, gradientShine 3s ease-in-out infinite;
             user-select: none;
             position: relative;
-            will-change: transform;
         }
 
         .splash-coin::after {
@@ -113,6 +135,7 @@
             50% { transform: scale(1.1); opacity: 0.8; }
         }
 
+        /* ===== НАЗВАНИЕ ===== */
         .splash-title {
             font-size: 32px;
             font-weight: 900;
@@ -134,6 +157,7 @@
             margin-top: -12px;
         }
 
+        /* ===== ПРОГРЕСС-БАР ===== */
         .splash-progress-wrap {
             width: 220px;
             display: flex;
@@ -158,7 +182,6 @@
             border-radius: 4px;
             transition: width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
             position: relative;
-            will-change: width;
         }
 
         .splash-progress-fill::after {
@@ -184,8 +207,10 @@
             font-variant-numeric: tabular-nums;
             letter-spacing: 2px;
             text-align: center;
+            font-feature-settings: "tnum";
         }
 
+        /* ===== ВЕРСИЯ ===== */
         .splash-version {
             position: fixed;
             bottom: 30px;
@@ -195,6 +220,28 @@
             font-weight: 400;
         }
 
+        /* ===== АДАПТАЦИЯ ДЛЯ LIGHT THEME ===== */
+        body.light-theme #splashScreen {
+            background: #f0f0f5;
+        }
+
+        body.light-theme .splash-subtitle {
+            color: rgba(0, 0, 0, 0.25);
+        }
+
+        body.light-theme .splash-percent {
+            color: rgba(0, 0, 0, 0.4);
+        }
+
+        body.light-theme .splash-version {
+            color: rgba(0, 0, 0, 0.15);
+        }
+
+        body.light-theme .splash-progress-track {
+            background: rgba(0, 0, 0, 0.06);
+        }
+
+        /* ===== АНИМАЦИЯ ДЛЯ ЭЛЕМЕНТОВ ПРИ ЗАГРУЗКЕ ===== */
         .splash-loading-dots {
             display: flex;
             gap: 8px;
@@ -217,6 +264,7 @@
             40% { transform: scale(1); opacity: 1; }
         }
 
+        /* ===== СКРЫТИЕ APP ПОКА НЕ ЗАГРУЗИТСЯ ===== */
         .app {
             opacity: 0;
             transition: opacity 0.4s ease;
@@ -226,6 +274,7 @@
             opacity: 1;
         }
 
+        /* ===== МЕДИА ===== */
         @media (max-width: 480px) {
             .splash-coin {
                 width: 100px;
@@ -243,96 +292,7 @@
                 letter-spacing: 3px;
             }
         }
-
-        body.light-theme #splashScreen {
-            background: #f0f0f5;
-        }
-
-        body.light-theme .splash-subtitle {
-            color: rgba(0, 0, 0, 0.25);
-        }
-
-        body.light-theme .splash-percent {
-            color: rgba(0, 0, 0, 0.4);
-        }
-
-        body.light-theme .splash-version {
-            color: rgba(0, 0, 0, 0.15);
-        }
-
-        body.light-theme .splash-progress-track {
-            background: rgba(0, 0, 0, 0.06);
-        }
-
-        /* ===== ОПТИМИЗАЦИЯ АНИМАЦИЙ ===== */
-        .coin-inner,
-        .energy-bar,
-        .click-plus {
-            will-change: transform;
-        }
-
-        img {
-            content-visibility: auto;
-            loading: lazy;
-            will-change: auto;
-        }
-
-        .upgrade-card,
-        .ad-card,
-        .stat-card-glass {
-            contain: layout style paint;
-        }
-
-        /* ===== ОТКЛЮЧАЕМ АНИМАЦИИ ДЛЯ СЛАБЫХ УСТРОЙСТВ ===== */
-        @media (prefers-reduced-motion: reduce) {
-            * {
-                animation-duration: 0.01ms !important;
-                animation-iteration-count: 1 !important;
-                transition-duration: 0.01ms !important;
-            }
-        }
     </style>
-
-    <!-- ===== ЗАГРУЗКА СКРИПТОВ АСИНХРОННО ===== -->
-    <script src="https://telegram.org/js/telegram-web-app.js" async></script>
-    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js" async></script>
-    <script src="https://sad.adsgram.ai/js/sad.min.js" async></script>
-
-    <!-- ===== TON CONNECT (ОТЛОЖЕННАЯ ЗАГРУЗКА) ===== -->
-    <script>
-        // TON Connect загружаем с задержкой, чтобы не блокировать старт
-        setTimeout(() => {
-            const tonScript = document.createElement('script');
-            tonScript.src = 'https://unpkg.com/@tonconnect/ui@2.0.9/dist/tonconnect-ui.min.js';
-            tonScript.async = true;
-            tonScript.onload = function() {
-                if (window.TON_CONNECT_UI) console.log('TON Connect ready');
-                else if (window.tonconnect) window.TON_CONNECT_UI = window.tonconnect;
-                window.dispatchEvent(new Event('tonconnect-ready'));
-            };
-            document.head.appendChild(tonScript);
-        }, 1000);
-    </script>
-
-    <!-- ===== TELEGRAM ANALYTICS (НЕКРИТИЧНЫЙ) ===== -->
-    <script>
-        setTimeout(() => {
-            if (window.Telegram && window.Telegram.WebApp) {
-                const script = document.createElement('script');
-                script.src = 'https://tganalytics.xyz/index.js';
-                script.async = true;
-                script.onload = function() {
-                    if (window.telegramAnalytics) {
-                        window.telegramAnalytics.init({
-                            token: 'eyJhcHBfbmFtZSI6IndlcmVnb29kIiwiYXBwX3VybCI6Imh0dHBzOi8vdC5tZS9XZXJlR29vb2Rib3QiLCJhcHBfZG9tYWluIjoiaHR0cHM6Ly93ZXJlZ29vZC5ydS8ifQ==!/Jd1QUzU6q1h1gN60VfBz53M1flHZlcVC5pcyACO9tM='
-                        });
-                        window.telegramAnalytics.trackEvent('app_started');
-                    }
-                };
-                document.head.appendChild(script);
-            }
-        }, 2000);
-    </script>
 </head>
 <body>
 
@@ -341,24 +301,34 @@
          ============================================================ -->
     <div id="splashScreen">
         <div class="splash-content">
+            <!-- МОНЕТА -->
             <div class="splash-coin">WG</div>
+
+            <!-- НАЗВАНИЕ -->
             <div class="splash-title">WereGood</div>
             <div class="splash-subtitle">Click to Earn</div>
+
+            <!-- ПРОГРЕСС-БАР -->
             <div class="splash-progress-wrap">
                 <div class="splash-progress-track">
                     <div class="splash-progress-fill" id="splashProgressFill"></div>
                 </div>
                 <div class="splash-percent" id="splashPercent">0%</div>
             </div>
+
+            <!-- ТОЧКИ ЗАГРУЗКИ -->
             <div class="splash-loading-dots">
-                <span></span><span></span><span></span>
+                <span></span>
+                <span></span>
+                <span></span>
             </div>
         </div>
+
         <div class="splash-version">v3.0 • WereGood</div>
     </div>
 
     <!-- ============================================================
-         ОСНОВНОЙ APP
+         ОСНОВНОЙ APP (СКРЫТ ПОКА НЕ ЗАГРУЗИТСЯ)
          ============================================================ -->
     <div class="app" id="app">
 
@@ -373,19 +343,19 @@
 
         <nav class="bottom-nav" id="bottomNav">
             <div class="nav-item active" data-tab="home">
-                <div class="nav-icon"><img src="/static/home_normal.png" alt="Главная" width="24" height="24" loading="lazy"></div>
+                <div class="nav-icon"><img src="/static/home_normal.png" alt="Главная" style="width: 24px; height: 24px;"></div>
                 <div class="nav-label" data-lang="nav_home">Главная</div>
             </div>
             <div class="nav-item" data-tab="shop">
-                <div class="nav-icon"><img src="/static/shop_normal.png" alt="Магазин" width="24" height="24" loading="lazy"></div>
+                <div class="nav-icon"><img src="/static/shop_normal.png" alt="Магазин" style="width: 24px; height: 24px;"></div>
                 <div class="nav-label" data-lang="nav_shop">Магазин</div>
             </div>
             <div class="nav-item" data-tab="lottery">
-                <div class="nav-icon"><img src="/static/fire_normal.png" alt="Вызов" width="24" height="24" loading="lazy"></div>
+                <div class="nav-icon"><img src="/static/fire_normal.png" alt="Вызов" style="width: 24px; height: 24px;"></div>
                 <div class="nav-label" data-lang="nav_lottery">Вызов</div>
             </div>
             <div class="nav-item" data-tab="profile">
-                <div class="nav-icon"><img src="/static/profile_normal.png" alt="Профиль" width="24" height="24" loading="lazy"></div>
+                <div class="nav-icon"><img src="/static/profile_normal.png" alt="Профиль" style="width: 24px; height: 24px;"></div>
                 <div class="nav-label" data-lang="nav_profile">Профиль</div>
             </div>
         </nav>
@@ -394,15 +364,13 @@
     {% include 'game/modals.html' %}
     {% include 'game/fortune.html' %}
 
-    <!-- ===== АУДИО (ОТЛОЖЕННАЯ ЗАГРУЗКА) ===== -->
-    <div style="display:none;">
-        <audio id="errorSound" preload="none"><source src="/static/error.mp3" type="audio/mpeg"></audio>
-        <audio id="clickSound" preload="none"><source src="/static/click.mp3" type="audio/mpeg"></audio>
-        <audio id="navSound" preload="none"><source src="/static/nav.mp3" type="audio/mpeg"></audio>
-        <audio id="lpDropSound" preload="none"><source src="/static/lp_drop.mp3" type="audio/mpeg"></audio>
-        <audio id="settingsSound" preload="none"><source src="/static/settings.mp3" type="audio/mpeg"></audio>
-        <audio id="purchaseSound" preload="none"><source src="/static/purchase.mp3" type="audio/mpeg"></audio>
-    </div>
+    <audio id="errorSound" preload="auto"><source src="/static/error.mp3" type="audio/mpeg"></audio>
+    <audio id="clickSound" preload="auto"><source src="/static/click.mp3" type="audio/mpeg"></audio>
+    <audio id="navSound" preload="auto"><source src="/static/nav.mp3" type="audio/mpeg"></audio>
+    <audio id="lpDropSound" preload="auto"><source src="/static/lp_drop.mp3" type="audio/mpeg"></audio>
+    <audio id="settingsSound" preload="auto"><source src="/static/settings.mp3" type="audio/mpeg"></audio>
+    <audio id="purchaseSound" preload="auto"><source src="/static/purchase.mp3" type="audio/mpeg"></audio>
+
 
     <!-- ============================================================
          СКРИПТ УПРАВЛЕНИЯ ЗАГРУЗКОЙ
@@ -418,8 +386,8 @@
 
             let currentProgress = 0;
             let isHidden = false;
-            let progressInterval = null;
 
+            // ===== ФУНКЦИЯ ОБНОВЛЕНИЯ ПРОГРЕССА =====
             function updateProgress(value) {
                 if (isHidden) return;
                 currentProgress = Math.min(100, Math.max(0, value));
@@ -427,14 +395,61 @@
                 if (percentText) percentText.textContent = Math.round(currentProgress) + '%';
             }
 
+            // ===== СИМУЛЯЦИЯ ЗАГРУЗКИ =====
+            function simulateLoading() {
+                let progress = 0;
+                const steps = [
+                    { target: 15, delay: 300 },
+                    { target: 30, delay: 400 },
+                    { target: 45, delay: 350 },
+                    { target: 55, delay: 300 },
+                    { target: 70, delay: 500 },
+                    { target: 82, delay: 400 },
+                    { target: 90, delay: 300 },
+                    { target: 95, delay: 200 },
+                    { target: 100, delay: 300 }
+                ];
+
+                let index = 0;
+
+                function nextStep() {
+                    if (index >= steps.length) {
+                        // Загрузка завершена
+                        finishLoading();
+                        return;
+                    }
+
+                    const step = steps[index];
+                    const increment = (step.target - progress) / 3;
+
+                    function animateStep() {
+                        progress += increment;
+                        if (progress >= step.target) {
+                            progress = step.target;
+                            updateProgress(progress);
+                            index++;
+                            setTimeout(nextStep, step.delay);
+                            return;
+                        }
+                        updateProgress(progress);
+                        requestAnimationFrame(animateStep);
+                    }
+
+                    animateStep();
+                }
+
+                nextStep();
+            }
+
+            // ===== ЗАВЕРШЕНИЕ ЗАГРУЗКИ =====
             function finishLoading() {
                 if (isHidden) return;
                 isHidden = true;
-                if (progressInterval) clearInterval(progressInterval);
 
+                // Доводим до 100% если ещё не дошли
                 if (currentProgress < 100) {
                     updateProgress(100);
-                    setTimeout(hideSplash, 300);
+                    setTimeout(hideSplash, 400);
                 } else {
                     hideSplash();
                 }
@@ -443,67 +458,111 @@
             function hideSplash() {
                 if (splash) {
                     splash.classList.add('hidden');
-                    setTimeout(() => { splash.style.display = 'none'; }, 500);
+                    setTimeout(() => {
+                        splash.style.display = 'none';
+                    }, 600);
                 }
-                if (app) app.classList.add('visible');
+
+                // Показываем приложение
+                if (app) {
+                    app.classList.add('visible');
+                }
+
+                // Убираем блокировку скролла
                 document.body.style.overflow = '';
             }
 
-            // ===== БЫСТРАЯ ЗАГРУЗКА =====
-            function init() {
-                updateProgress(10);
-
-                // DOM загружен
+            // ===== ОТСЛЕЖИВАНИЕ РЕАЛЬНОЙ ЗАГРУЗКИ =====
+            function trackRealLoading() {
+                // Ждём загрузку DOM
                 if (document.readyState === 'loading') {
-                    document.addEventListener('DOMContentLoaded', () => updateProgress(60));
+                    document.addEventListener('DOMContentLoaded', () => {
+                        updateProgress(60);
+                    });
                 } else {
                     updateProgress(60);
                 }
 
-                // Все ресурсы загружены
+                // Ждём загрузку стилей
                 window.addEventListener('load', () => {
                     updateProgress(85);
-                    setTimeout(() => updateProgress(95), 300);
+                    // Даём время на инициализацию скриптов
+                    setTimeout(() => {
+                        updateProgress(95);
+                    }, 500);
                 });
 
-                // Telegram WebApp
+                // Ждём инициализацию Telegram WebApp
                 if (window.Telegram && window.Telegram.WebApp) {
-                    updateProgress(70);
+                    if (window.Telegram.WebApp.isVersionAtLeast) {
+                        updateProgress(70);
+                    }
                 }
 
-                // Socket.IO
-                if (typeof io !== 'undefined') updateProgress(75);
+                // Ждём Socket.IO
+                if (typeof io !== 'undefined') {
+                    updateProgress(75);
+                }
 
-                // Прогресс-симуляция
-                let progress = 10;
-                progressInterval = setInterval(() => {
-                    if (isHidden) { clearInterval(progressInterval); return; }
-                    if (progress < 90) {
-                        progress += Math.random() * 3;
-                        updateProgress(Math.min(progress, 90));
+                // Ждём TON Connect
+                if (window.TON_CONNECT_UI !== null) {
+                    updateProgress(80);
+                }
+
+                // Ждём Adsgram
+                if (typeof window.Adsgram !== 'undefined') {
+                    updateProgress(78);
+                }
+            }
+
+            // ===== АВТОМАТИЧЕСКОЕ ЗАВЕРШЕНИЕ (ЗАПАСНОЙ ТАЙМЕР) =====
+            // Если что-то пошло не так — скрываем через 5 секунд
+            const fallbackTimer = setTimeout(() => {
+                if (!isHidden) {
+                    console.log('⏱️ Запасной таймер: принудительное завершение загрузки');
+                    updateProgress(100);
+                    setTimeout(finishLoading, 300);
+                }
+            }, 5000);
+
+            // ===== ЗАПУСК =====
+            function init() {
+                // Начальный прогресс
+                updateProgress(5);
+
+                // Запускаем симуляцию
+                simulateLoading();
+
+                // Отслеживаем реальную загрузку
+                trackRealLoading();
+
+                // Если через 3 секунды всё ещё загружаемся — ускоряем
+                setTimeout(() => {
+                    if (!isHidden && currentProgress < 70) {
+                        updateProgress(Math.max(currentProgress, 70));
                     }
-                }, 300);
+                }, 3000);
 
-                // Запасной таймер (макс 4 секунды)
+                // Если через 7 секунд всё ещё загружаемся — форсируем
                 setTimeout(() => {
                     if (!isHidden) {
-                        console.log('⏱️ Принудительное завершение загрузки');
-                        clearInterval(progressInterval);
+                        console.log('⚠️ Форсированное завершение загрузки');
                         updateProgress(100);
                         setTimeout(finishLoading, 200);
                     }
-                }, 4000);
+                }, 7000);
             }
 
+            // Запускаем когда DOM готов
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', init);
             } else {
                 init();
             }
 
+            // Экспортируем функцию для ручного завершения (если нужно)
             window.hideSplashScreen = function() {
                 if (!isHidden) {
-                    clearInterval(progressInterval);
                     updateProgress(100);
                     finishLoading();
                 }
@@ -513,6 +572,5 @@
     </script>
 
     {% include 'game/scripts.html' %}
-
 </body>
 </html>
