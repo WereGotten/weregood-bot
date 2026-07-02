@@ -569,7 +569,7 @@ ALLOWED_UPDATE_FIELDS = {
     'tutorial_completed', 'ton_wallet', 'banned_until', 'ban_reason', 'banned_by',
     'completed_achievements', 'daily_clicks',
     'fortune_bets_count', 'fortune_wins_count', 'fortune_total_bet_amount',
-    'language'
+    'language','cases'
 }
 
 MAX_USER_CACHE = 5000
@@ -1300,6 +1300,42 @@ def update_fortune_achievements(user_id, bet_amount=None, is_win=False, is_new_r
                     INSERT INTO payday_bonus (id, multiplier, is_active)
                     VALUES (1, 1.0, 0)
                 ''')
+
+            # ========== ТАБЛИЦА КЕЙСОВ ==========
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS cases (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    case_type INTEGER DEFAULT 1,
+                    opened_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    reward TEXT,
+                    reward_type TEXT,
+                    reward_amount REAL,
+                    rarity TEXT,
+                    UNIQUE(user_id, case_type, opened_at)
+                )
+            ''')
+
+            # ========== ТАБЛИЦА ДЛЯ ХРАНЕНИЯ КЕЙСОВ У ИГРОКОВ ==========
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS user_cases (
+                    user_id INTEGER PRIMARY KEY,
+                    case_count INTEGER DEFAULT 0,
+                    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+
+            # ========== ДОБАВЛЯЕМ КОЛОНКИ В users, ЕСЛИ ИХ НЕТ =====
+            try:
+                cursor.execute("ALTER TABLE users ADD COLUMN cases INTEGER DEFAULT 0")
+                print("✅ Добавлена колонка cases в users")
+            except:
+                pass
+
+            # ========== ИНДЕКСЫ ДЛЯ КЕЙСОВ ==========
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_cases_user ON cases(user_id)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_cases_type ON cases(case_type)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_cases_rarity ON cases(rarity)')
 
             # ========== ИНДЕКСЫ ==========
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_fortune_bets_round ON fortune_bets(round_id)')
@@ -2470,6 +2506,88 @@ def handle_get_remaining_time(data):
             emit('remaining_time', {'seconds': 0})
     else:
         emit('remaining_time', {'seconds': 0})
+
+
+# ================================================================
+# ФУНКЦИИ ДЛЯ КЕЙСОВ
+# ================================================================
+
+def get_user_cases(user_id):
+    """Получить количество кейсов у пользователя"""
+    with db.get_cursor() as cursor:
+        cursor.execute("SELECT cases FROM users WHERE user_id = ?", (user_id,))
+        row = cursor.fetchone()
+        if row:
+            return row['cases'] or 0
+        return 0
+
+
+def add_user_cases(user_id, amount=1):
+    """Добавить кейсы пользователю"""
+    with db.get_cursor() as cursor:
+        cursor.execute("UPDATE users SET cases = cases + ? WHERE user_id = ?", (amount, user_id))
+    invalidate_cache(user_id)
+
+
+def remove_user_cases(user_id, amount=1):
+    """Убрать кейсы у пользователя (при открытии)"""
+    with db.get_cursor() as cursor:
+        cursor.execute("UPDATE users SET cases = cases - ? WHERE user_id = ? AND cases >= ?", (amount, user_id, amount))
+    invalidate_cache(user_id)
+
+
+def log_case_opening(user_id, case_type, reward, reward_type, reward_amount, rarity):
+    """Записать открытие кейса в историю"""
+    with db.get_cursor() as cursor:
+        cursor.execute('''
+            INSERT INTO cases (user_id, case_type, reward, reward_type, reward_amount, rarity)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (user_id, case_type, reward, reward_type, reward_amount, rarity))
+
+
+def get_case_history(user_id, limit=20):
+    """Получить историю открытий кейсов"""
+    with db.get_cursor() as cursor:
+        cursor.execute('''
+            SELECT * FROM cases 
+            WHERE user_id = ? 
+            ORDER BY opened_at DESC 
+            LIMIT ?
+        ''', (user_id, limit))
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
+
+
+def get_case_stats():
+    """Получить статистику по кейсам"""
+    with db.get_cursor() as cursor:
+        # Всего открыто кейсов
+        cursor.execute("SELECT COUNT(*) as total FROM cases")
+        total = cursor.fetchone()['total']
+
+        # По редкостям
+        cursor.execute('''
+            SELECT rarity, COUNT(*) as count 
+            FROM cases 
+            GROUP BY rarity
+        ''')
+        rarity_stats = cursor.fetchall()
+
+        # Топ-10 лучших выигрышей
+        cursor.execute('''
+            SELECT user_id, reward, reward_amount, rarity, opened_at 
+            FROM cases 
+            WHERE rarity = 'legendary' 
+            ORDER BY reward_amount DESC 
+            LIMIT 10
+        ''')
+        top_wins = cursor.fetchall()
+
+        return {
+            'total_opened': total,
+            'rarity_stats': [dict(row) for row in rarity_stats],
+            'top_wins': [dict(row) for row in top_wins]
+        }
 
 @app.route('/')
 def game_page():
@@ -6667,6 +6785,291 @@ def api_set_referral():
             send_telegram_message(referrer['user_id'], f"🎉 Новый реферал присоединился по вашей ссылке!")
             return jsonify({"success": True, "message": "Referral attached"}), 200
     return jsonify({"success": False, "error": "Referrer not found"}), 404
+
+
+# ================================================================
+# API ДЛЯ КЕЙСОВ
+# ================================================================
+
+@app.route('/api/cases/get', methods=['POST'])
+def api_cases_get():
+    """Получить количество кейсов у пользователя"""
+    data = request.json
+    if not data:
+        return jsonify({"success": False, "error": "No data"}), 400
+
+    user_id = data.get('user_id')
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"success": False, "error": "Invalid user_id"}), 400
+
+    cases = get_user_cases(user_id)
+    return jsonify({"success": True, "cases": cases})
+
+
+@app.route('/api/cases/buy', methods=['POST'])
+def api_cases_buy():
+    """Купить кейс за WG"""
+    data = request.json
+    if not data:
+        return jsonify({"success": False, "error": "No data"}), 400
+
+    user_id = data.get('user_id')
+    case_type = data.get('case_type', 1)
+
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"success": False, "error": "Invalid user_id"}), 400
+
+    # Цены кейсов
+    CASE_PRICES = {
+        1: 10000,  # Обычный кейс
+        2: 50000  # Премиум кейс
+    }
+
+    price = CASE_PRICES.get(case_type)
+    if not price:
+        return jsonify({"success": False, "error": "Invalid case type"}), 400
+
+    user = get_user(user_id)
+
+    if user['wg'] < price:
+        return jsonify({
+            "success": False,
+            "error": f"Не хватает WG! Нужно {price} WG, у вас {user['wg']:.2f} WG"
+        }), 400
+
+    # Списываем WG
+    new_wg = user['wg'] - price
+    safe_update_user(user_id, wg=new_wg)
+
+    # Добавляем кейс
+    add_user_cases(user_id, 1)
+
+    add_log(f"🎰 Купил кейс типа {case_type} за {price} WG", user_id, user['username'],
+            old_value=user['wg'], new_value=new_wg, currency="wg")
+
+    return jsonify({
+        "success": True,
+        "message": f"Кейс куплен!",
+        "cases": get_user_cases(user_id),
+        "wg": new_wg
+    })
+
+
+@app.route('/api/cases/open', methods=['POST'])
+def api_cases_open():
+    """Открыть кейс (получить награду)"""
+    data = request.json
+    if not data:
+        return jsonify({"success": False, "error": "No data"}), 400
+
+    user_id = data.get('user_id')
+    case_type = data.get('case_type', 1)
+
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"success": False, "error": "Invalid user_id"}), 400
+
+    # Проверяем наличие кейсов
+    cases = get_user_cases(user_id)
+    if cases <= 0:
+        return jsonify({"success": False, "error": "У вас нет кейсов!"}), 400
+
+    # Данные кейсов (синхронизируем с фронтендом)
+    CASE_DATA = {
+        1: {  # Обычный кейс
+            'name': 'Обычный кейс',
+            'rewards': [
+                {'value': '2 000 WG', 'rarity': 'common', 'weight': 35, 'type': 'wg', 'amount': 2000},
+                {'value': '5 000 WG', 'rarity': 'common', 'weight': 22, 'type': 'wg', 'amount': 5000},
+                {'value': '10 000 WG', 'rarity': 'common', 'weight': 14, 'type': 'wg', 'amount': 10000},
+                {'value': '⭐ Новичок', 'rarity': 'common', 'weight': 10, 'type': 'upgrade', 'amount': 1},
+                {'value': '+3 ⚡ энергии', 'rarity': 'rare', 'weight': 6, 'type': 'energy', 'amount': 3},
+                {'value': '+5 ⚡ энергии', 'rarity': 'rare', 'weight': 4, 'type': 'energy', 'amount': 5},
+                {'value': '💎 Опытный', 'rarity': 'rare', 'weight': 3, 'type': 'upgrade', 'amount': 1},
+                {'value': '10 LP', 'rarity': 'epic', 'weight': 2, 'type': 'lp', 'amount': 10},
+                {'value': '30 000 WG', 'rarity': 'epic', 'weight': 1.5, 'type': 'wg', 'amount': 30000},
+                {'value': '+10 ⚡ энергии', 'rarity': 'epic', 'weight': 1, 'type': 'energy', 'amount': 10},
+                {'value': '👑 Мастер', 'rarity': 'epic', 'weight': 0.75, 'type': 'upgrade', 'amount': 1},
+                {'value': '50 LP', 'rarity': 'legendary', 'weight': 0.75, 'type': 'lp', 'amount': 50}
+            ]
+        },
+        2: {  # Премиум кейс
+            'name': 'Премиум кейс',
+            'rewards': [
+                {'value': '10 000 WG', 'rarity': 'common', 'weight': 25, 'type': 'wg', 'amount': 10000},
+                {'value': '25 000 WG', 'rarity': 'common', 'weight': 18, 'type': 'wg', 'amount': 25000},
+                {'value': '25 LP', 'rarity': 'rare', 'weight': 12, 'type': 'lp', 'amount': 25},
+                {'value': '+10 ⚡ энергии', 'rarity': 'rare', 'weight': 10, 'type': 'energy', 'amount': 10},
+                {'value': '👑 Мастер', 'rarity': 'epic', 'weight': 8, 'type': 'upgrade', 'amount': 1},
+                {'value': '75 000 WG', 'rarity': 'epic', 'weight': 6, 'type': 'wg', 'amount': 75000},
+                {'value': '100 LP', 'rarity': 'epic', 'weight': 4, 'type': 'lp', 'amount': 100},
+                {'value': '👑 Легенда', 'rarity': 'legendary', 'weight': 2, 'type': 'upgrade', 'amount': 1},
+                {'value': '250 LP', 'rarity': 'legendary', 'weight': 1, 'type': 'lp', 'amount': 250}
+            ]
+        }
+    }
+
+    case_data = CASE_DATA.get(case_type)
+    if not case_data:
+        return jsonify({"success": False, "error": "Invalid case type"}), 400
+
+    # Выбираем награду с учётом весов
+    rewards = case_data['rewards']
+    total_weight = sum(r['weight'] for r in rewards)
+    random_value = random.random() * total_weight
+    selected_reward = None
+
+    for reward in rewards:
+        random_value -= reward['weight']
+        if random_value <= 0:
+            selected_reward = reward
+            break
+
+    if not selected_reward:
+        selected_reward = rewards[-1]
+
+    # Убираем кейс
+    remove_user_cases(user_id, 1)
+
+    # Выдаём награду
+    user = get_user(user_id)
+    reward_type = selected_reward['type']
+    reward_amount = selected_reward['amount']
+    reward_value = selected_reward['value']
+    rarity = selected_reward['rarity']
+
+    old_value = None
+    new_value = None
+    currency = ""
+
+    if reward_type == 'wg':
+        old_value = user['wg']
+        new_value = old_value + reward_amount
+        safe_update_user(user_id, wg=new_value)
+        currency = "wg"
+    elif reward_type == 'lp':
+        old_value = user['lp']
+        new_value = old_value + reward_amount
+        safe_update_user(user_id, lp=new_value)
+        currency = "lp"
+    elif reward_type == 'energy':
+        old_value = user['max_energy']
+        new_value = old_value + reward_amount
+        safe_update_user(user_id, max_energy=new_value)
+        currency = "energy"
+    elif reward_type == 'upgrade':
+        # Выдача улучшений
+        upgrade_map = {
+            'Новичок': 1,
+            'Опытный': 2,
+            'Мастер': 4,
+            'Легенда': 5
+        }
+        upgrade_id = None
+        for name, uid in upgrade_map.items():
+            if name in reward_value:
+                upgrade_id = uid
+                break
+
+        if upgrade_id:
+            upgrade_counts = user.get("upgrade_counts", {})
+            upgrade_counts[upgrade_id] = upgrade_counts.get(upgrade_id, 0) + 1
+            safe_update_user(user_id, upgrade_counts=upgrade_counts)
+            old_value = f"{upgrade_id}"
+            new_value = upgrade_counts[upgrade_id]
+
+    # Логируем открытие
+    log_case_opening(user_id, case_type, reward_value, reward_type, reward_amount, rarity)
+
+    # Логируем в системные логи
+    add_log(
+        f"🎰 Открыл кейс и выиграл: {reward_value} ({rarity})",
+        user_id,
+        user['username'],
+        old_value=old_value,
+        new_value=new_value,
+        currency=currency
+    )
+
+    return jsonify({
+        "success": True,
+        "reward": {
+            "value": reward_value,
+            "rarity": rarity,
+            "type": reward_type,
+            "amount": reward_amount
+        },
+        "cases_left": get_user_cases(user_id),
+        "new_balance": {
+            "wg": user['wg'] if reward_type != 'wg' else new_value,
+            "lp": user['lp'] if reward_type != 'lp' else new_value,
+            "max_energy": user['max_energy'] if reward_type != 'energy' else new_value
+        }
+    })
+
+
+@app.route('/api/cases/history', methods=['POST'])
+def api_cases_history():
+    """Получить историю открытий кейсов"""
+    data = request.json
+    if not data:
+        return jsonify({"success": False, "error": "No data"}), 400
+
+    user_id = data.get('user_id')
+    limit = data.get('limit', 20)
+
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"success": False, "error": "Invalid user_id"}), 400
+
+    history = get_case_history(user_id, limit)
+    return jsonify({"success": True, "history": history})
+
+
+@app.route('/api/cases/stats', methods=['GET'])
+@require_admin
+def api_cases_stats():
+    """Получить статистику по кейсам (только для админа)"""
+    stats = get_case_stats()
+    return jsonify({"success": True, "stats": stats})
+
+
+@app.route('/api/cases/give', methods=['POST'])
+@require_admin
+def api_cases_give():
+    """Выдать кейсы игроку (админская команда)"""
+    data = request.json
+    if not data:
+        return jsonify({"success": False, "error": "No data"}), 400
+
+    user_id = data.get('user_id')
+    amount = data.get('amount', 1)
+
+    is_valid, user_id = validate_user_id(user_id)
+    if not is_valid:
+        return jsonify({"success": False, "error": "Invalid user_id"}), 400
+
+    if amount < 1 or amount > 100:
+        return jsonify({"success": False, "error": "Amount must be between 1 and 100"}), 400
+
+    add_user_cases(user_id, amount)
+    user = get_user(user_id)
+
+    add_admin_log(
+        f"🎁 Выдал {amount} кейсов игроку",
+        request.args.get('user_id', 'Admin'),
+        "Admin",
+        user_id,
+        user.get('username') or f"User_{user_id}"
+    )
+
+    return jsonify({
+        "success": True,
+        "message": f"Выдано {amount} кейсов",
+        "cases": get_user_cases(user_id)
+    })
 
 # ========== ОПТИМИЗИРОВАННЫЙ SYNC ЭНДПОИНТ ==========
 @app.route('/api/sync', methods=['POST'])
