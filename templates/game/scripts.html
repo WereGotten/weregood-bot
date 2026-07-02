@@ -7846,7 +7846,7 @@ function translateElement(el, key) {
 setTimeout(loadLanguageSettings, 100);
 
     // ================================================================
-// КЕЙСЫ - ПРЕМИУМ ВЕРСИЯ (ПОЛНОСТЬЮ РАБОЧАЯ)
+// КЕЙСЫ - ПРЕМИУМ ВЕРСИЯ (ПЛАВНАЯ РАБОТА)
 // ================================================================
 
 let currentCaseId = 1;
@@ -7913,26 +7913,6 @@ function getWeightedRandom(rewards) {
         if (random <= 0) return i;
     }
     return rewards.length - 1;
-}
-
-// ===== ЗАГРУЗКА КОЛИЧЕСТВА КЕЙСОВ С СЕРВЕРА =====
-function loadCasesCount() {
-    if (!window.userId) return;
-
-    fetch('/api/cases/get', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: window.userId })
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            caseCount = data.cases || 0;
-            localStorage.setItem('weregood_cases', caseCount.toString());
-            updateCaseCount();
-        }
-    })
-    .catch(err => console.error('Error loading cases count:', err));
 }
 
 // ===== ОТКРЫТИЕ КЕЙСА =====
@@ -8025,8 +8005,18 @@ function renderSlotTrack(rewards) {
         itemsCache = html;
     }
 
+    // ===== 100 КЛОНОВ + ЗАПАС ПО КРАЯМ =====
     let finalHtml = '';
+    // Добавляем 10 клонов в начало для запаса
+    for (let cycle = 0; cycle < 10; cycle++) {
+        finalHtml += itemsCache;
+    }
+    // Основные 100 клонов
     for (let cycle = 0; cycle < 100; cycle++) {
+        finalHtml += itemsCache;
+    }
+    // Добавляем 10 клонов в конец для запаса
+    for (let cycle = 0; cycle < 10; cycle++) {
         finalHtml += itemsCache;
     }
 
@@ -8042,10 +8032,31 @@ function renderRewardsGrid(rewards) {
     let html = '';
     for (let i = 0; i < rewards.length; i++) {
         const reward = rewards[i];
+        const rarityColors = {
+            common: 'rgba(255,255,255,0.04)',
+            rare: 'rgba(0,150,255,0.06)',
+            epic: 'rgba(156,39,176,0.06)',
+            legendary: 'rgba(255,215,0,0.08)'
+        };
+        const borderColors = {
+            common: 'rgba(255,255,255,0.04)',
+            rare: 'rgba(0,150,255,0.1)',
+            epic: 'rgba(156,39,176,0.1)',
+            legendary: 'rgba(255,215,0,0.15)'
+        };
         html += `
-            <div class="case-reward-card rarity-${reward.rarity}" data-index="${i}">
-                <img src="${reward.icon}" class="reward-icon" alt="${reward.value}" loading="lazy">
-                <span class="reward-value">${reward.value}</span>
+            <div class="case-reward-card rarity-${reward.rarity}" data-index="${i}" style="
+                background: ${rarityColors[reward.rarity] || 'rgba(255,255,255,0.03)'};
+                border: 1px solid ${borderColors[reward.rarity] || 'rgba(255,255,255,0.05)'};
+                border-radius: 14px;
+                padding: 12px 6px;
+                text-align: center;
+                transition: all 0.4s ease;
+                cursor: default;
+                position: relative;
+            ">
+                <img src="${reward.icon}" style="width: 30px; height: 30px; object-fit: contain; margin-bottom: 4px; display: block; margin-left: auto; margin-right: auto;">
+                <span style="font-size: 0.5rem; display: block; color: rgba(255,255,255,0.5); line-height: 1.2;">${reward.value}</span>
             </div>
         `;
     }
@@ -8152,6 +8163,7 @@ function spinCase() {
     const centerOffset = Math.max(1, Math.round((containerWidth - itemWidth) / 2 / itemWidth));
     const targetPosition = -(targetItemIndex - centerOffset) * itemWidth;
 
+    // ===== 12-15 СЕКУНД =====
     const duration = 12000 + Math.random() * 3000;
     const extraCycles = 15 + Math.floor(Math.random() * 8);
     const extraOffset = extraCycles * itemsPerCycle * itemWidth;
@@ -8219,59 +8231,15 @@ function spinCase() {
 
             triggerHaptic('heavy');
 
-            // ===== ОТПРАВЛЯЕМ ЗАПРОС НА ОТКРЫТИЕ КЕЙСА =====
-            fetch('/api/cases/open', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    user_id: window.userId,
-                    case_type: currentCaseId
-                })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    // Обновляем балансы
-                    if (data.new_balance) {
-                        if (data.new_balance.wg !== undefined) localWG = data.new_balance.wg;
-                        if (data.new_balance.lp !== undefined) localLP = data.new_balance.lp;
-                        if (data.new_balance.max_energy !== undefined) localMaxEnergy = data.new_balance.max_energy;
-                        if (typeof updateUI === 'function') updateUI();
-                    }
+            setTimeout(() => {
+                showToast(`🎉 Вы выиграли: ${winReward.value}!`, 'success');
+            }, 400);
 
-                    caseCount = data.cases_left || 0;
-                    localStorage.setItem('weregood_cases', caseCount.toString());
-                    updateCaseCount();
+            caseCount--;
+            localStorage.setItem('weregood_cases', caseCount.toString());
+            updateCaseCount();
 
-                    // Показываем результат
-                    const reward = data.reward;
-                    setTimeout(() => {
-                        showToast(`🎉 Вы выиграли: ${reward.value}!`, 'success');
-                    }, 300);
-
-                    if (reward.rarity === 'legendary') {
-                        triggerHaptic('heavy');
-                        setTimeout(() => {
-                            showToast(`🌟 ЛЕГЕНДАРНЫЙ ВЫИГРЫШ! ${reward.value}!`, 'success');
-                        }, 1500);
-                    }
-                } else {
-                    console.error('Open case error:', data.error);
-                    showToast('❌ Ошибка при открытии кейса', 'error');
-                    // Возвращаем кейс
-                    caseCount++;
-                    localStorage.setItem('weregood_cases', caseCount.toString());
-                    updateCaseCount();
-                }
-            })
-            .catch(err => {
-                console.error('Open case error:', err);
-                showToast('❌ Ошибка соединения', 'error');
-                // Возвращаем кейс
-                caseCount++;
-                localStorage.setItem('weregood_cases', caseCount.toString());
-                updateCaseCount();
-            });
+            handleCaseReward(winReward);
         }
 
         isCaseSpinning = false;
@@ -8283,6 +8251,47 @@ function spinCase() {
     };
 
     spinTimeout = setTimeout(finishSpin, duration + 500);
+}
+
+// ===== ОБРАБОТКА НАГРАДЫ =====
+function handleCaseReward(reward) {
+    const value = parseInt(reward.value.replace(/\s/g, '')) || 0;
+    const lowerValue = reward.value.toLowerCase();
+
+    if (lowerValue.includes('wg')) {
+        localWG += value;
+        if (typeof updateUI === 'function') updateUI();
+        addLog(`🎁 Выиграл ${value} WG из кейса!`, window.userId, window.username);
+    } else if (lowerValue.includes('lp')) {
+        localLP += value;
+        if (typeof updateUI === 'function') updateUI();
+        addLog(`🎁 Выиграл ${value} LP из кейса!`, window.userId, window.username);
+    } else if (lowerValue.includes('⚡')) {
+        const energyAmount = parseInt(lowerValue.match(/\d+/)?.[0] || 0);
+        if (energyAmount > 0) {
+            localMaxEnergy += energyAmount;
+            if (typeof updateUI === 'function') updateUI();
+            addLog(`🎁 Выиграл +${energyAmount} макс. энергии из кейса!`, window.userId, window.username);
+        }
+    } else if (lowerValue.includes('новичок') || lowerValue.includes('опытный') ||
+               lowerValue.includes('мастер') || lowerValue.includes('легенда')) {
+        const upgradeMap = {
+            'новичок': 1,
+            'опытный': 2,
+            'мастер': 4,
+            'легенда': 5
+        };
+        for (const [key, id] of Object.entries(upgradeMap)) {
+            if (lowerValue.includes(key)) {
+                upgradeCounts[id] = (upgradeCounts[id] || 0) + 1;
+                if (typeof updateUI === 'function') updateUI();
+                addLog(`🎁 Выиграл улучшение "${reward.value}" из кейса!`, window.userId, window.username);
+                break;
+            }
+        }
+    }
+
+    if (typeof syncData === 'function') syncData(true);
 }
 
 // ===== МОДАЛКА ПОКУПКИ =====
@@ -8325,7 +8334,7 @@ function showBuyCaseModal() {
                 Купите кейс за <span style="color: #FFD700; font-weight: 700;">${caseInfo.price} WG</span>
             </p>
             <div style="display: flex; gap: 10px;">
-                <button onclick="buyCaseFromModal()" style="
+                <button onclick="buyCase(); document.getElementById('buyCaseOverlay').remove();" style="
                     flex: 2;
                     padding: 14px;
                     border: none;
@@ -8360,11 +8369,6 @@ function showBuyCaseModal() {
     triggerHaptic('medium');
 }
 
-function buyCaseFromModal() {
-    document.getElementById('buyCaseOverlay').remove();
-    buyCase();
-}
-
 // ===== ПОКУПКА КЕЙСА =====
 function buyCase() {
     const caseInfo = caseData[currentCaseId];
@@ -8375,44 +8379,16 @@ function buyCase() {
         return;
     }
 
-    const buyBtn = document.getElementById('caseBuyBtn');
-    if (buyBtn) {
-        buyBtn.textContent = '⏳';
-        buyBtn.disabled = true;
-    }
+    localWG -= caseInfo.price;
+    if (typeof updateUI === 'function') updateUI();
 
-    fetch('/api/cases/buy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            user_id: window.userId,
-            case_type: currentCaseId
-        })
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            localWG = data.wg;
-            caseCount = data.cases;
-            localStorage.setItem('weregood_cases', caseCount.toString());
-            if (typeof updateUI === 'function') updateUI();
-            updateCaseCount();
-            showToast(`✅ Кейс куплен! Нажмите "ОТКРЫТЬ"`, 'success');
-            triggerHaptic('light');
-        } else {
-            showToast(data.error || '❌ Ошибка при покупке', 'error');
-        }
-    })
-    .catch(err => {
-        console.error('Buy case error:', err);
-        showToast('❌ Ошибка соединения', 'error');
-    })
-    .finally(() => {
-        if (buyBtn) {
-            buyBtn.textContent = '+';
-            buyBtn.disabled = false;
-        }
-    });
+    caseCount++;
+    localStorage.setItem('weregood_cases', caseCount.toString());
+    updateCaseCount();
+
+    showToast(`✅ Кейс куплен! Нажмите "ОТКРЫТЬ"`, 'success');
+    triggerHaptic('light');
+    if (typeof syncData === 'function') syncData(true);
 }
 
 // ===== ЗАКРЫТИЕ КЕЙСА =====
