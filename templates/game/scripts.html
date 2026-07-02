@@ -461,7 +461,7 @@ if (upgradeBtn && upgradeCard) {
     let syncInterval = null;
     let lastSyncTime = 0;
     let isSyncing = false;
-    const SYNC_DELAY = 5000;
+    const SYNC_DELAY = 2000;
 
     async function syncData(force = false) {
         if (isSyncing) return;
@@ -2727,7 +2727,7 @@ listDiv.innerHTML = html;
                 }
             }
             if (dailyData.can_claim || dailyData.current_day === 1) {
-                setTimeout(() => { openDailyModal(); }, 500);
+                setTimeout(() => { openDailyModal(); }, 100);
             }
             return dailyData;
         } catch(e) {
@@ -3973,7 +3973,7 @@ setTimeout(async () => {
     } catch (e) {
         console.log('TON предзагрузка не удалась, будет загружена при первом клике');
     }
-}, 1500);
+}, 300);
 
     // ==================== ТУТОРИАЛ (ОБУЧЕНИЕ) ====================
     let tutorialSteps = [], currentTutorialStep = 0, tutorialActive = false;
@@ -4006,8 +4006,8 @@ setTimeout(async () => {
             });
             let tutorialData = await tutorialRes.json();
             if (!tutorialData.completed) {
-                setTimeout(() => startTutorial(), 1500);
-            }
+            setTimeout(() => startTutorial(), 300); // ← 300 мс
+        }
         } catch(e) {
             console.error('Tutorial check error:', e);
         }
@@ -5411,7 +5411,7 @@ document.addEventListener("DOMContentLoaded", () => {
             setTimeout(() => {
                 openPromoModalWithCode(promoCode);
                 showToast(`🎫 Промокод ${promoCode} готов к активации!`, 'success');
-            }, 2000);
+            }, 300);
         } else if (startParam && !startParam.startsWith('claim_')) {
             const refCode = startParam;
             setTimeout(async () => {
@@ -7068,7 +7068,7 @@ function translateElement(el, key) {
 }
 
 // Загружаем язык при старте
-setTimeout(loadLanguageSettings, 500);
+setTimeout(loadLanguageSettings, 100);
 
     // ================================================================
 // КЕЙСЫ - ПРОСТАЯ РАБОЧАЯ ВЕРСИЯ
@@ -7589,13 +7589,13 @@ async function buyLPBoostStars() {
                             buttons: [{ type: 'ok' }]
                         });
                     }
+                   // ===== СТАЛО =====
                     setTimeout(() => {
                         updateStatus();
                         updateLPBoostCount();
-                        // Сбрасываем количество на 1
                         lpBoostQuantity = 1;
                         changeLpBoostCount(0);
-                    }, 500);
+                    }, 100); // ← 100
                 } else if (status === 'failed' || status === 'cancelled') {
                     showToast('❌ Оплата отменена или не удалась', 'error');
                 }
