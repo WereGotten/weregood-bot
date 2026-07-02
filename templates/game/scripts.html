@@ -579,28 +579,35 @@ if (upgradeBtn && upgradeCard) {
     }
 
     function updateLeaderboardMiniFast(leaderboardData) {
-        const container = document.getElementById('leaderboardMini');
-        if (!container || !leaderboardData || leaderboardData.length === 0) {
-            if (container) container.innerHTML = '<div class="loading">Загрузка...</div>';
-            return;
-        }
-        let html = '';
-        for (let i = 0; i < leaderboardData.length; i++) {
-            const user = leaderboardData[i];
-            const avatar = (user.avatar && user.avatar !== '👤' && user.avatar !== '')
-                ? `<img src="${user.avatar}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;">`
-                : '👤';
-            const userName = user.username || 'Игрок';
-            const dailyClicks = user.daily_clicks || user.clicks || 0;
-            html += `<div class="leaderboard-mini-item">
-                <span class="rank">${user.rank}</span>
-                <span class="avatar-mini">${avatar}</span>
-                <span class="name">${escapeHtml(userName)}</span>
-                <span class="clicks">${dailyClicks.toLocaleString()} кликов</span>
-            </div>`;
-        }
-        container.innerHTML = html;
+    const container = document.getElementById('leaderboardMini');
+    if (!container) return;
+
+    // Скрываем скелетон
+    const skeleton = container.querySelector('.leaderboard-skeleton');
+    if (skeleton) skeleton.style.display = 'none';
+
+    if (!leaderboardData || leaderboardData.length === 0) {
+        container.innerHTML = '<div class="loading" style="opacity:0.4;font-size:0.7rem;padding:8px;">Нет данных</div>';
+        return;
     }
+
+    let html = '';
+    for (let i = 0; i < leaderboardData.length; i++) {
+        const user = leaderboardData[i];
+        const avatar = (user.avatar && user.avatar !== '👤' && user.avatar !== '')
+            ? `<img src="${user.avatar}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;">`
+            : '👤';
+        const userName = user.username || 'Игрок';
+        const dailyClicks = user.daily_clicks || user.clicks || 0;
+        html += `<div class="leaderboard-mini-item">
+            <span class="rank">${user.rank}</span>
+            <span class="avatar-mini">${avatar}</span>
+            <span class="name">${escapeHtml(userName)}</span>
+            <span class="clicks">${dailyClicks.toLocaleString()} кликов</span>
+        </div>`;
+    }
+    container.innerHTML = html;
+}
 
     function updateRecentPlayersFast(players) {
         const container = document.getElementById('recentPlayersList');
@@ -5344,9 +5351,7 @@ document.addEventListener("DOMContentLoaded", () => {
     syncData(true);
 
     // ===== ПРИНУДИТЕЛЬНАЯ ЗАГРУЗКА МИНИ-ЛИДЕРБОРДА =====
-    setTimeout(() => {
-        loadLeaderboardData('day', true);
-    }, 500);
+    loadLeaderboardData('day', true);
 
     loadReferralLink();
     loadReferrals();
