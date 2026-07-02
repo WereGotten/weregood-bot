@@ -60,46 +60,8 @@
         <div class="stat-mini-item"><div class="stat-mini-icon"><img src="/static/click.png" style="width:30px"></div><div class="stat-mini-value" id="totalClicksMini">0</div><div class="stat-mini-label" data-lang="clicks">Кликов</div></div>
     </div>
 
-    <!-- ========== ЛИДЕРБОРД СО СКЕЛЕТОНОМ (БЕЗ МЕЛЬКАНИЯ) ========== -->
     <div class="leaderboard-mini" onclick="openLeaderboard()">
-        <div class="leaderboard-mini-header">
-            <span data-lang="top_players">🏆 Топ игроков</span>
-            <span>→</span>
-        </div>
-        <div class="leaderboard-mini-list" id="leaderboardMini">
-            <!-- Скелетон (показывается пока грузятся данные) -->
-            <div class="leaderboard-skeleton" id="leaderboardSkeleton">
-                <div class="skeleton-row" style="display:flex;align-items:center;gap:8px;height:24px;padding:4px 0;">
-                    <span class="skeleton-shimmer" style="width:20px;height:14px;background:rgba(255,255,255,0.06);border-radius:4px;display:inline-block;"></span>
-                    <span class="skeleton-shimmer" style="width:24px;height:24px;background:rgba(255,255,255,0.06);border-radius:50%;display:inline-block;"></span>
-                    <span class="skeleton-shimmer" style="flex:1;height:14px;background:rgba(255,255,255,0.06);border-radius:4px;display:inline-block;"></span>
-                    <span class="skeleton-shimmer" style="width:40px;height:14px;background:rgba(255,255,255,0.06);border-radius:4px;display:inline-block;"></span>
-                </div>
-                <div class="skeleton-row" style="display:flex;align-items:center;gap:8px;height:24px;padding:4px 0;">
-                    <span class="skeleton-shimmer" style="width:20px;height:14px;background:rgba(255,255,255,0.06);border-radius:4px;display:inline-block;"></span>
-                    <span class="skeleton-shimmer" style="width:24px;height:24px;background:rgba(255,255,255,0.06);border-radius:50%;display:inline-block;"></span>
-                    <span class="skeleton-shimmer" style="flex:1;height:14px;background:rgba(255,255,255,0.06);border-radius:4px;display:inline-block;"></span>
-                    <span class="skeleton-shimmer" style="width:40px;height:14px;background:rgba(255,255,255,0.06);border-radius:4px;display:inline-block;"></span>
-                </div>
-                <div class="skeleton-row" style="display:flex;align-items:center;gap:8px;height:24px;padding:4px 0;">
-                    <span class="skeleton-shimmer" style="width:20px;height:14px;background:rgba(255,255,255,0.06);border-radius:4px;display:inline-block;"></span>
-                    <span class="skeleton-shimmer" style="width:24px;height:24px;background:rgba(255,255,255,0.06);border-radius:50%;display:inline-block;"></span>
-                    <span class="skeleton-shimmer" style="flex:1;height:14px;background:rgba(255,255,255,0.06);border-radius:4px;display:inline-block;"></span>
-                    <span class="skeleton-shimmer" style="width:40px;height:14px;background:rgba(255,255,255,0.06);border-radius:4px;display:inline-block;"></span>
-                </div>
-                <div class="skeleton-row" style="display:flex;align-items:center;gap:8px;height:24px;padding:4px 0;">
-                    <span class="skeleton-shimmer" style="width:20px;height:14px;background:rgba(255,255,255,0.06);border-radius:4px;display:inline-block;"></span>
-                    <span class="skeleton-shimmer" style="width:24px;height:24px;background:rgba(255,255,255,0.06);border-radius:50%;display:inline-block;"></span>
-                    <span class="skeleton-shimmer" style="flex:1;height:14px;background:rgba(255,255,255,0.06);border-radius:4px;display:inline-block;"></span>
-                    <span class="skeleton-shimmer" style="width:40px;height:14px;background:rgba(255,255,255,0.06);border-radius:4px;display:inline-block;"></span>
-                </div>
-                <div class="skeleton-row" style="display:flex;align-items:center;gap:8px;height:24px;padding:4px 0;">
-                    <span class="skeleton-shimmer" style="width:20px;height:14px;background:rgba(255,255,255,0.06);border-radius:4px;display:inline-block;"></span>
-                    <span class="skeleton-shimmer" style="width:24px;height:24px;background:rgba(255,255,255,0.06);border-radius:50%;display:inline-block;"></span>
-                    <span class="skeleton-shimmer" style="flex:1;height:14px;background:rgba(255,255,255,0.06);border-radius:4px;display:inline-block;"></span>
-                    <span class="skeleton-shimmer" style="width:40px;height:14px;background:rgba(255,255,255,0.06);border-radius:4px;display:inline-block;"></span>
-                </div>
-            </div>
-        </div>
+        <div class="leaderboard-mini-header"><span data-lang="top_players">🏆 Топ игроков</span><span>→</span></div>
+        <div class="leaderboard-mini-list" id="leaderboardMini" data-lang="loading">Загрузка...</div>
     </div>
 </div>

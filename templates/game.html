@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, view-fit=cover, user-scalable=no">
     <title>WereGood</title>
 
     <!-- ===== ПРЕДЗАГРУЗКА ШРИФТА ===== -->
@@ -33,11 +33,11 @@
             display: flex;
             flex-direction: column;
             opacity: 0;
-            transition: opacity 0.15s ease;
+            transition: opacity 0.3s ease;
         }
         .app.visible { opacity: 1; }
 
-        /* ===== СПЛЕШ ЭКРАН (ПО ЦЕНТРУ) ===== */
+        /* ===== СПЛЕШ ЭКРАН ===== */
         #splashScreen {
             position: fixed;
             top: 0;
@@ -50,12 +50,12 @@
             align-items: center;
             justify-content: center;
             z-index: 99999;
-            transition: opacity 0.25s ease, transform 0.25s ease;
+            transition: opacity 0.4s ease, transform 0.4s ease;
             font-family: 'Inter', sans-serif;
         }
         #splashScreen.hidden {
             opacity: 0;
-            transform: scale(1.03);
+            transform: scale(1.05);
             pointer-events: none;
         }
 
@@ -120,7 +120,7 @@
             width: 0%;
             background: linear-gradient(90deg, #FFD700, #F5A623);
             border-radius: 3px;
-            transition: width 0.15s ease;
+            transition: width 0.2s ease;
         }
         .splash-percent {
             font-size: 13px;
@@ -258,7 +258,7 @@
     <audio id="settingsSound" preload="metadata"><source src="/static/settings.mp3" type="audio/mpeg"></audio>
     <audio id="purchaseSound" preload="metadata"><source src="/static/purchase.mp3" type="audio/mpeg"></audio>
 
-    <!-- ===== БЫСТРЫЙ СТАРТ ===== -->
+    <!-- ===== ОПТИМИЗИРОВАННЫЙ СПЛЕШ (2.5-3 СЕКУНДЫ) ===== -->
     <script>
         (function() {
             'use strict';
@@ -278,18 +278,25 @@
                 if (percentText) percentText.textContent = Math.round(currentProgress) + '%';
             }
 
+            // ===== ПЛАВНАЯ ЗАГРУЗКА (2.5 СЕКУНДЫ) =====
             function simulateLoading() {
                 const steps = [
-                    { target: 30, delay: 40 },
-                    { target: 50, delay: 40 },
-                    { target: 70, delay: 40 },
-                    { target: 85, delay: 40 },
-                    { target: 95, delay: 40 },
-                    { target: 100, delay: 40 }
+                    { target: 12, delay: 200 },
+                    { target: 28, delay: 250 },
+                    { target: 45, delay: 250 },
+                    { target: 60, delay: 250 },
+                    { target: 75, delay: 250 },
+                    { target: 88, delay: 250 },
+                    { target: 96, delay: 250 },
+                    { target: 100, delay: 300 }
                 ];
                 let index = 0;
                 function nextStep() {
-                    if (index >= steps.length) { finishLoading(); return; }
+                    if (index >= steps.length) {
+                        // После 100% ждём 500мс для завершения
+                        setTimeout(finishLoading, 500);
+                        return;
+                    }
                     const step = steps[index];
                     currentProgress = step.target;
                     updateProgress(currentProgress);
@@ -304,7 +311,7 @@
                 isHidden = true;
                 if (currentProgress < 100) {
                     updateProgress(100);
-                    setTimeout(hideSplash, 100);
+                    setTimeout(hideSplash, 200);
                 } else {
                     hideSplash();
                 }
@@ -313,7 +320,9 @@
             function hideSplash() {
                 if (splash) {
                     splash.classList.add('hidden');
-                    setTimeout(() => { splash.style.display = 'none'; }, 200);
+                    setTimeout(() => {
+                        splash.style.display = 'none';
+                    }, 400);
                 }
                 if (app) {
                     app.classList.add('visible');
@@ -321,6 +330,7 @@
                 document.body.style.overflow = '';
             }
 
+            // ===== ОТСЛЕЖИВАНИЕ РЕАЛЬНОЙ ЗАГРУЗКИ =====
             function trackRealLoading() {
                 if (document.readyState === 'loading') {
                     document.addEventListener('DOMContentLoaded', () => updateProgress(60));
@@ -329,7 +339,7 @@
                 }
                 window.addEventListener('load', () => {
                     updateProgress(85);
-                    setTimeout(() => updateProgress(95), 80);
+                    setTimeout(() => updateProgress(95), 200);
                 });
                 if (window.Telegram?.WebApp) updateProgress(70);
                 if (typeof io !== 'undefined') updateProgress(75);
@@ -337,29 +347,36 @@
                 if (typeof window.Adsgram !== 'undefined') updateProgress(78);
             }
 
-            // Короткий таймаут
+            // ===== ЗАПАСНОЙ ТАЙМЕР (4 СЕКУНДЫ) =====
             setTimeout(() => {
                 if (!isHidden) {
+                    console.log('⏱️ Запасной таймер: завершаем загрузку');
                     updateProgress(100);
-                    setTimeout(finishLoading, 80);
+                    setTimeout(finishLoading, 200);
                 }
-            }, 1500);
+            }, 4000);
 
+            // ===== ФОРСИРОВАННОЕ ЗАВЕРШЕНИЕ (6 СЕКУНД) =====
+            setTimeout(() => {
+                if (!isHidden) {
+                    console.log('⚠️ Форсированное завершение загрузки');
+                    updateProgress(100);
+                    setTimeout(finishLoading, 100);
+                }
+            }, 6000);
+
+            // ===== ЗАПУСК =====
             function init() {
                 updateProgress(5);
                 simulateLoading();
                 trackRealLoading();
+
+                // Ускоряем если застряло
                 setTimeout(() => {
-                    if (!isHidden && currentProgress < 70) {
-                        updateProgress(Math.max(currentProgress, 70));
+                    if (!isHidden && currentProgress < 50) {
+                        updateProgress(Math.max(currentProgress, 50));
                     }
-                }, 800);
-                setTimeout(() => {
-                    if (!isHidden) {
-                        updateProgress(100);
-                        setTimeout(finishLoading, 80);
-                    }
-                }, 2500);
+                }, 1500);
             }
 
             if (document.readyState === 'loading') {

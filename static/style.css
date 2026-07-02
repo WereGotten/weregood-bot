@@ -6896,29 +6896,3 @@ body.light-theme .star-upgrade-card {
     display: block !important;
 }
 
-/* ========== SKELETON SHIMMER (БЕЗ МЕЛЬКАНИЯ) ========== */
-.skeleton-shimmer {
-    display: inline-block;
-    background: linear-gradient(90deg,
-        rgba(255,255,255,0.05) 25%,
-        rgba(255,255,255,0.10) 50%,
-        rgba(255,255,255,0.05) 75%
-    );
-    background-size: 200% 100%;
-    animation: shimmer 1.5s ease-in-out infinite;
-}
-
-@keyframes shimmer {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
-}
-
-/* Светлая тема */
-body.light-theme .skeleton-shimmer {
-    background: linear-gradient(90deg,
-        rgba(0,0,0,0.05) 25%,
-        rgba(0,0,0,0.10) 50%,
-        rgba(0,0,0,0.05) 75%
-    );
-    background-size: 200% 100%;
-}
