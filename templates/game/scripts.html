@@ -1,219 +1,218 @@
 <script>
         // ================================================================
-    // ИНИЦИАЛИЗАЦИЯ - ПОЛУЧЕНИЕ ID ПОЛЬЗОВАТЕЛЯ
-    // ================================================================
+// ИНИЦИАЛИЗАЦИЯ - ПОЛУЧЕНИЕ ID ПОЛЬЗОВАТЕЛЯ
+// ================================================================
 
-    // ===== ЖДЁМ ГОТОВНОСТИ TELEGRAM WEBAPP =====
-    function waitForTelegram(callback) {
-        // Если уже есть — сразу вызываем
-        if (window.Telegram && window.Telegram.WebApp) {
-            console.log('✅ Telegram WebApp уже готов');
-            callback();
-            return;
-        }
-
-        console.log('⏳ Ожидаем загрузку Telegram WebApp...');
-
-        // Слушаем событие готовности
-        document.addEventListener('telegram-ready', function onReady() {
-            document.removeEventListener('telegram-ready', onReady);
-            console.log('✅ Telegram WebApp загружен (событие)');
-            callback();
-        });
-
-        // Проверяем каждые 50мс (максимум 3 секунды)
-        let attempts = 0;
-        const maxAttempts = 60; // 60 * 50мс = 3 секунды
-        const interval = setInterval(() => {
-            attempts++;
-            if (window.Telegram && window.Telegram.WebApp) {
-                clearInterval(interval);
-                console.log('✅ Telegram WebApp загружен (проверка)');
-                callback();
-            } else if (attempts >= maxAttempts) {
-                clearInterval(interval);
-                console.warn('⚠️ Telegram WebApp не загрузился за 3 секунды, используем fallback');
-                // Принудительно создаём объект Telegram если его нет
-                if (!window.Telegram) window.Telegram = {};
-                if (!window.Telegram.WebApp) {
-                    window.Telegram.WebApp = {
-                        initDataUnsafe: { user: null },
-                        ready: function() {},
-                        expand: function() {},
-                        isVersionAtLeast: function() { return false; }
-                    };
-                }
-                callback();
-            }
-        }, 50);
+// ===== ЖДЁМ ГОТОВНОСТИ TELEGRAM WEBAPP =====
+function waitForTelegram(callback) {
+    if (window.Telegram && window.Telegram.WebApp) {
+        console.log('✅ Telegram WebApp уже готов');
+        callback();
+        return;
     }
 
-    // ===== ЗАПУСКАЕМ ПОЛУЧЕНИЕ ID =====
-    waitForTelegram(function() {
-        _initializeUser();
+    console.log('⏳ Ожидаем загрузку Telegram WebApp...');
+
+    let isCalled = false;
+    const safeCallback = function() {
+        if (isCalled) return;
+        isCalled = true;
+        callback();
+    };
+
+    document.addEventListener('telegram-ready', function onReady() {
+        document.removeEventListener('telegram-ready', onReady);
+        console.log('✅ Telegram WebApp загружен (событие)');
+        safeCallback();
     });
 
-    // ===== ОСНОВНАЯ ФУНКЦИЯ ИНИЦИАЛИЗАЦИИ =====
-    function _initializeUser() {
-        let tg = window.Telegram?.WebApp;
-        let user = tg?.initDataUnsafe?.user;
-
-        let savedUserId = sessionStorage.getItem('weregood_user_id');
-        let userId = null;
-        let isAuthError = false;
-
-        console.log('🔍 Данные из Telegram:', user);
-
-        // ===== ПРАВИЛЬНАЯ ЛОГИКА ПОЛУЧЕНИЯ ID =====
-        if (user && user.id && user.id > 0) {
-            // Реальный ID из Telegram (минимальный ID в Telegram начинается с 100000000)
-            if (user.id.toString().length >= 9) {
-                userId = user.id;
-                sessionStorage.setItem('weregood_user_id', userId);
-                console.log('✅ ID получен из Telegram:', userId);
-            } else {
-                console.warn('⚠️ Подозрительный ID из Telegram:', user.id);
-                userId = user.id;
-                sessionStorage.setItem('weregood_user_id', userId);
+    let attempts = 0;
+    const maxAttempts = 60;
+    const interval = setInterval(() => {
+        attempts++;
+        if (window.Telegram && window.Telegram.WebApp) {
+            clearInterval(interval);
+            console.log('✅ Telegram WebApp загружен (проверка)');
+            safeCallback();
+        } else if (attempts >= maxAttempts) {
+            clearInterval(interval);
+            console.warn('⚠️ Telegram WebApp не загрузился за 3 секунды, используем fallback');
+            if (!window.Telegram) window.Telegram = {};
+            if (!window.Telegram.WebApp) {
+                window.Telegram.WebApp = {
+                    initDataUnsafe: { user: null },
+                    ready: function() {},
+                    expand: function() {},
+                    isVersionAtLeast: function() { return false; }
+                };
             }
-        } else if (savedUserId && savedUserId !== 'null' && parseInt(savedUserId) > 0) {
-            // Восстанавливаем из sessionStorage
-            userId = parseInt(savedUserId);
-            console.log('✅ ID восстановлен из sessionStorage:', userId);
+            safeCallback();
         }
+    }, 50);
+}
 
-        // ===== ЕСЛИ ID НЕ ПОЛУЧЕН — ПРОБУЕМ ЕЩЁ РАЗ =====
-        if (!userId || userId === 12345678 || userId === 0) {
-            console.warn('⚠️ ID не получен, пробуем повторно...');
+// ===== ЗАПУСКАЕМ ПОЛУЧЕНИЕ ID =====
+waitForTelegram(function() {
+    _initializeUser();
+});
 
-            // Пробуем получить ID через Telegram.WebApp повторно
-            if (window.Telegram && window.Telegram.WebApp) {
-                const freshUser = window.Telegram.WebApp.initDataUnsafe?.user;
-                if (freshUser && freshUser.id && freshUser.id > 0) {
-                    userId = freshUser.id;
-                    sessionStorage.setItem('weregood_user_id', userId);
-                    console.log('✅ ID получен повторно:', userId);
-                }
+// ===== ОСНОВНАЯ ФУНКЦИЯ ИНИЦИАЛИЗАЦИИ =====
+function _initializeUser() {
+    const tg = window.Telegram?.WebApp;
+    const user = tg?.initDataUnsafe?.user;
+    const savedUserId = sessionStorage.getItem('weregood_user_id');
+    let userId = null;
+
+    console.log('🔍 Данные из Telegram:', user);
+
+    // ===== ПОЛУЧЕНИЕ ID =====
+    if (user && user.id && user.id > 0) {
+        if (user.id.toString().length >= 9) {
+            userId = user.id;
+            sessionStorage.setItem('weregood_user_id', userId);
+            console.log('✅ ID получен из Telegram:', userId);
+        } else {
+            console.warn('⚠️ Подозрительный ID из Telegram:', user.id);
+            userId = user.id;
+            sessionStorage.setItem('weregood_user_id', userId);
+        }
+    } else if (savedUserId && savedUserId !== 'null' && parseInt(savedUserId) > 0) {
+        userId = parseInt(savedUserId);
+        console.log('✅ ID восстановлен из sessionStorage:', userId);
+    }
+
+    // ===== ПОВТОРНАЯ ПОПЫТКА =====
+    if (!userId || userId === 12345678 || userId === 0) {
+        console.warn('⚠️ ID не получен, пробуем повторно...');
+        if (window.Telegram && window.Telegram.WebApp) {
+            const freshUser = window.Telegram.WebApp.initDataUnsafe?.user;
+            if (freshUser && freshUser.id && freshUser.id > 0) {
+                userId = freshUser.id;
+                sessionStorage.setItem('weregood_user_id', userId);
+                console.log('✅ ID получен повторно:', userId);
             }
         }
+    }
 
-        // ===== СОХРАНЯЕМ В ГЛОБАЛЬНУЮ ПЕРЕМЕННУЮ =====
-        window.userId = userId;
-        console.log('📌 Глобальный userId установлен:', window.userId);
+    // ===== СОХРАНЯЕМ =====
+    window.userId = userId;
+    console.log('📌 Глобальный userId установлен:', window.userId);
 
-        // ===== ПРОВЕРКА: ЕСЛИ ID НЕ ПОЛУЧЕН =====
-        if (!userId || userId === 12345678 || userId === 0) {
-            isAuthError = true;
-            console.error('❌ КРИТИЧЕСКАЯ ОШИБКА: Невозможно определить пользователя!');
-            showAuthError();
-            return;
-        }
+    // ===== ПРОВЕРКА =====
+    if (!userId || userId === 12345678 || userId === 0) {
+        console.error('❌ КРИТИЧЕСКАЯ ОШИБКА: Невозможно определить пользователя!');
+        showAuthError();
+        return;
+    }
 
-        // ===== ID ПОЛУЧЕН — ПРОДОЛЖАЕМ =====
-        console.log('✅ Авторизация успешна, ID:', userId);
+    console.log('✅ Авторизация успешна, ID:', userId);
 
-        // Убираем оверлей ошибки если он есть
+    // Убираем оверлей ошибки
+    const errorOverlay = document.getElementById('authErrorOverlay');
+    if (errorOverlay) errorOverlay.remove();
+
+    // ===== ОТЛАДКА =====
+    console.log('👤 Игрок ID:', userId);
+    console.log('🔑 Секретный ID (для кейсов): 5264622363');
+    console.log('🔓 Доступ к кейсам:', userId === 5264622363 ? '✅ РАЗРЕШЁН' : '⛔ ЗАКРЫТ');
+
+    // ===== ДАННЫЕ ПОЛЬЗОВАТЕЛЯ =====
+    const username = user ? (user.username || '') : '';
+    const firstName = user ? (user.first_name || '') : '';
+    const lastName = user ? (user.last_name || '') : '';
+    const photoUrl = user && user.photo_url ? user.photo_url : '';
+    const chatId = userId;
+    const displayName = firstName || username || 'Игрок';
+
+    window.username = username;
+    window.firstName = firstName;
+    window.lastName = lastName;
+    window.photoUrl = photoUrl;
+    window.chatId = chatId;
+    window.displayName = displayName;
+
+    if (sessionStorage.getItem('weregood_display_name')) {
+        window.displayName = sessionStorage.getItem('weregood_display_name');
+    }
+
+    // ===== forceBindAccount =====
+    window.forceBindAccount = async function() {
         const errorOverlay = document.getElementById('authErrorOverlay');
         if (errorOverlay) errorOverlay.remove();
 
-        // ===== ДЛЯ ОТЛАДКИ: ВЫВОДИМ ID В КОНСОЛЬ =====
-        console.log('👤 Игрок ID:', userId);
-        console.log('🔑 Секретный ID (для кейсов): 5264622363');
-        console.log('🔓 Доступ к кейсам:', userId === 5264622363 ? '✅ РАЗРЕШЁН' : '⛔ ЗАКРЫТ');
-
-        // ===== ПРОДОЛЖАЕМ ИНИЦИАЛИЗАЦИЮ =====
-        let username = user ? (user.username || '') : '';
-        let firstName = user ? (user.first_name || '') : '';
-        let lastName = user ? (user.last_name || '') : '';
-        let photoUrl = user && user.photo_url ? user.photo_url : '';
-        let chatId = userId;
-        let displayName = firstName || username || 'Игрок';
-
-        // Сохраняем в глобальные переменные
-        window.username = username;
-        window.firstName = firstName;
-        window.lastName = lastName;
-        window.photoUrl = photoUrl;
-        window.chatId = chatId;
-        window.displayName = displayName;
-
-        const BOT_USERNAME = 'WereGooodbot';
-
-        // ФЛАГИ ДЛЯ СТИРАНИЯ - ПРЕДОТВРАЩАЕМ ПЕРЕЗАГРУЗКУ БИЛЕТОВ
-        let isScratchingActive = false;
-        let scratchTimeout = null;
-        let pendingRefreshTimeout = null;
-
-        // ===== forceBindAccount =====
-        window.forceBindAccount = async function() {
-            // Убираем оверлей ошибки, если он есть
-            const errorOverlay = document.getElementById('authErrorOverlay');
-            if (errorOverlay) errorOverlay.remove();
-
-            if (!window.Telegram?.WebApp) {
-                showToast('❌ Telegram WebApp не доступен', 'error');
-                return;
-            }
-
-            const tg = window.Telegram.WebApp;
-            tg.expand();
-            const freshUser = tg.initDataUnsafe?.user;
-
-            if (freshUser && freshUser.id && freshUser.id > 0) {
-                const newUserId = freshUser.id;
-                if (confirm(`⚠️ Обнаружен ваш аккаунт (ID: ${newUserId}).\n\nПривязать его к игре? Весь ваш прогресс сохранится.`)) {
-                    window.userId = newUserId;
-                    sessionStorage.setItem('weregood_user_id', newUserId);
-                    window.username = freshUser.username || '';
-                    window.firstName = freshUser.first_name || '';
-                    window.lastName = freshUser.last_name || '';
-                    window.photoUrl = freshUser.photo_url || '';
-                    window.displayName = window.firstName || window.username || 'Игрок';
-
-                    await autoRegister();
-                    await syncData(true);
-                    showToast('✅ Аккаунт привязан!', 'success');
-                    setTimeout(() => location.reload(), 1500);
-                }
-            } else {
-                showToast('❌ Не удалось получить данные аккаунта. Попробуйте перезапустить Telegram.', 'error');
-            }
-        };
-
-        if (sessionStorage.getItem('weregood_display_name')) {
-            window.displayName = sessionStorage.getItem('weregood_display_name');
+        if (!window.Telegram?.WebApp) {
+            showToast('❌ Telegram WebApp не доступен', 'error');
+            return;
         }
 
-        // ===== ВЫЗЫВАЕМ ОСТАЛЬНУЮ ЛОГИКУ =====
-        // Здесь продолжается остальной код игры
-        // (всё что было после этого блока)
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        const freshUser = tg.initDataUnsafe?.user;
+
+        if (freshUser && freshUser.id && freshUser.id > 0) {
+            const newUserId = freshUser.id;
+            if (confirm(`⚠️ Обнаружен ваш аккаунт (ID: ${newUserId}).\n\nПривязать его к игре? Весь ваш прогресс сохранится.`)) {
+                window.userId = newUserId;
+                sessionStorage.setItem('weregood_user_id', newUserId);
+                window.username = freshUser.username || '';
+                window.firstName = freshUser.first_name || '';
+                window.lastName = freshUser.last_name || '';
+                window.photoUrl = freshUser.photo_url || '';
+                window.displayName = window.firstName || window.username || 'Игрок';
+
+                await autoRegister();
+                await syncData(true);
+                showToast('✅ Аккаунт привязан!', 'success');
+                setTimeout(() => location.reload(), 1500);
+            }
+        } else {
+            showToast('❌ Не удалось получить данные аккаунта. Попробуйте перезапустить Telegram.', 'error');
+        }
+    };
+
+    // ================================================================
+    // ЗАПУСКАЕМ ОСТАЛЬНУЮ ЛОГИКУ ИГРЫ
+    // ================================================================
+
+    // Вызываем функции, которые зависят от userId
+    if (typeof autoRegister === 'function') {
+        autoRegister();
     }
+    if (typeof syncData === 'function') {
+        syncData(true);
+    }
+    if (typeof loadAvatar === 'function') {
+        loadAvatar();
+    }
+    if (typeof logGameEntry === 'function') {
+        logGameEntry();
+    }
+}
 
-    // ===== ПОКАЗ ОШИБКИ АВТОРИЗАЦИИ =====
-    function showAuthError() {
-        // Проверяем, нет ли уже оверлея
-        if (document.getElementById('authErrorOverlay')) return;
+// ===== ПОКАЗ ОШИБКИ АВТОРИЗАЦИИ =====
+function showAuthError() {
+    if (document.getElementById('authErrorOverlay')) return;
 
-        const errorHtml = `
-            <div id="authErrorOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:20px;">
-                <div style="background:linear-gradient(145deg,#1a1a2e,#0f0f20);border-radius:32px;padding:32px;max-width:350px;border:2px solid #f44336;">
-                    <div style="font-size:48px;margin-bottom:16px;">❌</div>
-                    <h2 style="color:#f44336;margin-bottom:12px;">Ошибка авторизации</h2>
-                    <p style="color:rgba(255,255,255,0.7);margin-bottom:24px;font-size:14px;">
-                        Не удалось определить ваш аккаунт.<br>
-                        Пожалуйста, перезапустите игру или привяжите аккаунт вручную.
-                    </p>
-                    <button onclick="window.forceBindAccount()" style="background:linear-gradient(135deg,#FFD700,#FFA500);border:none;padding:12px 24px;border-radius:40px;font-weight:700;color:#0a0a1a;cursor:pointer;width:100%;margin-bottom:12px;">
-                        🔗 Привязать аккаунт
-                    </button>
-                    <button onclick="location.reload()" style="background:rgba(255,255,255,0.1);border:none;padding:12px 24px;border-radius:40px;font-weight:500;color:white;cursor:pointer;width:100%;">
-                        ⟳ Перезагрузить
-                    </button>
-                </div>
+    const errorHtml = `
+        <div id="authErrorOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:20px;">
+            <div style="background:linear-gradient(145deg,#1a1a2e,#0f0f20);border-radius:32px;padding:32px;max-width:350px;border:2px solid #f44336;">
+                <div style="font-size:48px;margin-bottom:16px;">❌</div>
+                <h2 style="color:#f44336;margin-bottom:12px;">Ошибка авторизации</h2>
+                <p style="color:rgba(255,255,255,0.7);margin-bottom:24px;font-size:14px;">
+                    Не удалось определить ваш аккаунт.<br>
+                    Пожалуйста, перезапустите игру или привяжите аккаунт вручную.
+                </p>
+                <button onclick="window.forceBindAccount()" style="background:linear-gradient(135deg,#FFD700,#FFA500);border:none;padding:12px 24px;border-radius:40px;font-weight:700;color:#0a0a1a;cursor:pointer;width:100%;margin-bottom:12px;">
+                    🔗 Привязать аккаунт
+                </button>
+                <button onclick="location.reload()" style="background:rgba(255,255,255,0.1);border:none;padding:12px 24px;border-radius:40px;font-weight:500;color:white;cursor:pointer;width:100%;">
+                    ⟳ Перезагрузить
+                </button>
             </div>
-        `;
-        document.body.insertAdjacentHTML('beforeend', errorHtml);
-    }
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', errorHtml);
+}
 
         let currentTickets = [];
         let socket = null;
