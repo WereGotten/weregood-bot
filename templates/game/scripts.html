@@ -3,6 +3,12 @@
 // ИНИЦИАЛИЗАЦИЯ - ПОЛУЧЕНИЕ ID ПОЛЬЗОВАТЕЛЯ
 // ================================================================
 
+// ===== ГЛОБАЛЬНЫЕ ФЛАГИ (ОБЪЯВЛЕНЫ ДО ИСПОЛЬЗОВАНИЯ) =====
+let isSyncing = false;
+window.isScratchingActive = false;
+let scratchTimeout = null;
+let pendingRefreshTimeout = null;
+
 // ===== ЖДЁМ ГОТОВНОСТИ TELEGRAM WEBAPP =====
 function waitForTelegram(callback) {
     if (window.Telegram && window.Telegram.WebApp) {
@@ -134,11 +140,6 @@ function _initializeUser() {
     if (sessionStorage.getItem('weregood_display_name')) {
         window.displayName = sessionStorage.getItem('weregood_display_name');
     }
-
-    // ===== ФЛАГИ ДЛЯ СТИРАНИЯ =====
-    let isScratchingActive = false;
-    let scratchTimeout = null;
-    let pendingRefreshTimeout = null;
 
     // ===== forceBindAccount =====
     window.forceBindAccount = async function() {
@@ -597,7 +598,7 @@ function animateClick() {
 
 let syncInterval = null;
 let lastSyncTime = 0;
-let isSyncing = false;
+// isSyncing уже объявлен в начале файла
 const SYNC_DELAY = 2000;
 
 async function syncData(force = false) {
@@ -670,7 +671,7 @@ async function syncData(force = false) {
                 updateDrawUI();
             }
 
-            if (data.lottery.tickets && !isScratchingActive) {
+            if (data.lottery.tickets && !window.isScratchingActive) {
                 currentTickets = data.lottery.tickets;
                 if (typeof updateCarousel === 'function') {
                     updateCarousel();
@@ -678,11 +679,11 @@ async function syncData(force = false) {
                 if (isDrawn && typeof updateTopPlayers === 'function') {
                     updateTopPlayers();
                 }
-            } else if (data.lottery.tickets && isScratchingActive) {
+            } else if (data.lottery.tickets && window.isScratchingActive) {
                 console.log('⏳ Стирание активно, отложили обновление билетов');
                 if (pendingRefreshTimeout) clearTimeout(pendingRefreshTimeout);
                 pendingRefreshTimeout = setTimeout(() => {
-                    if (!isScratchingActive) {
+                    if (!window.isScratchingActive) {
                         currentTickets = data.lottery.tickets;
                         if (typeof updateCarousel === 'function') updateCarousel();
                         if (isDrawn && typeof updateTopPlayers === 'function') updateTopPlayers();
@@ -692,11 +693,10 @@ async function syncData(force = false) {
             }
         }
 
-        // В syncData, после обработки data.lottery, добавь:
+        // Обновляем мини-лидерборд и последних участников
         if (data.leaderboard && data.leaderboard.length > 0) {
             updateLeaderboardMiniFast(data.leaderboard);
         } else {
-            // Если данных нет - пробуем загрузить отдельно
             loadLeaderboardData('day', true);
         }
 
@@ -1062,7 +1062,6 @@ async function loadWithdrawals() {
 }
 
 
-
     // ==================== КЛИКЕР ====================
     let lastClickTime = 0;
     const CLICK_DEBOUNCE = 40;
@@ -1297,28 +1296,27 @@ shopTabs.forEach(tab => {
     }
 
     const navItems = document.querySelectorAll('.nav-item');
-navItems.forEach(item => {
-    item.onclick = (e) => {
-        playNavSound();
-        const tab = item.dataset.tab;
-        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        item.classList.add('active');
-        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-        const tabPane = document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
-        if (tabPane) tabPane.classList.add('active');
-        const mainContent = document.querySelector('.main-content');
-        if (mainContent) mainContent.scrollTop = 0;
-        if (tab === 'lottery') {
-            updateLottery();
-            loadRecentPlayers();
-        }
-        if (tab === 'profile' || tab === 'shop' || tab === 'home') updateStatus();
-        if (tab === 'home') {
-            updateLeaderboard();
-            loadRecentPlayers(); // ← ДОБАВЛЯЕМ
-        }
-    };
-});
+    navItems.forEach(item => {
+        const oldOnClick = item.onclick;
+        item.onclick = (e) => {
+            playNavSound();
+            const tab = item.dataset.tab;
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            item.classList.add('active');
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+            const tabPane = document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
+            if (tabPane) tabPane.classList.add('active');
+            const mainContent = document.querySelector('.main-content');
+            if (mainContent) mainContent.scrollTop = 0;
+            if (tab === 'lottery') {
+                updateLottery();
+                loadRecentPlayers();
+            }
+            if (tab === 'profile' || tab === 'shop' || tab === 'home') updateStatus();
+            if (tab === 'home') updateLeaderboard();
+            if (oldOnClick) oldOnClick(e);
+        };
+    });
 
     // ==================== ЛОТЕРЕЯ ====================
     const ticketBtn = document.getElementById('ticketBtn');
@@ -5557,29 +5555,12 @@ document.addEventListener("DOMContentLoaded", () => {
     autoRegister();
     loadAvatar();
     logGameEntry();
-
-    // ===== ПЕРВАЯ ЗАГРУЗКА =====
-    // 1. Сначала синхронизируем данные (баланс, лотерея)
     syncData(true);
 
-    // 2. Параллельно загружаем лидерборд
-    loadLeaderboardData('day', true);
-
-    // 3. Загружаем последних участников
-    loadRecentPlayers();
-
-    // ===== ВТОРАЯ ЗАГРУЗКА (через 1 секунду, на случай если первая не успела) =====
+    // ===== ПРИНУДИТЕЛЬНАЯ ЗАГРУЗКА МИНИ-ЛИДЕРБОРДА =====
     setTimeout(() => {
-        syncData(true);
         loadLeaderboardData('day', true);
-        loadRecentPlayers();
-    }, 1000);
-
-    // ===== ТРЕТЬЯ ЗАГРУЗКА (ещё через 2 секунды, как страховка) =====
-    setTimeout(() => {
-        syncData(true);
-        loadLeaderboardData('day', true);
-    }, 3000);
+    }, 500);
 
     loadReferralLink();
     loadReferrals();
@@ -5587,10 +5568,18 @@ document.addEventListener("DOMContentLoaded", () => {
     loadDailyStatus();
     setTimeout(checkAndStartTutorial, 2000);
 
-    // ===== ОПТИМИЗИРОВАННЫЙ СИНХРОНИЗАТОР =====
+    // ============================================================
+    // ОПТИМИЗИРОВАННЫЙ СИНХРОНИЗАТОР (КАК В NOTCOIN)
+    // ============================================================
+
     // 1️⃣ БЫСТРОЕ ОБНОВЛЕНИЕ БАЛАНСА (каждые 2 секунды)
+    // Используем ЛЁГКИЙ эндпоинт /api/sync_light - только баланс и энергия
     setInterval(async () => {
-        if (isScratchingActive) return;
+        if (isScratchingActive) {
+            // Если идёт стирание - пропускаем
+            return;
+        }
+
         try {
             const res = await fetch('/api/sync_light', {
                 method: 'POST',
@@ -5598,50 +5587,71 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: JSON.stringify({ user_id: userId })
             });
             const data = await res.json();
+
             if (data.success) {
                 const d = data.data;
+
+                // Обновляем ТОЛЬКО цифры (мгновенно!)
                 const wgEl = document.getElementById('wgBalance');
                 if (wgEl) wgEl.textContent = d.wg.toFixed(2);
+
                 const lpEl = document.getElementById('lpBalance');
                 if (lpEl) lpEl.textContent = d.lp;
+
                 const energyEl = document.getElementById('energyValue');
                 if (energyEl) energyEl.textContent = d.energy;
+
                 const maxEnergyEl = document.getElementById('maxEnergyValue');
                 if (maxEnergyEl) maxEnergyEl.textContent = d.max_energy;
+
                 const earningEl = document.getElementById('earningPerClick');
                 if (earningEl) earningEl.textContent = d.earning_per_click.toFixed(2);
+
                 const clickAmountEl = document.getElementById('clickAmount');
                 if (clickAmountEl) clickAmountEl.textContent = d.earning_per_click.toFixed(2);
+
+                // Обновляем энергобар
                 const percent = (d.energy / d.max_energy) * 100;
                 const bar = document.getElementById('energyBar');
                 if (bar) bar.style.width = percent + '%';
+
+                // Обновляем энергию в хедере
                 const headerEnergy = document.getElementById('energyHeader');
                 if (headerEnergy) headerEnergy.textContent = d.energy;
             }
-        } catch(e) {}
-    }, 2000);
+        } catch(e) {
+            // Тихая ошибка - не беспокоим игрока
+        }
+    }, 2000); // ← 2 секунды, как в Notcoin!
 
-    // 2️⃣ ТЯЖЁЛЫЕ ДАННЫЕ (редко)
+    // 2️⃣ ТЯЖЕЛЫЕ ДАННЫЕ (лотерея, лидерборд, рефералы) - РЕДКО!
     setInterval(() => {
         if (isScratchingActive) return;
+
         const activeTab = document.querySelector('.tab-pane.active');
+
+        // Если на вкладке "Лотерея" - обновляем лотерею
         if (activeTab && activeTab.id === 'tabLottery') {
             loadUserTickets();
             updateLottery();
         }
+
+        // Если на вкладке "Профиль" - обновляем рефералов
         if (activeTab && activeTab.id === 'tabProfile') {
             loadReferrals();
         }
+
+        // Всегда обновляем лидерборд (но редко)
         if (activeTab && activeTab.id === 'tabHome') {
             loadLeaderboardData('day', true);
-            loadRecentPlayers();
         }
-    }, 30000);
+    }, 30000); // ← 30 секунд
 
     console.log('✅ Оптимизированный синхронизатор запущен!');
-    console.log('   📊 Баланс обновляется каждые 2 секунды');
+    console.log('   📊 Баланс обновляется каждые 2 секунды (лёгкий запрос)');
     console.log('   🎰 Лотерея обновляется каждые 30 секунд');
     console.log('   👥 Рефералы обновляются каждые 30 секунд');
+    console.log('   🏆 Мини-лидерборд загружен при старте!');
 
     startDailyLeaderboardTimer();
     updateLPBoostCount();
@@ -5679,7 +5689,6 @@ document.addEventListener("DOMContentLoaded", () => {
         tg.expand();
     }
 
-    // Бет модалка
     const closeBetModalBtn = document.querySelector('#betModal .bet-modal-close');
     if (closeBetModalBtn) {
         closeBetModalBtn.addEventListener('click', closeBetModal);
