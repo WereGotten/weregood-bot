@@ -260,18 +260,23 @@
 <!-- ============================================================
      СТРАНИЦА ОТКРЫТИЯ КЕЙСА - ПРЕМИУМ 2026
      ============================================================ -->
+<!-- ============================================================
+     СТРАНИЦА ОТКРЫТИЯ КЕЙСА - ПРЕМИУМ ДИЗАЙН
+     ============================================================ -->
 <div id="casePage" class="case-page">
     <div class="case-page-content">
 
         <!-- ШАПКА -->
         <div class="case-header">
-            <button class="case-back-btn" onclick="closeCase()">←</button>
+            <button class="case-back-btn" onclick="closeCase()">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            </button>
             <div class="case-header-center">
                 <h2 id="caseTitle">Обычный кейс</h2>
                 <div class="case-header-stats">
                     <div class="case-stat">
                         <span class="stat-icon">💰</span>
-                        <span class="stat-value" id="casePriceDisplay">500</span>
+                        <span class="stat-value" id="casePriceDisplay">10 000</span>
                         <span class="stat-label">WG</span>
                     </div>
                     <div class="case-stat-divider"></div>
@@ -282,6 +287,9 @@
                     </div>
                 </div>
             </div>
+            <button class="case-buy-btn" onclick="buyCase()" id="caseBuyBtn">
+                <span>+</span>
+            </button>
         </div>
 
         <!-- БАРАБАН -->
@@ -289,26 +297,46 @@
             <div class="case-slot-machine">
                 <!-- Верхняя подсветка -->
                 <div class="case-slot-top-glow"></div>
+                <div class="case-slot-top-lights">
+                    <span></span><span></span><span></span>
+                    <span></span><span></span><span></span>
+                    <span></span><span></span><span></span>
+                </div>
 
                 <!-- Окно барабана -->
                 <div class="case-slot-window" id="caseSlotWindow">
                     <div class="case-slot-track" id="caseSlotTrack"></div>
-                    <div class="case-slot-pointer"></div>
+                    <div class="case-slot-pointer">
+                        <div class="pointer-arrow"></div>
+                    </div>
                     <div class="case-slot-shadow-left"></div>
                     <div class="case-slot-shadow-right"></div>
                     <div class="case-slot-center-glow"></div>
+                    <!-- Стекло с бликами -->
+                    <div class="case-slot-glass"></div>
                 </div>
 
                 <!-- Нижняя подсветка -->
+                <div class="case-slot-bottom-lights">
+                    <span></span><span></span><span></span>
+                    <span></span><span></span><span></span>
+                    <span></span><span></span><span></span>
+                </div>
                 <div class="case-slot-bottom-glow"></div>
             </div>
+        </div>
+
+        <!-- ИНФОРМАЦИЯ О ВРАЩЕНИИ -->
+        <div class="case-spin-info" id="caseSpinInfo">
+            <div class="spin-status" id="spinStatus">🎰 Нажмите кнопку, чтобы открыть кейс</div>
+            <div class="spin-progress" id="spinProgress" style="width: 0%;"></div>
         </div>
 
         <!-- КНОПКА ОТКРЫТЬ -->
         <div class="case-actions">
             <button class="case-spin-btn" id="caseSpinBtn" onclick="spinCase()">
-                <span class="btn-icon">🎰</span>
                 <span class="btn-text">ОТКРЫТЬ КЕЙС</span>
+                <span class="btn-glow"></span>
             </button>
         </div>
 

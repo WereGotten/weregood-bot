@@ -8089,7 +8089,7 @@ function getItemWidth() {
     return itemWidthCache;
 }
 
-// ===== ПЛАВНОЕ ВРАЩЕНИЕ (с requestAnimationFrame) =====
+// ===== ПЛАВНОЕ ВРАЩЕНИЕ (12-15 СЕКУНД С ЗАМЕДЛЕНИЕМ) =====
 function spinCase() {
     if (isCaseSpinning) return;
 
@@ -8103,6 +8103,9 @@ function spinCase() {
 
     const track = document.getElementById('caseSlotTrack');
     const spinBtn = document.getElementById('caseSpinBtn');
+    const spinStatus = document.getElementById('spinStatus');
+    const spinProgress = document.getElementById('spinProgress');
+
     if (!track || !spinBtn) return;
 
     if (spinTimeout) {
@@ -8116,21 +8119,30 @@ function spinCase() {
 
     isCaseSpinning = true;
     spinBtn.disabled = true;
+    spinBtn.classList.add('spinning');
     const btnText = spinBtn.querySelector('.btn-text');
-    if (btnText) btnText.textContent = '🎡 ВРАЩЕНИЕ...';
+    if (btnText) btnText.textContent = 'ВРАЩЕНИЕ...';
+
+    // Обновляем статус
+    if (spinStatus) {
+        spinStatus.textContent = '🎡 Барабан крутится... Удачи!';
+        spinStatus.classList.add('active');
+    }
 
     // Сбрасываем подсветку
     document.querySelectorAll('.case-reward-card').forEach(el => {
-        el.style.border = '1px solid ' + (el.classList.contains('rarity-common') ? 'rgba(255,255,255,0.05)' :
-            el.classList.contains('rarity-rare') ? 'rgba(0,150,255,0.2)' :
-            el.classList.contains('rarity-epic') ? 'rgba(156,39,176,0.2)' :
-            'rgba(255,215,0,0.3)');
+        el.style.border = '1px solid transparent';
         el.style.transform = 'scale(1)';
         el.style.boxShadow = 'none';
+        el.classList.remove('active');
     });
     document.querySelectorAll('.case-slot-item').forEach(el => {
         el.style.transform = 'scale(1)';
         el.style.boxShadow = 'none';
+        el.style.border = '2px solid ' + (el.classList.contains('rarity-common') ? 'rgba(255,255,255,0.08)' :
+            el.classList.contains('rarity-rare') ? 'rgba(0,150,255,0.2)' :
+            el.classList.contains('rarity-epic') ? 'rgba(156,39,176,0.2)' :
+            'rgba(255,215,0,0.25)');
     });
 
     const items = track.querySelectorAll('.case-slot-item');
@@ -8141,11 +8153,10 @@ function spinCase() {
     // Выбираем награду
     const winIndex = getWeightedRandom(caseInfo.rewards);
 
-    // Находим целевой элемент в центре трека
+    // Находим целевой элемент
     const middleIndex = Math.floor(totalItems / 2);
     let targetItemIndex = -1;
 
-    // Ищем ближайший элемент с нужным индексом к центру
     for (let offset = 0; offset < 50; offset++) {
         const checkIndex = middleIndex + offset;
         if (checkIndex < totalItems && parseInt(items[checkIndex].dataset.index) === winIndex) {
@@ -8168,25 +8179,44 @@ function spinCase() {
     const centerOffset = Math.round((containerWidth - itemWidth) / 2 / itemWidth);
     const targetPosition = -(targetItemIndex - centerOffset) * itemWidth;
 
-    // Добавляем дополнительные обороты для эффекта
-    const extraCycles = 20 + Math.floor(Math.random() * 5);
+    // ===== 12-15 СЕКУНД С ЗАМЕДЛЕНИЕМ =====
+    const duration = 12000 + Math.random() * 3000; // 12-15 секунд
+
+    // Добавляем много оборотов для эффекта
+    const extraCycles = 30 + Math.floor(Math.random() * 10);
     const extraOffset = extraCycles * itemsPerCycle * itemWidth;
     const finalPosition = targetPosition - extraOffset;
 
-    // ===== ЗАПУСК АНИМАЦИИ =====
+    // Запускаем анимацию
     track.style.transition = 'none';
     track.style.transform = 'translateX(0px)';
-    // Принудительный reflow
     void track.offsetHeight;
 
-    const duration = 6000 + Math.random() * 2000; // 6-8 секунд
-    track.style.transition = `transform ${duration}ms cubic-bezier(0.08, 0.82, 0.17, 1)`;
+    // ===== КАСТОМНАЯ ФУНКЦИЯ ЗАМЕДЛЕНИЯ (ease-in-out с сильным замедлением в конце) =====
+    // Используем cubic-bezier для плавного замедления
+    // https://easings.net/#easeInOutCubic
+    track.style.transition = `transform ${duration}ms cubic-bezier(0.65, 0, 0.35, 1)`;
     track.style.transform = `translateX(${finalPosition}px)`;
 
     triggerHaptic('medium');
 
+    // Обновляем прогресс-бар
+    let progress = 0;
+    const progressInterval = setInterval(() => {
+        progress += 1;
+        if (spinProgress) {
+            spinProgress.style.width = Math.min(progress, 95) + '%';
+        }
+        if (progress >= 95) {
+            clearInterval(progressInterval);
+        }
+    }, duration / 100);
+
     // ===== ЗАВЕРШЕНИЕ =====
     const finishSpin = () => {
+        clearInterval(progressInterval);
+        if (spinProgress) spinProgress.style.width = '100%';
+
         // Находим центральный элемент
         const containerRect = track.parentElement.getBoundingClientRect();
         const center = containerRect.left + containerRect.width / 2;
@@ -8211,22 +8241,27 @@ function spinCase() {
 
             // Анимация выигрыша
             closestItem.style.transform = 'scale(1.15)';
-            closestItem.style.boxShadow = '0 0 30px rgba(255,215,0,0.6)';
+            closestItem.style.boxShadow = '0 0 40px rgba(255,215,0,0.6)';
             closestItem.style.border = '3px solid #FFD700';
+            closestItem.style.transition = 'all 0.4s ease';
 
             // Подсвечиваем в сетке
             const rewardCards = document.querySelectorAll('.case-reward-card');
             for (let i = 0; i < rewardCards.length; i++) {
                 if (i === winIdx) {
-                    rewardCards[i].style.border = '2px solid #FFD700';
-                    rewardCards[i].style.transform = 'scale(1.08)';
-                    rewardCards[i].style.boxShadow = '0 0 20px rgba(255,215,0,0.3)';
+                    rewardCards[i].classList.add('active');
                 }
             }
 
             triggerHaptic('heavy');
 
             // Показываем результат
+            if (spinStatus) {
+                spinStatus.textContent = `🎉 ВЫ ВЫИГРАЛИ: ${winReward.value}!`;
+                spinStatus.classList.remove('active');
+                spinStatus.style.color = '#FFD700';
+            }
+
             setTimeout(() => {
                 showToast(`🎉 Вы выиграли: ${winReward.value}!`, 'success');
             }, 400);
@@ -8236,15 +8271,28 @@ function spinCase() {
             localStorage.setItem('weregood_cases', caseCount.toString());
             updateCaseCount();
 
-            // Выдаём награду (здесь логика выдачи)
+            // Выдаём награду
             handleCaseReward(winReward);
         }
 
         isCaseSpinning = false;
         spinBtn.disabled = false;
-        if (btnText) btnText.textContent = '🎰 ОТКРЫТЬ КЕЙС';
+        spinBtn.classList.remove('spinning');
+        if (btnText) btnText.textContent = 'ОТКРЫТЬ КЕЙС';
         spinTimeout = null;
         caseAnimationId = null;
+
+        if (spinStatus) {
+            setTimeout(() => {
+                spinStatus.textContent = '🎰 Нажмите кнопку, чтобы открыть кейс';
+                spinStatus.style.color = 'rgba(255,255,255,0.4)';
+            }, 3000);
+        }
+        if (spinProgress) {
+            setTimeout(() => {
+                spinProgress.style.width = '0%';
+            }, 500);
+        }
     };
 
     spinTimeout = setTimeout(finishSpin, duration + 500);
