@@ -3760,85 +3760,296 @@ async function checkTaskCompletion() {
 }
 
     // ==================== ПРОМОКОДЫ ====================
-    async function openPromoModalWithCode(promoCode) {
-        const modal = document.getElementById('promoModal');
-        const input = document.getElementById('promoCodeInput');
-        if (promoCode && input) {
-            input.value = promoCode.toUpperCase();
-        }
-        if (modal) modal.classList.add('active');
+
+// ===== ОТКРЫТИЕ МОДАЛКИ С ПРОМОКОДОМ (УЛУЧШЕННАЯ) =====
+window.openPromoModalWithCode = function(promoCode) {
+    console.log('🔓 openPromoModalWithCode вызвана с кодом:', promoCode);
+
+    if (!promoCode) {
+        console.warn('⚠️ Промокод не передан');
+        return;
     }
 
-    function closePromoModal() {
-        const modal = document.getElementById('promoModal');
-        const input = document.getElementById('promoCodeInput');
-        const message = document.getElementById('promoMessage');
-        if (modal) modal.classList.remove('active');
-        if (input) input.value = '';
-        if (message) message.innerHTML = '';
+    // Пытаемся найти модалку
+    let modal = document.getElementById('promoModal');
+    let input = document.getElementById('promoCodeInput');
+
+    // Если модалка не найдена — ждём и пробуем снова
+    if (!modal) {
+        console.log('⏳ Модалка не найдена, ждём 500мс...');
+        setTimeout(function() {
+            window.openPromoModalWithCode(promoCode);
+        }, 500);
+        return;
     }
 
-    async function activatePromoCode() {
-        const code = document.getElementById('promoCodeInput')?.value.toUpperCase().trim() || '';
-        const messageDiv = document.getElementById('promoMessage');
-        const btn = document.getElementById('activatePromoBtn');
-        if (!code) {
-            if (messageDiv) {
-                messageDiv.innerHTML = '❌ Введите промокод';
-                messageDiv.classList.remove('success');
-            }
-            return;
+    // Если поле ввода не найдено — ждём
+    if (!input) {
+        console.log('⏳ Поле ввода не найдено, ждём 500мс...');
+        setTimeout(function() {
+            window.openPromoModalWithCode(promoCode);
+        }, 500);
+        return;
+    }
+
+    // Вставляем промокод
+    input.value = promoCode.toUpperCase();
+    console.log('✅ Промокод вставлен:', input.value);
+
+    // Очищаем сообщение об ошибке
+    const messageDiv = document.getElementById('promoMessage');
+    if (messageDiv) {
+        messageDiv.innerHTML = '';
+        messageDiv.classList.remove('success');
+    }
+
+    // Открываем модалку
+    modal.classList.add('active');
+    console.log('✅ Модалка открыта');
+
+    // Показываем сообщение
+    showToast(`🎫 Промокод ${promoCode.toUpperCase()} готов к активации!`, 'success');
+
+    // Проверяем через 500мс, открыта ли модалка
+    setTimeout(function() {
+        if (!modal.classList.contains('active')) {
+            console.log('🔄 Модалка закрылась, открываем снова...');
+            modal.classList.add('active');
         }
-        if (btn) {
-            btn.disabled = true;
-            btn.textContent = '⏳ Проверка...';
-        }
+    }, 500);
+};
+
+// ===== РУЧНОЕ ОТКРЫТИЕ МОДАЛКИ (БЕЗ КОДА) =====
+window.openPromoModal = function() {
+    const modal = document.getElementById('promoModal');
+    if (modal) {
+        modal.classList.add('active');
+        console.log('✅ Модалка промокода открыта вручную');
+    } else {
+        showToast('❌ Модалка не найдена', 'error');
+    }
+};
+
+// ===== ЗАКРЫТИЕ МОДАЛКИ =====
+function closePromoModal() {
+    const modal = document.getElementById('promoModal');
+    const input = document.getElementById('promoCodeInput');
+    const message = document.getElementById('promoMessage');
+
+    if (modal) modal.classList.remove('active');
+    if (input) input.value = '';
+    if (message) {
+        message.innerHTML = '';
+        message.classList.remove('success');
+    }
+    console.log('✅ Модалка промокода закрыта');
+}
+
+// ===== АКТИВАЦИЯ ПРОМОКОДА =====
+async function activatePromoCode() {
+    const input = document.getElementById('promoCodeInput');
+    const messageDiv = document.getElementById('promoMessage');
+    const btn = document.getElementById('activatePromoBtn');
+
+    if (!input) {
+        showToast('❌ Ошибка: поле ввода не найдено', 'error');
+        return;
+    }
+
+    const code = input.value.toUpperCase().trim();
+
+    // Проверка на пустой код
+    if (!code) {
         if (messageDiv) {
-            messageDiv.innerHTML = '';
+            messageDiv.innerHTML = '❌ Введите промокод';
             messageDiv.classList.remove('success');
         }
-        try {
-            const res = await fetch('/api/activate_promo', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: userId, code: code })
-            });
-            const data = await res.json();
-            const isSuccess = data.success === true || data.ok === true;
-            if (isSuccess) {
-                const successMessage = data.message || data.msg || 'Промокод успешно активирован!';
-                if (messageDiv) {
-                    messageDiv.innerHTML = `✅ ${successMessage}`;
-                    messageDiv.classList.add('success');
-                }
-                showToast(`🎉 ${successMessage}`, 'success');
-                await syncData(true);
-                setTimeout(() => closePromoModal(), 2000);
-            } else {
-                const errorMessage = data.error || data.msg || 'Неизвестная ошибка';
-                if (messageDiv) {
-                    messageDiv.innerHTML = `❌ ${errorMessage}`;
-                    messageDiv.classList.remove('success');
-                }
-                showToast(errorMessage, 'error');
-            }
-        } catch (e) {
-            console.error('Activate promo error:', e);
-            if (messageDiv) {
-                messageDiv.innerHTML = '❌ Ошибка соединения с сервером';
-                messageDiv.classList.remove('success');
-            }
-            showToast('Ошибка соединения, попробуйте позже', 'error');
-        } finally {
-            if (btn) {
-                btn.disabled = false;
-                btn.textContent = '🎁 Активировать';
-            }
-        }
+        showToast('❌ Введите промокод', 'error');
+        return;
     }
 
-    const activatePromoBtn = document.getElementById('activatePromoBtn');
-    if (activatePromoBtn) activatePromoBtn.onclick = activatePromoCode;
+    // Блокируем кнопку
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = '⏳ Проверка...';
+    }
+
+    // Очищаем сообщение
+    if (messageDiv) {
+        messageDiv.innerHTML = '';
+        messageDiv.classList.remove('success');
+    }
+
+    try {
+        const res = await fetch('/api/activate_promo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id: userId,
+                code: code
+            })
+        });
+
+        const data = await res.json();
+        console.log('📡 Ответ сервера:', data);
+
+        // Проверяем успешность
+        const isSuccess = data.success === true || data.ok === true;
+
+        if (isSuccess) {
+            const successMessage = data.message || data.msg || 'Промокод успешно активирован!';
+
+            if (messageDiv) {
+                messageDiv.innerHTML = `✅ ${successMessage}`;
+                messageDiv.classList.add('success');
+            }
+
+            showToast(`🎉 ${successMessage}`, 'success');
+
+            // Обновляем данные
+            await syncData(true);
+
+            // Закрываем модалку через 2 секунды
+            setTimeout(() => {
+                closePromoModal();
+            }, 2000);
+
+        } else {
+            const errorMessage = data.error || data.msg || 'Неизвестная ошибка';
+
+            if (messageDiv) {
+                messageDiv.innerHTML = `❌ ${errorMessage}`;
+                messageDiv.classList.remove('success');
+            }
+
+            showToast(errorMessage, 'error');
+        }
+
+    } catch (e) {
+        console.error('❌ Activate promo error:', e);
+
+        if (messageDiv) {
+            messageDiv.innerHTML = '❌ Ошибка соединения с сервером';
+            messageDiv.classList.remove('success');
+        }
+
+        showToast('❌ Ошибка соединения, попробуйте позже', 'error');
+
+    } finally {
+        // Разблокируем кнопку
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = '🎁 Активировать';
+        }
+    }
+}
+
+// ===== ОБРАБОТКА ПРОМОКОДА ИЗ START_PARAM =====
+function handlePromoFromStartParam() {
+    try {
+        // Пробуем получить start_param из Telegram
+        const tg = window.Telegram?.WebApp;
+        let startParam = tg?.initDataUnsafe?.start_param;
+
+        // Если не нашли через Telegram — пробуем из URL
+        if (!startParam) {
+            const urlParams = new URLSearchParams(window.location.search);
+            startParam = urlParams.get('startapp') || urlParams.get('start_param');
+        }
+
+        if (!startParam) {
+            console.log('ℹ️ Нет start_param для обработки');
+            return false;
+        }
+
+        console.log('📩 Найден start_param:', startParam);
+
+        // Проверяем, что это промокод
+        if (startParam.startsWith('claim_')) {
+            const promoCode = startParam.replace('claim_', '');
+            console.log('🎫 Обнаружен промокод:', promoCode);
+
+            // Открываем модалку с задержкой
+            setTimeout(function() {
+                if (typeof window.openPromoModalWithCode === 'function') {
+                    window.openPromoModalWithCode(promoCode);
+                } else {
+                    // Если функция не определена — открываем вручную
+                    const modal = document.getElementById('promoModal');
+                    const input = document.getElementById('promoCodeInput');
+                    if (modal && input) {
+                        input.value = promoCode.toUpperCase();
+                        modal.classList.add('active');
+                        showToast(`🎫 Промокод ${promoCode} готов к активации!`, 'success');
+                    }
+                }
+            }, 800);
+
+            return true;
+        }
+
+        return false;
+
+    } catch(e) {
+        console.error('❌ Ошибка в handlePromoFromStartParam:', e);
+        return false;
+    }
+}
+
+// ===== ЗАПУСК ОБРАБОТКИ ПРОМОКОДА =====
+function initPromoHandling() {
+    console.log('🔍 Запуск обработки промокодов...');
+
+    // Многократные попытки для надёжности
+    const delays = [100, 500, 1000, 2000, 3000, 5000];
+
+    delays.forEach(function(delay) {
+        setTimeout(function() {
+            handlePromoFromStartParam();
+        }, delay);
+    });
+
+    // Финальная страховка через 6 секунд
+    setTimeout(function() {
+        const tg = window.Telegram?.WebApp;
+        let startParam = tg?.initDataUnsafe?.start_param;
+
+        if (!startParam) {
+            const urlParams = new URLSearchParams(window.location.search);
+            startParam = urlParams.get('startapp') || urlParams.get('start_param');
+        }
+
+        if (startParam && startParam.startsWith('claim_')) {
+            const promoCode = startParam.replace('claim_', '');
+            const modal = document.getElementById('promoModal');
+            const input = document.getElementById('promoCodeInput');
+
+            if (modal && input && !modal.classList.contains('active')) {
+                console.log('🔄 Финальная страховка: открываем модалку...');
+                input.value = promoCode.toUpperCase();
+                modal.classList.add('active');
+                showToast(`🎫 Промокод ${promoCode} готов к активации!`, 'success');
+            }
+        }
+    }, 6000);
+}
+
+// ===== НАЗНАЧАЕМ ОБРАБОТЧИК =====
+const activatePromoBtn = document.getElementById('activatePromoBtn');
+if (activatePromoBtn) {
+    // Удаляем старые обработчики
+    activatePromoBtn.removeEventListener('click', activatePromoCode);
+    activatePromoBtn.addEventListener('click', activatePromoCode);
+}
+
+// Запускаем обработку промокодов при загрузке
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+        initPromoHandling();
+    });
+} else {
+    initPromoHandling();
+}
 
     // ========== ОПТИМИЗИРОВАННЫЙ TON CONNECT ==========
 
