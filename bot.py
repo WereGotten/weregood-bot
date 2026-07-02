@@ -2651,12 +2651,23 @@ def api_ton_create_payment():
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid:
         return jsonify({"success": False, "error": "Неавторизованный запрос"}), 400
+
     proj_wallet = globals().get('PROJECT_WALLET_ADDRESS') or os.getenv('PROJECT_WALLET_ADDRESS')
     if not proj_wallet:
-        logger.critical("🚨 КРИТИЧЕСКАЯ ОШИБКА: PROJECT_WALLET_ADDRESS отсутствует в переменных сервера!")
-        return jsonify({"success": False, "error": "Ошибка конфигурации платежного шлюза на сервере"}), 500
+        logger.critical("🚨 PROJECT_WALLET_ADDRESS отсутствует!")
+        return jsonify({"success": False, "error": "Ошибка конфигурации платежного шлюза"}), 500
+
+    # ✅ Добавляем проверку на дубликат
+    # Если пользователь уже оплатил за последние 10 секунд — блокируем
+    cache_key = f"ton_payment_{user_id}"
+    if cache_key in pending_invoices:
+        return jsonify({"success": False, "error": "Подождите, предыдущий платёж обрабатывается"}), 429
+
+    pending_invoices[cache_key] = time.time()
+
     payment_amount_ton = 0.20
     payment_amount_nano = int(payment_amount_ton * 1e9)
+
     return jsonify({
         "success": True,
         "wallet_address": proj_wallet,
@@ -2741,18 +2752,30 @@ def api_create_lp_boost_invoice():
     data = request.json
     if not data:
         return jsonify({"success": False, "msg": "No data"}), 400
+
     user_id = data.get('user_id')
     chat_id = data.get('chat_id', user_id)
+    quantity = data.get('quantity', 1)  # ← Получаем количество
+
+    # Ограничиваем количество
+    if quantity < 1 or quantity > 10:
+        return jsonify({"success": False, "msg": "Количество должно быть от 1 до 10"}), 400
+
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid:
         return jsonify({"success": False, "msg": "Invalid user_id"}), 400
+
     try:
-        title = "💎 LP Бустер"
-        description = "Пополняет баланс на 50 LP!"
-        payload = json.dumps({"user_id": user_id, "type": "lp_boost"})
+        total_stars = 22 * quantity
+        total_lp = 50 * quantity
+
+        title = f"💎 LP Бустер x{quantity}"
+        description = f"Пополняет баланс на {total_lp} LP!"
+        payload = json.dumps({"user_id": user_id, "type": "lp_boost", "quantity": quantity})
         provider_token = ""
         currency = "XTR"
-        prices = [{"label": "LP Бустер", "amount": 22}]
+        prices = [{"label": f"LP Бустер x{quantity}", "amount": total_stars}]
+
         url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/createInvoiceLink"
         data = {
             "title": title,
@@ -2762,12 +2785,16 @@ def api_create_lp_boost_invoice():
             "currency": currency,
             "prices": prices
         }
+
         verify_ssl = not DEBUG_MODE
         response = requests.post(url, json=data, timeout=10, verify=verify_ssl)
         result = response.json()
+
         if result.get("ok"):
             return jsonify({"success": True, "invoice_link": result["result"]})
+
         return jsonify({"success": False, "msg": "Ошибка создания счёта"})
+
     except Exception as e:
         logger.error(f"Ошибка в create_lp_boost_invoice: {e}")
         return jsonify({"success": False, "msg": str(e)}), 500
@@ -2800,31 +2827,42 @@ def check_lp_boost_payment():
         user_id = data.get('user_id')
         expected_amount = data.get('expected_amount')
         sender_wallet = data.get('sender_wallet')
+        quantity = data.get('quantity', 1)
+
         if not user_id or not expected_amount:
             return jsonify({'confirmed': False, 'error': 'Missing parameters'}), 400
+
         expected_amount = float(expected_amount)
         confirmed, amount_paid, tx_hash = check_ton_transaction(sender_wallet, expected_amount, user_id)
+
         if confirmed:
             user = get_user(user_id)
+            total_lp = 50 * quantity
             old_lp = user['lp']
-            new_lp = old_lp + 50
+            new_lp = old_lp + total_lp
+
             safe_update_user(user_id, lp=new_lp)
+
             add_admin_log(
-                f"💎 Купил LP Бустер за TON ({expected_amount} TON) | +50 LP",
+                f"💎 Купил LP Бустер x{quantity} за TON ({expected_amount} TON) | +{total_lp} LP",
                 user_id,
                 user.get('username') or f"User_{user_id}",
                 details=f"Хэш транзакции: {tx_hash}, LP: {old_lp} → {new_lp}"
             )
+
             if 'send_telegram_message' in globals():
                 try:
                     send_telegram_message(user_id,
-                                          f"✨ **LP Бустер активирован!**\n\n"
-                                          f"💎 +50 LP на баланс!\n\n"
-                                          f"Спасибо за поддержку проекта!")
+                        f"✨ **LP Бустер x{quantity} активирован!**\n\n"
+                        f"💎 +{total_lp} LP на баланс!\n\n"
+                        f"Спасибо за поддержку проекта!")
                 except Exception as tg_err:
                     logger.error(f"⚠️ Не удалось отправить ТГ-сообщение: {tg_err}")
-            return jsonify({'confirmed': True, 'tx_hash': tx_hash})
+
+            return jsonify({'confirmed': True, 'tx_hash': tx_hash, 'lp_added': total_lp})
+
         return jsonify({'confirmed': False})
+
     except Exception as e:
         logger.error(f"Ошибка в check_lp_boost_payment: {e}", exc_info=True)
         return jsonify({'confirmed': False, 'error': str(e)}), 500

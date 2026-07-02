@@ -3702,153 +3702,215 @@ async function checkTaskCompletion() {
     const activatePromoBtn = document.getElementById('activatePromoBtn');
     if (activatePromoBtn) activatePromoBtn.onclick = activatePromoCode;
 
-    // ==================== TON CONNECT ====================
-    let tonConnectUI = null;
-    let paymentCheckInterval = null;
+    // ========== ОПТИМИЗИРОВАННЫЙ TON CONNECT ==========
 
-    async function initTonConnect() {
+let tonConnectUI = null;
+let paymentCheckInterval = null;
+let isTonConnecting = false;
+let tonWalletCached = null;
+
+// ===== 1. МГНОВЕННАЯ ЗАГРУЗКА TON (фоновая) =====
+async function initTonConnect() {
+    // Если уже инициализирован или идёт подключение — пропускаем
+    if (tonConnectUI || isTonConnecting) {
+        console.log('⏳ TON уже инициализируется или готов');
+        return tonConnectUI;
+    }
+
+    isTonConnecting = true;
+
     try {
-        if (typeof window.TON_CONNECT_UI === 'undefined') {
-            setTimeout(() => initTonConnect(), 300);
-            return;
+        // Ждём загрузку библиотеки с таймаутом
+        const tonLoaded = await new Promise((resolve) => {
+            if (typeof window.TON_CONNECT_UI !== 'undefined') {
+                resolve(true);
+                return;
+            }
+
+            const timeout = setTimeout(() => resolve(false), 3000);
+
+            // Слушаем событие загрузки
+            const onReady = () => {
+                clearTimeout(timeout);
+                resolve(true);
+                document.removeEventListener('tonconnect-ready', onReady);
+            };
+            document.addEventListener('tonconnect-ready', onReady);
+
+            // Проверяем ещё раз через 100мс
+            setTimeout(() => {
+                if (typeof window.TON_CONNECT_UI !== 'undefined') {
+                    clearTimeout(timeout);
+                    resolve(true);
+                    document.removeEventListener('tonconnect-ready', onReady);
+                }
+            }, 100);
+        });
+
+        if (!tonLoaded) {
+            console.warn('⚠️ TON Connect не загрузился, пробуем принудительно');
+            // Принудительная загрузка
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/@tonconnect/ui@2.0.9/dist/tonconnect-ui.min.js';
+            await new Promise((resolve) => {
+                script.onload = resolve;
+                script.onerror = resolve;
+                document.head.appendChild(script);
+            });
+            if (typeof window.TON_CONNECT_UI === 'undefined') {
+                console.error('❌ TON Connect не загрузился');
+                isTonConnecting = false;
+                return null;
+            }
         }
+
+        // Создаём UI
         const manifestUrl = `${window.location.origin}/tonconnect-manifest.json`;
         tonConnectUI = new window.TON_CONNECT_UI.TonConnectUI({
             manifestUrl: manifestUrl,
             actionsConfiguration: {
                 twaReturnUrl: `https://t.me/WereGooodbot`
+            },
+            uiPreferences: {
+                theme: 'DARK'
             }
         });
-        await tonConnectUI.connectionRestored;
+
+        // Ждём восстановления соединения (с таймаутом)
+        await Promise.race([
+            tonConnectUI.connectionRestored,
+            new Promise(resolve => setTimeout(resolve, 2000))
+        ]);
+
+        // Проверяем подключённый кошелёк
         if (tonConnectUI.wallet) {
             const address = tonConnectUI.wallet.account.address;
+            tonWalletCached = address;
             await saveWalletToBackend(address);
             updateTonWalletStatus(address);
         } else {
-            // Если кошелёк не подключён через UI — проверяем БД
+            // Если не подключён через UI — проверяем БД
             await loadTonWalletStatus();
         }
+
+        // Обработчик изменения статуса
         tonConnectUI.onStatusChange(async (wallet) => {
             if (wallet) {
                 const address = wallet.account.address;
+                tonWalletCached = address;
                 await saveWalletToBackend(address);
                 updateTonWalletStatus(address);
                 showToast('✅ TON кошелёк успешно привязан!', 'success');
             } else {
+                tonWalletCached = null;
                 await saveWalletToBackend('');
                 updateTonWalletStatus(null);
             }
         });
-    } catch(e) {
-        console.error('TON Connect init error:', e);
+
+        console.log('✅ TON Connect инициализирован');
+        isTonConnecting = false;
+        return tonConnectUI;
+
+    } catch (e) {
+        console.error('❌ TON Connect init error:', e);
+        isTonConnecting = false;
+        return null;
     }
 }
 
-    async function saveWalletToBackend(address) {
-        const targetUrl = address ? '/api/ton/save_wallet' : '/api/ton/disconnect_wallet';
-        const payload = { user_id: userId };
-        if (address) payload.wallet_address = address;
-        try {
-            await fetch(targetUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-        } catch(e) {
-            console.error('Failed to save wallet:', e);
-        }
+// ===== 2. БЫСТРАЯ ПРОВЕРКА КОШЕЛЬКА (из кэша) =====
+function getTonWallet() {
+    if (tonConnectUI && tonConnectUI.wallet) {
+        return tonConnectUI.wallet.account.address;
     }
+    return tonWalletCached || null;
+}
 
-    function updateTonWalletStatus(address) {
-        const walletStatus = document.getElementById('tonWalletStatus');
-        if (!walletStatus) return;
-        if (address) {
-            const shortAddress = address.slice(0, 5) + '...' + address.slice(-4);
-            walletStatus.innerText = shortAddress;
-            walletStatus.style.color = '#22c55e';
-        } else {
-            walletStatus.innerText = 'Не подключён';
-            walletStatus.style.color = '#FFD700';
-        }
-    }
+// ===== 3. ОПТИМИЗИРОВАННАЯ ПОКУПКА ЗА TON =====
+async function buyWithTon() {
+    const btn = document.getElementById('tonDonateBtn');
+    if (!btn) return;
 
-// ===== ЗАГРУЗКА СТАТУСА TON КОШЕЛЬКА ИЗ БД =====
-async function loadTonWalletStatus() {
+    // Блокируем кнопку
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Загрузка...';
+
     try {
-        const res = await fetch('/api/ton/get_wallet', {
+        // Инициализируем TON (мгновенно, если уже есть)
+        const ui = await initTonConnect();
+        if (!ui) {
+            showToast('❌ Система оплаты недоступна', 'error');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            return;
+        }
+
+        // Проверяем кошелёк
+        let wallet = getTonWallet();
+
+        if (!wallet) {
+            // Пытаемся восстановить из БД
+            await loadTonWalletStatus();
+            wallet = getTonWallet();
+        }
+
+        if (!wallet) {
+            showToast('🔗 Подключите TON кошелёк', 'info');
+            try {
+                await ui.openModal();
+                // Ждём подключения (макс 5 сек)
+                await new Promise((resolve) => {
+                    const checkWallet = setInterval(() => {
+                        if (ui.wallet) {
+                            clearInterval(checkWallet);
+                            resolve();
+                        }
+                    }, 100);
+                    setTimeout(() => {
+                        clearInterval(checkWallet);
+                        resolve();
+                    }, 5000);
+                });
+
+                if (!ui.wallet) {
+                    showToast('❌ Кошелёк не подключён', 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                    return;
+                }
+
+                wallet = ui.wallet.account.address;
+                tonWalletCached = wallet;
+                await saveWalletToBackend(wallet);
+                updateTonWalletStatus(wallet);
+
+            } catch (e) {
+                showToast('❌ Ошибка подключения кошелька', 'error');
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                return;
+            }
+        }
+
+        // Создаём платёж
+        showToast('💎 Создаём платёж...', 'info');
+        const response = await fetch('/api/ton/create_payment', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_id: userId })
         });
-        const data = await res.json();
 
-        if (data.success && data.wallet) {
-            // Кошелёк есть в БД — обновляем UI
-            updateTonWalletStatus(data.wallet);
-
-            // Если TON Connect UI уже инициализирован, но кошелёк не подключён — подключаем
-            if (tonConnectUI && !tonConnectUI.wallet) {
-                try {
-                    await tonConnectUI.connectionRestored;
-                    if (tonConnectUI.wallet) {
-                        // Уже подключён через UI
-                        return;
-                    }
-                } catch(e) {
-                    // Если не подключён — ничего не делаем, просто показываем статус из БД
-                }
-            }
-        } else {
-            // В БД нет кошелька
-            updateTonWalletStatus(null);
-        }
-    } catch(e) {
-        console.error('Error loading TON wallet status:', e);
-    }
-}
-
-    window.buyWithTon = async function() {
-        if (!tonConnectUI) {
-            showToast('🔄 Система оплаты загружается...', 'info');
-            await initTonConnect();
-            if (!tonConnectUI) {
-                showToast('❌ Ошибка: Система оплаты недоступна', 'error');
-                return;
-            }
-        }
-        if (!tonConnectUI.wallet) {
-            showToast('🔗 Подключите TON кошелёк для оплаты', 'info');
-            try {
-                await tonConnectUI.openModal();
-            } catch(e) {
-                showToast('❌ Не удалось открыть список кошельков', 'error');
-            }
+        const paymentData = await response.json();
+        if (!paymentData || !paymentData.success) {
+            showToast(paymentData?.error || 'Ошибка создания платежа', 'error');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
             return;
         }
-        let friendlyAddress = '';
-        try {
-            const rawAddr = tonConnectUI.wallet.account.address;
-            friendlyAddress = rawAddr;
-        } catch(e) {
-            friendlyAddress = tonConnectUI.wallet?.account?.address || '';
-        }
-        let paymentData = null;
-        try {
-            showToast('💎 Создаём платёж на сервере...', 'info');
-            const response = await fetch('/api/ton/create_payment', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: userId })
-            });
-            paymentData = await response.json();
-            if (!paymentData || !paymentData.success) {
-                showToast(paymentData?.error || 'Ошибка создания платежа', 'error');
-                return;
-            }
-        } catch(err) {
-            showToast('❌ Сервер не ответил на запрос платежа', 'error');
-            return;
-        }
+
+        // Отправляем транзакцию
         const transaction = {
             validUntil: Math.floor(Date.now() / 1000) + 300,
             messages: [{
@@ -3857,67 +3919,209 @@ async function loadTonWalletStatus() {
                 comment: paymentData.comment
             }]
         };
+
         try {
-            await tonConnectUI.sendTransaction(transaction);
-        } catch(e) {
+            await ui.sendTransaction(transaction);
+        } catch (e) {
             if (String(e.message).includes('canceled')) {
                 showToast('❌ Транзакция отменена', 'error');
+            } else {
+                showToast('❌ Ошибка отправки транзакции', 'error');
+                console.error('Transaction error:', e);
+            }
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            return;
+        }
+
+        // Проверяем платёж
+        showToast('💰 Проверяем транзакцию...', 'info');
+        startPaymentCheck(paymentData.amount, btn, originalText);
+
+    } catch (e) {
+        console.error('Buy with TON error:', e);
+        showToast('❌ Ошибка: ' + e.message, 'error');
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+
+// ===== 4. ПРОВЕРКА ПЛАТЕЖА (с автоматической остановкой) =====
+function startPaymentCheck(expectedAmount, btn, originalText) {
+    let attempts = 0;
+    const maxAttempts = 30;
+
+    if (paymentCheckInterval) {
+        clearInterval(paymentCheckInterval);
+        paymentCheckInterval = null;
+    }
+
+    let userWalletAddress = getTonWallet();
+
+    paymentCheckInterval = setInterval(async () => {
+        attempts++;
+
+        try {
+            const res = await fetch('/api/ton/check_payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: userId,
+                    expected_amount: expectedAmount,
+                    sender_wallet: userWalletAddress
+                })
+            });
+
+            const data = await res.json();
+
+            if (data && data.confirmed) {
+                clearInterval(paymentCheckInterval);
+                paymentCheckInterval = null;
+
+                showToast('✅ Награда получена! +40 энергии и +50 LP!', 'success');
+                await updateStatus();
+                updateUI();
+
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText || '💎 Купить за 0.20 TON';
+                }
+
+                // Обновляем звёздный магазин
+                const starsBalanceEl = document.getElementById('starsBalance');
+                if (starsBalanceEl) {
+                    await updateStatus();
+                }
+
                 return;
             }
-        }
-        showToast('💰 Проверяем зачисление транзакции...', 'info');
-        startPaymentCheck(paymentData.amount);
-    };
 
-    function startPaymentCheck(expectedAmount) {
-        let attempts = 0;
-        const maxAttempts = 36;
-        if (paymentCheckInterval) clearInterval(paymentCheckInterval);
-        let userWalletAddress = tonConnectUI?.wallet?.account?.address || '';
-        paymentCheckInterval = setInterval(async () => {
-            attempts++;
-            try {
-                const res = await fetch('/api/ton/check_payment', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        user_id: userId,
-                        expected_amount: expectedAmount,
-                        sender_wallet: userWalletAddress
-                    })
-                });
-                const data = await res.json();
-                if (data && data.confirmed) {
-                    clearInterval(paymentCheckInterval);
-                    paymentCheckInterval = null;
-                    showToast('✅ Награда получена! +40 энергии и +50 LP зачислены!', 'success');
-                    await updateStatus();
-                    updateUI();
-                } else if (attempts >= maxAttempts) {
-                    clearInterval(paymentCheckInterval);
-                    paymentCheckInterval = null;
-                    showToast('⚠️ Не удалось подтвердить платеж, обратитесь в поддержку', 'error');
+            if (attempts >= maxAttempts) {
+                clearInterval(paymentCheckInterval);
+                paymentCheckInterval = null;
+
+                showToast('⏳ Транзакция не подтверждена, проверьте баланс', 'warning');
+
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText || '💎 Купить за 0.20 TON';
                 }
-            } catch(e) {
-                console.error('Payment check error:', e);
             }
-        }, 5000);
+
+        } catch (e) {
+            console.error('Payment check error:', e);
+            if (attempts >= maxAttempts) {
+                clearInterval(paymentCheckInterval);
+                paymentCheckInterval = null;
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText || '💎 Купить за 0.20 TON';
+                }
+            }
+        }
+    }, 3000);
+}
+
+// ===== 5. ЗАГРУЗКА СТАТУСА КОШЕЛЬКА ИЗ БД (с кэшированием) =====
+async function loadTonWalletStatus() {
+    // Если уже есть в кэше и не прошло 5 минут — не запрашиваем
+    if (tonWalletCached && tonWalletCached !== '') {
+        updateTonWalletStatus(tonWalletCached);
+        return tonWalletCached;
     }
 
-    async function disconnectTonWallet() {
-        if (!confirm('⚠️ Вы уверены, что хотите отвязать TON кошелёк?')) return;
-        try {
-            if (tonConnectUI) {
-                await tonConnectUI.disconnect();
-            } else {
-                await saveWalletToBackend('');
-                updateTonWalletStatus(null);
-            }
-            showToast('✅ TON кошелёк отвязан', 'success');
-        } catch(e) {
-            showToast('❌ Ошибка при отвязке кошелька', 'error');
+    try {
+        const res = await fetch('/api/ton/get_wallet', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId })
+        });
+
+        const data = await res.json();
+
+        if (data.success && data.wallet) {
+            tonWalletCached = data.wallet;
+            updateTonWalletStatus(data.wallet);
+            return data.wallet;
+        } else {
+            tonWalletCached = null;
+            updateTonWalletStatus(null);
+            return null;
         }
+    } catch (e) {
+        console.error('Error loading TON wallet status:', e);
+        return null;
     }
+}
+
+// ===== 6. СОХРАНЕНИЕ КОШЕЛЬКА (с инвалидацией кэша) =====
+async function saveWalletToBackend(address) {
+    try {
+        const targetUrl = address ? '/api/ton/save_wallet' : '/api/ton/disconnect_wallet';
+        const payload = { user_id: userId };
+        if (address) payload.wallet_address = address;
+
+        await fetch(targetUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        // Обновляем кэш
+        if (address) {
+            tonWalletCached = address;
+        } else {
+            tonWalletCached = null;
+        }
+    } catch (e) {
+        console.error('Failed to save wallet:', e);
+    }
+}
+
+// ===== 7. ОТВЯЗКА КОШЕЛЬКА =====
+async function disconnectTonWallet() {
+    if (!confirm('⚠️ Вы уверены, что хотите отвязать TON кошелёк?')) return;
+
+    try {
+        if (tonConnectUI) {
+            await tonConnectUI.disconnect();
+        } else {
+            await saveWalletToBackend('');
+            tonWalletCached = null;
+            updateTonWalletStatus(null);
+        }
+        showToast('✅ TON кошелёк отвязан', 'success');
+    } catch (e) {
+        showToast('❌ Ошибка при отвязке кошелька', 'error');
+    }
+}
+
+// ===== 8. ОБНОВЛЕНИЕ UI СТАТУСА =====
+function updateTonWalletStatus(address) {
+    const walletStatus = document.getElementById('tonWalletStatus');
+    if (!walletStatus) return;
+
+    if (address) {
+        const shortAddress = address.slice(0, 5) + '...' + address.slice(-4);
+        walletStatus.innerText = shortAddress;
+        walletStatus.style.color = '#22c55e';
+        walletStatus.style.fontWeight = '600';
+    } else {
+        walletStatus.innerText = 'Не подключён';
+        walletStatus.style.color = '#FFD700';
+        walletStatus.style.fontWeight = 'normal';
+    }
+}
+
+// ===== 9. ПРЕДЗАГРУЗКА TON ПРИ СТАРТЕ =====
+// Загружаем TON в фоне при старте, чтобы при нажатии было мгновенно
+setTimeout(async () => {
+    try {
+        await initTonConnect();
+    } catch (e) {
+        console.log('TON предзагрузка не удалась, будет загружена при первом клике');
+    }
+}, 1500);
 
     // ==================== ТУТОРИАЛ (ОБУЧЕНИЕ) ====================
     let tutorialSteps = [], currentTutorialStep = 0, tutorialActive = false;
@@ -7427,6 +7631,328 @@ function triggerHaptic(type = 'medium') {
             navigator.vibrate(duration);
         }
     } catch(e) {}
+}
+
+    // ========== LP БУСТЕР С КОЛИЧЕСТВОМ ==========
+
+let lpBoostQuantity = 1;
+const LP_BOOST_PRICE_STARS = 22;
+const LP_BOOST_PRICE_TON = 0.18;
+const LP_BOOST_REWARD_LP = 50;
+
+function changeLpBoostCount(delta) {
+    const newValue = lpBoostQuantity + delta;
+
+    // Ограничения
+    if (newValue < 1) {
+        showToast('Минимальное количество — 1', 'error');
+        return;
+    }
+    if (newValue > 10) {
+        showToast('Максимальное количество — 10 за раз', 'error');
+        return;
+    }
+
+    lpBoostQuantity = newValue;
+
+    // Обновляем UI
+    const quantityEl = document.getElementById('lpBoostQuantity');
+    if (quantityEl) quantityEl.innerText = lpBoostQuantity;
+
+    // Обновляем цену и награду
+    const totalReward = lpBoostQuantity * LP_BOOST_REWARD_LP;
+    const totalStars = lpBoostQuantity * LP_BOOST_PRICE_STARS;
+    const totalTon = (lpBoostQuantity * LP_BOOST_PRICE_TON).toFixed(2);
+
+    const rewardEl = document.getElementById('lpBoostTotalReward');
+    if (rewardEl) {
+        if (lpBoostQuantity === 1) {
+            rewardEl.innerHTML = `💎 +${totalReward} LP`;
+        } else {
+            rewardEl.innerHTML = `💎 +${totalReward} LP (${lpBoostQuantity} шт.)`;
+        }
+    }
+
+    const priceEl = document.getElementById('lpBoostTotalPrice');
+    if (priceEl) {
+        priceEl.innerHTML = `⭐ ${totalStars} Stars / 💎 ${totalTon} TON`;
+    }
+
+    // Обновляем кнопки
+    const starsBtn = document.getElementById('lpBoostStarsBtn');
+    if (starsBtn) {
+        const span = starsBtn.querySelector('span');
+        if (span) {
+            span.innerHTML = `Купить <span id="lpBoostStarsPrice">${totalStars}</span> звёзд`;
+        }
+    }
+
+    const tonBtn = document.getElementById('lpBoostTonBtn');
+    if (tonBtn) {
+        const span = tonBtn.querySelector('span');
+        if (span) {
+            span.innerHTML = `Купить за <span id="lpBoostTonPrice">${totalTon}</span> TON`;
+        }
+    }
+
+    // Обновляем цены в атрибутах для функций покупки
+    document.getElementById('lpBoostStarsPrice')?.setAttribute('data-value', totalStars);
+    document.getElementById('lpBoostTonPrice')?.setAttribute('data-value', totalTon);
+}
+
+// ===== ОБНОВЛЁННАЯ ПОКУПКА LP БУСТЕРА ЗА STARS =====
+async function buyLPBoostStars() {
+    const quantity = lpBoostQuantity;
+    const totalStars = quantity * LP_BOOST_PRICE_STARS;
+    const totalLP = quantity * LP_BOOST_REWARD_LP;
+
+    showToast(`💰 Создаём счёт на ${totalStars} Stars...`, 'info');
+
+    try {
+        const res = await fetch('/api/create_lp_boost_invoice', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id: userId,
+                chat_id: chatId,
+                quantity: quantity  // ← Передаём количество
+            })
+        });
+
+        const data = await res.json();
+
+        if (!data.success) {
+            showToast(data.msg || 'Ошибка создания счёта', 'error');
+            return;
+        }
+
+        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openInvoice) {
+            window.Telegram.WebApp.openInvoice(data.invoice_link, async (status) => {
+                if (status === 'paid') {
+                    showToast(`✨ Получено +${totalLP} LP!`, 'success');
+                    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.showPopup) {
+                        window.Telegram.WebApp.showPopup({
+                            title: '🎉 Покупка успешна!',
+                            message: `💎 Вы получили +${totalLP} LP на баланс!`,
+                            buttons: [{ type: 'ok' }]
+                        });
+                    }
+                    setTimeout(() => {
+                        updateStatus();
+                        updateLPBoostCount();
+                        // Сбрасываем количество на 1
+                        lpBoostQuantity = 1;
+                        changeLpBoostCount(0);
+                    }, 500);
+                } else if (status === 'failed' || status === 'cancelled') {
+                    showToast('❌ Оплата отменена или не удалась', 'error');
+                }
+            });
+        } else {
+            window.open(data.invoice_link, '_blank');
+            showToast('🔗 Оплатите по ссылке в новом окне', 'info');
+        }
+    } catch (e) {
+        console.error('Ошибка при оплате:', e);
+        showToast('Ошибка при создании платежа', 'error');
+    }
+}
+
+// ===== ОБНОВЛЁННАЯ ПОКУПКА LP БУСТЕРА ЗА TON =====
+async function buyLPBoostTon() {
+    const quantity = lpBoostQuantity;
+    const totalTon = (quantity * LP_BOOST_PRICE_TON).toFixed(2);
+    const totalLP = quantity * LP_BOOST_REWARD_LP;
+
+    const btn = document.getElementById('lpBoostTonBtn');
+    if (!btn) return;
+
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Загрузка...';
+
+    try {
+        // Инициализируем TON
+        const ui = await initTonConnect();
+        if (!ui) {
+            showToast('❌ Система оплаты недоступна', 'error');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            return;
+        }
+
+        // Проверяем кошелёк
+        let wallet = getTonWallet();
+        if (!wallet) {
+            await loadTonWalletStatus();
+            wallet = getTonWallet();
+        }
+
+        if (!wallet) {
+            showToast('🔗 Подключите TON кошелёк', 'info');
+            try {
+                await ui.openModal();
+                await new Promise((resolve) => {
+                    const checkWallet = setInterval(() => {
+                        if (ui.wallet) {
+                            clearInterval(checkWallet);
+                            resolve();
+                        }
+                    }, 100);
+                    setTimeout(() => {
+                        clearInterval(checkWallet);
+                        resolve();
+                    }, 5000);
+                });
+
+                if (!ui.wallet) {
+                    showToast('❌ Кошелёк не подключён', 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                    return;
+                }
+
+                wallet = ui.wallet.account.address;
+                tonWalletCached = wallet;
+                await saveWalletToBackend(wallet);
+                updateTonWalletStatus(wallet);
+
+            } catch (e) {
+                showToast('❌ Ошибка подключения кошелька', 'error');
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                return;
+            }
+        }
+
+        // Создаём платёж с количеством
+        showToast(`💎 Создаём платёж на ${totalTon} TON...`, 'info');
+        const response = await fetch('/api/ton/create_lp_boost_payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id: userId,
+                quantity: quantity  // ← Передаём количество
+            })
+        });
+
+        const paymentData = await response.json();
+        if (!paymentData || !paymentData.success) {
+            showToast(paymentData?.error || 'Ошибка создания платежа', 'error');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            return;
+        }
+
+        // Отправляем транзакцию
+        const transaction = {
+            validUntil: Math.floor(Date.now() / 1000) + 300,
+            messages: [{
+                address: paymentData.wallet_address,
+                amount: paymentData.amount_nano.toString(),
+                comment: paymentData.comment
+            }]
+        };
+
+        try {
+            await ui.sendTransaction(transaction);
+        } catch (e) {
+            if (String(e.message).includes('canceled')) {
+                showToast('❌ Транзакция отменена', 'error');
+            } else {
+                showToast('❌ Ошибка отправки транзакции', 'error');
+                console.error('Transaction error:', e);
+            }
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            return;
+        }
+
+        // Проверяем платёж
+        showToast('💰 Проверяем транзакцию...', 'info');
+        startLPBoostPaymentCheck(paymentData.amount, quantity, btn, originalText);
+
+    } catch (e) {
+        console.error('Buy LP Boost TON error:', e);
+        showToast('❌ Ошибка: ' + e.message, 'error');
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+
+// ===== ПРОВЕРКА ПЛАТЕЖА LP БУСТЕРА =====
+function startLPBoostPaymentCheck(expectedAmount, quantity, btn, originalText) {
+    let attempts = 0;
+    const maxAttempts = 30;
+    const totalLP = quantity * LP_BOOST_REWARD_LP;
+
+    if (paymentCheckInterval) {
+        clearInterval(paymentCheckInterval);
+        paymentCheckInterval = null;
+    }
+
+    let userWalletAddress = getTonWallet();
+
+    paymentCheckInterval = setInterval(async () => {
+        attempts++;
+
+        try {
+            const res = await fetch('/api/ton/check_lp_boost_payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: userId,
+                    expected_amount: expectedAmount,
+                    sender_wallet: userWalletAddress,
+                    quantity: quantity  // ← Передаём количество
+                })
+            });
+
+            const data = await res.json();
+
+            if (data && data.confirmed) {
+                clearInterval(paymentCheckInterval);
+                paymentCheckInterval = null;
+
+                showToast(`✅ Получено +${totalLP} LP!`, 'success');
+                await updateStatus();
+                await updateLPBoostCount();
+                updateUI();
+
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText || '💎 Купить за 0.18 TON';
+                }
+
+                // Сбрасываем количество
+                lpBoostQuantity = 1;
+                changeLpBoostCount(0);
+
+                return;
+            }
+
+            if (attempts >= maxAttempts) {
+                clearInterval(paymentCheckInterval);
+                paymentCheckInterval = null;
+                showToast('⏳ Транзакция не подтверждена', 'warning');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText || '💎 Купить за 0.18 TON';
+                }
+            }
+
+        } catch (e) {
+            console.error('Payment check error:', e);
+            if (attempts >= maxAttempts) {
+                clearInterval(paymentCheckInterval);
+                paymentCheckInterval = null;
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText || '💎 Купить за 0.18 TON';
+                }
+            }
+        }
+    }, 3000);
 }
 
 </script>
