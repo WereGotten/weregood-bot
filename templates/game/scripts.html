@@ -176,22 +176,88 @@ function _initializeUser() {
     };
 
     // ================================================================
-    // ЗАПУСКАЕМ ОСТАЛЬНУЮ ЛОГИКУ ИГРЫ
+    // ЗАПУСКАЕМ ВСЕ ФУНКЦИИ ЗАГРУЗКИ (МГНОВЕННО!)
     // ================================================================
 
-    // Вызываем функции, которые зависят от userId
+    // 1. РЕГИСТРАЦИЯ
     if (typeof autoRegister === 'function') {
         autoRegister();
     }
+
+    // 2. ОСНОВНАЯ СИНХРОНИЗАЦИЯ (грузит все данные)
     if (typeof syncData === 'function') {
         syncData(true);
     }
+
+    // 3. АВАТАР
     if (typeof loadAvatar === 'function') {
         loadAvatar();
     }
+
+    // 4. ЛОГ ВХОДА
     if (typeof logGameEntry === 'function') {
         logGameEntry();
     }
+
+    // 5. НАСТРОЙКИ
+    if (typeof loadSettings === 'function') {
+        loadSettings();
+    }
+
+    // 6. РЕФЕРАЛЬНАЯ ССЫЛКА
+    if (typeof loadReferralLink === 'function') {
+        loadReferralLink();
+    }
+
+    // 7. СПИСОК РЕФЕРАЛОВ
+    if (typeof loadReferrals === 'function') {
+        loadReferrals();
+    }
+
+    // 8. ЕЖЕДНЕВНЫЕ НАГРАДЫ
+    if (typeof loadDailyStatus === 'function') {
+        loadDailyStatus();
+    }
+
+    // 9. ЛИДЕРБОРД (мгновенно!)
+    if (typeof loadLeaderboardData === 'function') {
+        loadLeaderboardData('day', true);
+    }
+
+    // 10. ПОСЛЕДНИЕ ИГРОКИ
+    if (typeof loadRecentPlayers === 'function') {
+        loadRecentPlayers();
+    }
+
+    // 11. ЛОТЕРЕЯ
+    if (typeof loadUserTickets === 'function') {
+        loadUserTickets();
+    }
+
+    // 12. ИНИЦИАЛИЗАЦИЯ СОКЕТА
+    if (typeof initSocket === 'function') {
+        initSocket();
+    }
+
+    // 13. TON CONNECT
+    if (typeof initTonConnect === 'function') {
+        initTonConnect();
+    }
+    if (typeof loadTonWalletStatus === 'function') {
+        loadTonWalletStatus();
+    }
+
+    // 14. ПРОВЕРКА ТУТОРИАЛА
+    if (typeof checkAndStartTutorial === 'function') {
+        setTimeout(checkAndStartTutorial, 1000);
+    }
+
+    // 15. ОБНОВЛЕНИЕ LP БУСТЕРА
+    if (typeof updateLPBoostCount === 'function') {
+        updateLPBoostCount();
+    }
+
+    console.log('✅ Все данные загружены!');
 }
 
 // ===== ПОКАЗ ОШИБКИ АВТОРИЗАЦИИ =====
