@@ -5890,6 +5890,23 @@ function closeGamepad() {
 document.addEventListener("DOMContentLoaded", () => {
     console.log('📄 DOM загружен, запускаем инициализацию...');
 
+    // ===== ОТКЛЮЧАЕМ КЭШ ДЛЯ ВСЕХ ЗАПРОСОВ =====
+    const originalFetch = window.fetch;
+    window.fetch = function(...args) {
+        if (args[0] && typeof args[0] === 'string') {
+            try {
+                const url = new URL(args[0], window.location.origin);
+                // Добавляем timestamp к GET запросам
+                if (args[1]?.method !== 'POST') {
+                    url.searchParams.set('_t', Date.now());
+                }
+                args[0] = url.toString();
+            } catch(e) {}
+        }
+        return originalFetch.apply(this, args);
+    };
+    console.log('✅ Кэш отключен для всех запросов');
+
     // ===== БАЗОВАЯ ИНИЦИАЛИЗАЦИЯ =====
     initTonConnect();
     loadTonWalletStatus();
@@ -5899,64 +5916,72 @@ document.addEventListener("DOMContentLoaded", () => {
     logGameEntry();
 
     // ============================================================
-    // МНОГОЭТАПНАЯ ЗАГРУЗКА ДАННЫХ
+    // ПОСЛЕДОВАТЕЛЬНАЯ ЗАГРУЗКА ДАННЫХ (БЕЗ ПАРАЛЛЕЛЬНЫХ ЗАПРОСОВ)
     // ============================================================
 
-    // 1️⃣ МГНОВЕННАЯ ЗАГРУЗКА (самое важное)
-    console.log('🚀 Старт загрузки данных...');
-    showToast('⏳ Загрузка...', 'info');
+    async function loadAllDataSequentially() {
+        console.log('🚀 Старт последовательной загрузки данных...');
+        showToast('⏳ Загрузка...', 'info');
 
-    // Загружаем основные данные
-    syncData(true);
+        try {
+            // 1️⃣ ОСНОВНЫЕ ДАННЫЕ (баланс, лотерея)
+            console.log('1️⃣ Загрузка основных данных...');
+            await syncData(true);
+            console.log('✅ Основные данные загружены');
 
-    // Параллельно загружаем лидерборд и участников
-    setTimeout(() => {
-        loadLeaderboardData('day', true);
-        loadRecentPlayers();
-        loadReferrals();
-        updateLottery();
-    }, 100);
+            // 2️⃣ ЛИДЕРБОРД
+            console.log('2️⃣ Загрузка лидерборда...');
+            await loadLeaderboardData('day', true);
+            console.log('✅ Лидерборд загружен');
 
-    // 2️⃣ ЗАГРУЗКА ЧЕРЕЗ 1 СЕКУНДУ (на случай если первая не успела)
-    setTimeout(() => {
-        console.log('🔄 Вторая волна загрузки...');
-        syncData(true);
-        loadLeaderboardData('day', true);
-        loadRecentPlayers();
-        loadReferralLink();
-        loadReferrals();
-        loadSettings();
-        loadDailyStatus();
-        loadLanguageSettings();
-        loadTonWalletStatus();
-        updateLPBoostCount();
-        updateLottery();
-    }, 1000);
+            // 3️⃣ ПОСЛЕДНИЕ УЧАСТНИКИ
+            console.log('3️⃣ Загрузка последних участников...');
+            await loadRecentPlayers();
+            console.log('✅ Последние участники загружены');
 
-    // 3️⃣ ЗАГРУЗКА ЧЕРЕЗ 3 СЕКУНДЫ (страховка)
-    setTimeout(() => {
-        console.log('🔄 Третья волна загрузки (страховка)...');
-        // Проверяем, загрузились ли данные
-        if (localWG === 0 && localLP === 0) {
-            console.warn('⚠️ Данные всё ещё пустые, форсируем обновление...');
-            syncData(true);
-            loadLeaderboardData('day', true);
-            loadRecentPlayers();
-            loadReferrals();
-            // Перерисовываем UI
+            // 4️⃣ РЕФЕРАЛЫ
+            console.log('4️⃣ Загрузка рефералов...');
+            await loadReferrals();
+            await loadReferralLink();
+            console.log('✅ Рефералы загружены');
+
+            // 5️⃣ ЛОТЕРЕЯ
+            console.log('5️⃣ Загрузка лотереи...');
+            await updateLottery();
+            console.log('✅ Лотерея загружена');
+
+            // 6️⃣ НАСТРОЙКИ
+            console.log('6️⃣ Загрузка настроек...');
+            await loadSettings();
+            await loadDailyStatus();
+            await loadLanguageSettings();
+            await loadTonWalletStatus();
+            await updateLPBoostCount();
+            console.log('✅ Настройки загружены');
+
+            // 7️⃣ ОБНОВЛЯЕМ UI
             updateUI();
-        }
-    }, 3000);
+            console.log('✅ ВСЕ ДАННЫЕ УСПЕШНО ЗАГРУЖЕНЫ!');
+            showToast('✅ Игра загружена!', 'success');
 
-    // 4️⃣ ЗАГРУЗКА НАСТРОЕК И ДРУГИХ ДАННЫХ (параллельно)
-    setTimeout(() => {
-        loadSettings();
-        loadDailyStatus();
-        loadLanguageSettings();
-        loadReferralLink();
-        loadReferrals();
-        loadTonWalletStatus();
-    }, 500);
+            // Запускаем таймеры после загрузки
+            startDailyLeaderboardTimer();
+            checkPaydayStatus();
+
+        } catch(e) {
+            console.error('❌ Ошибка при загрузке данных:', e);
+            showToast('⚠️ Некоторые данные не загрузились, пробуем снова...', 'error');
+
+            // Повторная попытка через 2 секунды
+            setTimeout(() => {
+                console.log('🔄 Повторная попытка загрузки...');
+                loadAllDataSequentially();
+            }, 2000);
+        }
+    }
+
+    // Запускаем последовательную загрузку через 100мс
+    setTimeout(loadAllDataSequentially, 100);
 
     // ============================================================
     // ОПТИМИЗИРОВАННЫЙ СИНХРОНИЗАТОР
@@ -5969,28 +5994,21 @@ document.addEventListener("DOMContentLoaded", () => {
             const res = await fetch('/api/sync_light', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: userId })
+                body: JSON.stringify({ user_id: userId, _t: Date.now() })
             });
             const data = await res.json();
             if (data.success) {
                 const d = data.data;
-                const wgEl = document.getElementById('wgBalance');
-                if (wgEl) wgEl.textContent = d.wg.toFixed(2);
-                const lpEl = document.getElementById('lpBalance');
-                if (lpEl) lpEl.textContent = d.lp;
-                const energyEl = document.getElementById('energyValue');
-                if (energyEl) energyEl.textContent = d.energy;
-                const maxEnergyEl = document.getElementById('maxEnergyValue');
-                if (maxEnergyEl) maxEnergyEl.textContent = d.max_energy;
-                const earningEl = document.getElementById('earningPerClick');
-                if (earningEl) earningEl.textContent = d.earning_per_click.toFixed(2);
-                const clickAmountEl = document.getElementById('clickAmount');
-                if (clickAmountEl) clickAmountEl.textContent = d.earning_per_click.toFixed(2);
+                document.getElementById('wgBalance')?.textContent = d.wg.toFixed(2);
+                document.getElementById('lpBalance')?.textContent = d.lp;
+                document.getElementById('energyValue')?.textContent = d.energy;
+                document.getElementById('maxEnergyValue')?.textContent = d.max_energy;
+                document.getElementById('earningPerClick')?.textContent = d.earning_per_click.toFixed(2);
+                document.getElementById('clickAmount')?.textContent = d.earning_per_click.toFixed(2);
+
                 const percent = (d.energy / d.max_energy) * 100;
-                const bar = document.getElementById('energyBar');
-                if (bar) bar.style.width = percent + '%';
-                const headerEnergy = document.getElementById('energyHeader');
-                if (headerEnergy) headerEnergy.textContent = d.energy;
+                document.getElementById('energyBar')?.style.width = percent + '%';
+                document.getElementById('energyHeader')?.textContent = d.energy;
             }
         } catch(e) {}
     }, 2000);
@@ -6019,14 +6037,22 @@ document.addEventListener("DOMContentLoaded", () => {
     console.log('   👥 Рефералы обновляются каждые 30 секунд');
 
     // ============================================================
-    // ЗАПУСК ТАЙМЕРОВ
+    // ПРОВЕРКА ЗАГРУЗКИ (СТРАХОВКА)
     // ============================================================
 
-    startDailyLeaderboardTimer();
-    updateLPBoostCount();
+    setTimeout(() => {
+        const recentContainer = document.getElementById('recentPlayersList');
+        const hasRecentData = recentContainer && !recentContainer.innerHTML.includes('загрузк') && recentContainer.innerHTML !== '';
+
+        if (!hasRecentData || (localWG === 0 && localLP === 0)) {
+            console.warn('⚠️ Данные не загрузились, принудительная перезагрузка...');
+            showToast('⏳ Повторная загрузка...', 'info');
+            loadAllDataSequentially();
+        }
+    }, 5000);
 
     // ============================================================
-    // ОБРАБОТКА ПРОМОКОДОВ И РЕФЕРАЛОВ (ИСПРАВЛЕННАЯ)
+    // ОБРАБОТКА ПРОМОКОДОВ И РЕФЕРАЛОВ
     // ============================================================
 
     function handleStartParam() {
@@ -6050,7 +6076,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 const promoCode = startParam.replace('claim_', '').toUpperCase();
                 console.log('🎫 Обнаружен промокод:', promoCode);
 
-                // Проверяем, есть ли модалка
                 const modal = document.getElementById('promoModal');
                 const input = document.getElementById('promoCodeInput');
 
@@ -6059,20 +6084,16 @@ document.addEventListener("DOMContentLoaded", () => {
                     return false;
                 }
 
-                // Вставляем промокод в поле
                 if (input) {
                     input.value = promoCode;
                     console.log('✅ Промокод вставлен:', promoCode);
                 }
 
-                // Открываем модалку
                 modal.classList.add('active');
                 console.log('✅ Модалка промокода открыта');
 
-                // Показываем сообщение
                 showToast(`🎫 Промокод ${promoCode} готов к активации!`, 'success');
 
-                // Проверяем через 500мс, не закрылась ли модалка
                 setTimeout(() => {
                     if (!modal.classList.contains('active')) {
                         console.log('🔄 Модалка закрылась, открываем снова...');
@@ -6117,20 +6138,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Запускаем обработку несколько раз для надёжности
     console.log('🔍 Запуск обработки start_param...');
-
-    // Сразу
-    handleStartParam();
-
-    // Через 500мс
+    setTimeout(handleStartParam, 100);
     setTimeout(handleStartParam, 500);
-
-    // Через 1.5 секунды
     setTimeout(handleStartParam, 1500);
-
-    // Через 3 секунды (страховка)
     setTimeout(handleStartParam, 3000);
 
-    // Через 5 секунд (финальная страховка)
+    // Финальная страховка
     setTimeout(() => {
         const tg = window.Telegram?.WebApp;
         const startParam = tg?.initDataUnsafe?.start_param;
@@ -6199,6 +6212,15 @@ document.addEventListener("DOMContentLoaded", () => {
             console.log('Ставка на Красных');
             openBetModal('red');
         });
+    }
+
+    // ============================================================
+    // PAYDAY
+    // ============================================================
+
+    if (typeof checkPaydayStatus === 'function') {
+        setTimeout(checkPaydayStatus, 2000);
+        setInterval(checkPaydayStatus, 10000);
     }
 
     console.log('✅ DOMContentLoaded завершён!');
