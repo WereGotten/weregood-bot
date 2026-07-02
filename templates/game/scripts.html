@@ -971,21 +971,31 @@ async function loadReferralLink() {
 
 async function loadReferrals() {
     try {
+        console.log('🔄 Загрузка рефералов...');
+
         let res = await fetch('/api/get_referrals', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_id: userId })
         });
+
         let data = await res.json();
+        console.log('📊 Получены рефералы:', data);
 
         const referralsCount = document.getElementById('referralsCount');
-        if (referralsCount) referralsCount.innerText = `(${data.referrals.length})`;
+        if (referralsCount) {
+            referralsCount.innerText = `(${data.referrals.length})`;
+        }
 
         const totalEarnedLP = document.getElementById('totalEarnedLP');
-        if (totalEarnedLP) totalEarnedLP.innerText = data.total_earned_lp.toFixed(2);
+        if (totalEarnedLP) {
+            totalEarnedLP.innerText = data.total_earned_lp.toFixed(2);
+        }
 
         const totalEarnedWG = document.getElementById('totalEarnedWG');
-        if (totalEarnedWG) totalEarnedWG.innerText = data.total_earned_wg.toFixed(2);
+        if (totalEarnedWG) {
+            totalEarnedWG.innerText = data.total_earned_wg.toFixed(2);
+        }
 
         let container = document.getElementById('referralsList');
         if (!container) return;
@@ -1013,8 +1023,17 @@ async function loadReferrals() {
             </div>`;
         }
         container.innerHTML = html;
+
+        console.log('✅ Рефералы отображены');
+
     } catch(e) {
         console.error('Error loading referrals:', e);
+
+        // Показываем заглушку при ошибке
+        const container = document.getElementById('referralsList');
+        if (container) {
+            container.innerHTML = '<div class="empty-referrals">😢 Ошибка загрузки рефералов</div>';
+        }
     }
 }
 
@@ -1296,27 +1315,35 @@ shopTabs.forEach(tab => {
     }
 
     const navItems = document.querySelectorAll('.nav-item');
-    navItems.forEach(item => {
-        const oldOnClick = item.onclick;
-        item.onclick = (e) => {
-            playNavSound();
-            const tab = item.dataset.tab;
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            item.classList.add('active');
-            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-            const tabPane = document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
-            if (tabPane) tabPane.classList.add('active');
-            const mainContent = document.querySelector('.main-content');
-            if (mainContent) mainContent.scrollTop = 0;
-            if (tab === 'lottery') {
-                updateLottery();
-                loadRecentPlayers();
-            }
-            if (tab === 'profile' || tab === 'shop' || tab === 'home') updateStatus();
-            if (tab === 'home') updateLeaderboard();
-            if (oldOnClick) oldOnClick(e);
-        };
-    });
+navItems.forEach(item => {
+    item.onclick = (e) => {
+        playNavSound();
+        const tab = item.dataset.tab;
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        item.classList.add('active');
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+        const tabPane = document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
+        if (tabPane) tabPane.classList.add('active');
+        const mainContent = document.querySelector('.main-content');
+        if (mainContent) mainContent.scrollTop = 0;
+
+        if (tab === 'lottery') {
+            updateLottery();
+            loadRecentPlayers();
+        }
+        if (tab === 'profile' || tab === 'shop' || tab === 'home') {
+            updateStatus();
+        }
+        if (tab === 'profile') {
+            loadReferrals();        // ← ДОБАВЛЕНО
+            loadReferralLink();     // ← ДОБАВЛЕНО
+        }
+        if (tab === 'home') {
+            updateLeaderboard();
+            loadRecentPlayers();
+        }
+    };
+});
 
     // ==================== ЛОТЕРЕЯ ====================
     const ticketBtn = document.getElementById('ticketBtn');
@@ -5813,6 +5840,9 @@ function closeGamepad() {
 
     // ==================== DOMCONTENTLOADED ====================
 document.addEventListener("DOMContentLoaded", () => {
+    console.log('📄 DOM загружен, запускаем инициализацию...');
+
+    // ===== БАЗОВАЯ ИНИЦИАЛИЗАЦИЯ =====
     initTonConnect();
     loadTonWalletStatus();
     initSocket();
@@ -5826,8 +5856,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // 1️⃣ МГНОВЕННАЯ ЗАГРУЗКА (самое важное)
     console.log('🚀 Старт загрузки данных...');
-
-    // Показываем индикатор загрузки
     showToast('⏳ Загрузка...', 'info');
 
     // Загружаем основные данные
@@ -5837,6 +5865,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setTimeout(() => {
         loadLeaderboardData('day', true);
         loadRecentPlayers();
+        loadReferrals();        // ← ДОБАВЛЕНО
     }, 100);
 
     // 2️⃣ ЗАГРУЗКА ЧЕРЕЗ 1 СЕКУНДУ (на случай если первая не успела)
@@ -5847,6 +5876,11 @@ document.addEventListener("DOMContentLoaded", () => {
         loadRecentPlayers();
         loadReferralLink();
         loadReferrals();
+        loadSettings();
+        loadDailyStatus();
+        loadLanguageSettings();
+        loadTonWalletStatus();
+        updateLPBoostCount();
     }, 1000);
 
     // 3️⃣ ЗАГРУЗКА ЧЕРЕЗ 3 СЕКУНДЫ (страховка)
@@ -5858,18 +5892,20 @@ document.addEventListener("DOMContentLoaded", () => {
             syncData(true);
             loadLeaderboardData('day', true);
             loadRecentPlayers();
+            loadReferrals();
             // Перерисовываем UI
             updateUI();
         }
     }, 3000);
 
-    // 4️⃣ ЗАГРУЗКА НАСТРОЕК И ДРУГИХ ДАННЫХ
+    // 4️⃣ ЗАГРУЗКА НАСТРОЕК И ДРУГИХ ДАННЫХ (параллельно)
     setTimeout(() => {
         loadSettings();
         loadDailyStatus();
         loadLanguageSettings();
         loadReferralLink();
         loadReferrals();
+        loadTonWalletStatus();
     }, 500);
 
     // ============================================================
@@ -5878,7 +5914,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // 1️⃣ БЫСТРОЕ ОБНОВЛЕНИЕ БАЛАНСА (каждые 2 секунды)
     setInterval(async () => {
-        if (isScratchingActive) return;
+        if (window.isScratchingActive) return;
         try {
             const res = await fetch('/api/sync_light', {
                 method: 'POST',
@@ -5909,9 +5945,9 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch(e) {}
     }, 2000);
 
-    // 2️⃣ ТЯЖЁЛЫЕ ДАННЫЕ (редко)
+    // 2️⃣ ТЯЖЁЛЫЕ ДАННЫЕ (каждые 30 секунд)
     setInterval(() => {
-        if (isScratchingActive) return;
+        if (window.isScratchingActive) return;
         const activeTab = document.querySelector('.tab-pane.active');
         if (activeTab && activeTab.id === 'tabLottery') {
             loadUserTickets();
@@ -5919,6 +5955,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         if (activeTab && activeTab.id === 'tabProfile') {
             loadReferrals();
+            loadReferralLink();
         }
         if (activeTab && activeTab.id === 'tabHome') {
             loadLeaderboardData('day', true);
@@ -5931,12 +5968,16 @@ document.addEventListener("DOMContentLoaded", () => {
     console.log('   🎰 Лотерея обновляется каждые 30 секунд');
     console.log('   👥 Рефералы обновляются каждые 30 секунд');
 
+    // ============================================================
+    // ЗАПУСК ТАЙМЕРОВ
+    // ============================================================
+
     startDailyLeaderboardTimer();
     updateLPBoostCount();
 
-        // ================================================================
+    // ============================================================
     // ОБРАБОТКА ПРОМОКОДОВ И РЕФЕРАЛОВ (ИСПРАВЛЕННАЯ)
-    // ================================================================
+    // ============================================================
 
     function handleStartParam() {
         try {
@@ -6056,13 +6097,20 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }, 5000);
 
-    // Разворачиваем Telegram WebApp
+    // ============================================================
+    // РАЗВОРАЧИВАЕМ TELEGRAM WEBAPP
+    // ============================================================
+
     if (window.Telegram?.WebApp) {
         window.Telegram.WebApp.ready();
         window.Telegram.WebApp.expand();
     }
 
-    // Обработчики модалок
+    // ============================================================
+    // ОБРАБОТЧИКИ МОДАЛОК
+    // ============================================================
+
+    // Бет модалка
     const closeBetModalBtn = document.querySelector('#betModal .bet-modal-close');
     if (closeBetModalBtn) {
         closeBetModalBtn.addEventListener('click', closeBetModal);
@@ -6102,6 +6150,8 @@ document.addEventListener("DOMContentLoaded", () => {
             openBetModal('red');
         });
     }
+
+    console.log('✅ DOMContentLoaded завершён!');
 });
 
     document.addEventListener('click', function(e) {
