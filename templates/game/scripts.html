@@ -1314,33 +1314,57 @@ shopTabs.forEach(tab => {
         setTimeout(() => updateDonateCarousel(), 100);
     }
 
-    const navItems = document.querySelectorAll('.nav-item');
+    // ================================================================
+// НАВИГАЦИЯ ПО ВКЛАДКАМ
+// ================================================================
+
+const navItems = document.querySelectorAll('.nav-item');
 navItems.forEach(item => {
-    item.onclick = (e) => {
+    item.onclick = function(e) {
         playNavSound();
-        const tab = item.dataset.tab;
+        const tab = this.dataset.tab;
+
+        // Обновляем активную вкладку
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        item.classList.add('active');
+        this.classList.add('active');
+
+        // Показываем нужную панель
         document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
         const tabPane = document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
         if (tabPane) tabPane.classList.add('active');
+
+        // Скроллим наверх
         const mainContent = document.querySelector('.main-content');
         if (mainContent) mainContent.scrollTop = 0;
 
+        // ===== ЗАГРУЗКА ДАННЫХ В ЗАВИСИМОСТИ ОТ ВКЛАДКИ =====
         if (tab === 'lottery') {
+            console.log('🎰 Переключение на вкладку "Вызов"');
+            // Загружаем данные лотереи
             updateLottery();
+            // Загружаем последних участников
             loadRecentPlayers();
-        }
-        if (tab === 'profile' || tab === 'shop' || tab === 'home') {
+            // Обновляем статус
             updateStatus();
         }
+
         if (tab === 'profile') {
-            loadReferrals();        // ← ДОБАВЛЕНО
-            loadReferralLink();     // ← ДОБАВЛЕНО
+            console.log('👤 Переключение на вкладку "Профиль"');
+            loadReferrals();
+            loadReferralLink();
+            updateStatus();
         }
+
+        if (tab === 'shop') {
+            console.log('🛒 Переключение на вкладку "Магазин"');
+            updateStatus();
+        }
+
         if (tab === 'home') {
+            console.log('🏠 Переключение на вкладку "Главная"');
             updateLeaderboard();
             loadRecentPlayers();
+            updateStatus();
         }
     };
 });
@@ -5865,7 +5889,8 @@ document.addEventListener("DOMContentLoaded", () => {
     setTimeout(() => {
         loadLeaderboardData('day', true);
         loadRecentPlayers();
-        loadReferrals();        // ← ДОБАВЛЕНО
+        loadReferrals();
+        updateLottery();
     }, 100);
 
     // 2️⃣ ЗАГРУЗКА ЧЕРЕЗ 1 СЕКУНДУ (на случай если первая не успела)
@@ -5881,6 +5906,7 @@ document.addEventListener("DOMContentLoaded", () => {
         loadLanguageSettings();
         loadTonWalletStatus();
         updateLPBoostCount();
+        updateLottery();
     }, 1000);
 
     // 3️⃣ ЗАГРУЗКА ЧЕРЕЗ 3 СЕКУНДЫ (страховка)
@@ -6196,9 +6222,55 @@ document.addEventListener("DOMContentLoaded", () => {
         syncData(true);
     }
 
-    function updateLottery() {
-        syncData(true);
-    }
+    // ================================================================
+// ОБНОВЛЕНИЕ ЛОТЕРЕИ (ПРИ ПЕРЕКЛЮЧЕНИИ НА ВКЛАДКУ)
+// ================================================================
+
+function updateLottery() {
+    console.log('🎰 Обновление данных лотереи...');
+
+    // Загружаем актуальные данные
+    loadUserTickets();
+
+    // Обновляем статус розыгрыша
+    fetch('/api/lottery_status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId })
+    })
+    .then(res => res.json())
+    .then(data => {
+        console.log('📊 Данные лотереи:', data);
+
+        // Обновляем призовой фонд
+        const prizePoolEl = document.getElementById('prizePool');
+        if (prizePoolEl && data.prize_pool !== undefined) {
+            prizePoolEl.innerText = data.prize_pool.toFixed(2);
+        }
+
+        // Обновляем баланс LP
+        const lotteryLPEl = document.getElementById('lotteryLPBalance');
+        if (lotteryLPEl && data.user_lp !== undefined) {
+            lotteryLPEl.innerText = data.user_lp;
+        }
+
+        // Обновляем количество билетов
+        const ticketsCountEl = document.getElementById('ticketsCount');
+        if (ticketsCountEl && data.user_tickets !== undefined) {
+            ticketsCountEl.innerText = data.user_tickets;
+        }
+
+        // Обновляем статус розыгрыша
+        if (data.is_drawn !== undefined) {
+            isDrawn = data.is_drawn;
+            winningNumbers = data.winning_numbers || [];
+            updateDrawUI();
+        }
+    })
+    .catch(e => {
+        console.error('❌ Ошибка обновления лотереи:', e);
+    });
+}
 
     function loadRecentPlayers() {
         syncData(true);
