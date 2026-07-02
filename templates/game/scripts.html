@@ -257,6 +257,16 @@ function _initializeUser() {
         updateLPBoostCount();
     }
 
+    // 16. PAYDAY СТАТУС
+    if (typeof checkPaydayStatus === 'function') {
+        checkPaydayStatus();
+    }
+
+    // 17. ЯЗЫК
+    if (typeof loadLanguageSettings === 'function') {
+        setTimeout(loadLanguageSettings, 100);
+    }
+
     console.log('✅ Все данные загружены!');
 }
 
