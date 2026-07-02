@@ -2748,19 +2748,29 @@ ticketBtn.innerHTML = `<img src="/static/fire.png" alt="Принять учас�
 
     // ==================== ЛИДЕРБОРД ====================
     window.openLeaderboard = async function() {
-        const leaderboardPage = document.getElementById('leaderboardPage');
-        const bottomNav = document.getElementById('bottomNav');
-        if (leaderboardPage) leaderboardPage.classList.add('active');
-        if (bottomNav) bottomNav.style.display = 'none';
-        await loadLeaderboardData('day', true);
-    };
+    const leaderboardPage = document.getElementById('leaderboardPage');
+    const bottomNav = document.getElementById('bottomNav');
+    if (leaderboardPage) leaderboardPage.classList.add('active');
+    if (bottomNav) bottomNav.style.display = 'none';
+
+    // ===== ПЕРЕЗАПУСКАЕМ ТАЙМЕР =====
+    startDailyLeaderboardTimer();
+
+    await loadLeaderboardData('day', true);
+};
 
     window.closeLeaderboard = function() {
-        const leaderboardPage = document.getElementById('leaderboardPage');
-        const bottomNav = document.getElementById('bottomNav');
-        if (leaderboardPage) leaderboardPage.classList.remove('active');
-        if (bottomNav) bottomNav.style.display = 'flex';
-    };
+    const leaderboardPage = document.getElementById('leaderboardPage');
+    const bottomNav = document.getElementById('bottomNav');
+    if (leaderboardPage) leaderboardPage.classList.remove('active');
+    if (bottomNav) bottomNav.style.display = 'flex';
+
+    // ===== ОСТАНАВЛИВАЕМ ТАЙМЕР =====
+    if (dailyLeaderboardTimerInterval) {
+        clearInterval(dailyLeaderboardTimerInterval);
+        dailyLeaderboardTimerInterval = null;
+    }
+};
 
     async function loadLeaderboardData(period, forceRefresh = false) {
     let listDiv = document.getElementById('leaderboardList');
@@ -2838,28 +2848,39 @@ ticketBtn.innerHTML = `<img src="/static/fire.png" alt="Принять учас�
 }
 
     const leaderboardTabs = document.querySelectorAll('.leaderboard-tab');
-    leaderboardTabs.forEach(tab => {
-        tab.onclick = () => {
-            const period = tab.dataset.period;
-            document.querySelectorAll('.leaderboard-tab').forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            const timerContainer = document.getElementById('dailyTimerContainer');
-            const comingSoonMsg = document.getElementById('comingSoonMsg');
-            const leaderboardList = document.getElementById('leaderboardList');
-            if (period === 'day') {
-                if (timerContainer) timerContainer.style.display = 'block';
-                if (comingSoonMsg) comingSoonMsg.style.display = 'none';
-                if (leaderboardList) leaderboardList.style.display = 'flex';
-                loadLeaderboardData('day', true);
-                if (typeof startDailyLeaderboardTimer === 'function') startDailyLeaderboardTimer();
-            } else {
-                if (timerContainer) timerContainer.style.display = 'none';
-                if (comingSoonMsg) comingSoonMsg.style.display = 'block';
-                if (leaderboardList) leaderboardList.style.display = 'none';
-                leaderboardList.innerHTML = '';
+leaderboardTabs.forEach(tab => {
+    tab.onclick = () => {
+        const period = tab.dataset.period;
+        document.querySelectorAll('.leaderboard-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+
+        const timerContainer = document.getElementById('dailyTimerContainer');
+        const comingSoonMsg = document.getElementById('comingSoonMsg');
+        const leaderboardList = document.getElementById('leaderboardList');
+
+        if (period === 'day') {
+            if (timerContainer) timerContainer.style.display = 'block';
+            if (comingSoonMsg) comingSoonMsg.style.display = 'none';
+            if (leaderboardList) leaderboardList.style.display = 'flex';
+
+            // ===== ПЕРЕЗАПУСКАЕМ ТАЙМЕР =====
+            startDailyLeaderboardTimer();
+
+            loadLeaderboardData('day', true);
+        } else {
+            if (timerContainer) timerContainer.style.display = 'none';
+            if (comingSoonMsg) comingSoonMsg.style.display = 'block';
+            if (leaderboardList) leaderboardList.style.display = 'none';
+            leaderboardList.innerHTML = '';
+
+            // ===== ОСТАНАВЛИВАЕМ ТАЙМЕР =====
+            if (dailyLeaderboardTimerInterval) {
+                clearInterval(dailyLeaderboardTimerInterval);
+                dailyLeaderboardTimerInterval = null;
             }
-        };
-    });
+        }
+    };
+});
 
     // ==================== РЕФЕРАЛЫ ====================
     window.copyReferralLink = function() {
@@ -3697,32 +3718,46 @@ async function checkTaskCompletion() {
     let dailyLeaderboardTimerInterval = null;
 
     function startDailyLeaderboardTimer() {
-        if (dailyLeaderboardTimerInterval) clearInterval(dailyLeaderboardTimerInterval);
-        function updateTimer() {
-            const now = new Date();
-            const nextMidnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 21, 0, 0));
-            let targetDate = new Date(nextMidnight);
-            if (now > targetDate) {
-                targetDate = new Date(targetDate.getTime() + 24 * 60 * 60 * 1000);
-            }
-            const diff = targetDate - now;
-            if (diff <= 0) {
-                if (dailyLeaderboardTimerInterval) clearInterval(dailyLeaderboardTimerInterval);
-                loadLeaderboardData('day', true);
-                startDailyLeaderboardTimer();
-                return;
-            }
-            const hours = Math.floor(diff / (1000 * 60 * 60));
-            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-            const timerElement = document.getElementById('dailyLeaderboardTimer');
-            if (timerElement) {
-                timerElement.innerHTML = `${hours.toString().padStart(2, '0')} : ${minutes.toString().padStart(2, '0')} : ${seconds.toString().padStart(2, '0')}`;
-            }
-        }
-        updateTimer();
-        dailyLeaderboardTimerInterval = setInterval(updateTimer, 1000);
+    // Очищаем старый интервал, если есть
+    if (dailyLeaderboardTimerInterval) {
+        clearInterval(dailyLeaderboardTimerInterval);
+        dailyLeaderboardTimerInterval = null;
     }
+
+    function updateTimer() {
+        const now = new Date();
+        // 21:00 UTC (полночь по МСК)
+        const targetDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 21, 0, 0));
+
+        // Если уже прошло 21:00, то цель — следующий день
+        if (now > targetDate) {
+            targetDate.setDate(targetDate.getDate() + 1);
+        }
+
+        const diff = targetDate - now;
+
+        if (diff <= 0) {
+            // Обновляем данные и перезапускаем таймер
+            loadLeaderboardData('day', true);
+            setTimeout(() => startDailyLeaderboardTimer(), 1000);
+            return;
+        }
+
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+        const timerElement = document.getElementById('dailyLeaderboardTimer');
+        if (timerElement) {
+            timerElement.innerHTML = `${hours.toString().padStart(2, '0')} : ${minutes.toString().padStart(2, '0')} : ${seconds.toString().padStart(2, '0')}`;
+        }
+    }
+
+    // Обновляем сразу
+    updateTimer();
+    // Запускаем интервал
+    dailyLeaderboardTimerInterval = setInterval(updateTimer, 1000);
+}
 
     // ==================== ПРОМОКОДЫ ====================
     async function openPromoModalWithCode(promoCode) {
