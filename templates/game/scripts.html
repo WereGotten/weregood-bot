@@ -692,11 +692,18 @@ async function syncData(force = false) {
             }
         }
 
+        // В syncData, после обработки data.lottery, добавь:
         if (data.leaderboard && data.leaderboard.length > 0) {
             updateLeaderboardMiniFast(data.leaderboard);
+        } else {
+            // Если данных нет - пробуем загрузить отдельно
+            loadLeaderboardData('day', true);
         }
+
         if (data.recent_players && data.recent_players.length > 0) {
             updateRecentPlayersFast(data.recent_players);
+        } else {
+            loadRecentPlayers();
         }
 
         updateUI();
@@ -711,19 +718,25 @@ async function syncData(force = false) {
 
 function updateLeaderboardMiniFast(leaderboardData) {
     const container = document.getElementById('leaderboardMini');
-    if (!container || !leaderboardData || leaderboardData.length === 0) {
-        if (container) container.innerHTML = '<div class="loading">Загрузка...</div>';
+    if (!container) {
+        console.warn('leaderboardMini container not found');
         return;
     }
+
+    if (!leaderboardData || leaderboardData.length === 0) {
+        container.innerHTML = '<div class="empty-state" style="padding: 10px; font-size: 0.7rem;">😢 Пока нет данных</div>';
+        return;
+    }
+
     let html = '';
-    for (let i = 0; i < leaderboardData.length; i++) {
+    for (let i = 0; i < Math.min(leaderboardData.length, 5); i++) {
         const user = leaderboardData[i];
         const avatar = (user.avatar && user.avatar !== '👤' && user.avatar !== '')
-            ? `<img src="${user.avatar}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;">`
+            ? `<img src="${user.avatar}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;" onerror="this.parentElement.innerHTML='👤'">`
             : '👤';
         const userName = user.username || 'Игрок';
         const dailyClicks = user.daily_clicks || user.clicks || 0;
-        html += `<div class="leaderboard-mini-item">
+        html += `<div class="leaderboard-mini-item" onclick="openPlayerProfile(${user.user_id}, 0)">
             <span class="rank">${user.rank}</span>
             <span class="avatar-mini">${avatar}</span>
             <span class="name">${escapeHtml(userName)}</span>
@@ -733,18 +746,52 @@ function updateLeaderboardMiniFast(leaderboardData) {
     container.innerHTML = html;
 }
 
+// ===== ЗАГРУЗКА ПОСЛЕДНИХ УЧАСТНИКОВ =====
+async function loadRecentPlayers() {
+    try {
+        const res = await fetch('/api/recent_players', {
+            method: 'GET',
+            headers: {
+                'Cache-Control': 'no-cache, no-store, must-revalidate'
+            }
+        });
+        const players = await res.json();
+        console.log('📋 Загружены последние участники:', players.length);
+
+        if (players && players.length > 0) {
+            updateRecentPlayersFast(players);
+        } else {
+            const container = document.getElementById('recentPlayersList');
+            if (container) {
+                container.innerHTML = '<div class="empty-state">😢 Пока нет участников</div>';
+            }
+        }
+    } catch(e) {
+        console.error('Error loading recent players:', e);
+        const container = document.getElementById('recentPlayersList');
+        if (container) {
+            container.innerHTML = '<div class="empty-state">😢 Пока нет участников</div>';
+        }
+    }
+}
+
 function updateRecentPlayersFast(players) {
     const container = document.getElementById('recentPlayersList');
-    if (!container) return;
+    if (!container) {
+        console.warn('recentPlayersList container not found');
+        return;
+    }
+
     if (!players || players.length === 0) {
         container.innerHTML = '<div class="empty-state">😢 Пока нет участников</div>';
         return;
     }
+
     let html = '';
-    for (let i = 0; i < players.length; i++) {
+    for (let i = 0; i < Math.min(players.length, 5); i++) {
         const p = players[i];
         const avatarHtml = (p.avatar_url && p.avatar_url !== '')
-            ? `<img src="${p.avatar_url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`
+            ? `<img src="${p.avatar_url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" onerror="this.parentElement.innerHTML='👤'">`
             : '👤';
         let playerName = p.username || 'Игрок';
         if (playerName.startsWith('@')) playerName = playerName.substring(1);
@@ -752,6 +799,7 @@ function updateRecentPlayersFast(players) {
         if (p.role === 'founder') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#ef4444;">👑</span>';
         else if (p.role === 'pioneer') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#00b4d8;">⭐</span>';
         else if (p.role === 'legend') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#FFD700;">👑</span>';
+
         html += `<div class="recent-player-item" onclick="openPlayerProfile(${p.user_id}, 0)">
             <div class="recent-player-avatar">${avatarHtml}</div>
             <div class="recent-player-info">
@@ -1014,6 +1062,7 @@ async function loadWithdrawals() {
 }
 
 
+
     // ==================== КЛИКЕР ====================
     let lastClickTime = 0;
     const CLICK_DEBOUNCE = 40;
@@ -1248,27 +1297,28 @@ shopTabs.forEach(tab => {
     }
 
     const navItems = document.querySelectorAll('.nav-item');
-    navItems.forEach(item => {
-        const oldOnClick = item.onclick;
-        item.onclick = (e) => {
-            playNavSound();
-            const tab = item.dataset.tab;
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            item.classList.add('active');
-            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-            const tabPane = document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
-            if (tabPane) tabPane.classList.add('active');
-            const mainContent = document.querySelector('.main-content');
-            if (mainContent) mainContent.scrollTop = 0;
-            if (tab === 'lottery') {
-                updateLottery();
-                loadRecentPlayers();
-            }
-            if (tab === 'profile' || tab === 'shop' || tab === 'home') updateStatus();
-            if (tab === 'home') updateLeaderboard();
-            if (oldOnClick) oldOnClick(e);
-        };
-    });
+navItems.forEach(item => {
+    item.onclick = (e) => {
+        playNavSound();
+        const tab = item.dataset.tab;
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        item.classList.add('active');
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+        const tabPane = document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
+        if (tabPane) tabPane.classList.add('active');
+        const mainContent = document.querySelector('.main-content');
+        if (mainContent) mainContent.scrollTop = 0;
+        if (tab === 'lottery') {
+            updateLottery();
+            loadRecentPlayers();
+        }
+        if (tab === 'profile' || tab === 'shop' || tab === 'home') updateStatus();
+        if (tab === 'home') {
+            updateLeaderboard();
+            loadRecentPlayers(); // ← ДОБАВЛЯЕМ
+        }
+    };
+});
 
     // ==================== ЛОТЕРЕЯ ====================
     const ticketBtn = document.getElementById('ticketBtn');
@@ -5499,204 +5549,8 @@ function closeGamepad() {
         }
     }
 
-
-    // ================================================================
-// БЫСТРОЕ ОБНОВЛЕНИЕ БАЛАНСА (для первого показа)
-// ================================================================
-async function quickBalanceUpdate() {
-    if (!userId) {
-        console.warn('⚠️ quickBalanceUpdate: userId нет');
-        return;
-    }
-
-    try {
-        const res = await fetch('/api/sync_light', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId })
-        });
-        const data = await res.json();
-
-        if (data.success) {
-            const d = data.data;
-            console.log('📊 Быстрая загрузка баланса:', d);
-
-            // Обновляем балансы
-            const wgEl = document.getElementById('wgBalance');
-            if (wgEl) wgEl.textContent = d.wg.toFixed(2);
-
-            const lpEl = document.getElementById('lpBalance');
-            if (lpEl) lpEl.textContent = d.lp;
-
-            const energyEl = document.getElementById('energyValue');
-            if (energyEl) energyEl.textContent = d.energy;
-
-            const maxEnergyEl = document.getElementById('maxEnergyValue');
-            if (maxEnergyEl) maxEnergyEl.textContent = d.max_energy;
-
-            const earningEl = document.getElementById('earningPerClick');
-            if (earningEl) earningEl.textContent = d.earning_per_click.toFixed(2);
-
-            const clickAmountEl = document.getElementById('clickAmount');
-            if (clickAmountEl) clickAmountEl.textContent = d.earning_per_click.toFixed(2);
-
-            const totalClicksEl = document.getElementById('totalClicksMini');
-            if (totalClicksEl) totalClicksEl.textContent = d.total_clicks || 0;
-
-            // Обновляем локальные переменные
-            localWG = d.wg || 0;
-            localLP = d.lp || 0;
-            localEnergy = d.energy || 0;
-            localMaxEnergy = d.max_energy || 500;
-            localEarning = d.earning_per_click || 0.01;
-            localClicks = d.total_clicks || 0;
-
-            // Обновляем энергобар
-            const percent = (d.energy / d.max_energy) * 100;
-            const bar = document.getElementById('energyBar');
-            if (bar) bar.style.width = percent + '%';
-
-            const headerEnergy = document.getElementById('energyHeader');
-            if (headerEnergy) headerEnergy.textContent = d.energy;
-
-            // Обновляем мини-статистику
-            const totalWGmini = document.getElementById('totalWGmini');
-            if (totalWGmini) totalWGmini.textContent = d.wg.toFixed(2);
-
-            // Загружаем билеты
-            try {
-                const ticketRes = await fetch('/api/lottery_status', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: userId })
-                });
-                const ticketData = await ticketRes.json();
-
-                if (ticketData.user_tickets !== undefined) {
-                    const totalTicketsMini = document.getElementById('totalTicketsMini');
-                    if (totalTicketsMini) totalTicketsMini.textContent = ticketData.user_tickets;
-
-                    const totalTickets = document.getElementById('totalTickets');
-                    if (totalTickets) totalTickets.textContent = ticketData.user_tickets;
-
-                    const ticketsCount = document.getElementById('ticketsCount');
-                    if (ticketsCount) ticketsCount.textContent = ticketData.user_tickets;
-                }
-
-                const prizePool = document.getElementById('prizePool');
-                if (prizePool && ticketData.prize_pool !== undefined) {
-                    prizePool.textContent = ticketData.prize_pool.toFixed(2);
-                }
-            } catch(e) {
-                console.warn('⚠️ Быстрая загрузка билетов не удалась:', e);
-            }
-
-            // Обновляем профиль
-            const totalWG = document.getElementById('totalWG');
-            if (totalWG) totalWG.textContent = d.wg.toFixed(2);
-
-            const totalLP = document.getElementById('totalLP');
-            if (totalLP) totalLP.textContent = d.lp;
-
-            const profileClicks = document.getElementById('profileClicks');
-            if (profileClicks) profileClicks.textContent = d.total_clicks || 0;
-        }
-    } catch(e) {
-        console.warn('⚠️ quickBalanceUpdate error:', e);
-    }
-}
-
-
-// ================================================================
-// ЗАГРУЗКА МИНИ-ЛИДЕРБОРДА
-// ================================================================
-async function loadMiniLeaderboard() {
-    const container = document.getElementById('leaderboardMini');
-    if (!container) {
-        console.warn('⚠️ leaderboardMini не найден');
-        return;
-    }
-
-    try {
-        container.innerHTML = '<div class="loading">Загрузка...</div>';
-
-        const res = await fetch('/api/leaderboard/daily?force=true');
-        const data = await res.json();
-
-        if (!data || data.length === 0) {
-            container.innerHTML = '<div style="text-align:center;opacity:0.4;font-size:0.7rem;padding:8px;">Нет данных за сегодня</div>';
-            return;
-        }
-
-        let html = '';
-        for (let i = 0; i < Math.min(data.length, 5); i++) {
-            const user = data[i];
-            const avatar = (user.avatar && user.avatar !== '👤' && user.avatar !== '')
-                ? `<img src="${user.avatar}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;" onerror="this.parentElement.innerHTML='👤'">`
-                : '👤';
-
-            let displayName = user.username || 'Игрок';
-            if (displayName.startsWith('@')) displayName = displayName.substring(1);
-            if (displayName.length > 15) displayName = displayName.substring(0, 13) + '…';
-
-            const dailyClicks = user.daily_clicks || 0;
-
-            let rankDisplay = user.rank;
-            if (user.rank === 1) rankDisplay = '🥇';
-            else if (user.rank === 2) rankDisplay = '🥈';
-            else if (user.rank === 3) rankDisplay = '🥉';
-
-            if (user.hide_from_top) {
-                displayName = 'Аноним';
-            }
-
-            html += `
-                <div class="leaderboard-mini-item" onclick="openPlayerProfile(${user.user_id}, 0)">
-                    <span class="rank">${rankDisplay}</span>
-                    <span class="avatar-mini">${avatar}</span>
-                    <span class="name">${escapeHtml(displayName)}</span>
-                    <span class="clicks">${dailyClicks.toLocaleString()} кликов</span>
-                </div>
-            `;
-        }
-        container.innerHTML = html;
-
-    } catch(e) {
-        console.error('❌ Ошибка загрузки мини-лидерборда:', e);
-        container.innerHTML = '<div style="text-align:center;opacity:0.4;font-size:0.7rem;padding:8px;">Ошибка загрузки</div>';
-    }
-}
-
-
-// ================================================================
-// ЗАПАСНЫЕ ТАЙМЕРЫ ДЛЯ ФОРСИРОВАННОЙ ЗАГРУЗКИ
-// ================================================================
-// Если через 2 секунды данные всё ещё пустые — форсируем
-setTimeout(() => {
-    if (localWG === 0 && localLP === 0) {
-        console.log('⚠️ Данные не загрузились, форсируем...');
-        quickBalanceUpdate();
-        syncData(true);
-        loadMiniLeaderboard();
-    }
-}, 2000);
-
-// Ещё один запасной через 4 секунды
-setTimeout(() => {
-    if (localWG === 0 && localLP === 0) {
-        console.log('⚠️ Второй запасной таймер...');
-        quickBalanceUpdate();
-        syncData(true);
-        loadMiniLeaderboard();
-    }
-}, 4000);
-
-
-// ================================================================
-// DOMCONTENTLOADED
-// ================================================================
+    // ==================== DOMCONTENTLOADED ====================
 document.addEventListener("DOMContentLoaded", () => {
-    // ===== 1. БАЗОВАЯ ИНИЦИАЛИЗАЦИЯ =====
     initTonConnect();
     loadTonWalletStatus();
     initSocket();
@@ -5704,49 +5558,39 @@ document.addEventListener("DOMContentLoaded", () => {
     loadAvatar();
     logGameEntry();
 
-    // ===== 2. ПЕРВАЯ ВОЛНА ЗАГРУЗКИ (МГНОВЕННАЯ) =====
-    // Сразу показываем данные
-    setTimeout(() => {
-        quickBalanceUpdate();
-    }, 50);
+    // ===== ПЕРВАЯ ЗАГРУЗКА =====
+    // 1. Сначала синхронизируем данные (баланс, лотерея)
+    syncData(true);
 
-    // ===== 3. ВТОРАЯ ВОЛНА (МИНИ-ЛИДЕРБОРД) =====
-    setTimeout(() => {
-        loadMiniLeaderboard();
-    }, 200);
+    // 2. Параллельно загружаем лидерборд
+    loadLeaderboardData('day', true);
 
-    // ===== 4. ТРЕТЬЯ ВОЛНА (ПОЛНАЯ СИНХРОНИЗАЦИЯ) =====
-    setTimeout(() => {
-        syncData(true);
-    }, 400);
+    // 3. Загружаем последних участников
+    loadRecentPlayers();
 
-    // ===== 5. ЧЕТВЁРТАЯ ВОЛНА (ДУБЛИРУЕМ ДЛЯ НАДЁЖНОСТИ) =====
+    // ===== ВТОРАЯ ЗАГРУЗКА (через 1 секунду, на случай если первая не успела) =====
     setTimeout(() => {
         syncData(true);
-        loadMiniLeaderboard();
-    }, 800);
+        loadLeaderboardData('day', true);
+        loadRecentPlayers();
+    }, 1000);
 
-    // ===== 6. ПЯТАЯ ВОЛНА (ЗАПАСНАЯ) =====
+    // ===== ТРЕТЬЯ ЗАГРУЗКА (ещё через 2 секунды, как страховка) =====
     setTimeout(() => {
-        quickBalanceUpdate();
-        loadMiniLeaderboard();
-    }, 1500);
+        syncData(true);
+        loadLeaderboardData('day', true);
+    }, 3000);
 
-    // ===== 7. ОСТАЛЬНЫЕ ДАННЫЕ =====
     loadReferralLink();
     loadReferrals();
     loadSettings();
     loadDailyStatus();
     setTimeout(checkAndStartTutorial, 2000);
 
-    // ============================================================
-    // ОПТИМИЗИРОВАННЫЙ СИНХРОНИЗАТОР
-    // ============================================================
-
+    // ===== ОПТИМИЗИРОВАННЫЙ СИНХРОНИЗАТОР =====
     // 1️⃣ БЫСТРОЕ ОБНОВЛЕНИЕ БАЛАНСА (каждые 2 секунды)
     setInterval(async () => {
         if (isScratchingActive) return;
-
         try {
             const res = await fetch('/api/sync_light', {
                 method: 'POST',
@@ -5754,64 +5598,43 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: JSON.stringify({ user_id: userId })
             });
             const data = await res.json();
-
             if (data.success) {
                 const d = data.data;
-
                 const wgEl = document.getElementById('wgBalance');
                 if (wgEl) wgEl.textContent = d.wg.toFixed(2);
-
                 const lpEl = document.getElementById('lpBalance');
                 if (lpEl) lpEl.textContent = d.lp;
-
                 const energyEl = document.getElementById('energyValue');
                 if (energyEl) energyEl.textContent = d.energy;
-
                 const maxEnergyEl = document.getElementById('maxEnergyValue');
                 if (maxEnergyEl) maxEnergyEl.textContent = d.max_energy;
-
                 const earningEl = document.getElementById('earningPerClick');
                 if (earningEl) earningEl.textContent = d.earning_per_click.toFixed(2);
-
                 const clickAmountEl = document.getElementById('clickAmount');
                 if (clickAmountEl) clickAmountEl.textContent = d.earning_per_click.toFixed(2);
-
                 const percent = (d.energy / d.max_energy) * 100;
                 const bar = document.getElementById('energyBar');
                 if (bar) bar.style.width = percent + '%';
-
                 const headerEnergy = document.getElementById('energyHeader');
                 if (headerEnergy) headerEnergy.textContent = d.energy;
-
-                // Обновляем локальные переменные
-                localWG = d.wg || 0;
-                localLP = d.lp || 0;
-                localEnergy = d.energy || 0;
-                localMaxEnergy = d.max_energy || 500;
-                localEarning = d.earning_per_click || 0.01;
             }
-        } catch(e) {
-            // Тихая ошибка
-        }
+        } catch(e) {}
     }, 2000);
 
-    // 2️⃣ ТЯЖЕЛЫЕ ДАННЫЕ (раз в 30 секунд)
+    // 2️⃣ ТЯЖЁЛЫЕ ДАННЫЕ (редко)
     setInterval(() => {
         if (isScratchingActive) return;
-
         const activeTab = document.querySelector('.tab-pane.active');
-
         if (activeTab && activeTab.id === 'tabLottery') {
             loadUserTickets();
             updateLottery();
         }
-
         if (activeTab && activeTab.id === 'tabProfile') {
             loadReferrals();
         }
-
         if (activeTab && activeTab.id === 'tabHome') {
             loadLeaderboardData('day', true);
+            loadRecentPlayers();
         }
     }, 30000);
 
@@ -5819,12 +5642,10 @@ document.addEventListener("DOMContentLoaded", () => {
     console.log('   📊 Баланс обновляется каждые 2 секунды');
     console.log('   🎰 Лотерея обновляется каждые 30 секунд');
     console.log('   👥 Рефералы обновляются каждые 30 секунд');
-    console.log('   🏆 Мини-лидерборд загружен при старте!');
 
     startDailyLeaderboardTimer();
     updateLPBoostCount();
 
-    // ===== ОБРАБОТКА ПАРАМЕТРОВ ЗАПУСКА =====
     if (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
         const startParam = tg.initDataUnsafe.start_param;
         if (startParam && startParam.startsWith('claim_')) {
@@ -5858,22 +5679,19 @@ document.addEventListener("DOMContentLoaded", () => {
         tg.expand();
     }
 
-    // ===== ОБРАБОТЧИКИ ДЛЯ ФОРТУНЫ =====
+    // Бет модалка
     const closeBetModalBtn = document.querySelector('#betModal .bet-modal-close');
     if (closeBetModalBtn) {
         closeBetModalBtn.addEventListener('click', closeBetModal);
     }
-
     const submitBetBtn = document.getElementById('submitBetBtn');
     if (submitBetBtn) {
         submitBetBtn.addEventListener('click', submitBet);
     }
-
     const betAmountInput = document.getElementById('betAmount');
     if (betAmountInput) {
         betAmountInput.addEventListener('input', calculateBet);
     }
-
     const betPresets = document.querySelectorAll('.bet-preset-premium');
     betPresets.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -5885,7 +5703,6 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     });
-
     const betBtnYellow = document.getElementById('betBtnYellow');
     if (betBtnYellow) {
         betBtnYellow.addEventListener('click', (e) => {
@@ -5894,7 +5711,6 @@ document.addEventListener("DOMContentLoaded", () => {
             openBetModal('yellow');
         });
     }
-
     const betBtnRed = document.getElementById('betBtnRed');
     if (betBtnRed) {
         betBtnRed.addEventListener('click', (e) => {
@@ -5905,66 +5721,60 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.bet-btn-premium');
+        if (btn && btn.getAttribute('data-team')) {
+            e.stopPropagation();
+            const team = btn.getAttribute('data-team');
+            if (team === 'yellow' || team === 'red') {
+                openBetModal(team);
+            }
+        }
+    });
 
-// ===== ОБРАБОТЧИК КЛИКОВ ДЛЯ СТАВОК (вне DOMContentLoaded) =====
-document.addEventListener('click', function(e) {
-    const btn = e.target.closest('.bet-btn-premium');
-    if (btn && btn.getAttribute('data-team')) {
-        e.stopPropagation();
-        const team = btn.getAttribute('data-team');
-        if (team === 'yellow' || team === 'red') {
-            openBetModal(team);
+    function loadAvatar() {
+        if (photoUrl && photoUrl !== '') {
+            const userAvatar = document.getElementById('userAvatar');
+            const avatarPlaceholder = document.getElementById('avatarPlaceholder');
+            if (userAvatar) {
+                userAvatar.src = photoUrl;
+                userAvatar.style.display = 'block';
+                if (avatarPlaceholder) avatarPlaceholder.style.display = 'none';
+            }
+        } else {
+            const avatarPlaceholder = document.getElementById('avatarPlaceholder');
+            if (avatarPlaceholder) avatarPlaceholder.style.display = 'flex';
         }
     }
-});
 
-
-// ================================================================
-// ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
-// ================================================================
-
-function loadAvatar() {
-    if (photoUrl && photoUrl !== '') {
-        const userAvatar = document.getElementById('userAvatar');
-        const avatarPlaceholder = document.getElementById('avatarPlaceholder');
-        if (userAvatar) {
-            userAvatar.src = photoUrl;
-            userAvatar.style.display = 'block';
-            if (avatarPlaceholder) avatarPlaceholder.style.display = 'none';
-        }
-    } else {
-        const avatarPlaceholder = document.getElementById('avatarPlaceholder');
-        if (avatarPlaceholder) avatarPlaceholder.style.display = 'flex';
+    function logGameEntry() {
+        fetch('/api/log_game_entry', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId })
+        }).catch(e => console.log('Log entry error:', e));
     }
-}
 
-function logGameEntry() {
-    fetch('/api/log_game_entry', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: userId })
-    }).catch(e => console.log('Log entry error:', e));
-}
+    function updateStatus() {
+        syncData(true);
+    }
 
-function updateStatus() {
-    syncData(true);
-}
+    function updateLeaderboard() {
+        syncData(true);
+    }
 
-function updateLeaderboard() {
-    syncData(true);
-}
+    function updateLottery() {
+        syncData(true);
+    }
 
-function updateLottery() {
-    syncData(true);
-}
+    function loadRecentPlayers() {
+        syncData(true);
+    }
 
-function loadRecentPlayers() {
-    syncData(true);
-}
-
-function calculateBet() {
-    // функция расчёта комиссии, если нужна
-}
+    // Заглушка для calculateBet (если не определена)
+    function calculateBet() {
+        // функция расчёта комиссии, если нужна
+    }
 
     // ==================== РЕФЕРАЛЬНЫЙ КОНКУРС ====================
 let contestTimerInterval = null;
