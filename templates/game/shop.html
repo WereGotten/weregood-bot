@@ -1,11 +1,9 @@
 <!-- ============================================================
-     ВКЛАДКА МАГАЗИНА (shop.html)
+     ВКЛАДКА МАГАЗИНА
      ============================================================ -->
 <div id="tabShop" class="tab-pane">
 
-    <!-- ============================================================
-         ВКЛАДКИ МАГАЗИНА
-         ============================================================ -->
+    <!-- ===== ВКЛАДКИ ===== -->
     <div class="shop-tabs">
         <div class="shop-tab active" data-shop-tab="normal">
             <img src="/static/shop_icon.png" alt="Магазин">
@@ -22,9 +20,10 @@
     </div>
 
     <!-- ============================================================
-         ОБЫЧНЫЙ МАГАЗИН
+         ВКЛАДКА 1: ОБЫЧНЫЙ МАГАЗИН
          ============================================================ -->
     <div id="shopNormal" class="shop-pane active">
+
         <h2 class="section-title">
             <img src="/static/shop_icon.png" alt="Магазин" style="width: 30px; height: 30px;">
             <span data-lang="shop">Магазин</span>
@@ -135,12 +134,14 @@
             </div>
             <div class="donation-text" data-lang="support_project">Поддержать проект →</div>
         </div>
-    </div>
+
+    </div> <!-- shopNormal -->
 
     <!-- ============================================================
-         ЗВЁЗДНЫЙ МАГАЗИН
+         ВКЛАДКА 2: ЗВЁЗДНЫЙ МАГАЗИН
          ============================================================ -->
     <div id="shopStars" class="shop-pane">
+
         <!-- Баланс звёзд -->
         <div class="stars-balance-card">
             <div class="stars-balance-row">
@@ -280,7 +281,7 @@
             </div> <!-- donate-carousel-container -->
         </div>
 
-        <!-- ИНФОРМАЦИОННЫЕ КАРТОЧКИ -->
+        <!-- ИНФО КАРТОЧКИ -->
         <div class="info-card">
             <div class="info-icon">⭐</div>
             <div class="info-text">
@@ -296,14 +297,15 @@
                 <p data-lang="how_to_pay_ton_desc">Нажмите "Купить за TON" → подключите кошелёк → подтвердите платеж → бонус зачислится автоматически!</p>
             </div>
         </div>
+
     </div> <!-- shopStars -->
 
     <!-- ============================================================
-         КЕЙСЫ - ПРОСТАЯ И КРАСИВАЯ ВКЛАДКА
+         ВКЛАДКА 3: КЕЙСЫ
          ============================================================ -->
     <div id="shopCases" class="shop-pane">
 
-        <!-- ===== ДЛЯ ОБЫЧНЫХ ИГРОКОВ ===== -->
+        <!-- ДЛЯ ОБЫЧНЫХ ИГРОКОВ -->
         <div id="casesAccessDenied" style="display: none; text-align: center; padding: 50px 20px;">
             <div style="font-size: 4rem; margin-bottom: 16px;">🎁</div>
             <h2 style="color: #FFD700; margin-bottom: 12px; font-size: 1.4rem; font-weight: 700;">
@@ -321,7 +323,7 @@
             <div style="margin-top: 20px; width: 100px; height: 3px; background: linear-gradient(90deg, transparent, rgba(255,215,0,0.3), transparent); border-radius: 3px; margin-left: auto; margin-right: auto;"></div>
         </div>
 
-        <!-- ===== ДЛЯ АДМИНИСТРАТОРОВ ===== -->
+        <!-- ДЛЯ АДМИНИСТРАТОРОВ -->
         <div id="casesAdminContent" style="display: none;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                 <div style="display: flex; align-items: center; gap: 10px;">
@@ -331,7 +333,6 @@
                 <div style="background: rgba(255,215,0,0.12); padding: 4px 14px; border-radius: 30px; font-size: 0.8rem; color: #FFD700; font-weight: 600;" id="caseCountMain">0</div>
             </div>
 
-            <!-- Список кейсов -->
             <div style="display: flex; flex-direction: column; gap: 12px;">
                 <!-- Обычный кейс -->
                 <div onclick="openCase(1)" style="
@@ -344,8 +345,6 @@
                     border: 1px solid rgba(255,255,255,0.06);
                     cursor: pointer;
                     transition: all 0.15s ease;
-                    position: relative;
-                    overflow: hidden;
                 ">
                     <div style="font-size: 2rem; flex-shrink: 0;">📦</div>
                     <div style="flex: 1;">
@@ -357,6 +356,7 @@
                 </div>
             </div>
         </div>
+
     </div> <!-- shopCases -->
 
 </div> <!-- tabShop -->
