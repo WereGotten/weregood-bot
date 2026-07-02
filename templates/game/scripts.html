@@ -1,5 +1,5 @@
 <script>
-        // ================================================================
+    // ================================================================
 // ИНИЦИАЛИЗАЦИЯ - ПОЛУЧЕНИЕ ID ПОЛЬЗОВАТЕЛЯ
 // ================================================================
 
@@ -135,6 +135,11 @@ function _initializeUser() {
         window.displayName = sessionStorage.getItem('weregood_display_name');
     }
 
+    // ===== ФЛАГИ ДЛЯ СТИРАНИЯ =====
+    let isScratchingActive = false;
+    let scratchTimeout = null;
+    let pendingRefreshTimeout = null;
+
     // ===== forceBindAccount =====
     window.forceBindAccount = async function() {
         const errorOverlay = document.getElementById('authErrorOverlay');
@@ -214,193 +219,193 @@ function showAuthError() {
     document.body.insertAdjacentHTML('beforeend', errorHtml);
 }
 
-        let currentTickets = [];
-        let socket = null;
-        let isDrawn = false;
-        let winningNumbers = [];
-        let timerInterval = null;
-        let currentTicketIndex = 0;
+    let currentTickets = [];
+    let socket = null;
+    let isDrawn = false;
+    let winningNumbers = [];
+    let timerInterval = null;
+    let currentTicketIndex = 0;
 
-        let localWG = 0;
-        let localLP = 0;
-        let localEnergy = 500;
-        let localClicks = 0;
-        let localEarning = 0.01;
-        let localUSDT = 0;
-        let localWins = 0;
-        let localRole = 'player';
-        let localStars = 0;
-        let localMaxEnergy = 500;
-        let localEnergyUpgrades = 0;
-        let localHideFromTop = false;
-        let upgradeCounts = {1: 0, 2: 0, 3: 0};
-        let upgradeCosts = {1: 1.5, 2: 10, 3: 40, 4: 70, 5: 150};
-        let scratchProgress = new Map();
-        let availablePrefixes = [];
-        let dailyData = null;
-        let dailyTimerInterval = null;
+    let localWG = 0;
+    let localLP = 0;
+    let localEnergy = 500;
+    let localClicks = 0;
+    let localEarning = 0.01;
+    let localUSDT = 0;
+    let localWins = 0;
+    let localRole = 'player';
+    let localStars = 0;
+    let localMaxEnergy = 500;
+    let localEnergyUpgrades = 0;
+    let localHideFromTop = false;
+    let upgradeCounts = {1: 0, 2: 0, 3: 0};
+    let upgradeCosts = {1: 1.5, 2: 10, 3: 40, 4: 70, 5: 150};
+    let scratchProgress = new Map();
+    let availablePrefixes = [];
+    let dailyData = null;
+    let dailyTimerInterval = null;
 
-        let isUpdatingStatus = false;
-        let lastStatusUpdate = 0;
-        let isUpdatingLottery = false;
-        let lastLotteryUpdate = 0;
-        const STATUS_UPDATE_DELAY = 3000;
-        const LOTTERY_UPDATE_DELAY = 5000;
+    let isUpdatingStatus = false;
+    let lastStatusUpdate = 0;
+    let isUpdatingLottery = false;
+    let lastLotteryUpdate = 0;
+    const STATUS_UPDATE_DELAY = 3000;
+    const LOTTERY_UPDATE_DELAY = 5000;
 
-        let dataCache = { status: null, lottery: null, leaderboard: null };
-        const dailyRewardsList = {
-            1: { reward: "15 WG" },
-            2: { reward: "50 WG" },
-            3: { reward: "+10 ⚡" },
-            4: { reward: "10 LP" },
-            5: { reward: "+15 ⚡" },
-            6: { reward: "150 WG" },
-            7: { reward: "20 LP" }
-        };
+    let dataCache = { status: null, lottery: null, leaderboard: null };
+    const dailyRewardsList = {
+        1: { reward: "15 WG" },
+        2: { reward: "50 WG" },
+        3: { reward: "+10 ⚡" },
+        4: { reward: "10 LP" },
+        5: { reward: "+15 ⚡" },
+        6: { reward: "150 WG" },
+        7: { reward: "20 LP" }
+    };
 
-        function showComingSoon() {
-            openGamepad();
-        }
-
-        function showToast(msg, type = 'info') {
-            let toast = document.getElementById('toast');
-            if (!toast) {
-                toast = document.createElement('div');
-                toast.id = 'toast';
-                toast.className = 'toast';
-                document.body.appendChild(toast);
-            }
-            toast.textContent = msg;
-            toast.className = `toast ${type} show`;
-            setTimeout(() => toast.className = 'toast', 1500);
-        }
-
-        function playPurchaseSound() {
-            const soundsToggle = document.getElementById('soundsToggle');
-            const soundEnabled = soundsToggle ? soundsToggle.checked : true;
-            const purchaseSound = document.getElementById('purchaseSound');
-            if (purchaseSound && soundEnabled) {
-                purchaseSound.currentTime = 0;
-                purchaseSound.play().catch(e => console.log('Purchase sound error:', e));
-            }
-        }
-
-        function playErrorSound() {
-            const soundsToggle = document.getElementById('soundsToggle');
-            const soundEnabled = soundsToggle ? soundsToggle.checked : true;
-            const errorSound = document.getElementById('errorSound');
-            if (errorSound && soundEnabled) {
-                errorSound.currentTime = 0;
-                errorSound.play().catch(e => console.log('Error sound error:', e));
-            }
-        }
-
-        function playClickFeedback() {
-            const vibrationToggle = document.getElementById('vibrationToggle');
-            const vibrationEnabled = vibrationToggle ? vibrationToggle.checked : true;
-            const soundsToggle = document.getElementById('soundsToggle');
-            const soundEnabled = soundsToggle ? soundsToggle.checked : true;
-            const clickSound = document.getElementById('clickSound');
-            if (navigator.vibrate && vibrationEnabled) navigator.vibrate(15);
-            if (clickSound && soundEnabled) {
-                clickSound.currentTime = 0;
-                clickSound.play().catch(e => console.log('Audio play error:', e));
-            }
-        }
-
-        function playLpDropSound() {
-            const soundsToggle = document.getElementById('soundsToggle');
-            const soundEnabled = soundsToggle ? soundsToggle.checked : true;
-            const lpDropSound = document.getElementById('lpDropSound');
-            if (lpDropSound && soundEnabled) {
-                lpDropSound.currentTime = 0;
-                lpDropSound.volume = 0.5;
-                lpDropSound.play().catch(e => console.log('LP drop sound error:', e));
-            }
-        }
-
-        function playNavSound() {
-            const soundsToggle = document.getElementById('soundsToggle');
-            const soundEnabled = soundsToggle ? soundsToggle.checked : true;
-            const navSound = document.getElementById('navSound');
-            if (navSound && soundEnabled) {
-                navSound.currentTime = 0;
-                navSound.volume = 0.3;
-                navSound.play().catch(e => console.log('Nav sound error:', e));
-            }
-        }
-
-        function playSettingsSound() {
-            const soundsToggle = document.getElementById('soundsToggle');
-            const soundEnabled = soundsToggle ? soundsToggle.checked : true;
-            const settingsSound = document.getElementById('settingsSound');
-            if (settingsSound && soundEnabled) {
-                settingsSound.currentTime = 0;
-                settingsSound.volume = 0.3;
-                settingsSound.play().catch(e => console.log('Settings sound error:', e));
-            }
-        }
-
-        function escapeHtml(text) {
-            if (!text) return '';
-            return text.replace(/[&<>]/g, function(m) {
-                if (m === '&') return '&amp;';
-                if (m === '<') return '&lt;';
-                if (m === '>') return '&gt;';
-                return m;
-            });
-        }
-
-        function getUpgradeCost(upgradeId, currentCount) {
-        const configs = {
-            1: { baseCost: 1.5 },
-            2: { baseCost: 10 },
-            3: { baseCost: 40 },
-            4: { baseCost: 70 },
-            5: { baseCost: 150 }
-        };
-        const config = configs[upgradeId];
-        if (!config) return 0;
-        if (currentCount === 0) return config.baseCost;
-        return config.baseCost * Math.pow(1.65, currentCount);
+    function showComingSoon() {
+        openGamepad();
     }
 
-        function updateUI() {
-        upgradeCosts[1] = getUpgradeCost(1, upgradeCounts[1] || 0);
-        upgradeCosts[2] = getUpgradeCost(2, upgradeCounts[2] || 0);
-        upgradeCosts[3] = getUpgradeCost(3, upgradeCounts[3] || 0);
+    function showToast(msg, type = 'info') {
+        let toast = document.getElementById('toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'toast';
+            toast.className = 'toast';
+            document.body.appendChild(toast);
+        }
+        toast.textContent = msg;
+        toast.className = `toast ${type} show`;
+        setTimeout(() => toast.className = 'toast', 1500);
+    }
 
-        const wgEl = document.getElementById('wgBalance');
-        if (wgEl) wgEl.innerText = localWG.toFixed(2);
-        const lpEl = document.getElementById('lpBalance');
-        if (lpEl) lpEl.innerText = localLP;
-        const energyEl = document.getElementById('energyValue');
-        if (energyEl) energyEl.innerText = localEnergy;
-        const maxEnergyEl = document.getElementById('maxEnergyValue');
-        if (maxEnergyEl) maxEnergyEl.innerText = localMaxEnergy;
-        const energyHeaderEl = document.getElementById('energyHeader');
-        if (energyHeaderEl) energyHeaderEl.innerText = localEnergy;
+    function playPurchaseSound() {
+        const soundsToggle = document.getElementById('soundsToggle');
+        const soundEnabled = soundsToggle ? soundsToggle.checked : true;
+        const purchaseSound = document.getElementById('purchaseSound');
+        if (purchaseSound && soundEnabled) {
+            purchaseSound.currentTime = 0;
+            purchaseSound.play().catch(e => console.log('Purchase sound error:', e));
+        }
+    }
 
-        let percent = (localEnergy / localMaxEnergy) * 100;
-        const energyBar = document.getElementById('energyBar');
-        if (energyBar) energyBar.style.width = percent + '%';
+    function playErrorSound() {
+        const soundsToggle = document.getElementById('soundsToggle');
+        const soundEnabled = soundsToggle ? soundsToggle.checked : true;
+        const errorSound = document.getElementById('errorSound');
+        if (errorSound && soundEnabled) {
+            errorSound.currentTime = 0;
+            errorSound.play().catch(e => console.log('Error sound error:', e));
+        }
+    }
 
-        const totalWG = document.getElementById('totalWG');
-        if (totalWG) totalWG.innerText = localWG.toFixed(2);
-        const totalLP = document.getElementById('totalLP');
-        if (totalLP) totalLP.innerText = localLP;
-        const totalWGmini = document.getElementById('totalWGmini');
-        if (totalWGmini) totalWGmini.innerText = localWG.toFixed(2);
-        const lotteryLPBalance = document.getElementById('lotteryLPBalance');
-        if (lotteryLPBalance) lotteryLPBalance.innerText = localLP;
-        const totalClicksMini = document.getElementById('totalClicksMini');
-        if (totalClicksMini) totalClicksMini.innerText = localClicks;
-        const profileClicks = document.getElementById('profileClicks');
-        if (profileClicks) profileClicks.innerText = localClicks;
-        const profileUSDT = document.getElementById('profileUSDT');
-        if (profileUSDT) profileUSDT.innerText = localUSDT.toFixed(2);
-        const profileWins = document.getElementById('profileWins');
-        if (profileWins) profileWins.innerText = localWins;
+    function playClickFeedback() {
+        const vibrationToggle = document.getElementById('vibrationToggle');
+        const vibrationEnabled = vibrationToggle ? vibrationToggle.checked : true;
+        const soundsToggle = document.getElementById('soundsToggle');
+        const soundEnabled = soundsToggle ? soundsToggle.checked : true;
+        const clickSound = document.getElementById('clickSound');
+        if (navigator.vibrate && vibrationEnabled) navigator.vibrate(15);
+        if (clickSound && soundEnabled) {
+            clickSound.currentTime = 0;
+            clickSound.play().catch(e => console.log('Audio play error:', e));
+        }
+    }
+
+    function playLpDropSound() {
+        const soundsToggle = document.getElementById('soundsToggle');
+        const soundEnabled = soundsToggle ? soundsToggle.checked : true;
+        const lpDropSound = document.getElementById('lpDropSound');
+        if (lpDropSound && soundEnabled) {
+            lpDropSound.currentTime = 0;
+            lpDropSound.volume = 0.5;
+            lpDropSound.play().catch(e => console.log('LP drop sound error:', e));
+        }
+    }
+
+    function playNavSound() {
+        const soundsToggle = document.getElementById('soundsToggle');
+        const soundEnabled = soundsToggle ? soundsToggle.checked : true;
+        const navSound = document.getElementById('navSound');
+        if (navSound && soundEnabled) {
+            navSound.currentTime = 0;
+            navSound.volume = 0.3;
+            navSound.play().catch(e => console.log('Nav sound error:', e));
+        }
+    }
+
+    function playSettingsSound() {
+        const soundsToggle = document.getElementById('soundsToggle');
+        const soundEnabled = soundsToggle ? soundsToggle.checked : true;
+        const settingsSound = document.getElementById('settingsSound');
+        if (settingsSound && soundEnabled) {
+            settingsSound.currentTime = 0;
+            settingsSound.volume = 0.3;
+            settingsSound.play().catch(e => console.log('Settings sound error:', e));
+        }
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        return text.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    function getUpgradeCost(upgradeId, currentCount) {
+    const configs = {
+        1: { baseCost: 1.5 },
+        2: { baseCost: 10 },
+        3: { baseCost: 40 },
+        4: { baseCost: 70 },
+        5: { baseCost: 150 }
+    };
+    const config = configs[upgradeId];
+    if (!config) return 0;
+    if (currentCount === 0) return config.baseCost;
+    return config.baseCost * Math.pow(1.65, currentCount);
+}
+
+    function updateUI() {
+    upgradeCosts[1] = getUpgradeCost(1, upgradeCounts[1] || 0);
+    upgradeCosts[2] = getUpgradeCost(2, upgradeCounts[2] || 0);
+    upgradeCosts[3] = getUpgradeCost(3, upgradeCounts[3] || 0);
+
+    const wgEl = document.getElementById('wgBalance');
+    if (wgEl) wgEl.innerText = localWG.toFixed(2);
+    const lpEl = document.getElementById('lpBalance');
+    if (lpEl) lpEl.innerText = localLP;
+    const energyEl = document.getElementById('energyValue');
+    if (energyEl) energyEl.innerText = localEnergy;
+    const maxEnergyEl = document.getElementById('maxEnergyValue');
+    if (maxEnergyEl) maxEnergyEl.innerText = localMaxEnergy;
+    const energyHeaderEl = document.getElementById('energyHeader');
+    if (energyHeaderEl) energyHeaderEl.innerText = localEnergy;
+
+    let percent = (localEnergy / localMaxEnergy) * 100;
+    const energyBar = document.getElementById('energyBar');
+    if (energyBar) energyBar.style.width = percent + '%';
+
+    const totalWG = document.getElementById('totalWG');
+    if (totalWG) totalWG.innerText = localWG.toFixed(2);
+    const totalLP = document.getElementById('totalLP');
+    if (totalLP) totalLP.innerText = localLP;
+    const totalWGmini = document.getElementById('totalWGmini');
+    if (totalWGmini) totalWGmini.innerText = localWG.toFixed(2);
+    const lotteryLPBalance = document.getElementById('lotteryLPBalance');
+    if (lotteryLPBalance) lotteryLPBalance.innerText = localLP;
+    const totalClicksMini = document.getElementById('totalClicksMini');
+    if (totalClicksMini) totalClicksMini.innerText = localClicks;
+    const profileClicks = document.getElementById('profileClicks');
+    if (profileClicks) profileClicks.innerText = localClicks;
+    const profileUSDT = document.getElementById('profileUSDT');
+    if (profileUSDT) profileUSDT.innerText = localUSDT.toFixed(2);
+    const profileWins = document.getElementById('profileWins');
+    if (profileWins) profileWins.innerText = localWins;
 
     // ========== ОБНОВЛЕНИЕ ДОХОДА С УЧЁТОМ PAYDAY ==========
 const earningPerClick = document.getElementById('earningPerClick');
