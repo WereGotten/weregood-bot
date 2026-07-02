@@ -181,19 +181,65 @@ function _initializeUser() {
     // ================================================================
 
     // Вызываем функции, которые зависят от userId
-    if (typeof autoRegister === 'function') {
-        autoRegister();
-    }
-    if (typeof syncData === 'function') {
-        syncData(true);
-    }
-    if (typeof loadAvatar === 'function') {
-        loadAvatar();
-    }
-    if (typeof logGameEntry === 'function') {
-        logGameEntry();
+if (typeof autoRegister === 'function') {
+    autoRegister();
+}
+if (typeof loadAvatar === 'function') {
+    loadAvatar();
+}
+if (typeof logGameEntry === 'function') {
+    logGameEntry();
+}
+
+// ===== ОСНОВНАЯ ЗАГРУЗКА ДАННЫХ =====
+console.log('🔄 Начинаем загрузку данных...');
+
+// 1. Сразу показываем загрузку
+showToast('⏳ Загрузка данных...', 'info');
+
+// 2. Загружаем данные с повторными попытками
+async function loadInitialData() {
+    try {
+        await syncData(true);
+        console.log('✅ Первая синхронизация завершена');
+    } catch(e) {
+        console.warn('⚠️ Первая синхронизация не удалась, пробуем ещё раз:', e);
+        // Пробуем через 1 секунду
+        setTimeout(async () => {
+            try {
+                await syncData(true);
+                console.log('✅ Вторая синхронизация завершена');
+            } catch(e2) {
+                console.warn('⚠️ Вторая синхронизация не удалась:', e2);
+            }
+        }, 1000);
     }
 }
+
+// Запускаем загрузку
+loadInitialData();
+
+// 3. Фоновая загрузка остальных данных
+setTimeout(() => {
+    loadLeaderboardData('day', true);
+    loadRecentPlayers();
+    loadReferralLink();
+    loadReferrals();
+    loadSettings();
+    loadDailyStatus();
+    loadLanguageSettings();
+    loadTonWalletStatus();
+}, 500);
+
+// 4. Страховка — если через 3 секунды данные всё ещё пустые
+setTimeout(() => {
+    if (localWG === 0 && localLP === 0) {
+        console.log('⚠️ Данные не загрузились, форсируем синхронизацию...');
+        syncData(true);
+        loadLeaderboardData('day', true);
+        loadRecentPlayers();
+    }
+}, 3000);
 
 // ===== ПОКАЗ ОШИБКИ АВТОРИЗАЦИИ =====
 function showAuthError() {
@@ -5600,39 +5646,73 @@ function closeGamepad() {
         }
     }
 
-    // ==================== DOMCONTENTLOADED ====================
-document.addEventListener("DOMContentLoaded", () => {
+    document.addEventListener("DOMContentLoaded", () => {
     initTonConnect();
     loadTonWalletStatus();
     initSocket();
     autoRegister();
     loadAvatar();
     logGameEntry();
-    syncData(true);
-
-    // ===== ПРИНУДИТЕЛЬНАЯ ЗАГРУЗКА МИНИ-ЛИДЕРБОРДА =====
-    setTimeout(() => {
-        loadLeaderboardData('day', true);
-    }, 500);
-
-    loadReferralLink();
-    loadReferrals();
-    loadSettings();
-    loadDailyStatus();
-    setTimeout(checkAndStartTutorial, 2000);
 
     // ============================================================
-    // ОПТИМИЗИРОВАННЫЙ СИНХРОНИЗАТОР (КАК В NOTCOIN)
+    // МНОГОЭТАПНАЯ ЗАГРУЗКА ДАННЫХ
+    // ============================================================
+
+    // 1️⃣ МГНОВЕННАЯ ЗАГРУЗКА (самое важное)
+    console.log('🚀 Старт загрузки данных...');
+
+    // Показываем индикатор загрузки
+    showToast('⏳ Загрузка...', 'info');
+
+    // Загружаем основные данные
+    syncData(true);
+
+    // Параллельно загружаем лидерборд и участников
+    setTimeout(() => {
+        loadLeaderboardData('day', true);
+        loadRecentPlayers();
+    }, 100);
+
+    // 2️⃣ ЗАГРУЗКА ЧЕРЕЗ 1 СЕКУНДУ (на случай если первая не успела)
+    setTimeout(() => {
+        console.log('🔄 Вторая волна загрузки...');
+        syncData(true);
+        loadLeaderboardData('day', true);
+        loadRecentPlayers();
+        loadReferralLink();
+        loadReferrals();
+    }, 1000);
+
+    // 3️⃣ ЗАГРУЗКА ЧЕРЕЗ 3 СЕКУНДЫ (страховка)
+    setTimeout(() => {
+        console.log('🔄 Третья волна загрузки (страховка)...');
+        // Проверяем, загрузились ли данные
+        if (localWG === 0 && localLP === 0) {
+            console.warn('⚠️ Данные всё ещё пустые, форсируем обновление...');
+            syncData(true);
+            loadLeaderboardData('day', true);
+            loadRecentPlayers();
+            // Перерисовываем UI
+            updateUI();
+        }
+    }, 3000);
+
+    // 4️⃣ ЗАГРУЗКА НАСТРОЕК И ДРУГИХ ДАННЫХ
+    setTimeout(() => {
+        loadSettings();
+        loadDailyStatus();
+        loadLanguageSettings();
+        loadReferralLink();
+        loadReferrals();
+    }, 500);
+
+    // ============================================================
+    // ОПТИМИЗИРОВАННЫЙ СИНХРОНИЗАТОР
     // ============================================================
 
     // 1️⃣ БЫСТРОЕ ОБНОВЛЕНИЕ БАЛАНСА (каждые 2 секунды)
-    // Используем ЛЁГКИЙ эндпоинт /api/sync_light - только баланс и энергия
     setInterval(async () => {
-        if (isScratchingActive) {
-            // Если идёт стирание - пропускаем
-            return;
-        }
-
+        if (isScratchingActive) return;
         try {
             const res = await fetch('/api/sync_light', {
                 method: 'POST',
@@ -5640,75 +5720,56 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: JSON.stringify({ user_id: userId })
             });
             const data = await res.json();
-
             if (data.success) {
                 const d = data.data;
-
-                // Обновляем ТОЛЬКО цифры (мгновенно!)
                 const wgEl = document.getElementById('wgBalance');
                 if (wgEl) wgEl.textContent = d.wg.toFixed(2);
-
                 const lpEl = document.getElementById('lpBalance');
                 if (lpEl) lpEl.textContent = d.lp;
-
                 const energyEl = document.getElementById('energyValue');
                 if (energyEl) energyEl.textContent = d.energy;
-
                 const maxEnergyEl = document.getElementById('maxEnergyValue');
                 if (maxEnergyEl) maxEnergyEl.textContent = d.max_energy;
-
                 const earningEl = document.getElementById('earningPerClick');
                 if (earningEl) earningEl.textContent = d.earning_per_click.toFixed(2);
-
                 const clickAmountEl = document.getElementById('clickAmount');
                 if (clickAmountEl) clickAmountEl.textContent = d.earning_per_click.toFixed(2);
-
-                // Обновляем энергобар
                 const percent = (d.energy / d.max_energy) * 100;
                 const bar = document.getElementById('energyBar');
                 if (bar) bar.style.width = percent + '%';
-
-                // Обновляем энергию в хедере
                 const headerEnergy = document.getElementById('energyHeader');
                 if (headerEnergy) headerEnergy.textContent = d.energy;
             }
-        } catch(e) {
-            // Тихая ошибка - не беспокоим игрока
-        }
-    }, 2000); // ← 2 секунды, как в Notcoin!
+        } catch(e) {}
+    }, 2000);
 
-    // 2️⃣ ТЯЖЕЛЫЕ ДАННЫЕ (лотерея, лидерборд, рефералы) - РЕДКО!
+    // 2️⃣ ТЯЖЁЛЫЕ ДАННЫЕ (редко)
     setInterval(() => {
         if (isScratchingActive) return;
-
         const activeTab = document.querySelector('.tab-pane.active');
-
-        // Если на вкладке "Лотерея" - обновляем лотерею
         if (activeTab && activeTab.id === 'tabLottery') {
             loadUserTickets();
             updateLottery();
         }
-
-        // Если на вкладке "Профиль" - обновляем рефералов
         if (activeTab && activeTab.id === 'tabProfile') {
             loadReferrals();
         }
-
-        // Всегда обновляем лидерборд (но редко)
         if (activeTab && activeTab.id === 'tabHome') {
             loadLeaderboardData('day', true);
+            loadRecentPlayers();
         }
-    }, 30000); // ← 30 секунд
+    }, 30000);
 
     console.log('✅ Оптимизированный синхронизатор запущен!');
-    console.log('   📊 Баланс обновляется каждые 2 секунды (лёгкий запрос)');
+    console.log('   📊 Баланс обновляется каждые 2 секунды');
     console.log('   🎰 Лотерея обновляется каждые 30 секунд');
     console.log('   👥 Рефералы обновляются каждые 30 секунд');
-    console.log('   🏆 Мини-лидерборд загружен при старте!');
 
     startDailyLeaderboardTimer();
     updateLPBoostCount();
 
+    // Обработка start_param
+    const tg = window.Telegram?.WebApp;
     if (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
         const startParam = tg.initDataUnsafe.start_param;
         if (startParam && startParam.startsWith('claim_')) {
@@ -5742,6 +5803,7 @@ document.addEventListener("DOMContentLoaded", () => {
         tg.expand();
     }
 
+    // Обработчики модалок
     const closeBetModalBtn = document.querySelector('#betModal .bet-modal-close');
     if (closeBetModalBtn) {
         closeBetModalBtn.addEventListener('click', closeBetModal);
