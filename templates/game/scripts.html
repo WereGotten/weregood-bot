@@ -7899,7 +7899,7 @@ function startLPBoostPaymentCheck(expectedAmount, quantity, btn, originalText) {
                     user_id: userId,
                     expected_amount: expectedAmount,
                     sender_wallet: userWalletAddress,
-                    quantity: quantity  // ← ЭТО НУЖНО ПЕРЕДАВАТЬ!
+                    quantity: quantity
                 })
             });
 
@@ -7919,7 +7919,6 @@ function startLPBoostPaymentCheck(expectedAmount, quantity, btn, originalText) {
                     btn.innerHTML = originalText || '💎 Купить за 0.18 TON';
                 }
 
-                // Сбрасываем количество
                 lpBoostQuantity = 1;
                 changeLpBoostCount(0);
 
@@ -7948,6 +7947,9 @@ function startLPBoostPaymentCheck(expectedAmount, quantity, btn, originalText) {
             }
         }
     }, 3000);
-}
+}  // ← ЭТА СКОБКА ЗАКРЫВАЕТ ФУНКЦИЮ
+
+// ===== УБЕРИ ЭТУ ЛИШНЮЮ СКОБКУ ↓↓↓ =====
+// }  ← УДАЛИТЬ!
 
 </script>
