@@ -7931,7 +7931,6 @@ function openCase(caseId = 1) {
     page.classList.add('active');
     isCasePageOpen = true;
 
-    // Блокируем скролл
     if (typeof disableScroll === 'function') {
         disableScroll();
     } else {
@@ -7941,33 +7940,47 @@ function openCase(caseId = 1) {
     // Заполняем данные
     const titleEl = document.getElementById('caseTitle');
     const priceEl = document.getElementById('casePriceDisplay');
-    const countEl = document.getElementById('caseCountMain');
+    const countEl = document.getElementById('caseCount');
 
     if (titleEl) titleEl.textContent = `🎰 ${caseInfo.name}`;
     if (priceEl) priceEl.textContent = caseInfo.price;
     if (countEl) countEl.textContent = caseCount;
 
-    // Рендерим контент
     renderRewardsGrid(caseInfo.rewards);
     renderSlotTrack(caseInfo.rewards);
 
-    // Сбрасываем позицию трека
+    // ===== СБРАСЫВАЕМ ПОЗИЦИЮ ТРЕКА С ОТСТУПОМ =====
     const track = document.getElementById('caseSlotTrack');
     if (track) {
         track.style.transition = 'none';
-        track.style.transform = 'translateX(0px)';
+        // Начинаем с середины, чтобы не было видно пустоты
+        const items = track.querySelectorAll('.case-slot-item');
+        const itemWidth = getItemWidth();
+        const middleIndex = Math.floor(items.length / 2);
+        const startOffset = -(middleIndex * itemWidth);
+        track.style.transform = `translateX(${startOffset}px)`;
     }
 
     // Сбрасываем состояние кнопки
     const spinBtn = document.getElementById('caseSpinBtn');
     if (spinBtn) {
         spinBtn.disabled = false;
+        spinBtn.classList.remove('spinning');
         const btnText = spinBtn.querySelector('.btn-text');
-        if (btnText) btnText.textContent = '🎰 ОТКРЫТЬ КЕЙС';
+        if (btnText) btnText.textContent = 'ОТКРЫТЬ КЕЙС';
     }
     isCaseSpinning = false;
 
-    // Очищаем старые таймауты
+    // Сброс статуса
+    const spinStatus = document.getElementById('spinStatus');
+    if (spinStatus) {
+        spinStatus.textContent = '🎰 Нажмите кнопку, чтобы открыть кейс';
+        spinStatus.classList.remove('active');
+        spinStatus.style.color = 'rgba(255,255,255,0.4)';
+    }
+    const spinProgress = document.getElementById('spinProgress');
+    if (spinProgress) spinProgress.style.width = '0%';
+
     if (spinTimeout) {
         clearTimeout(spinTimeout);
         spinTimeout = null;
@@ -7978,7 +7991,7 @@ function openCase(caseId = 1) {
     }
 }
 
-// ===== РЕНДЕР ТРЕКА (с оптимизацией) =====
+// ===== РЕНДЕР ТРЕКА =====
 function renderSlotTrack(rewards) {
     const track = document.getElementById('caseSlotTrack');
     if (!track) return;
@@ -7987,47 +8000,19 @@ function renderSlotTrack(rewards) {
         let html = '';
         for (let i = 0; i < rewards.length; i++) {
             const reward = rewards[i];
-            const rarityColors = {
-                common: 'rgba(255,255,255,0.08)',
-                rare: 'rgba(0,150,255,0.15)',
-                epic: 'rgba(156,39,176,0.15)',
-                legendary: 'rgba(255,215,0,0.2)'
-            };
-            const borderColors = {
-                common: 'rgba(255,255,255,0.1)',
-                rare: '#0096ff',
-                epic: '#9C27B0',
-                legendary: '#FFD700'
-            };
             html += `
-                <div class="case-slot-item rarity-${reward.rarity}" data-index="${i}" style="
-                    flex: 0 0 100px;
-                    height: 90px;
-                    background: ${rarityColors[reward.rarity] || 'rgba(255,255,255,0.05)'};
-                    border: 2px solid ${borderColors[reward.rarity] || 'rgba(255,255,255,0.1)'};
-                    border-radius: 16px;
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    justify-content: center;
-                    padding: 8px;
-                    transition: all 0.15s ease;
-                    position: relative;
-                    overflow: hidden;
-                    min-width: 100px;
-                    max-width: 100px;
-                ">
-                    <img src="${reward.icon}" style="width: 32px; height: 32px; object-fit: contain; margin-bottom: 4px;">
-                    <span style="font-size: 0.55rem; text-align: center; line-height: 1.2; color: rgba(255,255,255,0.8);">${reward.value}</span>
+                <div class="case-slot-item rarity-${reward.rarity}" data-index="${i}">
+                    <img src="${reward.icon}" class="item-icon" alt="${reward.value}" loading="lazy">
+                    <span class="item-value">${reward.value}</span>
                 </div>
             `;
         }
         itemsCache = html;
     }
 
-    // 50 клонов для плавной анимации
+    // ===== УВЕЛИЧИВАЕМ КОЛИЧЕСТВО КЛОНОВ ДО 80 (было 50) =====
     let finalHtml = '';
-    for (let cycle = 0; cycle < 50; cycle++) {
+    for (let cycle = 0; cycle < 80; cycle++) {
         finalHtml += itemsCache;
     }
 
@@ -8081,11 +8066,13 @@ function updateCaseCount() {
 }
 
 // ===== ПОЛУЧЕНИЕ ШИРИНЫ ЭЛЕМЕНТА =====
+// ===== ПОЛУЧЕНИЕ ШИРИНЫ ЭЛЕМЕНТА С ЗАПАСОМ =====
 function getItemWidth() {
     if (itemWidthCache !== null) return itemWidthCache;
     const firstItem = document.querySelector('.case-slot-item');
-    if (!firstItem) return 108;
-    itemWidthCache = firstItem.offsetWidth + 8;
+    if (!firstItem) return 140; // ← увеличен запас
+    // Добавляем отступы для точности
+    itemWidthCache = firstItem.offsetWidth + 10;
     return itemWidthCache;
 }
 
@@ -8183,7 +8170,7 @@ function spinCase() {
     const duration = 12000 + Math.random() * 3000; // 12-15 секунд
 
     // Добавляем много оборотов для эффекта
-    const extraCycles = 30 + Math.floor(Math.random() * 10);
+    const extraCycles = 40 + Math.floor(Math.random() * 15);
     const extraOffset = extraCycles * itemsPerCycle * itemWidth;
     const finalPosition = targetPosition - extraOffset;
 
@@ -8213,90 +8200,103 @@ function spinCase() {
     }, duration / 100);
 
     // ===== ЗАВЕРШЕНИЕ =====
-    const finishSpin = () => {
-        clearInterval(progressInterval);
-        if (spinProgress) spinProgress.style.width = '100%';
+const finishSpin = () => {
+    clearInterval(progressInterval);
+    if (spinProgress) spinProgress.style.width = '100%';
 
-        // Находим центральный элемент
-        const containerRect = track.parentElement.getBoundingClientRect();
-        const center = containerRect.left + containerRect.width / 2;
-        let closestItem = null;
-        let closestDistance = Infinity;
+    // Находим центральный элемент
+    const containerRect = track.parentElement.getBoundingClientRect();
+    const center = containerRect.left + containerRect.width / 2;
+    let closestItem = null;
+    let closestDistance = Infinity;
 
-        const allItems = track.querySelectorAll('.case-slot-item');
-        for (let i = 0; i < allItems.length; i++) {
-            const el = allItems[i];
-            const elRect = el.getBoundingClientRect();
-            const elCenter = elRect.left + elRect.width / 2;
-            const distance = Math.abs(elCenter - center);
-            if (distance < closestDistance) {
-                closestDistance = distance;
-                closestItem = el;
-            }
-        }
+    const allItems = track.querySelectorAll('.case-slot-item');
 
-        if (closestItem) {
-            const winIdx = parseInt(closestItem.dataset.index);
-            const winReward = caseInfo.rewards[winIdx];
-
-            // Анимация выигрыша
-            closestItem.style.transform = 'scale(1.15)';
-            closestItem.style.boxShadow = '0 0 40px rgba(255,215,0,0.6)';
-            closestItem.style.border = '3px solid #FFD700';
-            closestItem.style.transition = 'all 0.4s ease';
-
-            // Подсвечиваем в сетке
-            const rewardCards = document.querySelectorAll('.case-reward-card');
-            for (let i = 0; i < rewardCards.length; i++) {
-                if (i === winIdx) {
-                    rewardCards[i].classList.add('active');
-                }
-            }
-
-            triggerHaptic('heavy');
-
-            // Показываем результат
-            if (spinStatus) {
-                spinStatus.textContent = `🎉 ВЫ ВЫИГРАЛИ: ${winReward.value}!`;
-                spinStatus.classList.remove('active');
-                spinStatus.style.color = '#FFD700';
-            }
-
-            setTimeout(() => {
-                showToast(`🎉 Вы выиграли: ${winReward.value}!`, 'success');
-            }, 400);
-
-            // Уменьшаем количество кейсов
-            caseCount--;
-            localStorage.setItem('weregood_cases', caseCount.toString());
-            updateCaseCount();
-
-            // Выдаём награду
-            handleCaseReward(winReward);
-        }
-
+    // ===== ПРОВЕРКА: если элементов нет, перезагружаем трек =====
+    if (allItems.length === 0) {
+        console.warn('⚠️ Нет элементов в треке, перезагружаем...');
+        renderSlotTrack(caseInfo.rewards);
         isCaseSpinning = false;
         spinBtn.disabled = false;
         spinBtn.classList.remove('spinning');
         if (btnText) btnText.textContent = 'ОТКРЫТЬ КЕЙС';
-        spinTimeout = null;
-        caseAnimationId = null;
+        return;
+    }
+
+    for (let i = 0; i < allItems.length; i++) {
+        const el = allItems[i];
+        const elRect = el.getBoundingClientRect();
+        const elCenter = elRect.left + elRect.width / 2;
+        const distance = Math.abs(elCenter - center);
+        if (distance < closestDistance) {
+            closestDistance = distance;
+            closestItem = el;
+        }
+    }
+
+    if (closestItem) {
+        const winIdx = parseInt(closestItem.dataset.index);
+        const winReward = caseInfo.rewards[winIdx];
+
+        // Анимация выигрыша
+        closestItem.style.transform = 'scale(1.15)';
+        closestItem.style.boxShadow = '0 0 40px rgba(255,215,0,0.6)';
+        closestItem.style.border = '3px solid #FFD700';
+        closestItem.style.transition = 'all 0.4s ease';
+
+        // Подсвечиваем в сетке
+        const rewardCards = document.querySelectorAll('.case-reward-card');
+        for (let i = 0; i < rewardCards.length; i++) {
+            if (i === winIdx) {
+                rewardCards[i].classList.add('active');
+            }
+        }
+
+        triggerHaptic('heavy');
 
         if (spinStatus) {
-            setTimeout(() => {
-                spinStatus.textContent = '🎰 Нажмите кнопку, чтобы открыть кейс';
-                spinStatus.style.color = 'rgba(255,255,255,0.4)';
-            }, 3000);
+            spinStatus.textContent = `🎉 ВЫ ВЫИГРАЛИ: ${winReward.value}!`;
+            spinStatus.classList.remove('active');
+            spinStatus.style.color = '#FFD700';
         }
-        if (spinProgress) {
-            setTimeout(() => {
-                spinProgress.style.width = '0%';
-            }, 500);
-        }
-    };
 
-    spinTimeout = setTimeout(finishSpin, duration + 500);
-}
+        setTimeout(() => {
+            showToast(`🎉 Вы выиграли: ${winReward.value}!`, 'success');
+        }, 400);
+
+        caseCount--;
+        localStorage.setItem('weregood_cases', caseCount.toString());
+        updateCaseCount();
+
+        handleCaseReward(winReward);
+    } else {
+        // Если не нашли элемент — показываем ошибку
+        console.warn('⚠️ Не удалось найти выигрышный элемент');
+        if (spinStatus) {
+            spinStatus.textContent = '❌ Ошибка! Попробуйте ещё раз';
+            spinStatus.style.color = '#f44336';
+        }
+    }
+
+    isCaseSpinning = false;
+    spinBtn.disabled = false;
+    spinBtn.classList.remove('spinning');
+    if (btnText) btnText.textContent = 'ОТКРЫТЬ КЕЙС';
+    spinTimeout = null;
+    caseAnimationId = null;
+
+    if (spinStatus) {
+        setTimeout(() => {
+            spinStatus.textContent = '🎰 Нажмите кнопку, чтобы открыть кейс';
+            spinStatus.style.color = 'rgba(255,255,255,0.4)';
+        }, 3000);
+    }
+    if (spinProgress) {
+        setTimeout(() => {
+            spinProgress.style.width = '0%';
+        }, 500);
+    }
+};
 
 // ===== ОБРАБОТКА НАГРАДЫ =====
 function handleCaseReward(reward) {

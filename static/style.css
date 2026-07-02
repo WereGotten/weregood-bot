@@ -6907,4 +6907,48 @@ body.light-theme .star-upgrade-card {
         font-size: 0.6rem;
     }
 }
+/* ===== ПЛАВНОСТЬ ТРЕКА ===== */
+.case-slot-track {
+    display: flex;
+    gap: 10px;
+    height: 100%;
+    padding: 6px 0;
+    will-change: transform;
+    /* Улучшаем рендеринг */
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+}
 
+/* ===== УЛУЧШЕННАЯ ВИДИМОСТЬ КАРТОЧЕК ===== */
+.case-slot-track .case-slot-item {
+    flex: 0 0 130px;
+    height: 110px;
+    border-radius: 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 8px;
+    transition: all 0.2s ease;
+    position: relative;
+    min-width: 130px;
+    max-width: 130px;
+    border: 2px solid rgba(255,255,255,0.06);
+    /* Улучшаем рендеринг */
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+}
+
+/* Адаптация под мобильные */
+@media (max-width: 420px) {
+    .case-slot-track .case-slot-item {
+        flex: 0 0 100px;
+        min-width: 100px;
+        max-width: 100px;
+        height: 90px;
+    }
+}
