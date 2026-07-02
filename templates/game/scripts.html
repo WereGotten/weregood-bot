@@ -7842,7 +7842,7 @@ function translateElement(el, key) {
 setTimeout(loadLanguageSettings, 100);
 
     // ================================================================
-// КЕЙСЫ - ОПТИМИЗИРОВАННАЯ ВЕРСИЯ (БЕЗ МЕЛЬКАНИЯ)
+// КЕЙСЫ - ОПТИМИЗИРОВАННАЯ ВЕРСИЯ (ПЛАВНАЯ РАБОТА)
 // ================================================================
 
 let currentCaseId = 1;
@@ -7852,6 +7852,7 @@ let spinTimeout = null;
 let itemsCache = null;
 let itemWidthCache = null;
 let isCasePageOpen = false;
+let caseAnimationId = null;
 
 // ===== ДАННЫЕ КЕЙСА =====
 const caseData = {
@@ -7862,15 +7863,30 @@ const caseData = {
             { icon: '/static/wallet.png', value: '2 000 WG', rarity: 'common', weight: 35 },
             { icon: '/static/wallet.png', value: '5 000 WG', rarity: 'common', weight: 22 },
             { icon: '/static/wallet.png', value: '10 000 WG', rarity: 'common', weight: 14 },
-            { icon: '/static/star_icon.png', value: 'Улучшение Новичок', rarity: 'common', weight: 10 },
-            { icon: '/static/lightning.png', value: '+3 лимита энергии', rarity: 'rare', weight: 6 },
-            { icon: '/static/lightning.png', value: '+5 лимита энергии', rarity: 'rare', weight: 4 },
-            { icon: '/static/diamond_icon.png', value: 'Улучшение Опытный', rarity: 'rare', weight: 3 },
-            { icon: '/static/diamond.png', value: '10 LP Coin', rarity: 'epic', weight: 2 },
+            { icon: '/static/star_icon.png', value: '⭐ Новичок', rarity: 'common', weight: 10 },
+            { icon: '/static/lightning.png', value: '+3 ⚡ энергии', rarity: 'rare', weight: 6 },
+            { icon: '/static/lightning.png', value: '+5 ⚡ энергии', rarity: 'rare', weight: 4 },
+            { icon: '/static/diamond_icon.png', value: '💎 Опытный', rarity: 'rare', weight: 3 },
+            { icon: '/static/diamond.png', value: '10 LP', rarity: 'epic', weight: 2 },
             { icon: '/static/wallet.png', value: '30 000 WG', rarity: 'epic', weight: 1.5 },
-            { icon: '/static/lightning.png', value: '+10 лимита энергии', rarity: 'epic', weight: 1 },
-            { icon: '/static/crown_icon.png', value: 'Улучшение Мастер', rarity: 'epic', weight: 0.75 },
-            { icon: '/static/diamond.png', value: '50 LP Coin', rarity: 'legendary', weight: 0.75 }
+            { icon: '/static/lightning.png', value: '+10 ⚡ энергии', rarity: 'epic', weight: 1 },
+            { icon: '/static/crown_icon.png', value: '👑 Мастер', rarity: 'epic', weight: 0.75 },
+            { icon: '/static/diamond.png', value: '50 LP', rarity: 'legendary', weight: 0.75 }
+        ]
+    },
+    2: {
+        name: 'Премиум кейс',
+        price: 50000,
+        rewards: [
+            { icon: '/static/wallet.png', value: '10 000 WG', rarity: 'common', weight: 25 },
+            { icon: '/static/wallet.png', value: '25 000 WG', rarity: 'common', weight: 18 },
+            { icon: '/static/diamond.png', value: '25 LP', rarity: 'rare', weight: 12 },
+            { icon: '/static/lightning.png', value: '+10 ⚡ энергии', rarity: 'rare', weight: 10 },
+            { icon: '/static/crown_icon.png', value: '👑 Мастер', rarity: 'epic', weight: 8 },
+            { icon: '/static/wallet.png', value: '75 000 WG', rarity: 'epic', weight: 6 },
+            { icon: '/static/diamond.png', value: '100 LP', rarity: 'epic', weight: 4 },
+            { icon: '/static/crown_icon.png', value: '👑 Легенда', rarity: 'legendary', weight: 2 },
+            { icon: '/static/diamond.png', value: '250 LP', rarity: 'legendary', weight: 1 }
         ]
     }
 };
@@ -7896,11 +7912,10 @@ function getWeightedRandom(rewards) {
 }
 
 // ===== ОТКРЫТИЕ КЕЙСА =====
-function openCase(caseId) {
-    // Если кейс уже открыт — не открываем заново
+function openCase(caseId = 1) {
     if (isCasePageOpen) return;
 
-    currentCaseId = caseId || 1;
+    currentCaseId = caseId;
     const caseInfo = caseData[currentCaseId];
     if (!caseInfo) return;
 
@@ -7912,34 +7927,31 @@ function openCase(caseId) {
     page.classList.add('active');
     isCasePageOpen = true;
 
-    // Блокируем скролл (правильно!)
-    document.body.style.overflow = 'hidden';
+    // Блокируем скролл
+    if (typeof disableScroll === 'function') {
+        disableScroll();
+    } else {
+        document.body.style.overflow = 'hidden';
+    }
 
     // Заполняем данные
     const titleEl = document.getElementById('caseTitle');
     const priceEl = document.getElementById('casePriceDisplay');
-    const countEl = document.getElementById('caseCount');
-    const countMainEl = document.getElementById('caseCountMain');
+    const countEl = document.getElementById('caseCountMain');
 
-    if (titleEl) titleEl.textContent = caseInfo.name;
+    if (titleEl) titleEl.textContent = `🎰 ${caseInfo.name}`;
     if (priceEl) priceEl.textContent = caseInfo.price;
     if (countEl) countEl.textContent = caseCount;
-    if (countMainEl) countMainEl.textContent = caseCount;
 
     // Рендерим контент
     renderRewardsGrid(caseInfo.rewards);
     renderSlotTrack(caseInfo.rewards);
-    updateCaseCount();
 
     // Сбрасываем позицию трека
     const track = document.getElementById('caseSlotTrack');
     if (track) {
         track.style.transition = 'none';
         track.style.transform = 'translateX(0px)';
-        if (spinTimeout) {
-            clearTimeout(spinTimeout);
-            spinTimeout = null;
-        }
     }
 
     // Сбрасываем состояние кнопки
@@ -7947,12 +7959,22 @@ function openCase(caseId) {
     if (spinBtn) {
         spinBtn.disabled = false;
         const btnText = spinBtn.querySelector('.btn-text');
-        if (btnText) btnText.textContent = 'ОТКРЫТЬ КЕЙС';
+        if (btnText) btnText.textContent = '🎰 ОТКРЫТЬ КЕЙС';
     }
     isCaseSpinning = false;
+
+    // Очищаем старые таймауты
+    if (spinTimeout) {
+        clearTimeout(spinTimeout);
+        spinTimeout = null;
+    }
+    if (caseAnimationId) {
+        cancelAnimationFrame(caseAnimationId);
+        caseAnimationId = null;
+    }
 }
 
-// ===== РЕНДЕР ТРЕКА =====
+// ===== РЕНДЕР ТРЕКА (с оптимизацией) =====
 function renderSlotTrack(rewards) {
     const track = document.getElementById('caseSlotTrack');
     if (!track) return;
@@ -7961,19 +7983,47 @@ function renderSlotTrack(rewards) {
         let html = '';
         for (let i = 0; i < rewards.length; i++) {
             const reward = rewards[i];
+            const rarityColors = {
+                common: 'rgba(255,255,255,0.08)',
+                rare: 'rgba(0,150,255,0.15)',
+                epic: 'rgba(156,39,176,0.15)',
+                legendary: 'rgba(255,215,0,0.2)'
+            };
+            const borderColors = {
+                common: 'rgba(255,255,255,0.1)',
+                rare: '#0096ff',
+                epic: '#9C27B0',
+                legendary: '#FFD700'
+            };
             html += `
-                <div class="case-slot-item rarity-${reward.rarity}" data-index="${i}">
-                    <img src="${reward.icon}" class="item-icon" alt="${reward.value}" loading="lazy">
-                    <span class="item-value">${reward.value}</span>
+                <div class="case-slot-item rarity-${reward.rarity}" data-index="${i}" style="
+                    flex: 0 0 100px;
+                    height: 90px;
+                    background: ${rarityColors[reward.rarity] || 'rgba(255,255,255,0.05)'};
+                    border: 2px solid ${borderColors[reward.rarity] || 'rgba(255,255,255,0.1)'};
+                    border-radius: 16px;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 8px;
+                    transition: all 0.15s ease;
+                    position: relative;
+                    overflow: hidden;
+                    min-width: 100px;
+                    max-width: 100px;
+                ">
+                    <img src="${reward.icon}" style="width: 32px; height: 32px; object-fit: contain; margin-bottom: 4px;">
+                    <span style="font-size: 0.55rem; text-align: center; line-height: 1.2; color: rgba(255,255,255,0.8);">${reward.value}</span>
                 </div>
             `;
         }
         itemsCache = html;
     }
 
-    // 40 клонов — достаточно для 8 секунд (меньше = быстрее)
+    // 50 клонов для плавной анимации
     let finalHtml = '';
-    for (let cycle = 0; cycle < 40; cycle++) {
+    for (let cycle = 0; cycle < 50; cycle++) {
         finalHtml += itemsCache;
     }
 
@@ -7989,10 +8039,30 @@ function renderRewardsGrid(rewards) {
     let html = '';
     for (let i = 0; i < rewards.length; i++) {
         const reward = rewards[i];
+        const rarityColors = {
+            common: 'rgba(255,255,255,0.05)',
+            rare: 'rgba(0,150,255,0.1)',
+            epic: 'rgba(156,39,176,0.1)',
+            legendary: 'rgba(255,215,0,0.15)'
+        };
+        const borderColors = {
+            common: 'rgba(255,255,255,0.05)',
+            rare: 'rgba(0,150,255,0.2)',
+            epic: 'rgba(156,39,176,0.2)',
+            legendary: 'rgba(255,215,0,0.3)'
+        };
         html += `
-            <div class="case-reward-card rarity-${reward.rarity}" data-index="${i}">
-                <img src="${reward.icon}" class="reward-icon" alt="${reward.value}" loading="lazy">
-                <span class="reward-value">${reward.value}</span>
+            <div class="case-reward-card rarity-${reward.rarity}" data-index="${i}" style="
+                background: ${rarityColors[reward.rarity] || 'rgba(255,255,255,0.03)'};
+                border: 1px solid ${borderColors[reward.rarity] || 'rgba(255,255,255,0.05)'};
+                border-radius: 12px;
+                padding: 8px 4px;
+                text-align: center;
+                transition: all 0.3s ease;
+                cursor: default;
+            ">
+                <img src="${reward.icon}" style="width: 24px; height: 24px; object-fit: contain; margin-bottom: 4px;">
+                <span style="font-size: 0.5rem; display: block; color: rgba(255,255,255,0.7); line-height: 1.2;">${reward.value}</span>
             </div>
         `;
     }
@@ -8002,22 +8072,20 @@ function renderRewardsGrid(rewards) {
 // ===== ОБНОВЛЕНИЕ КОЛИЧЕСТВА КЕЙСОВ =====
 function updateCaseCount() {
     caseCount = parseInt(localStorage.getItem('weregood_cases') || '0');
-    const countEl = document.getElementById('caseCount');
-    const countMainEl = document.getElementById('caseCountMain');
+    const countEl = document.getElementById('caseCountMain');
     if (countEl) countEl.textContent = caseCount;
-    if (countMainEl) countMainEl.textContent = caseCount;
 }
 
 // ===== ПОЛУЧЕНИЕ ШИРИНЫ ЭЛЕМЕНТА =====
 function getItemWidth() {
     if (itemWidthCache !== null) return itemWidthCache;
     const firstItem = document.querySelector('.case-slot-item');
-    if (!firstItem) return 122;
-    itemWidthCache = firstItem.offsetWidth + 12;
+    if (!firstItem) return 108;
+    itemWidthCache = firstItem.offsetWidth + 8;
     return itemWidthCache;
 }
 
-// ===== ВРАЩЕНИЕ =====
+// ===== ПЛАВНОЕ ВРАЩЕНИЕ (с requestAnimationFrame) =====
 function spinCase() {
     if (isCaseSpinning) return;
 
@@ -8037,40 +8105,53 @@ function spinCase() {
         clearTimeout(spinTimeout);
         spinTimeout = null;
     }
+    if (caseAnimationId) {
+        cancelAnimationFrame(caseAnimationId);
+        caseAnimationId = null;
+    }
 
     isCaseSpinning = true;
     spinBtn.disabled = true;
     const btnText = spinBtn.querySelector('.btn-text');
-    if (btnText) btnText.textContent = 'ВРАЩЕНИЕ...';
+    if (btnText) btnText.textContent = '🎡 ВРАЩЕНИЕ...';
 
     // Сбрасываем подсветку
-    document.querySelectorAll('.case-reward-card').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.case-slot-item').forEach(el => el.classList.remove('active', 'bounce'));
+    document.querySelectorAll('.case-reward-card').forEach(el => {
+        el.style.border = '1px solid ' + (el.classList.contains('rarity-common') ? 'rgba(255,255,255,0.05)' :
+            el.classList.contains('rarity-rare') ? 'rgba(0,150,255,0.2)' :
+            el.classList.contains('rarity-epic') ? 'rgba(156,39,176,0.2)' :
+            'rgba(255,215,0,0.3)');
+        el.style.transform = 'scale(1)';
+        el.style.boxShadow = 'none';
+    });
+    document.querySelectorAll('.case-slot-item').forEach(el => {
+        el.style.transform = 'scale(1)';
+        el.style.boxShadow = 'none';
+    });
 
     const items = track.querySelectorAll('.case-slot-item');
     const itemWidth = getItemWidth();
     const itemsPerCycle = caseInfo.rewards.length;
     const totalItems = items.length;
 
+    // Выбираем награду
     const winIndex = getWeightedRandom(caseInfo.rewards);
 
-    // Ищем элемент в середине
+    // Находим целевой элемент в центре трека
     const middleIndex = Math.floor(totalItems / 2);
     let targetItemIndex = -1;
 
-    for (let i = middleIndex; i < totalItems; i++) {
-        if (parseInt(items[i].dataset.index) === winIndex) {
-            targetItemIndex = i;
+    // Ищем ближайший элемент с нужным индексом к центру
+    for (let offset = 0; offset < 50; offset++) {
+        const checkIndex = middleIndex + offset;
+        if (checkIndex < totalItems && parseInt(items[checkIndex].dataset.index) === winIndex) {
+            targetItemIndex = checkIndex;
             break;
         }
-    }
-
-    if (targetItemIndex === -1) {
-        for (let i = middleIndex; i >= 0; i--) {
-            if (parseInt(items[i].dataset.index) === winIndex) {
-                targetItemIndex = i;
-                break;
-            }
+        const checkIndexNeg = middleIndex - offset;
+        if (checkIndexNeg >= 0 && parseInt(items[checkIndexNeg].dataset.index) === winIndex) {
+            targetItemIndex = checkIndexNeg;
+            break;
         }
     }
 
@@ -8078,19 +8159,23 @@ function spinCase() {
         targetItemIndex = middleIndex + winIndex;
     }
 
-    const centerOffset = 3;
+    // Центрируем элемент
+    const containerWidth = track.parentElement.clientWidth;
+    const centerOffset = Math.round((containerWidth - itemWidth) / 2 / itemWidth);
     const targetPosition = -(targetItemIndex - centerOffset) * itemWidth;
 
-    const extraCycles = 25 + Math.floor(Math.random() * 3); // меньше оборотов = быстрее
+    // Добавляем дополнительные обороты для эффекта
+    const extraCycles = 20 + Math.floor(Math.random() * 5);
     const extraOffset = extraCycles * itemsPerCycle * itemWidth;
     const finalPosition = targetPosition - extraOffset;
 
-    // ===== ЗАПУСК =====
+    // ===== ЗАПУСК АНИМАЦИИ =====
     track.style.transition = 'none';
     track.style.transform = 'translateX(0px)';
+    // Принудительный reflow
     void track.offsetHeight;
 
-    const duration = 8000; // 8 секунд вместо 12
+    const duration = 6000 + Math.random() * 2000; // 6-8 секунд
     track.style.transition = `transform ${duration}ms cubic-bezier(0.08, 0.82, 0.17, 1)`;
     track.style.transform = `translateX(${finalPosition}px)`;
 
@@ -8098,6 +8183,7 @@ function spinCase() {
 
     // ===== ЗАВЕРШЕНИЕ =====
     const finishSpin = () => {
+        // Находим центральный элемент
         const containerRect = track.parentElement.getBoundingClientRect();
         const center = containerRect.left + containerRect.width / 2;
         let closestItem = null;
@@ -8116,41 +8202,92 @@ function spinCase() {
         }
 
         if (closestItem) {
-            const winIndex = parseInt(closestItem.dataset.index);
-            const winReward = caseInfo.rewards[winIndex];
+            const winIdx = parseInt(closestItem.dataset.index);
+            const winReward = caseInfo.rewards[winIdx];
 
-            closestItem.classList.add('bounce');
-            setTimeout(() => {
-                closestItem.classList.remove('bounce');
-            }, 400);
+            // Анимация выигрыша
+            closestItem.style.transform = 'scale(1.15)';
+            closestItem.style.boxShadow = '0 0 30px rgba(255,215,0,0.6)';
+            closestItem.style.border = '3px solid #FFD700';
 
-            closestItem.classList.add('active');
-
+            // Подсвечиваем в сетке
             const rewardCards = document.querySelectorAll('.case-reward-card');
             for (let i = 0; i < rewardCards.length; i++) {
-                if (i === winIndex) {
-                    rewardCards[i].classList.add('active');
+                if (i === winIdx) {
+                    rewardCards[i].style.border = '2px solid #FFD700';
+                    rewardCards[i].style.transform = 'scale(1.08)';
+                    rewardCards[i].style.boxShadow = '0 0 20px rgba(255,215,0,0.3)';
                 }
             }
 
             triggerHaptic('heavy');
 
+            // Показываем результат
             setTimeout(() => {
                 showToast(`🎉 Вы выиграли: ${winReward.value}!`, 'success');
-            }, 300);
+            }, 400);
 
+            // Уменьшаем количество кейсов
             caseCount--;
             localStorage.setItem('weregood_cases', caseCount.toString());
             updateCaseCount();
+
+            // Выдаём награду (здесь логика выдачи)
+            handleCaseReward(winReward);
         }
 
         isCaseSpinning = false;
         spinBtn.disabled = false;
-        if (btnText) btnText.textContent = 'ОТКРЫТЬ КЕЙС';
+        if (btnText) btnText.textContent = '🎰 ОТКРЫТЬ КЕЙС';
         spinTimeout = null;
+        caseAnimationId = null;
     };
 
-    spinTimeout = setTimeout(finishSpin, duration + 400);
+    spinTimeout = setTimeout(finishSpin, duration + 500);
+}
+
+// ===== ОБРАБОТКА НАГРАДЫ =====
+function handleCaseReward(reward) {
+    // Здесь логика выдачи награды
+    // Пример:
+    const value = parseInt(reward.value.replace(/\s/g, '')) || 0;
+    const lowerValue = reward.value.toLowerCase();
+
+    if (lowerValue.includes('wg')) {
+        localWG += value;
+        if (typeof updateUI === 'function') updateUI();
+        addLog(`🎁 Выиграл ${value} WG из кейса!`, window.userId, window.username);
+    } else if (lowerValue.includes('lp')) {
+        localLP += value;
+        if (typeof updateUI === 'function') updateUI();
+        addLog(`🎁 Выиграл ${value} LP из кейса!`, window.userId, window.username);
+    } else if (lowerValue.includes('⚡')) {
+        const energyAmount = parseInt(lowerValue.match(/\d+/)?.[0] || 0);
+        if (energyAmount > 0) {
+            localMaxEnergy += energyAmount;
+            if (typeof updateUI === 'function') updateUI();
+            addLog(`🎁 Выиграл +${energyAmount} макс. энергии из кейса!`, window.userId, window.username);
+        }
+    } else if (lowerValue.includes('новичок') || lowerValue.includes('опытный') || lowerValue.includes('мастер') || lowerValue.includes('легенда')) {
+        // Выдача улучшений
+        const upgradeMap = {
+            'новичок': 1,
+            'опытный': 2,
+            'мастер': 4,
+            'легенда': 5
+        };
+        for (const [key, id] of Object.entries(upgradeMap)) {
+            if (lowerValue.includes(key)) {
+                upgradeCounts[id] = (upgradeCounts[id] || 0) + 1;
+                if (typeof updateUI === 'function') updateUI();
+                addLog(`🎁 Выиграл улучшение "${reward.value}" из кейса!`, window.userId, window.username);
+                break;
+            }
+        }
+    }
+
+    // Сохраняем в localStorage
+    if (typeof syncData === 'function') syncData(true);
 }
 
 // ===== МОДАЛКА ПОКУПКИ =====
@@ -8168,11 +8305,11 @@ function showBuyCaseModal() {
         top: 0; left: 0; right: 0; bottom: 0;
         background: rgba(0,0,0,0.85);
         backdrop-filter: blur(12px);
-        z-index: 9999;
+        z-index: 10000;
         display: flex;
         align-items: center;
         justify-content: center;
-        animation: fadeIn 0.25s ease;
+        animation: fadeIn 0.2s ease;
     `;
 
     overlay.innerHTML = `
@@ -8185,7 +8322,7 @@ function showBuyCaseModal() {
             text-align: center;
             border: 1px solid rgba(255,215,0,0.1);
             box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-            animation: scaleIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+            animation: scaleIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
         ">
             <div style="font-size: 3rem; margin-bottom: 8px;">🎰</div>
             <h3 style="color: #FFD700; font-size: 1.2rem; margin-bottom: 6px;">У вас нет кейсов!</h3>
@@ -8228,21 +8365,18 @@ function showBuyCaseModal() {
     triggerHaptic('medium');
 }
 
-// ===== ПОКУПКА =====
+// ===== ПОКУПКА КЕЙСА =====
 function buyCase() {
     const caseInfo = caseData[currentCaseId];
     if (!caseInfo) return;
 
-    // Используем глобальный localWG из основного скрипта
-    if (typeof localWG !== 'undefined' && localWG < caseInfo.price) {
+    if (typeof localWG === 'undefined' || localWG < caseInfo.price) {
         showToast(`❌ Не хватает WG! Нужно ${caseInfo.price} WG`, 'error');
         return;
     }
 
-    if (typeof localWG !== 'undefined') {
-        localWG -= caseInfo.price;
-        if (typeof updateUI === 'function') updateUI();
-    }
+    localWG -= caseInfo.price;
+    if (typeof updateUI === 'function') updateUI();
 
     caseCount++;
     localStorage.setItem('weregood_cases', caseCount.toString());
@@ -8253,32 +8387,36 @@ function buyCase() {
     if (typeof syncData === 'function') syncData(true);
 }
 
-// ===== ЗАКРЫТИЕ =====
+// ===== ЗАКРЫТИЕ КЕЙСА =====
 function closeCase() {
     const page = document.getElementById('casePage');
     if (!page) return;
 
     page.classList.remove('active');
-    // Скрываем с задержкой, чтобы анимация завершилась
     setTimeout(() => {
         page.style.display = 'none';
     }, 300);
 
     // Возвращаем скролл
-    document.body.style.overflow = '';
+    if (typeof enableScroll === 'function') {
+        enableScroll();
+    } else {
+        document.body.style.overflow = '';
+    }
 
     if (spinTimeout) {
         clearTimeout(spinTimeout);
         spinTimeout = null;
+    }
+    if (caseAnimationId) {
+        cancelAnimationFrame(caseAnimationId);
+        caseAnimationId = null;
     }
 
     const track = document.getElementById('caseSlotTrack');
     if (track) {
         track.style.transition = 'none';
         track.style.transform = 'translateX(0px)';
-        track.querySelectorAll('.case-slot-item').forEach(el => {
-            el.classList.remove('active', 'bounce');
-        });
     }
 
     isCaseSpinning = false;
@@ -8288,7 +8426,7 @@ function closeCase() {
     if (spinBtn) {
         spinBtn.disabled = false;
         const btnText = spinBtn.querySelector('.btn-text');
-        if (btnText) btnText.textContent = 'ОТКРЫТЬ КЕЙС';
+        if (btnText) btnText.textContent = '🎰 ОТКРЫТЬ КЕЙС';
     }
 
     const overlay = document.getElementById('buyCaseOverlay');
@@ -8306,6 +8444,12 @@ function triggerHaptic(type = 'medium') {
             navigator.vibrate(duration);
         }
     } catch(e) {}
+}
+
+// ===== ADD LOG =====
+function addLog(action, userId, username) {
+    // Простая заглушка для логов
+    console.log(`📝 [LOG] ${action} | User: ${username || userId}`);
 }
 
     // ========== LP БУСТЕР С КОЛИЧЕСТВОМ ==========
