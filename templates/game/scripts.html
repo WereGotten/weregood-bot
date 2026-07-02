@@ -7995,46 +7995,28 @@ function renderSlotTrack(rewards) {
         let html = '';
         for (let i = 0; i < rewards.length; i++) {
             const reward = rewards[i];
-            const rarityColors = {
-                common: 'rgba(255,255,255,0.06)',
-                rare: 'rgba(0,150,255,0.08)',
-                epic: 'rgba(156,39,176,0.08)',
-                legendary: 'rgba(255,215,0,0.08)'
-            };
-            const borderColors = {
-                common: 'rgba(255,255,255,0.08)',
-                rare: 'rgba(0,150,255,0.2)',
-                epic: 'rgba(156,39,176,0.2)',
-                legendary: 'rgba(255,215,0,0.25)'
-            };
             html += `
-                <div class="case-slot-item rarity-${reward.rarity}" data-index="${i}" style="
-                    flex: 0 0 130px;
-                    height: 110px;
-                    background: ${rarityColors[reward.rarity] || 'rgba(255,255,255,0.04)'};
-                    border: 2px solid ${borderColors[reward.rarity] || 'rgba(255,255,255,0.06)'};
-                    border-radius: 18px;
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    justify-content: center;
-                    padding: 12px 8px;
-                    transition: all 0.2s ease;
-                    position: relative;
-                    min-width: 130px;
-                    max-width: 130px;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-                ">
-                    <img src="${reward.icon}" style="width: 42px; height: 42px; object-fit: contain; margin-bottom: 6px;">
-                    <span style="font-size: 0.65rem; text-align: center; line-height: 1.3; color: rgba(255,255,255,0.9); font-weight: 600; max-width: 100%;">${reward.value}</span>
+                <div class="case-slot-item rarity-${reward.rarity}" data-index="${i}">
+                    <img src="${reward.icon}" class="item-icon" alt="${reward.value}" loading="lazy">
+                    <span class="item-value">${reward.value}</span>
                 </div>
             `;
         }
         itemsCache = html;
     }
 
+    // ===== 100 КЛОНОВ + ЗАПАС ПО КРАЯМ =====
     let finalHtml = '';
-    for (let cycle = 0; cycle < 80; cycle++) {
+    // Добавляем 10 клонов в начало для запаса
+    for (let cycle = 0; cycle < 10; cycle++) {
+        finalHtml += itemsCache;
+    }
+    // Основные 100 клонов
+    for (let cycle = 0; cycle < 100; cycle++) {
+        finalHtml += itemsCache;
+    }
+    // Добавляем 10 клонов в конец для запаса
+    for (let cycle = 0; cycle < 10; cycle++) {
         finalHtml += itemsCache;
     }
 
@@ -8100,6 +8082,7 @@ function getItemWidth() {
 }
 
 // ===== ВРАЩЕНИЕ (12-15 СЕКУНД С ЗАМЕДЛЕНИЕМ) =====
+// ===== ВРАЩЕНИЕ (12-15 СЕКУНД С ЗАМЕДЛЕНИЕМ) =====
 function spinCase() {
     if (isCaseSpinning) return;
 
@@ -8156,12 +8139,23 @@ function spinCase() {
     const itemsPerCycle = caseInfo.rewards.length;
     const totalItems = items.length;
 
+    if (totalItems === 0) {
+        console.warn('⚠️ Нет элементов в треке, перезагружаем...');
+        renderSlotTrack(caseInfo.rewards);
+        isCaseSpinning = false;
+        spinBtn.disabled = false;
+        spinBtn.classList.remove('spinning');
+        if (btnText) btnText.textContent = 'ОТКРЫТЬ КЕЙС';
+        return;
+    }
+
     const winIndex = getWeightedRandom(caseInfo.rewards);
 
+    // Находим элемент в центре
     const middleIndex = Math.floor(totalItems / 2);
     let targetItemIndex = -1;
 
-    for (let offset = 0; offset < 50; offset++) {
+    for (let offset = 0; offset < 30; offset++) {
         const checkIndex = middleIndex + offset;
         if (checkIndex < totalItems && parseInt(items[checkIndex].dataset.index) === winIndex) {
             targetItemIndex = checkIndex;
@@ -8175,18 +8169,29 @@ function spinCase() {
     }
 
     if (targetItemIndex === -1) {
-        targetItemIndex = middleIndex + winIndex;
+        targetItemIndex = Math.min(middleIndex + winIndex, totalItems - 1);
     }
 
+    // Центрируем элемент
     const containerWidth = track.parentElement.clientWidth;
-    const centerOffset = Math.round((containerWidth - itemWidth) / 2 / itemWidth);
+    const centerOffset = Math.max(1, Math.round((containerWidth - itemWidth) / 2 / itemWidth));
     const targetPosition = -(targetItemIndex - centerOffset) * itemWidth;
 
+    // ===== БЕЗОПАСНЫЕ ОБОРОТЫ (НЕ УЕЗЖАЕМ ДАЛЕКО) =====
     const duration = 12000 + Math.random() * 3000;
-    const extraCycles = 40 + Math.floor(Math.random() * 15);
-    const extraOffset = extraCycles * itemsPerCycle * itemWidth;
-    const finalPosition = targetPosition - extraOffset;
 
+    // Умеренные обороты
+    const extraCycles = 12 + Math.floor(Math.random() * 6);
+    const extraOffset = extraCycles * itemsPerCycle * itemWidth;
+    let finalPosition = targetPosition - extraOffset;
+
+    // ===== ЖЁСТКОЕ ОГРАНИЧЕНИЕ =====
+    const maxOffset = -(totalItems - 5) * itemWidth;
+    if (finalPosition < maxOffset) {
+        finalPosition = maxOffset;
+    }
+
+    // Запускаем анимацию
     track.style.transition = 'none';
     track.style.transform = 'translateX(0px)';
     void track.offsetHeight;
@@ -8196,6 +8201,7 @@ function spinCase() {
 
     triggerHaptic('medium');
 
+    // Прогресс-бар
     let progress = 0;
     const progressInterval = setInterval(() => {
         progress += 1;
@@ -8207,6 +8213,7 @@ function spinCase() {
         }
     }, duration / 100);
 
+    // ===== ЗАВЕРШЕНИЕ =====
     const finishSpin = () => {
         clearInterval(progressInterval);
         if (spinProgress) spinProgress.style.width = '100%';
@@ -8219,8 +8226,7 @@ function spinCase() {
         const allItems = track.querySelectorAll('.case-slot-item');
 
         if (allItems.length === 0) {
-            console.warn('⚠️ Нет элементов в треке, перезагружаем...');
-            renderSlotTrack(caseInfo.rewards);
+            console.warn('⚠️ Нет элементов в треке');
             isCaseSpinning = false;
             spinBtn.disabled = false;
             spinBtn.classList.remove('spinning');
