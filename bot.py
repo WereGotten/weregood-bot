@@ -2755,7 +2755,7 @@ def api_create_lp_boost_invoice():
 
     user_id = data.get('user_id')
     chat_id = data.get('chat_id', user_id)
-    quantity = data.get('quantity', 1)  # ← Получаем количество
+    quantity = data.get('quantity', 1)  # ← ДОЛЖЕН БЫТЬ!
 
     # Ограничиваем количество
     if quantity < 1 or quantity > 10:
@@ -2803,21 +2803,29 @@ def api_create_lp_boost_invoice():
 def api_ton_create_lp_boost_payment():
     data = request.json or {}
     user_id = data.get('user_id')
+    quantity = data.get('quantity', 1)  # ← ДОЛЖЕН БЫТЬ!
+
+    if quantity < 1 or quantity > 10:
+        return jsonify({"success": False, "error": "Количество должно быть от 1 до 10"}), 400
+
     is_valid, user_id = validate_user_id(user_id)
     if not is_valid:
         return jsonify({"success": False, "error": "Неавторизованный запрос"}), 400
+
     proj_wallet = globals().get('PROJECT_WALLET_ADDRESS') or os.getenv('PROJECT_WALLET_ADDRESS')
     if not proj_wallet:
         logger.critical("🚨 PROJECT_WALLET_ADDRESS отсутствует!")
         return jsonify({"success": False, "error": "Ошибка конфигурации платежного шлюза"}), 500
-    payment_amount_ton = 0.18
+
+    payment_amount_ton = 0.18 * quantity  # ← УМНОЖАЕМ!
     payment_amount_nano = int(payment_amount_ton * 1e9)
+
     return jsonify({
         "success": True,
         "wallet_address": proj_wallet,
         "amount": payment_amount_ton,
         "amount_nano": payment_amount_nano,
-        "comment": f"WereGood_LP:{user_id}"
+        "comment": f"WereGood_LP:{user_id}:{quantity}"
     })
 
 @app.route('/api/ton/check_lp_boost_payment', methods=['POST'])
@@ -2827,7 +2835,7 @@ def check_lp_boost_payment():
         user_id = data.get('user_id')
         expected_amount = data.get('expected_amount')
         sender_wallet = data.get('sender_wallet')
-        quantity = data.get('quantity', 1)
+        quantity = data.get('quantity', 1)  # ← ДОЛЖЕН БЫТЬ!
 
         if not user_id or not expected_amount:
             return jsonify({'confirmed': False, 'error': 'Missing parameters'}), 400
@@ -2837,7 +2845,7 @@ def check_lp_boost_payment():
 
         if confirmed:
             user = get_user(user_id)
-            total_lp = 50 * quantity
+            total_lp = 50 * quantity  # ← УМНОЖАЕМ!
             old_lp = user['lp']
             new_lp = old_lp + total_lp
 

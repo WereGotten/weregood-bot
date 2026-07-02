@@ -7715,7 +7715,7 @@ async function buyLPBoostStars() {
             body: JSON.stringify({
                 user_id: userId,
                 chat_id: chatId,
-                quantity: quantity  // ← Передаём количество
+                quantity: quantity  // ← ЭТО НУЖНО ПЕРЕДАВАТЬ!
             })
         });
 
@@ -7832,7 +7832,7 @@ async function buyLPBoostTon() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 user_id: userId,
-                quantity: quantity  // ← Передаём количество
+                quantity: quantity  // ← ЭТО НУЖНО ПЕРЕДАВАТЬ!
             })
         });
 
@@ -7868,7 +7868,7 @@ async function buyLPBoostTon() {
             return;
         }
 
-        // Проверяем платёж
+        // Проверяем платёж (передаём количество)
         showToast('💰 Проверяем транзакцию...', 'info');
         startLPBoostPaymentCheck(paymentData.amount, quantity, btn, originalText);
 
@@ -7904,7 +7904,7 @@ function startLPBoostPaymentCheck(expectedAmount, quantity, btn, originalText) {
                     user_id: userId,
                     expected_amount: expectedAmount,
                     sender_wallet: userWalletAddress,
-                    quantity: quantity  // ← Передаём количество
+                    quantity: quantity  // ← ЭТО НУЖНО ПЕРЕДАВАТЬ!
                 })
             });
 
