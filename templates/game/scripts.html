@@ -5723,39 +5723,132 @@ document.addEventListener("DOMContentLoaded", () => {
     startDailyLeaderboardTimer();
     updateLPBoostCount();
 
-    // Обработка start_param
-    const tg = window.Telegram?.WebApp;
-    if (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
-        const startParam = tg.initDataUnsafe.start_param;
-        if (startParam && startParam.startsWith('claim_')) {
-            const promoCode = startParam.replace('claim_', '');
-            setTimeout(() => {
-                openPromoModalWithCode(promoCode);
-                showToast(`🎫 Промокод ${promoCode} готов к активации!`, 'success');
-            }, 300);
-        } else if (startParam && !startParam.startsWith('claim_')) {
-            const refCode = startParam;
-            setTimeout(async () => {
-                try {
-                    const response = await fetch('/api/set_referral', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ user_id: userId, referral_code: refCode })
-                    });
-                    const data = await response.json();
-                    if (data.success) {
-                        showToast('🎉 Реферальный код активирован!', 'success');
-                    }
-                } catch(e) {
-                    console.error('Error sending referral code:', e);
+        // ================================================================
+    // ОБРАБОТКА ПРОМОКОДОВ И РЕФЕРАЛОВ (ИСПРАВЛЕННАЯ)
+    // ================================================================
+
+    function handleStartParam() {
+        try {
+            const tg = window.Telegram?.WebApp;
+            if (!tg || !tg.initDataUnsafe) {
+                console.log('⏳ Telegram WebApp ещё не готов');
+                return false;
+            }
+
+            const startParam = tg.initDataUnsafe.start_param;
+            if (!startParam) {
+                console.log('ℹ️ Нет start_param');
+                return false;
+            }
+
+            console.log('📩 Обработка start_param:', startParam);
+
+            // === ПРОМОКОД ===
+            if (startParam.startsWith('claim_')) {
+                const promoCode = startParam.replace('claim_', '').toUpperCase();
+                console.log('🎫 Обнаружен промокод:', promoCode);
+
+                // Проверяем, есть ли модалка
+                const modal = document.getElementById('promoModal');
+                const input = document.getElementById('promoCodeInput');
+
+                if (!modal) {
+                    console.error('❌ Модалка promoModal не найдена');
+                    return false;
                 }
-            }, 1500);
+
+                // Вставляем промокод в поле
+                if (input) {
+                    input.value = promoCode;
+                    console.log('✅ Промокод вставлен:', promoCode);
+                }
+
+                // Открываем модалку
+                modal.classList.add('active');
+                console.log('✅ Модалка промокода открыта');
+
+                // Показываем сообщение
+                showToast(`🎫 Промокод ${promoCode} готов к активации!`, 'success');
+
+                // Проверяем через 500мс, не закрылась ли модалка
+                setTimeout(() => {
+                    if (!modal.classList.contains('active')) {
+                        console.log('🔄 Модалка закрылась, открываем снова...');
+                        modal.classList.add('active');
+                    }
+                }, 500);
+
+                return true;
+            }
+
+            // === РЕФЕРАЛЬНАЯ ССЫЛКА ===
+            if (!startParam.startsWith('claim_') && startParam.length > 0) {
+                const refCode = startParam;
+                console.log('👥 Обнаружен реферальный код:', refCode);
+
+                setTimeout(async () => {
+                    try {
+                        const response = await fetch('/api/set_referral', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ user_id: userId, referral_code: refCode })
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            showToast('🎉 Реферальный код активирован!', 'success');
+                        }
+                    } catch(e) {
+                        console.error('Error sending referral code:', e);
+                    }
+                }, 1500);
+
+                return true;
+            }
+
+            return false;
+
+        } catch(e) {
+            console.error('❌ Ошибка в handleStartParam:', e);
+            return false;
         }
     }
 
-    if (tg) {
-        tg.ready();
-        tg.expand();
+    // Запускаем обработку несколько раз для надёжности
+    console.log('🔍 Запуск обработки start_param...');
+
+    // Сразу
+    handleStartParam();
+
+    // Через 500мс
+    setTimeout(handleStartParam, 500);
+
+    // Через 1.5 секунды
+    setTimeout(handleStartParam, 1500);
+
+    // Через 3 секунды (страховка)
+    setTimeout(handleStartParam, 3000);
+
+    // Через 5 секунд (финальная страховка)
+    setTimeout(() => {
+        const tg = window.Telegram?.WebApp;
+        const startParam = tg?.initDataUnsafe?.start_param;
+        if (startParam && startParam.startsWith('claim_')) {
+            const modal = document.getElementById('promoModal');
+            if (modal && !modal.classList.contains('active')) {
+                console.log('🔄 Финальная страховка: открываем модалку...');
+                const promoCode = startParam.replace('claim_', '').toUpperCase();
+                const input = document.getElementById('promoCodeInput');
+                if (input) input.value = promoCode;
+                modal.classList.add('active');
+                showToast(`🎫 Промокод ${promoCode} готов к активации!`, 'success');
+            }
+        }
+    }, 5000);
+
+    // Разворачиваем Telegram WebApp
+    if (window.Telegram?.WebApp) {
+        window.Telegram.WebApp.ready();
+        window.Telegram.WebApp.expand();
     }
 
     // Обработчики модалок
