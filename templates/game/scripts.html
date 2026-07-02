@@ -136,9 +136,9 @@ function _initializeUser() {
     }
 
     // ===== ФЛАГИ ДЛЯ СТИРАНИЯ =====
-    window.isScratchingActive = false;
-    window.scratchTimeout = null;
-    window.pendingRefreshTimeout = null;
+    let isScratchingActive = false;
+    let scratchTimeout = null;
+    let pendingRefreshTimeout = null;
 
     // ===== forceBindAccount =====
     window.forceBindAccount = async function() {
@@ -165,8 +165,8 @@ function _initializeUser() {
                 window.photoUrl = freshUser.photo_url || '';
                 window.displayName = window.firstName || window.username || 'Игрок';
 
-                if (typeof autoRegister === 'function') autoRegister();
-                if (typeof syncData === 'function') syncData(true);
+                await autoRegister();
+                await syncData(true);
                 showToast('✅ Аккаунт привязан!', 'success');
                 setTimeout(() => location.reload(), 1500);
             }
@@ -176,98 +176,22 @@ function _initializeUser() {
     };
 
     // ================================================================
-    // ЗАПУСКАЕМ ВСЕ ФУНКЦИИ ЗАГРУЗКИ (МГНОВЕННО!)
+    // ЗАПУСКАЕМ ОСТАЛЬНУЮ ЛОГИКУ ИГРЫ
     // ================================================================
 
-    // 1. РЕГИСТРАЦИЯ
+    // Вызываем функции, которые зависят от userId
     if (typeof autoRegister === 'function') {
         autoRegister();
     }
-
-    // 2. ОСНОВНАЯ СИНХРОНИЗАЦИЯ (грузит все данные)
     if (typeof syncData === 'function') {
         syncData(true);
     }
-
-    // 3. АВАТАР
     if (typeof loadAvatar === 'function') {
         loadAvatar();
     }
-
-    // 4. ЛОГ ВХОДА
     if (typeof logGameEntry === 'function') {
         logGameEntry();
     }
-
-    // 5. НАСТРОЙКИ
-    if (typeof loadSettings === 'function') {
-        loadSettings();
-    }
-
-    // 6. РЕФЕРАЛЬНАЯ ССЫЛКА
-    if (typeof loadReferralLink === 'function') {
-        loadReferralLink();
-    }
-
-    // 7. СПИСОК РЕФЕРАЛОВ
-    if (typeof loadReferrals === 'function') {
-        loadReferrals();
-    }
-
-    // 8. ЕЖЕДНЕВНЫЕ НАГРАДЫ
-    if (typeof loadDailyStatus === 'function') {
-        loadDailyStatus();
-    }
-
-    // 9. ЛИДЕРБОРД (мгновенно!)
-    if (typeof loadLeaderboardData === 'function') {
-        loadLeaderboardData('day', true);
-    }
-
-    // 10. ПОСЛЕДНИЕ ИГРОКИ
-    if (typeof loadRecentPlayers === 'function') {
-        loadRecentPlayers();
-    }
-
-    // 11. ЛОТЕРЕЯ
-    if (typeof loadUserTickets === 'function') {
-        loadUserTickets();
-    }
-
-    // 12. ИНИЦИАЛИЗАЦИЯ СОКЕТА
-    if (typeof initSocket === 'function') {
-        initSocket();
-    }
-
-    // 13. TON CONNECT
-    if (typeof initTonConnect === 'function') {
-        initTonConnect();
-    }
-    if (typeof loadTonWalletStatus === 'function') {
-        loadTonWalletStatus();
-    }
-
-    // 14. ПРОВЕРКА ТУТОРИАЛА
-    if (typeof checkAndStartTutorial === 'function') {
-        setTimeout(checkAndStartTutorial, 1000);
-    }
-
-    // 15. ОБНОВЛЕНИЕ LP БУСТЕРА
-    if (typeof updateLPBoostCount === 'function') {
-        updateLPBoostCount();
-    }
-
-    // 16. PAYDAY СТАТУС
-    if (typeof checkPaydayStatus === 'function') {
-        checkPaydayStatus();
-    }
-
-    // 17. ЯЗЫК
-    if (typeof loadLanguageSettings === 'function') {
-        setTimeout(loadLanguageSettings, 100);
-    }
-
-    console.log('✅ Все данные загружены!');
 }
 
 // ===== ПОКАЗ ОШИБКИ АВТОРИЗАЦИИ =====
@@ -686,7 +610,7 @@ async function syncData(force = false) {
         const response = await fetch('/api/sync', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: window.userId }),
+            body: JSON.stringify({ user_id: userId }),
             signal: AbortSignal.timeout(5000)
         });
         if (!response.ok) throw new Error('Sync failed');
@@ -746,7 +670,7 @@ async function syncData(force = false) {
                 updateDrawUI();
             }
 
-            if (data.lottery.tickets && !window.isScratchingActive) {
+            if (data.lottery.tickets && !isScratchingActive) {
                 currentTickets = data.lottery.tickets;
                 if (typeof updateCarousel === 'function') {
                     updateCarousel();
@@ -754,16 +678,16 @@ async function syncData(force = false) {
                 if (isDrawn && typeof updateTopPlayers === 'function') {
                     updateTopPlayers();
                 }
-            } else if (data.lottery.tickets && window.isScratchingActive) {
+            } else if (data.lottery.tickets && isScratchingActive) {
                 console.log('⏳ Стирание активно, отложили обновление билетов');
-                if (window.pendingRefreshTimeout) clearTimeout(window.pendingRefreshTimeout);
-                window.pendingRefreshTimeout = setTimeout(() => {
-                    if (!window.isScratchingActive) {
+                if (pendingRefreshTimeout) clearTimeout(pendingRefreshTimeout);
+                pendingRefreshTimeout = setTimeout(() => {
+                    if (!isScratchingActive) {
                         currentTickets = data.lottery.tickets;
                         if (typeof updateCarousel === 'function') updateCarousel();
                         if (isDrawn && typeof updateTopPlayers === 'function') updateTopPlayers();
                     }
-                    window.pendingRefreshTimeout = null;
+                    pendingRefreshTimeout = null;
                 }, 1000);
             }
         }
@@ -875,7 +799,7 @@ function updateRecentPlayers(players) {
 // ================================================================
 
 async function autoRegister() {
-    if (!window.userId) return;
+    if (!userId) return;
     try {
         let urlParams = new URLSearchParams(window.location.search);
         let refCode = urlParams.get('startapp') || '';
@@ -883,11 +807,11 @@ async function autoRegister() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                user_id: window.userId,
-                username: window.username || '',
-                first_name: window.firstName || '',
-                last_name: window.lastName || '',
-                avatar_url: window.photoUrl || '',
+                user_id: userId,
+                username: username || '',
+                first_name: firstName || '',
+                last_name: lastName || '',
+                avatar_url: photoUrl,
                 referral_code: refCode
             })
         });
@@ -895,7 +819,7 @@ async function autoRegister() {
         if (data.success) {
             console.log('✅ Регистрация успешна');
             const greetingEl = document.getElementById('userGreeting');
-            if (greetingEl) greetingEl.innerText = window.firstName || window.username || 'Игрок';
+            if (greetingEl) greetingEl.innerText = firstName || username || 'Игрок';
         }
     } catch(e) {
         console.error('AutoRegister error:', e);
@@ -907,7 +831,7 @@ async function loadSettings() {
         let res = await fetch('/api/get_settings', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: window.userId })
+            body: JSON.stringify({ user_id: userId })
         });
         let settings = await res.json();
 
@@ -932,14 +856,7 @@ async function loadSettings() {
 
         const themeToggle = document.getElementById('themeToggle');
         if (themeToggle) themeToggle.checked = settings.theme === 'dark';
-
-        // Сохраняем язык если он есть в настройках
-        if (settings.language && typeof setLanguage === 'function') {
-            setLanguage(settings.language);
-        }
-    } catch(e) {
-        console.error('Error loading settings:', e);
-    }
+    } catch(e) {}
 }
 
 async function saveSetting(setting, value) {
@@ -947,7 +864,7 @@ async function saveSetting(setting, value) {
         await fetch('/api/update_settings', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: window.userId, setting: setting, value: value })
+            body: JSON.stringify({ user_id: userId, setting: setting, value: value })
         });
         if (setting === 'theme') {
             if (value) document.body.classList.add('light-theme');
@@ -965,28 +882,24 @@ async function saveSetting(setting, value) {
         let status = value ? 'включены' : 'выключены';
         if (setting === 'theme') status = value ? 'включена' : 'выключена';
         showToast(`${settingNames[setting]} ${status}`, 'info');
-    } catch(e) {
-        console.error('Error saving setting:', e);
-    }
+    } catch(e) {}
 }
 
 // Назначаем обработчики переключателей
-document.addEventListener('DOMContentLoaded', function() {
-    const themeToggle = document.getElementById('themeToggle');
-    if (themeToggle) themeToggle.onchange = (e) => saveSetting('theme', e.target.checked);
+const themeToggle = document.getElementById('themeToggle');
+if (themeToggle) themeToggle.onchange = (e) => saveSetting('theme', e.target.checked);
 
-    const notificationsToggle = document.getElementById('notificationsToggle');
-    if (notificationsToggle) notificationsToggle.onchange = (e) => saveSetting('notifications', e.target.checked);
+const notificationsToggle = document.getElementById('notificationsToggle');
+if (notificationsToggle) notificationsToggle.onchange = (e) => saveSetting('notifications', e.target.checked);
 
-    const soundsToggle = document.getElementById('soundsToggle');
-    if (soundsToggle) soundsToggle.onchange = (e) => saveSetting('sounds', e.target.checked);
+const soundsToggle = document.getElementById('soundsToggle');
+if (soundsToggle) soundsToggle.onchange = (e) => saveSetting('sounds', e.target.checked);
 
-    const vibrationToggle = document.getElementById('vibrationToggle');
-    if (vibrationToggle) vibrationToggle.onchange = (e) => saveSetting('vibration', e.target.checked);
+const vibrationToggle = document.getElementById('vibrationToggle');
+if (vibrationToggle) vibrationToggle.onchange = (e) => saveSetting('vibration', e.target.checked);
 
-    const hideFromTopToggle = document.getElementById('hideFromTopToggle');
-    if (hideFromTopToggle) hideFromTopToggle.onchange = (e) => saveSetting('hideFromTop', e.target.checked);
-});
+const hideFromTopToggle = document.getElementById('hideFromTopToggle');
+if (hideFromTopToggle) hideFromTopToggle.onchange = (e) => saveSetting('hideFromTop', e.target.checked);
 
 // ================================================================
 // РЕФЕРАЛЫ
@@ -997,7 +910,7 @@ async function loadReferralLink() {
         let res = await fetch('/api/get_referral_link', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: window.userId })
+            body: JSON.stringify({ user_id: userId })
         });
         let data = await res.json();
         const referralInput = document.getElementById('referralLinkInput');
@@ -1013,7 +926,7 @@ async function loadReferrals() {
         let res = await fetch('/api/get_referrals', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: window.userId })
+            body: JSON.stringify({ user_id: userId })
         });
         let data = await res.json();
 
@@ -1066,7 +979,7 @@ async function loadWithdrawals() {
         let res = await fetch('/api/get_withdrawals', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: window.userId })
+            body: JSON.stringify({ user_id: userId })
         });
         let data = await res.json();
 
@@ -1097,10 +1010,10 @@ async function loadWithdrawals() {
         }
         const historyList = document.getElementById('withdrawalHistoryList');
         if (historyList) historyList.innerHTML = historyHtml || '<div class="empty-state">История пуста</div>';
-    } catch(e) {
-        console.error('Error loading withdrawals:', e);
-    }
+    } catch(e) {}
 }
+
+
     // ==================== КЛИКЕР ====================
     let lastClickTime = 0;
     const CLICK_DEBOUNCE = 40;
