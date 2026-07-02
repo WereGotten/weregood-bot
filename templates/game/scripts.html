@@ -1154,17 +1154,26 @@ shopTabs.forEach(tab => {
         };
     }
 
-    const myTicketsBtn = document.getElementById('myTicketsBtn');
+    // ========== МОИ БИЛЕТЫ ==========
+const myTicketsBtn = document.getElementById('myTicketsBtn');
 if (myTicketsBtn) {
     myTicketsBtn.onclick = async () => {
         await loadUserTickets();
+
         const ticketsPage = document.getElementById('ticketsPage');
         const bottomNav = document.getElementById('bottomNav');
-        if (ticketsPage) ticketsPage.classList.add('active');
-        if (bottomNav) bottomNav.style.display = 'none';
-        document.body.style.overflow = 'hidden';
 
-        // ========== ПЕРЕВОД ЗАГОЛОВКА "МОИ БИЛЕТЫ" ==========
+        if (ticketsPage) {
+            ticketsPage.classList.add('active');
+        }
+        if (bottomNav) {
+            bottomNav.style.display = 'none';
+        }
+
+        // ===== ПРАВИЛЬНАЯ БЛОКИРОВКА СКРОЛЛА =====
+        disableScroll();
+
+        // ===== ПЕРЕВОД ЗАГОЛОВКА =====
         const t = TRANSLATIONS[currentLanguage] || TRANSLATIONS.ru;
         const titleEl = ticketsPage?.querySelector('h2');
         if (titleEl) {
@@ -1173,14 +1182,24 @@ if (myTicketsBtn) {
     };
 }
 
-    window.closeTicketsPage = function() {
-        const ticketsPage = document.getElementById('ticketsPage');
-        const bottomNav = document.getElementById('bottomNav');
-        if (ticketsPage) ticketsPage.classList.remove('active');
-        if (bottomNav) bottomNav.style.display = 'flex';
-        document.body.style.overflow = '';
-        scratchProgress.clear();
-    };
+// ========== ЗАКРЫТИЕ БИЛЕТОВ ==========
+window.closeTicketsPage = function() {
+    const ticketsPage = document.getElementById('ticketsPage');
+    const bottomNav = document.getElementById('bottomNav');
+
+    if (ticketsPage) {
+        ticketsPage.classList.remove('active');
+    }
+    if (bottomNav) {
+        bottomNav.style.display = 'flex';
+    }
+
+    // ===== ВОССТАНАВЛИВАЕМ СКРОЛЛ =====
+    enableScroll();
+
+    // Очищаем прогресс стирания
+    scratchProgress.clear();
+};
 
     // ========== ОСНОВНАЯ ФУНКЦИЯ ЗАГРУЗКИ БИЛЕТОВ С ЗАЩИТОЙ ОТ СТИРАНИЯ ==========
     async function loadUserTickets() {
@@ -3975,222 +3994,294 @@ setTimeout(async () => {
     }
 }, 300);
 
-    // ==================== ТУТОРИАЛ (ОБУЧЕНИЕ) ====================
-    let tutorialSteps = [], currentTutorialStep = 0, tutorialActive = false;
+    // ==================== ТУТОРИАЛ (ОБУЧЕНИЕ) - ОПТИМИЗИРОВАННАЯ ВЕРСИЯ ====================
 
-    function disableScroll() {
-        document.body.style.overflow = 'hidden';
-        document.body.style.position = 'fixed';
-        document.body.style.width = '100%';
-    }
+let tutorialSteps = [];
+let currentTutorialStep = 0;
+let tutorialActive = false;
+let savedScrollPosition = 0;
 
-    function enableScroll() {
-        document.body.style.overflow = '';
-        document.body.style.position = '';
-        document.body.style.width = '';
-    }
+// ===== УПРАВЛЕНИЕ СКРОЛЛОМ (ЕДИНАЯ ВЕРСИЯ) =====
+function disableScroll() {
+    savedScrollPosition = window.scrollY || window.pageYOffset;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    document.body.style.overflow = 'hidden';
+    document.body.style.paddingRight = scrollbarWidth + 'px';
+    document.body.style.position = 'fixed';
+    document.body.style.top = '-' + savedScrollPosition + 'px';
+    document.body.style.width = '100%';
+}
 
-    async function checkAndStartTutorial() {
-        try {
-            let dailyRes = await fetch('/api/daily_status', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: userId })
-            });
-            let dailyDataCheck = await dailyRes.json();
-            if (dailyDataCheck.can_claim || dailyDataCheck.current_day === 1) return;
-            let tutorialRes = await fetch('/api/get_tutorial_status', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: userId })
-            });
-            let tutorialData = await tutorialRes.json();
-            if (!tutorialData.completed) {
-            setTimeout(() => startTutorial(), 300); // ← 300 мс
-        }
-        } catch(e) {
-            console.error('Tutorial check error:', e);
-        }
-    }
+function enableScroll() {
+    document.body.style.overflow = '';
+    document.body.style.paddingRight = '';
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.width = '';
+    window.scrollTo(0, savedScrollPosition);
+}
 
-    function startTutorial() {
-        if (tutorialActive) return;
-        tutorialActive = true;
-        currentTutorialStep = 0;
-        disableScroll();
-        initTutorialSteps();
-        showTutorialStep();
-    }
-
-    function initTutorialSteps() {
-        tutorialSteps = [
-            { tab: 'home', elementId: 'coin', text: '💰 Кликай по монете и зарабатывай WG Coin!', position: 'bottom' },
-            { tab: 'home', elementId: 'leaderboard-mini', text: '🏆 Топ игроков — чем больше кликов, тем выше место!', position: 'top' },
-            { tab: 'shop', elementId: 'upgrade-card', text: '🛒 Улучшай заработок за WG Coin. Цена растёт с каждой покупкой!', position: 'bottom', subTab: 'normal' },
-            { tab: 'shop', elementId: 'ad-card', text: '🎬 Смотри рекламу → +150 энергии или +1 к макс. энергии!', position: 'bottom', subTab: 'normal' },
-            { tab: 'shop', elementId: 'energyUpgradeCard', text: '⭐ Покупай усиление за Telegram Stars: +40 энергии и +50 LP!', position: 'bottom', subTab: 'stars' },
-            { tab: 'shop', elementId: 'tonDonateBtn', text: '💎 Купи улучшение за TON через TON Connect!', position: 'bottom', subTab: 'stars' },
-            { tab: 'lottery', elementId: 'ticketBtn', text: '🎫 Купи билет за 100 LP и участвуй в розыгрыше USDT!', position: 'top' },
-            { tab: 'lottery', elementId: 'myTicketsBtn', text: '📋 Здесь твои билеты — стирай их после розыгрыша!', position: 'bottom' },
-            { tab: 'profile', elementId: 'stats-grid', text: '📊 Твои ресурсы: WG, LP, USDT, победы и клики.', position: 'bottom' },
-            { tab: 'profile', elementId: 'withdrawal-btn', text: '💸 Выводи USDT (минимум 2).', position: 'top' },
-            { tab: 'profile', elementId: 'referral-section', text: '👥 Приглашай друзей и получай 5% от их трат LP!', position: 'top' }
-        ];
-    }
-
-    async function showTutorialStep() {
-        if (currentTutorialStep >= tutorialSteps.length) {
-            finishTutorial();
-            return;
-        }
-        const step = tutorialSteps[currentTutorialStep];
-        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        const targetNav = document.querySelector(`[data-tab="${step.tab}"]`);
-        if (targetNav) targetNav.classList.add('active');
-        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-        const targetPane = document.getElementById(`tab${step.tab.charAt(0).toUpperCase() + step.tab.slice(1)}`);
-        if (targetPane) targetPane.classList.add('active');
-        if (step.subTab) {
-            const starsTab = document.querySelector('[data-shop-tab="stars"]');
-            const normalTab = document.querySelector('[data-shop-tab="normal"]');
-            const shopStars = document.getElementById('shopStars');
-            const shopNormal = document.getElementById('shopNormal');
-            if (step.subTab === 'stars') {
-                if (starsTab) starsTab.classList.add('active');
-                if (normalTab) normalTab.classList.remove('active');
-                if (shopStars) shopStars.classList.add('active');
-                if (shopNormal) shopNormal.classList.remove('active');
-            } else {
-                if (normalTab) normalTab.classList.add('active');
-                if (starsTab) starsTab.classList.remove('active');
-                if (shopNormal) shopNormal.classList.add('active');
-                if (shopStars) shopStars.classList.remove('active');
-            }
-        }
-        await new Promise(resolve => setTimeout(resolve, 200));
-        let element = document.getElementById(step.elementId);
-        if (!element) {
-            const classMap = {
-                'upgrade-card': '.upgrade-card',
-                'ad-card': '.ad-card',
-                'energyUpgradeCard': '#energyUpgradeCard',
-                'tonDonateBtn': '#tonDonateBtn'
-            };
-            if (classMap[step.elementId]) {
-                element = document.querySelector(classMap[step.elementId]);
-            }
-        }
-        if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            await new Promise(resolve => setTimeout(resolve, 400));
-            highlightElement(element, step.text, step.position);
-        } else {
-            console.warn(`Элемент ${step.elementId} не найден`);
-            nextTutorialStep();
-        }
-    }
-
-    function highlightElement(element, text, position = 'bottom') {
-        if (!element) {
-            nextTutorialStep();
-            return;
-        }
-        const rect = element.getBoundingClientRect();
-        const overlay = document.getElementById('tutorialOverlay');
-        const highlight = document.getElementById('tutorialHighlight');
-        const tooltip = document.getElementById('tutorialTooltip');
-        const tooltipText = document.getElementById('tutorialText');
-        if (overlay) overlay.style.backgroundColor = 'rgba(0,0,0,0.85)';
-        if (overlay) overlay.classList.add('active');
-        if (highlight) highlight.style.display = 'block';
-        if (highlight) {
-            highlight.style.top = (rect.top - 8) + 'px';
-            highlight.style.left = (rect.left - 8) + 'px';
-            highlight.style.width = (rect.width + 16) + 'px';
-            highlight.style.height = (rect.height + 16) + 'px';
-        }
-        if (tooltipText) tooltipText.innerHTML = text;
-        const tooltipHeight = 180;
-        let tooltipTop, tooltipLeft;
-        if (position === 'top' || rect.top < 100) {
-            tooltipTop = rect.bottom + 15;
-        } else {
-            tooltipTop = rect.top - tooltipHeight - 15;
-        }
-        tooltipLeft = Math.max(10, Math.min(rect.left + (rect.width / 2) - 150, window.innerWidth - 310));
-        if (tooltip) {
-            tooltip.style.top = tooltipTop + 'px';
-            tooltip.style.left = tooltipLeft + 'px';
-            tooltip.style.display = 'block';
-        }
-    }
-
-    function nextTutorialStep() {
-        const overlay = document.getElementById('tutorialOverlay');
-        const highlight = document.getElementById('tutorialHighlight');
-        const tooltip = document.getElementById('tutorialTooltip');
-        if (overlay) overlay.classList.remove('active');
-        if (highlight) highlight.style.display = 'none';
-        if (tooltip) tooltip.style.display = 'none';
-        currentTutorialStep++;
-        if (currentTutorialStep >= tutorialSteps.length) {
-            finishTutorial();
-        } else {
-            setTimeout(() => showTutorialStep(), 300);
-        }
-    }
-
-    function skipTutorial() {
-        const overlay = document.getElementById('tutorialOverlay');
-        if (overlay) overlay.classList.remove('active');
-        tutorialActive = false;
-        enableScroll();
-        fetch('/api/complete_tutorial', {
+// ===== ПРОВЕРКА И ЗАПУСК ТУТОРИАЛА =====
+async function checkAndStartTutorial() {
+    try {
+        // Проверяем ежедневные награды — если доступны, туториал не показываем
+        const dailyRes = await fetch('/api/daily_status', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_id: userId })
-        }).catch(e => console.log('Tutorial skip error:', e));
-        showToast('Обучение пропущено', 'info');
+        });
+        const dailyDataCheck = await dailyRes.json();
+        if (dailyDataCheck.can_claim || dailyDataCheck.current_day === 1) return;
+
+        // Проверяем, проходил ли игрок туториал
+        const tutorialRes = await fetch('/api/get_tutorial_status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId })
+        });
+        const tutorialData = await tutorialRes.json();
+
+        if (!tutorialData.completed) {
+            setTimeout(() => startTutorial(), 300);
+        }
+    } catch(e) {
+        console.error('Tutorial check error:', e);
+    }
+}
+
+// ===== ЗАПУСК ТУТОРИАЛА =====
+function startTutorial() {
+    if (tutorialActive) return;
+    tutorialActive = true;
+    currentTutorialStep = 0;
+    disableScroll();
+    initTutorialSteps();
+    showTutorialStep();
+}
+
+// ===== ИНИЦИАЛИЗАЦИЯ ШАГОВ =====
+function initTutorialSteps() {
+    tutorialSteps = [
+        { tab: 'home', elementId: 'coin', text: '💰 Кликай по монете и зарабатывай WG Coin!', position: 'bottom' },
+        { tab: 'home', elementId: 'leaderboard-mini', text: '🏆 Топ игроков — чем больше кликов, тем выше место!', position: 'top' },
+        { tab: 'shop', elementId: 'upgrade-card', text: '🛒 Улучшай заработок за WG Coin. Цена растёт с каждой покупкой!', position: 'bottom', subTab: 'normal' },
+        { tab: 'shop', elementId: 'ad-card', text: '🎬 Смотри рекламу → +150 энергии или +1 к макс. энергии!', position: 'bottom', subTab: 'normal' },
+        { tab: 'shop', elementId: 'energyUpgradeCard', text: '⭐ Покупай усиление за Telegram Stars: +40 энергии и +50 LP!', position: 'bottom', subTab: 'stars' },
+        { tab: 'shop', elementId: 'tonDonateBtn', text: '💎 Купи улучшение за TON через TON Connect!', position: 'bottom', subTab: 'stars' },
+        { tab: 'lottery', elementId: 'ticketBtn', text: '🎫 Купи билет за 100 LP и участвуй в розыгрыше USDT!', position: 'top' },
+        { tab: 'lottery', elementId: 'myTicketsBtn', text: '📋 Здесь твои билеты — стирай их после розыгрыша!', position: 'bottom' },
+        { tab: 'profile', elementId: 'stats-grid', text: '📊 Твои ресурсы: WG, LP, USDT, победы и клики.', position: 'bottom' },
+        { tab: 'profile', elementId: 'withdrawal-btn', text: '💸 Выводи USDT (минимум 2).', position: 'top' },
+        { tab: 'profile', elementId: 'referral-section', text: '👥 Приглашай друзей и получай 5% от их трат LP!', position: 'top' }
+    ];
+}
+
+// ===== ПОКАЗ ШАГА =====
+async function showTutorialStep() {
+    if (currentTutorialStep >= tutorialSteps.length) {
+        finishTutorial();
+        return;
     }
 
-    async function finishTutorial() {
-        const overlay = document.getElementById('tutorialOverlay');
-        if (overlay) overlay.classList.remove('active');
-        tutorialActive = false;
-        enableScroll();
+    const step = tutorialSteps[currentTutorialStep];
+
+    // Переключаем вкладку
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    const targetNav = document.querySelector(`[data-tab="${step.tab}"]`);
+    if (targetNav) targetNav.classList.add('active');
+
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    const targetPane = document.getElementById(`tab${step.tab.charAt(0).toUpperCase() + step.tab.slice(1)}`);
+    if (targetPane) targetPane.classList.add('active');
+
+    // Переключаем подвкладку магазина если нужно
+    if (step.subTab) {
+        const starsTab = document.querySelector('[data-shop-tab="stars"]');
+        const normalTab = document.querySelector('[data-shop-tab="normal"]');
+        const shopStars = document.getElementById('shopStars');
+        const shopNormal = document.getElementById('shopNormal');
+
+        if (step.subTab === 'stars') {
+            if (starsTab) starsTab.classList.add('active');
+            if (normalTab) normalTab.classList.remove('active');
+            if (shopStars) shopStars.classList.add('active');
+            if (shopNormal) shopNormal.classList.remove('active');
+        } else {
+            if (normalTab) normalTab.classList.add('active');
+            if (starsTab) starsTab.classList.remove('active');
+            if (shopNormal) shopNormal.classList.add('active');
+            if (shopStars) shopStars.classList.remove('active');
+        }
+    }
+
+    // Небольшая задержка для переключения вкладок
+    await new Promise(resolve => setTimeout(resolve, 150));
+
+    // Находим элемент
+    let element = document.getElementById(step.elementId);
+    if (!element) {
+        const classMap = {
+            'upgrade-card': '.upgrade-card',
+            'ad-card': '.ad-card',
+            'energyUpgradeCard': '#energyUpgradeCard',
+            'tonDonateBtn': '#tonDonateBtn'
+        };
+        if (classMap[step.elementId]) {
+            element = document.querySelector(classMap[step.elementId]);
+        }
+    }
+
+    if (element) {
+        // Прокручиваем к элементу
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        await new Promise(resolve => setTimeout(resolve, 300));
+        highlightElement(element, step.text, step.position);
+    } else {
+        console.warn(`Элемент ${step.elementId} не найден`);
+        nextTutorialStep();
+    }
+}
+
+// ===== ПОДСВЕТКА ЭЛЕМЕНТА =====
+function highlightElement(element, text, position = 'bottom') {
+    if (!element) {
+        nextTutorialStep();
+        return;
+    }
+
+    const rect = element.getBoundingClientRect();
+    const overlay = document.getElementById('tutorialOverlay');
+    const highlight = document.getElementById('tutorialHighlight');
+    const tooltip = document.getElementById('tutorialTooltip');
+    const tooltipText = document.getElementById('tutorialText');
+
+    // Показываем оверлей
+    if (overlay) {
+        overlay.style.backgroundColor = 'rgba(0,0,0,0.85)';
+        overlay.classList.add('active');
+    }
+
+    // Настраиваем подсветку
+    if (highlight) {
+        highlight.style.display = 'block';
+        highlight.style.top = (rect.top - 8) + 'px';
+        highlight.style.left = (rect.left - 8) + 'px';
+        highlight.style.width = (rect.width + 16) + 'px';
+        highlight.style.height = (rect.height + 16) + 'px';
+    }
+
+    // Текст тултипа
+    if (tooltipText) {
+        tooltipText.innerHTML = text;
+    }
+
+    // Позиционируем тултип
+    const tooltipHeight = 180;
+    let tooltipTop, tooltipLeft;
+
+    if (position === 'top' || rect.top < 100) {
+        tooltipTop = rect.bottom + 15;
+    } else {
+        tooltipTop = rect.top - tooltipHeight - 15;
+    }
+
+    tooltipLeft = Math.max(10, Math.min(rect.left + (rect.width / 2) - 150, window.innerWidth - 310));
+
+    if (tooltip) {
+        tooltip.style.top = tooltipTop + 'px';
+        tooltip.style.left = tooltipLeft + 'px';
+        tooltip.style.display = 'block';
+    }
+}
+
+// ===== СЛЕДУЮЩИЙ ШАГ =====
+function nextTutorialStep() {
+    const overlay = document.getElementById('tutorialOverlay');
+    const highlight = document.getElementById('tutorialHighlight');
+    const tooltip = document.getElementById('tutorialTooltip');
+
+    if (overlay) overlay.classList.remove('active');
+    if (highlight) highlight.style.display = 'none';
+    if (tooltip) tooltip.style.display = 'none';
+
+    currentTutorialStep++;
+
+    if (currentTutorialStep >= tutorialSteps.length) {
+        finishTutorial();
+    } else {
+        setTimeout(() => showTutorialStep(), 300);
+    }
+}
+
+// ===== ПРОПУСК ТУТОРИАЛА =====
+function skipTutorial() {
+    const overlay = document.getElementById('tutorialOverlay');
+    if (overlay) overlay.classList.remove('active');
+
+    tutorialActive = false;
+    enableScroll();
+
+    fetch('/api/complete_tutorial', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId })
+    }).catch(e => console.log('Tutorial skip error:', e));
+
+    showToast('Обучение пропущено', 'info');
+}
+
+// ===== ЗАВЕРШЕНИЕ ТУТОРИАЛА =====
+async function finishTutorial() {
+    const overlay = document.getElementById('tutorialOverlay');
+    if (overlay) overlay.classList.remove('active');
+
+    tutorialActive = false;
+    enableScroll();
+
+    try {
         await fetch('/api/complete_tutorial', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_id: userId })
         });
         showToast('🎓 Обучение завершено! Добро пожаловать в игру!', 'success');
+    } catch(e) {
+        console.error('Finish tutorial error:', e);
     }
+}
 
-    const tutorialNextBtn = document.getElementById('tutorialNextBtn');
-    const tutorialSkipBtn = document.getElementById('tutorialSkipBtn');
-    if (tutorialNextBtn) tutorialNextBtn.onclick = () => nextTutorialStep();
-    if (tutorialSkipBtn) tutorialSkipBtn.onclick = () => skipTutorial();
+// ===== НАЗНАЧАЕМ ОБРАБОТЧИКИ =====
+const tutorialNextBtn = document.getElementById('tutorialNextBtn');
+const tutorialSkipBtn = document.getElementById('tutorialSkipBtn');
+
+if (tutorialNextBtn) {
+    tutorialNextBtn.onclick = () => nextTutorialStep();
+}
+
+if (tutorialSkipBtn) {
+    tutorialSkipBtn.onclick = () => skipTutorial();
+}
 
     // ========== ГЕЙМПАД МЕНЮ ==========
-    function openGamepad() {
-        const modal = document.getElementById('gamepadModal');
-        if (!modal) {
-            console.error('gamepadModal not found');
-            return;
-        }
-        modal.classList.add('active');
-        document.body.style.overflow = 'hidden';
-        document.body.style.position = 'fixed';
-        document.body.style.width = '100%';
-    }
+let savedScrollPosition = 0;
 
-    function closeGamepad() {
-        const modal = document.getElementById('gamepadModal');
-        if (modal) modal.classList.remove('active');
-        document.body.style.overflow = '';
-        document.body.style.position = '';
-        document.body.style.width = '';
+function openGamepad() {
+    const modal = document.getElementById('gamepadModal');
+    if (!modal) {
+        console.error('gamepadModal not found');
+        return;
     }
+    modal.classList.add('active');
+    disableScroll(); // ← используй общую функцию
+}
+
+function closeGamepad() {
+    const modal = document.getElementById('gamepadModal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+    enableScroll(); // ← используй общую функцию
+}
 
     function openGame(gameName) {
         if (gameName === 'fortune') {
@@ -7071,7 +7162,7 @@ function translateElement(el, key) {
 setTimeout(loadLanguageSettings, 100);
 
     // ================================================================
-// КЕЙСЫ - ПРОСТАЯ РАБОЧАЯ ВЕРСИЯ
+// КЕЙСЫ - ОПТИМИЗИРОВАННАЯ ВЕРСИЯ (БЕЗ МЕЛЬКАНИЯ)
 // ================================================================
 
 let currentCaseId = 1;
@@ -7080,6 +7171,7 @@ let caseCount = parseInt(localStorage.getItem('weregood_cases') || '0');
 let spinTimeout = null;
 let itemsCache = null;
 let itemWidthCache = null;
+let isCasePageOpen = false;
 
 // ===== ДАННЫЕ КЕЙСА =====
 const caseData = {
@@ -7103,6 +7195,15 @@ const caseData = {
     }
 };
 
+// ===== ИНИЦИАЛИЗАЦИЯ (скрываем кейсы при старте) =====
+(function initCases() {
+    const page = document.getElementById('casePage');
+    if (page) {
+        page.style.display = 'none';
+        page.classList.remove('active');
+    }
+})();
+
 // ===== ФУНКЦИЯ ВЫБОРА С УЧЁТОМ ВЕСОВ =====
 function getWeightedRandom(rewards) {
     const totalWeight = rewards.reduce((sum, r) => sum + r.weight, 0);
@@ -7116,6 +7217,9 @@ function getWeightedRandom(rewards) {
 
 // ===== ОТКРЫТИЕ КЕЙСА =====
 function openCase(caseId) {
+    // Если кейс уже открыт — не открываем заново
+    if (isCasePageOpen) return;
+
     currentCaseId = caseId || 1;
     const caseInfo = caseData[currentCaseId];
     if (!caseInfo) return;
@@ -7123,27 +7227,49 @@ function openCase(caseId) {
     const page = document.getElementById('casePage');
     if (!page) return;
 
-    document.getElementById('caseTitle').textContent = caseInfo.name;
-    document.getElementById('casePriceDisplay').textContent = caseInfo.price;
-    document.getElementById('caseCount').textContent = caseCount;
-    document.getElementById('caseCountMain').textContent = caseCount;
+    // Показываем страницу
+    page.style.display = 'block';
+    page.classList.add('active');
+    isCasePageOpen = true;
 
+    // Блокируем скролл (правильно!)
+    document.body.style.overflow = 'hidden';
+
+    // Заполняем данные
+    const titleEl = document.getElementById('caseTitle');
+    const priceEl = document.getElementById('casePriceDisplay');
+    const countEl = document.getElementById('caseCount');
+    const countMainEl = document.getElementById('caseCountMain');
+
+    if (titleEl) titleEl.textContent = caseInfo.name;
+    if (priceEl) priceEl.textContent = caseInfo.price;
+    if (countEl) countEl.textContent = caseCount;
+    if (countMainEl) countMainEl.textContent = caseCount;
+
+    // Рендерим контент
     renderRewardsGrid(caseInfo.rewards);
     renderSlotTrack(caseInfo.rewards);
     updateCaseCount();
 
+    // Сбрасываем позицию трека
     const track = document.getElementById('caseSlotTrack');
     if (track) {
-        track.style.transform = 'translateX(0px)';
         track.style.transition = 'none';
+        track.style.transform = 'translateX(0px)';
         if (spinTimeout) {
             clearTimeout(spinTimeout);
             spinTimeout = null;
         }
     }
 
-    page.classList.add('active');
-    document.body.style.overflow = 'hidden';
+    // Сбрасываем состояние кнопки
+    const spinBtn = document.getElementById('caseSpinBtn');
+    if (spinBtn) {
+        spinBtn.disabled = false;
+        const btnText = spinBtn.querySelector('.btn-text');
+        if (btnText) btnText.textContent = 'ОТКРЫТЬ КЕЙС';
+    }
+    isCaseSpinning = false;
 }
 
 // ===== РЕНДЕР ТРЕКА =====
@@ -7157,7 +7283,7 @@ function renderSlotTrack(rewards) {
             const reward = rewards[i];
             html += `
                 <div class="case-slot-item rarity-${reward.rarity}" data-index="${i}">
-                    <img src="${reward.icon}" class="item-icon" alt="${reward.value}">
+                    <img src="${reward.icon}" class="item-icon" alt="${reward.value}" loading="lazy">
                     <span class="item-value">${reward.value}</span>
                 </div>
             `;
@@ -7165,9 +7291,9 @@ function renderSlotTrack(rewards) {
         itemsCache = html;
     }
 
-    // 60 клонов — достаточно для 12 секунд
+    // 40 клонов — достаточно для 8 секунд (меньше = быстрее)
     let finalHtml = '';
-    for (let cycle = 0; cycle < 60; cycle++) {
+    for (let cycle = 0; cycle < 40; cycle++) {
         finalHtml += itemsCache;
     }
 
@@ -7181,22 +7307,25 @@ function renderRewardsGrid(rewards) {
     if (!grid) return;
 
     let html = '';
-    rewards.forEach(reward => {
+    for (let i = 0; i < rewards.length; i++) {
+        const reward = rewards[i];
         html += `
-            <div class="case-reward-card rarity-${reward.rarity}">
-                <img src="${reward.icon}" class="reward-icon" alt="${reward.value}">
+            <div class="case-reward-card rarity-${reward.rarity}" data-index="${i}">
+                <img src="${reward.icon}" class="reward-icon" alt="${reward.value}" loading="lazy">
                 <span class="reward-value">${reward.value}</span>
             </div>
         `;
-    });
+    }
     grid.innerHTML = html;
 }
 
 // ===== ОБНОВЛЕНИЕ КОЛИЧЕСТВА КЕЙСОВ =====
 function updateCaseCount() {
     caseCount = parseInt(localStorage.getItem('weregood_cases') || '0');
-    document.getElementById('caseCount').textContent = caseCount;
-    document.getElementById('caseCountMain').textContent = caseCount;
+    const countEl = document.getElementById('caseCount');
+    const countMainEl = document.getElementById('caseCountMain');
+    if (countEl) countEl.textContent = caseCount;
+    if (countMainEl) countMainEl.textContent = caseCount;
 }
 
 // ===== ПОЛУЧЕНИЕ ШИРИНЫ ЭЛЕМЕНТА =====
@@ -7231,8 +7360,10 @@ function spinCase() {
 
     isCaseSpinning = true;
     spinBtn.disabled = true;
-    spinBtn.querySelector('.btn-text').textContent = 'ВРАЩЕНИЕ...';
+    const btnText = spinBtn.querySelector('.btn-text');
+    if (btnText) btnText.textContent = 'ВРАЩЕНИЕ...';
 
+    // Сбрасываем подсветку
     document.querySelectorAll('.case-reward-card').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.case-slot-item').forEach(el => el.classList.remove('active', 'bounce'));
 
@@ -7270,7 +7401,7 @@ function spinCase() {
     const centerOffset = 3;
     const targetPosition = -(targetItemIndex - centerOffset) * itemWidth;
 
-    const extraCycles = 30 + Math.floor(Math.random() * 5);
+    const extraCycles = 25 + Math.floor(Math.random() * 3); // меньше оборотов = быстрее
     const extraOffset = extraCycles * itemsPerCycle * itemWidth;
     const finalPosition = targetPosition - extraOffset;
 
@@ -7279,7 +7410,7 @@ function spinCase() {
     track.style.transform = 'translateX(0px)';
     void track.offsetHeight;
 
-    const duration = 12000;
+    const duration = 8000; // 8 секунд вместо 12
     track.style.transition = `transform ${duration}ms cubic-bezier(0.08, 0.82, 0.17, 1)`;
     track.style.transform = `translateX(${finalPosition}px)`;
 
@@ -7311,7 +7442,7 @@ function spinCase() {
             closestItem.classList.add('bounce');
             setTimeout(() => {
                 closestItem.classList.remove('bounce');
-            }, 500);
+            }, 400);
 
             closestItem.classList.add('active');
 
@@ -7335,11 +7466,11 @@ function spinCase() {
 
         isCaseSpinning = false;
         spinBtn.disabled = false;
-        spinBtn.querySelector('.btn-text').textContent = 'ОТКРЫТЬ КЕЙС';
+        if (btnText) btnText.textContent = 'ОТКРЫТЬ КЕЙС';
         spinTimeout = null;
     };
 
-    spinTimeout = setTimeout(finishSpin, duration + 500);
+    spinTimeout = setTimeout(finishSpin, duration + 400);
 }
 
 // ===== МОДАЛКА ПОКУПКИ =====
@@ -7361,7 +7492,7 @@ function showBuyCaseModal() {
         display: flex;
         align-items: center;
         justify-content: center;
-        animation: fadeIn 0.3s ease;
+        animation: fadeIn 0.25s ease;
     `;
 
     overlay.innerHTML = `
@@ -7374,7 +7505,7 @@ function showBuyCaseModal() {
             text-align: center;
             border: 1px solid rgba(255,215,0,0.1);
             box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-            animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            animation: scaleIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
         ">
             <div style="font-size: 3rem; margin-bottom: 8px;">🎰</div>
             <h3 style="color: #FFD700; font-size: 1.2rem; margin-bottom: 6px;">У вас нет кейсов!</h3>
@@ -7422,13 +7553,16 @@ function buyCase() {
     const caseInfo = caseData[currentCaseId];
     if (!caseInfo) return;
 
-    if (localWG < caseInfo.price) {
+    // Используем глобальный localWG из основного скрипта
+    if (typeof localWG !== 'undefined' && localWG < caseInfo.price) {
         showToast(`❌ Не хватает WG! Нужно ${caseInfo.price} WG`, 'error');
         return;
     }
 
-    localWG -= caseInfo.price;
-    updateUI();
+    if (typeof localWG !== 'undefined') {
+        localWG -= caseInfo.price;
+        if (typeof updateUI === 'function') updateUI();
+    }
 
     caseCount++;
     localStorage.setItem('weregood_cases', caseCount.toString());
@@ -7436,40 +7570,49 @@ function buyCase() {
 
     showToast(`✅ Кейс куплен! Нажмите "ОТКРЫТЬ"`, 'success');
     triggerHaptic('light');
-    syncData(true);
+    if (typeof syncData === 'function') syncData(true);
 }
 
 // ===== ЗАКРЫТИЕ =====
 function closeCase() {
     const page = document.getElementById('casePage');
-    if (page) {
-        page.classList.remove('active');
-        document.body.style.overflow = '';
+    if (!page) return;
 
-        if (spinTimeout) {
-            clearTimeout(spinTimeout);
-            spinTimeout = null;
-        }
+    page.classList.remove('active');
+    // Скрываем с задержкой, чтобы анимация завершилась
+    setTimeout(() => {
+        page.style.display = 'none';
+    }, 300);
 
-        const track = document.getElementById('caseSlotTrack');
-        if (track) {
-            track.style.transition = 'none';
-            track.style.transform = 'translateX(0px)';
-            track.querySelectorAll('.case-slot-item').forEach(el => {
-                el.classList.remove('active', 'bounce');
-            });
-        }
-        isCaseSpinning = false;
+    // Возвращаем скролл
+    document.body.style.overflow = '';
 
-        const spinBtn = document.getElementById('caseSpinBtn');
-        if (spinBtn) {
-            spinBtn.disabled = false;
-            spinBtn.querySelector('.btn-text').textContent = 'ОТКРЫТЬ КЕЙС';
-        }
-
-        const overlay = document.getElementById('buyCaseOverlay');
-        if (overlay) overlay.remove();
+    if (spinTimeout) {
+        clearTimeout(spinTimeout);
+        spinTimeout = null;
     }
+
+    const track = document.getElementById('caseSlotTrack');
+    if (track) {
+        track.style.transition = 'none';
+        track.style.transform = 'translateX(0px)';
+        track.querySelectorAll('.case-slot-item').forEach(el => {
+            el.classList.remove('active', 'bounce');
+        });
+    }
+
+    isCaseSpinning = false;
+    isCasePageOpen = false;
+
+    const spinBtn = document.getElementById('caseSpinBtn');
+    if (spinBtn) {
+        spinBtn.disabled = false;
+        const btnText = spinBtn.querySelector('.btn-text');
+        if (btnText) btnText.textContent = 'ОТКРЫТЬ КЕЙС';
+    }
+
+    const overlay = document.getElementById('buyCaseOverlay');
+    if (overlay) overlay.remove();
 }
 
 // ===== HAPTIC =====

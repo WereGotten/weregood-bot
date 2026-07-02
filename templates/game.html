@@ -5,33 +5,81 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
     <title>WereGood</title>
 
-    <!-- ===== ПРЕДЗАГРУЗКА ШРИФТА (критический) ===== -->
+    <!-- ===== ПРЕДЗАГРУЗКА ШРИФТА ===== -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-    <!-- ===== КРИТИЧЕСКИЙ CSS (встроен для мгновенного отображения) ===== -->
+    <!-- ===== КРИТИЧЕСКИЙ CSS ===== -->
     <style>
-        /* --- БАЗОВЫЙ СБРОС И MINIMAL STYLES --- */
+        /* --- БАЗОВЫЙ СБРОС --- */
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent !important; user-select: none !important; }
-        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #0a0a1a; color: #ffffff; overflow: hidden; }
-        .app { max-width: 500px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; opacity: 0; transition: opacity 0.2s ease; }
+
+        /* --- BODY - СКРОЛЛ РАБОТАЕТ --- */
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0a0a1a;
+            color: #ffffff;
+            overflow-y: auto !important;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        /* --- APP --- */
+        .app {
+            max-width: 500px;
+            margin: 0 auto;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            transition: opacity 0.15s ease;
+        }
         .app.visible { opacity: 1; }
 
-        /* --- БЫСТРЫЙ СПЛЕШ (показывается пока грузится основной CSS) --- */
+        /* ===== СПЛЕШ ЭКРАН (ПО ЦЕНТРУ) ===== */
         #splashScreen {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #0a0a1a; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; z-index: 99999;
-            transition: opacity 0.3s ease, transform 0.3s ease;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0a0a1a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999;
+            transition: opacity 0.25s ease, transform 0.25s ease;
             font-family: 'Inter', sans-serif;
         }
-        #splashScreen.hidden { opacity: 0; transform: scale(1.03); pointer-events: none; }
+        #splashScreen.hidden {
+            opacity: 0;
+            transform: scale(1.03);
+            pointer-events: none;
+        }
+
+        .splash-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            width: 100%;
+            padding: 20px;
+        }
+
         .splash-coin {
-            width: 100px; height: 100px; border-radius: 50%;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
             background: linear-gradient(135deg, #FFD700, #F5A623);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 34px; font-weight: 900; color: #0a0a1a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 34px;
+            font-weight: 900;
+            color: #0a0a1a;
             box-shadow: 0 0 60px rgba(255,215,0,0.2);
             animation: splashPulse 1.5s ease-in-out infinite;
         }
@@ -39,35 +87,65 @@
             0%, 100% { transform: scale(1); }
             50% { transform: scale(1.04); }
         }
+
         .splash-title {
-            font-size: 28px; font-weight: 900; margin-top: 16px;
+            font-size: 28px;
+            font-weight: 900;
+            margin-top: 16px;
             background: linear-gradient(135deg, #FFD700, #F5A623);
-            -webkit-background-clip: text; background-clip: text; color: transparent;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
         }
         .splash-subtitle {
-            font-size: 12px; color: rgba(255,255,255,0.3);
-            letter-spacing: 3px; text-transform: uppercase; margin-top: 4px;
+            font-size: 12px;
+            color: rgba(255,255,255,0.3);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-top: 4px;
         }
-        .splash-progress-wrap { width: 180px; margin-top: 16px; }
+        .splash-progress-wrap {
+            width: 180px;
+            margin-top: 16px;
+        }
         .splash-progress-track {
-            width: 100%; height: 3px; background: rgba(255,255,255,0.06);
-            border-radius: 3px; overflow: hidden;
+            width: 100%;
+            height: 3px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 3px;
+            overflow: hidden;
         }
         .splash-progress-fill {
-            height: 100%; width: 0%;
+            height: 100%;
+            width: 0%;
             background: linear-gradient(90deg, #FFD700, #F5A623);
-            border-radius: 3px; transition: width 0.2s ease;
+            border-radius: 3px;
+            transition: width 0.15s ease;
         }
         .splash-percent {
-            font-size: 13px; color: rgba(255,255,255,0.3);
-            text-align: center; margin-top: 6px;
+            font-size: 13px;
+            color: rgba(255,255,255,0.3);
+            text-align: center;
+            margin-top: 6px;
             font-variant-numeric: tabular-nums;
         }
         .splash-version {
-            position: fixed; bottom: 20px;
-            font-size: 10px; color: rgba(255,255,255,0.1);
+            position: fixed;
+            bottom: 20px;
+            font-size: 10px;
+            color: rgba(255,255,255,0.1);
             letter-spacing: 1px;
         }
+
+        /* ===== КЕЙСЫ СКРЫТЫ ДО ЗАГРУЗКИ ===== */
+        #casePage {
+            display: none !important;
+        }
+        #casePage.active {
+            display: block !important;
+        }
+
+        /* ===== АДАПТАЦИЯ ===== */
         @media (max-width: 480px) {
             .splash-coin { width: 80px; height: 80px; font-size: 28px; }
             .splash-title { font-size: 22px; }
@@ -75,16 +153,16 @@
         }
     </style>
 
-    <!-- ===== ОСНОВНОЙ CSS (загружается асинхронно, не блокирует рендер) ===== -->
+    <!-- ===== ОСНОВНОЙ CSS (асинхронно) ===== -->
     <link rel="stylesheet" href="/static/style.css" media="print" onload="this.media='all'">
     <noscript><link rel="stylesheet" href="/static/style.css"></noscript>
 
-    <!-- ===== ВНЕШНИЕ СКРИПТЫ (асинхронно) ===== -->
+    <!-- ===== ВНЕШНИЕ СКРИПТЫ ===== -->
     <script src="https://telegram.org/js/telegram-web-app.js" async></script>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js" async></script>
     <script src="https://sad.adsgram.ai/js/sad.min.js" async></script>
 
-    <!-- ===== TON CONNECT (асинхронно, не блокирует) ===== -->
+    <!-- ===== TON CONNECT ===== -->
     <script>
         window.TON_CONNECT_UI = null;
         const tonScript = document.createElement('script');
@@ -102,7 +180,7 @@
         document.head.appendChild(tonScript);
     </script>
 
-    <!-- ===== ANALYTICS (асинхронно) ===== -->
+    <!-- ===== ANALYTICS ===== -->
     <script>
         (function() {
             if (window.Telegram && window.Telegram.WebApp) {
@@ -124,7 +202,7 @@
 </head>
 <body>
 
-    <!-- ===== БЫСТРЫЙ СПЛЕШ ЭКРАН ===== -->
+    <!-- ===== СПЛЕШ ЭКРАН ===== -->
     <div id="splashScreen">
         <div class="splash-content">
             <div class="splash-coin">WG</div>
@@ -172,7 +250,7 @@
     {% include 'game/modals.html' %}
     {% include 'game/fortune.html' %}
 
-    <!-- ===== AUDIO (preload="metadata" для быстрой загрузки) ===== -->
+    <!-- ===== AUDIO ===== -->
     <audio id="errorSound" preload="metadata"><source src="/static/error.mp3" type="audio/mpeg"></audio>
     <audio id="clickSound" preload="metadata"><source src="/static/click.mp3" type="audio/mpeg"></audio>
     <audio id="navSound" preload="metadata"><source src="/static/nav.mp3" type="audio/mpeg"></audio>
@@ -180,7 +258,7 @@
     <audio id="settingsSound" preload="metadata"><source src="/static/settings.mp3" type="audio/mpeg"></audio>
     <audio id="purchaseSound" preload="metadata"><source src="/static/purchase.mp3" type="audio/mpeg"></audio>
 
-    <!-- ===== ОПТИМИЗИРОВАННЫЙ СКРИПТ ЗАГРУЗКИ (МГНОВЕННЫЙ) ===== -->
+    <!-- ===== БЫСТРЫЙ СТАРТ ===== -->
     <script>
         (function() {
             'use strict';
@@ -193,7 +271,6 @@
             let currentProgress = 0;
             let isHidden = false;
 
-            // ===== БЫСТРОЕ ОБНОВЛЕНИЕ ПРОГРЕССА =====
             function updateProgress(value) {
                 if (isHidden) return;
                 currentProgress = Math.min(100, Math.max(0, value));
@@ -201,45 +278,33 @@
                 if (percentText) percentText.textContent = Math.round(currentProgress) + '%';
             }
 
-            // ===== МГНОВЕННАЯ СИМУЛЯЦИЯ ЗАГРУЗКИ (быстрые шаги) =====
             function simulateLoading() {
-                let progress = 0;
-                // ← Ускоренные шаги (все задержки уменьшены)
                 const steps = [
-                    { target: 30, delay: 50 },
-                    { target: 50, delay: 50 },
-                    { target: 70, delay: 50 },
-                    { target: 85, delay: 50 },
-                    { target: 95, delay: 50 },
-                    { target: 100, delay: 50 }
+                    { target: 30, delay: 40 },
+                    { target: 50, delay: 40 },
+                    { target: 70, delay: 40 },
+                    { target: 85, delay: 40 },
+                    { target: 95, delay: 40 },
+                    { target: 100, delay: 40 }
                 ];
-
                 let index = 0;
-
                 function nextStep() {
-                    if (index >= steps.length) {
-                        finishLoading();
-                        return;
-                    }
-
+                    if (index >= steps.length) { finishLoading(); return; }
                     const step = steps[index];
-                    // Быстрый переход к цели
-                    progress = step.target;
-                    updateProgress(progress);
+                    currentProgress = step.target;
+                    updateProgress(currentProgress);
                     index++;
                     setTimeout(nextStep, step.delay);
                 }
-
                 nextStep();
             }
 
-            // ===== ЗАВЕРШЕНИЕ =====
             function finishLoading() {
                 if (isHidden) return;
                 isHidden = true;
                 if (currentProgress < 100) {
                     updateProgress(100);
-                    setTimeout(hideSplash, 150);
+                    setTimeout(hideSplash, 100);
                 } else {
                     hideSplash();
                 }
@@ -248,7 +313,7 @@
             function hideSplash() {
                 if (splash) {
                     splash.classList.add('hidden');
-                    setTimeout(() => { splash.style.display = 'none'; }, 300);
+                    setTimeout(() => { splash.style.display = 'none'; }, 200);
                 }
                 if (app) {
                     app.classList.add('visible');
@@ -256,7 +321,6 @@
                 document.body.style.overflow = '';
             }
 
-            // ===== ОТСЛЕЖИВАНИЕ РЕАЛЬНОЙ ЗАГРУЗКИ =====
             function trackRealLoading() {
                 if (document.readyState === 'loading') {
                     document.addEventListener('DOMContentLoaded', () => updateProgress(60));
@@ -265,43 +329,37 @@
                 }
                 window.addEventListener('load', () => {
                     updateProgress(85);
-                    setTimeout(() => updateProgress(95), 100);
+                    setTimeout(() => updateProgress(95), 80);
                 });
-                // Проверяем ключевые библиотеки
                 if (window.Telegram?.WebApp) updateProgress(70);
                 if (typeof io !== 'undefined') updateProgress(75);
                 if (window.TON_CONNECT_UI !== null) updateProgress(80);
                 if (typeof window.Adsgram !== 'undefined') updateProgress(78);
             }
 
-            // ===== КОРОТКИЙ ЗАПАСНОЙ ТАЙМЕР (2 секунды) =====
+            // Короткий таймаут
             setTimeout(() => {
                 if (!isHidden) {
                     updateProgress(100);
-                    setTimeout(finishLoading, 100);
+                    setTimeout(finishLoading, 80);
                 }
-            }, 2000);
+            }, 1500);
 
-            // ===== ЗАПУСК =====
             function init() {
                 updateProgress(5);
                 simulateLoading();
                 trackRealLoading();
-
-                // Ускоряем, если застряло
                 setTimeout(() => {
                     if (!isHidden && currentProgress < 70) {
                         updateProgress(Math.max(currentProgress, 70));
                     }
-                }, 1000);
-
-                // Форсируем через 3 секунды
+                }, 800);
                 setTimeout(() => {
                     if (!isHidden) {
                         updateProgress(100);
-                        setTimeout(finishLoading, 100);
+                        setTimeout(finishLoading, 80);
                     }
-                }, 3000);
+                }, 2500);
             }
 
             if (document.readyState === 'loading') {
@@ -320,14 +378,10 @@
         })();
     </script>
 
-    <!-- ===== ОСНОВНОЙ JS (загружается в конце, не блокирует) ===== -->
+    <!-- ===== ПРЕДЗАГРУЗКА userId ===== -->
     <script>
-        // ===== МГНОВЕННЫЙ СТАРТ =====
         (function() {
-            // Проверяем, есть ли уже userId
             let userId = parseInt(sessionStorage.getItem('weregood_user_id')) || 0;
-
-            // Если ID есть, сразу начинаем загрузку
             if (userId > 0) {
                 window.userId = userId;
             }

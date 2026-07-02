@@ -6886,3 +6886,12 @@ body.light-theme .star-upgrade-card {
 .cases-header-left {
     display: flex;
     align-items: center;
+
+/* Скрываем кейсы до загрузки */
+#casePage {
+    display: none !important;
+}
+
+#casePage.active {
+    display: block !important;
+}
