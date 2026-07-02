@@ -1261,13 +1261,17 @@ async function loadWithdrawals() {
     };
 
     // ========== ВКЛАДКИ МАГАЗИНА ==========
-const shopTabs = document.querySelectorAll('.shop-tab');
+const shopTabs = document.querySelectorAll('.shop-tab-btn');
 shopTabs.forEach(tab => {
     tab.onclick = () => {
         let target = tab.dataset.shopTab;
-        document.querySelectorAll('.shop-tab').forEach(t => t.classList.remove('active'));
+
+        // Переключаем классы активной вкладки
+        document.querySelectorAll('.shop-tab-btn').forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
-        document.querySelectorAll('.shop-pane').forEach(pane => pane.classList.remove('active'));
+
+        // Переключаем панели
+        document.querySelectorAll('.shop-pane-content').forEach(pane => pane.classList.remove('active'));
 
         if (target === 'normal') {
             const shopNormal = document.getElementById('shopNormal');
@@ -1275,7 +1279,7 @@ shopTabs.forEach(tab => {
         } else if (target === 'stars') {
             const shopStars = document.getElementById('shopStars');
             if (shopStars) shopStars.classList.add('active');
-            updateStatus();
+            if (typeof updateStatus === 'function') updateStatus();
         } else if (target === 'cases') {
             const shopCases = document.getElementById('shopCases');
             if (shopCases) shopCases.classList.add('active');
