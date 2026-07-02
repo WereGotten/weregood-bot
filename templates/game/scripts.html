@@ -3,201 +3,41 @@
 // ИНИЦИАЛИЗАЦИЯ - ПОЛУЧЕНИЕ ID ПОЛЬЗОВАТЕЛЯ
 // ================================================================
 
-// ===== ЖДЁМ ГОТОВНОСТИ TELEGRAM WEBAPP =====
-function waitForTelegram(callback) {
-    if (window.Telegram && window.Telegram.WebApp) {
-        console.log('✅ Telegram WebApp уже готов');
-        callback();
-        return;
+let tg = window.Telegram?.WebApp;
+let user = tg?.initDataUnsafe?.user;
+
+let savedUserId = sessionStorage.getItem('weregood_user_id');
+let userId = null;
+let isAuthError = false;
+
+// ===== ПРАВИЛЬНАЯ ЛОГИКА ПОЛУЧЕНИЯ ID =====
+if (user && user.id && user.id > 0) {
+    // Реальный ID из Telegram (минимальный ID в Telegram начинается с 100000000)
+    if (user.id.toString().length >= 9) {
+        userId = user.id;
+        sessionStorage.setItem('weregood_user_id', userId);
+        console.log('✅ ID получен из Telegram:', userId);
+    } else {
+        console.warn('⚠️ Подозрительный ID из Telegram:', user.id);
+        userId = user.id;
+        sessionStorage.setItem('weregood_user_id', userId);
     }
-
-    console.log('⏳ Ожидаем загрузку Telegram WebApp...');
-
-    let isCalled = false;
-    const safeCallback = function() {
-        if (isCalled) return;
-        isCalled = true;
-        callback();
-    };
-
-    document.addEventListener('telegram-ready', function onReady() {
-        document.removeEventListener('telegram-ready', onReady);
-        console.log('✅ Telegram WebApp загружен (событие)');
-        safeCallback();
-    });
-
-    let attempts = 0;
-    const maxAttempts = 60;
-    const interval = setInterval(() => {
-        attempts++;
-        if (window.Telegram && window.Telegram.WebApp) {
-            clearInterval(interval);
-            console.log('✅ Telegram WebApp загружен (проверка)');
-            safeCallback();
-        } else if (attempts >= maxAttempts) {
-            clearInterval(interval);
-            console.warn('⚠️ Telegram WebApp не загрузился за 3 секунды, используем fallback');
-            if (!window.Telegram) window.Telegram = {};
-            if (!window.Telegram.WebApp) {
-                window.Telegram.WebApp = {
-                    initDataUnsafe: { user: null },
-                    ready: function() {},
-                    expand: function() {},
-                    isVersionAtLeast: function() { return false; }
-                };
-            }
-            safeCallback();
-        }
-    }, 50);
+} else if (savedUserId && savedUserId !== 'null' && parseInt(savedUserId) > 0) {
+    // Восстанавливаем из sessionStorage
+    userId = parseInt(savedUserId);
+    console.log('✅ ID восстановлен из sessionStorage:', userId);
 }
 
-// ===== ЗАПУСКАЕМ ПОЛУЧЕНИЕ ID =====
-waitForTelegram(function() {
-    _initializeUser();
-});
+// ===== СОХРАНЯЕМ В ГЛОБАЛЬНУЮ ПЕРЕМЕННУЮ ДЛЯ ДОСТУПА ИЗ ЛЮБОГО МЕСТА =====
+window.userId = userId;
+console.log('📌 Глобальный userId установлен:', window.userId);
 
-// ===== ОСНОВНАЯ ФУНКЦИЯ ИНИЦИАЛИЗАЦИИ =====
-function _initializeUser() {
-    const tg = window.Telegram?.WebApp;
-    const user = tg?.initDataUnsafe?.user;
-    const savedUserId = sessionStorage.getItem('weregood_user_id');
-    let userId = null;
+// ===== ПРОВЕРКА: ЕСЛИ ID НЕ ПОЛУЧЕН =====
+if (!userId || userId === 12345678) {
+    isAuthError = true;
+    console.error('❌ КРИТИЧЕСКАЯ ОШИБКА: Невозможно определить пользователя!');
 
-    console.log('🔍 Данные из Telegram:', user);
-
-    // ===== ПОЛУЧЕНИЕ ID =====
-    if (user && user.id && user.id > 0) {
-        if (user.id.toString().length >= 9) {
-            userId = user.id;
-            sessionStorage.setItem('weregood_user_id', userId);
-            console.log('✅ ID получен из Telegram:', userId);
-        } else {
-            console.warn('⚠️ Подозрительный ID из Telegram:', user.id);
-            userId = user.id;
-            sessionStorage.setItem('weregood_user_id', userId);
-        }
-    } else if (savedUserId && savedUserId !== 'null' && parseInt(savedUserId) > 0) {
-        userId = parseInt(savedUserId);
-        console.log('✅ ID восстановлен из sessionStorage:', userId);
-    }
-
-    // ===== ПОВТОРНАЯ ПОПЫТКА =====
-    if (!userId || userId === 12345678 || userId === 0) {
-        console.warn('⚠️ ID не получен, пробуем повторно...');
-        if (window.Telegram && window.Telegram.WebApp) {
-            const freshUser = window.Telegram.WebApp.initDataUnsafe?.user;
-            if (freshUser && freshUser.id && freshUser.id > 0) {
-                userId = freshUser.id;
-                sessionStorage.setItem('weregood_user_id', userId);
-                console.log('✅ ID получен повторно:', userId);
-            }
-        }
-    }
-
-    // ===== СОХРАНЯЕМ =====
-    window.userId = userId;
-    console.log('📌 Глобальный userId установлен:', window.userId);
-
-    // ===== ПРОВЕРКА =====
-    if (!userId || userId === 12345678 || userId === 0) {
-        console.error('❌ КРИТИЧЕСКАЯ ОШИБКА: Невозможно определить пользователя!');
-        showAuthError();
-        return;
-    }
-
-    console.log('✅ Авторизация успешна, ID:', userId);
-
-    // Убираем оверлей ошибки
-    const errorOverlay = document.getElementById('authErrorOverlay');
-    if (errorOverlay) errorOverlay.remove();
-
-    // ===== ОТЛАДКА =====
-    console.log('👤 Игрок ID:', userId);
-    console.log('🔑 Секретный ID (для кейсов): 5264622363');
-    console.log('🔓 Доступ к кейсам:', userId === 5264622363 ? '✅ РАЗРЕШЁН' : '⛔ ЗАКРЫТ');
-
-    // ===== ДАННЫЕ ПОЛЬЗОВАТЕЛЯ =====
-    const username = user ? (user.username || '') : '';
-    const firstName = user ? (user.first_name || '') : '';
-    const lastName = user ? (user.last_name || '') : '';
-    const photoUrl = user && user.photo_url ? user.photo_url : '';
-    const chatId = userId;
-    const displayName = firstName || username || 'Игрок';
-
-    window.username = username;
-    window.firstName = firstName;
-    window.lastName = lastName;
-    window.photoUrl = photoUrl;
-    window.chatId = chatId;
-    window.displayName = displayName;
-
-    if (sessionStorage.getItem('weregood_display_name')) {
-        window.displayName = sessionStorage.getItem('weregood_display_name');
-    }
-
-    // ===== ФЛАГИ ДЛЯ СТИРАНИЯ =====
-    let isScratchingActive = false;
-    let scratchTimeout = null;
-    let pendingRefreshTimeout = null;
-
-    // ===== forceBindAccount =====
-    window.forceBindAccount = async function() {
-        const errorOverlay = document.getElementById('authErrorOverlay');
-        if (errorOverlay) errorOverlay.remove();
-
-        if (!window.Telegram?.WebApp) {
-            showToast('❌ Telegram WebApp не доступен', 'error');
-            return;
-        }
-
-        const tg = window.Telegram.WebApp;
-        tg.expand();
-        const freshUser = tg.initDataUnsafe?.user;
-
-        if (freshUser && freshUser.id && freshUser.id > 0) {
-            const newUserId = freshUser.id;
-            if (confirm(`⚠️ Обнаружен ваш аккаунт (ID: ${newUserId}).\n\nПривязать его к игре? Весь ваш прогресс сохранится.`)) {
-                window.userId = newUserId;
-                sessionStorage.setItem('weregood_user_id', newUserId);
-                window.username = freshUser.username || '';
-                window.firstName = freshUser.first_name || '';
-                window.lastName = freshUser.last_name || '';
-                window.photoUrl = freshUser.photo_url || '';
-                window.displayName = window.firstName || window.username || 'Игрок';
-
-                await autoRegister();
-                await syncData(true);
-                showToast('✅ Аккаунт привязан!', 'success');
-                setTimeout(() => location.reload(), 1500);
-            }
-        } else {
-            showToast('❌ Не удалось получить данные аккаунта. Попробуйте перезапустить Telegram.', 'error');
-        }
-    };
-
-    // ================================================================
-    // ЗАПУСКАЕМ ОСТАЛЬНУЮ ЛОГИКУ ИГРЫ
-    // ================================================================
-
-    // Вызываем функции, которые зависят от userId
-    if (typeof autoRegister === 'function') {
-        autoRegister();
-    }
-    if (typeof syncData === 'function') {
-        syncData(true);
-    }
-    if (typeof loadAvatar === 'function') {
-        loadAvatar();
-    }
-    if (typeof logGameEntry === 'function') {
-        logGameEntry();
-    }
-}
-
-// ===== ПОКАЗ ОШИБКИ АВТОРИЗАЦИИ =====
-function showAuthError() {
-    if (document.getElementById('authErrorOverlay')) return;
-
+    // Создаём красивое сообщение об ошибке
     const errorHtml = `
         <div id="authErrorOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:20px;">
             <div style="background:linear-gradient(145deg,#1a1a2e,#0f0f20);border-radius:32px;padding:32px;max-width:350px;border:2px solid #f44336;">
@@ -217,155 +57,203 @@ function showAuthError() {
         </div>
     `;
     document.body.insertAdjacentHTML('beforeend', errorHtml);
+
+    // Останавливаем выполнение остального кода
+    throw new Error('Authentication failed - no user ID');
 }
 
-// ================================================================
-// ОСНОВНЫЕ ПЕРЕМЕННЫЕ ИГРЫ
-// ================================================================
+// ===== ДЛЯ ОТЛАДКИ: ВЫВОДИМ ID В КОНСОЛЬ =====
+console.log('👤 Игрок ID:', userId);
+console.log('🔑 Секретный ID (для кейсов): 5264622363');
+console.log('🔓 Доступ к кейсам:', userId === 5264622363 ? '✅ РАЗРЕШЁН' : '⛔ ЗАКРЫТ');
 
-let currentTickets = [];
-let socket = null;
-let isDrawn = false;
-let winningNumbers = [];
-let timerInterval = null;
-let currentTicketIndex = 0;
+    let username = user ? (user.username || '') : '';
+    let firstName = user ? (user.first_name || '') : '';
+    let lastName = user ? (user.last_name || '') : '';
+    let photoUrl = user && user.photo_url ? user.photo_url : '';
+    let chatId = userId;
+    let displayName = firstName || username || 'Игрок';
 
-let localWG = 0;
-let localLP = 0;
-let localEnergy = 500;
-let localClicks = 0;
-let localEarning = 0.01;
-let localUSDT = 0;
-let localWins = 0;
-let localRole = 'player';
-let localStars = 0;
-let localMaxEnergy = 500;
-let localEnergyUpgrades = 0;
-let localHideFromTop = false;
-let upgradeCounts = {1: 0, 2: 0, 3: 0};
-let upgradeCosts = {1: 1.5, 2: 10, 3: 40, 4: 70, 5: 150};
-let scratchProgress = new Map();
-let availablePrefixes = [];
-let dailyData = null;
-let dailyTimerInterval = null;
+    const BOT_USERNAME = 'WereGooodbot';
 
-let isUpdatingStatus = false;
-let lastStatusUpdate = 0;
-let isUpdatingLottery = false;
-let lastLotteryUpdate = 0;
-const STATUS_UPDATE_DELAY = 3000;
-const LOTTERY_UPDATE_DELAY = 5000;
+    // ФЛАГИ ДЛЯ СТИРАНИЯ - ПРЕДОТВРАЩАЕМ ПЕРЕЗАГРУЗКУ БИЛЕТОВ
+    let isScratchingActive = false;
+    let scratchTimeout = null;
+    let pendingRefreshTimeout = null;
 
-let dataCache = { status: null, lottery: null, leaderboard: null };
+    window.forceBindAccount = async function() {
+        // Убираем оверлей ошибки, если он есть
+        const errorOverlay = document.getElementById('authErrorOverlay');
+        if (errorOverlay) errorOverlay.remove();
 
-const dailyRewardsList = {
-    1: { reward: "15 WG" },
-    2: { reward: "50 WG" },
-    3: { reward: "+10 ⚡" },
-    4: { reward: "10 LP" },
-    5: { reward: "+15 ⚡" },
-    6: { reward: "150 WG" },
-    7: { reward: "20 LP" }
-};
+        if (!tg) {
+            showToast('❌ Telegram WebApp не доступен', 'error');
+            return;
+        }
+        tg.expand();
+        const freshUser = tg.initDataUnsafe?.user;
+        if (freshUser && freshUser.id && freshUser.id > 0) {
+            const newUserId = freshUser.id;
+            if (confirm(`⚠️ Обнаружен ваш аккаунт (ID: ${newUserId}).\n\nПривязать его к игре? Весь ваш прогресс сохранится.`)) {
+                userId = newUserId;
+                sessionStorage.setItem('weregood_user_id', userId);
+                username = freshUser.username || '';
+                firstName = freshUser.first_name || '';
+                lastName = freshUser.last_name || '';
+                photoUrl = freshUser.photo_url || '';
+                displayName = firstName || username || 'Игрок';
+                await autoRegister();
+                await syncData(true);
+                showToast('✅ Аккаунт привязан!', 'success');
+                setTimeout(() => location.reload(), 1500);
+            }
+        } else {
+            showToast('❌ Не удалось получить данные аккаунта. Попробуйте перезапустить Telegram.', 'error');
+        }
+    };
 
-// ================================================================
-// ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
-// ================================================================
-
-function showComingSoon() {
-    openGamepad();
-}
-
-function showToast(msg, type = 'info') {
-    let toast = document.getElementById('toast');
-    if (!toast) {
-        toast = document.createElement('div');
-        toast.id = 'toast';
-        toast.className = 'toast';
-        document.body.appendChild(toast);
+    if (sessionStorage.getItem('weregood_display_name')) {
+        displayName = sessionStorage.getItem('weregood_display_name');
     }
-    toast.textContent = msg;
-    toast.className = `toast ${type} show`;
-    setTimeout(() => toast.className = 'toast', 1500);
-}
 
-function playPurchaseSound() {
-    const soundsToggle = document.getElementById('soundsToggle');
-    const soundEnabled = soundsToggle ? soundsToggle.checked : true;
-    const purchaseSound = document.getElementById('purchaseSound');
-    if (purchaseSound && soundEnabled) {
-        purchaseSound.currentTime = 0;
-        purchaseSound.play().catch(e => console.log('Purchase sound error:', e));
+    let currentTickets = [];
+    let socket = null;
+    let isDrawn = false;
+    let winningNumbers = [];
+    let timerInterval = null;
+    let currentTicketIndex = 0;
+
+    let localWG = 0;
+    let localLP = 0;
+    let localEnergy = 500;
+    let localClicks = 0;
+    let localEarning = 0.01;
+    let localUSDT = 0;
+    let localWins = 0;
+    let localRole = 'player';
+    let localStars = 0;
+    let localMaxEnergy = 500;
+    let localEnergyUpgrades = 0;
+    let localHideFromTop = false;
+    let upgradeCounts = {1: 0, 2: 0, 3: 0};
+    let upgradeCosts = {1: 1.5, 2: 10, 3: 40, 4: 70, 5: 150};
+    let scratchProgress = new Map();
+    let availablePrefixes = [];
+    let dailyData = null;
+    let dailyTimerInterval = null;
+
+    let isUpdatingStatus = false;
+    let lastStatusUpdate = 0;
+    let isUpdatingLottery = false;
+    let lastLotteryUpdate = 0;
+    const STATUS_UPDATE_DELAY = 3000;
+    const LOTTERY_UPDATE_DELAY = 5000;
+
+    let dataCache = { status: null, lottery: null, leaderboard: null };
+    const dailyRewardsList = {
+        1: { reward: "15 WG" },
+        2: { reward: "50 WG" },
+        3: { reward: "+10 ⚡" },
+        4: { reward: "10 LP" },
+        5: { reward: "+15 ⚡" },
+        6: { reward: "150 WG" },
+        7: { reward: "20 LP" }
+    };
+
+    function showComingSoon() {
+        openGamepad();
     }
-}
 
-function playErrorSound() {
-    const soundsToggle = document.getElementById('soundsToggle');
-    const soundEnabled = soundsToggle ? soundsToggle.checked : true;
-    const errorSound = document.getElementById('errorSound');
-    if (errorSound && soundEnabled) {
-        errorSound.currentTime = 0;
-        errorSound.play().catch(e => console.log('Error sound error:', e));
+    function showToast(msg, type = 'info') {
+        let toast = document.getElementById('toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'toast';
+            toast.className = 'toast';
+            document.body.appendChild(toast);
+        }
+        toast.textContent = msg;
+        toast.className = `toast ${type} show`;
+        setTimeout(() => toast.className = 'toast', 1500);
     }
-}
 
-function playClickFeedback() {
-    const vibrationToggle = document.getElementById('vibrationToggle');
-    const vibrationEnabled = vibrationToggle ? vibrationToggle.checked : true;
-    const soundsToggle = document.getElementById('soundsToggle');
-    const soundEnabled = soundsToggle ? soundsToggle.checked : true;
-    const clickSound = document.getElementById('clickSound');
-    if (navigator.vibrate && vibrationEnabled) navigator.vibrate(15);
-    if (clickSound && soundEnabled) {
-        clickSound.currentTime = 0;
-        clickSound.play().catch(e => console.log('Audio play error:', e));
+    function playPurchaseSound() {
+        const soundsToggle = document.getElementById('soundsToggle');
+        const soundEnabled = soundsToggle ? soundsToggle.checked : true;
+        const purchaseSound = document.getElementById('purchaseSound');
+        if (purchaseSound && soundEnabled) {
+            purchaseSound.currentTime = 0;
+            purchaseSound.play().catch(e => console.log('Purchase sound error:', e));
+        }
     }
-}
 
-function playLpDropSound() {
-    const soundsToggle = document.getElementById('soundsToggle');
-    const soundEnabled = soundsToggle ? soundsToggle.checked : true;
-    const lpDropSound = document.getElementById('lpDropSound');
-    if (lpDropSound && soundEnabled) {
-        lpDropSound.currentTime = 0;
-        lpDropSound.volume = 0.5;
-        lpDropSound.play().catch(e => console.log('LP drop sound error:', e));
+    function playErrorSound() {
+        const soundsToggle = document.getElementById('soundsToggle');
+        const soundEnabled = soundsToggle ? soundsToggle.checked : true;
+        const errorSound = document.getElementById('errorSound');
+        if (errorSound && soundEnabled) {
+            errorSound.currentTime = 0;
+            errorSound.play().catch(e => console.log('Error sound error:', e));
+        }
     }
-}
 
-function playNavSound() {
-    const soundsToggle = document.getElementById('soundsToggle');
-    const soundEnabled = soundsToggle ? soundsToggle.checked : true;
-    const navSound = document.getElementById('navSound');
-    if (navSound && soundEnabled) {
-        navSound.currentTime = 0;
-        navSound.volume = 0.3;
-        navSound.play().catch(e => console.log('Nav sound error:', e));
+    function playClickFeedback() {
+        const vibrationToggle = document.getElementById('vibrationToggle');
+        const vibrationEnabled = vibrationToggle ? vibrationToggle.checked : true;
+        const soundsToggle = document.getElementById('soundsToggle');
+        const soundEnabled = soundsToggle ? soundsToggle.checked : true;
+        const clickSound = document.getElementById('clickSound');
+        if (navigator.vibrate && vibrationEnabled) navigator.vibrate(15);
+        if (clickSound && soundEnabled) {
+            clickSound.currentTime = 0;
+            clickSound.play().catch(e => console.log('Audio play error:', e));
+        }
     }
-}
 
-function playSettingsSound() {
-    const soundsToggle = document.getElementById('soundsToggle');
-    const soundEnabled = soundsToggle ? soundsToggle.checked : true;
-    const settingsSound = document.getElementById('settingsSound');
-    if (settingsSound && soundEnabled) {
-        settingsSound.currentTime = 0;
-        settingsSound.volume = 0.3;
-        settingsSound.play().catch(e => console.log('Settings sound error:', e));
+    function playLpDropSound() {
+        const soundsToggle = document.getElementById('soundsToggle');
+        const soundEnabled = soundsToggle ? soundsToggle.checked : true;
+        const lpDropSound = document.getElementById('lpDropSound');
+        if (lpDropSound && soundEnabled) {
+            lpDropSound.currentTime = 0;
+            lpDropSound.volume = 0.5;
+            lpDropSound.play().catch(e => console.log('LP drop sound error:', e));
+        }
     }
-}
 
-function escapeHtml(text) {
-    if (!text) return '';
-    return text.replace(/[&<>]/g, function(m) {
-        if (m === '&') return '&amp;';
-        if (m === '<') return '&lt;';
-        if (m === '>') return '&gt;';
-        return m;
-    });
-}
+    function playNavSound() {
+        const soundsToggle = document.getElementById('soundsToggle');
+        const soundEnabled = soundsToggle ? soundsToggle.checked : true;
+        const navSound = document.getElementById('navSound');
+        if (navSound && soundEnabled) {
+            navSound.currentTime = 0;
+            navSound.volume = 0.3;
+            navSound.play().catch(e => console.log('Nav sound error:', e));
+        }
+    }
 
-function getUpgradeCost(upgradeId, currentCount) {
+    function playSettingsSound() {
+        const soundsToggle = document.getElementById('soundsToggle');
+        const soundEnabled = soundsToggle ? soundsToggle.checked : true;
+        const settingsSound = document.getElementById('settingsSound');
+        if (settingsSound && soundEnabled) {
+            settingsSound.currentTime = 0;
+            settingsSound.volume = 0.3;
+            settingsSound.play().catch(e => console.log('Settings sound error:', e));
+        }
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        return text.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    function getUpgradeCost(upgradeId, currentCount) {
     const configs = {
         1: { baseCost: 1.5 },
         2: { baseCost: 10 },
@@ -379,27 +267,19 @@ function getUpgradeCost(upgradeId, currentCount) {
     return config.baseCost * Math.pow(1.65, currentCount);
 }
 
-// ================================================================
-// ОБНОВЛЕНИЕ UI
-// ================================================================
-
-function updateUI() {
+    function updateUI() {
     upgradeCosts[1] = getUpgradeCost(1, upgradeCounts[1] || 0);
     upgradeCosts[2] = getUpgradeCost(2, upgradeCounts[2] || 0);
     upgradeCosts[3] = getUpgradeCost(3, upgradeCounts[3] || 0);
 
     const wgEl = document.getElementById('wgBalance');
     if (wgEl) wgEl.innerText = localWG.toFixed(2);
-
     const lpEl = document.getElementById('lpBalance');
     if (lpEl) lpEl.innerText = localLP;
-
     const energyEl = document.getElementById('energyValue');
     if (energyEl) energyEl.innerText = localEnergy;
-
     const maxEnergyEl = document.getElementById('maxEnergyValue');
     if (maxEnergyEl) maxEnergyEl.innerText = localMaxEnergy;
-
     const energyHeaderEl = document.getElementById('energyHeader');
     if (energyHeaderEl) energyHeaderEl.innerText = localEnergy;
 
@@ -409,57 +289,65 @@ function updateUI() {
 
     const totalWG = document.getElementById('totalWG');
     if (totalWG) totalWG.innerText = localWG.toFixed(2);
-
     const totalLP = document.getElementById('totalLP');
     if (totalLP) totalLP.innerText = localLP;
-
     const totalWGmini = document.getElementById('totalWGmini');
     if (totalWGmini) totalWGmini.innerText = localWG.toFixed(2);
-
     const lotteryLPBalance = document.getElementById('lotteryLPBalance');
     if (lotteryLPBalance) lotteryLPBalance.innerText = localLP;
-
     const totalClicksMini = document.getElementById('totalClicksMini');
     if (totalClicksMini) totalClicksMini.innerText = localClicks;
-
     const profileClicks = document.getElementById('profileClicks');
     if (profileClicks) profileClicks.innerText = localClicks;
-
     const profileUSDT = document.getElementById('profileUSDT');
     if (profileUSDT) profileUSDT.innerText = localUSDT.toFixed(2);
-
     const profileWins = document.getElementById('profileWins');
     if (profileWins) profileWins.innerText = localWins;
 
     // ========== ОБНОВЛЕНИЕ ДОХОДА С УЧЁТОМ PAYDAY ==========
-    const earningPerClick = document.getElementById('earningPerClick');
-    const clickAmount = document.getElementById('clickAmount');
+const earningPerClick = document.getElementById('earningPerClick');
+const clickAmount = document.getElementById('clickAmount');
 
-    const paydayMultiplier = window.paydayMultiplier || 1;
-    const isPaydayActive = paydayMultiplier > 1;
+// Проверяем, активен ли PayDay (используем глобальную переменную)
+const paydayMultiplier = window.paydayMultiplier || 1;
+const isPaydayActive = paydayMultiplier > 1;
 
-    let displayEarning = localEarning;
+// localEarning уже содержит доход с множителем (приходит с сервера)
+// Поэтому просто показываем его
+let displayEarning = localEarning;
 
-    if (earningPerClick) {
-        earningPerClick.innerText = displayEarning.toFixed(2);
-        if (isPaydayActive) {
-            earningPerClick.style.color = '#FF6B00';
-            earningPerClick.style.fontWeight = '800';
-            let badge = earningPerClick.parentElement?.querySelector('.payday-badge');
-            if (!badge && earningPerClick.parentElement) {
-                badge = document.createElement('span');
-                badge.className = 'payday-badge';
-                badge.style.cssText = 'background: #FF6B00; color: white; padding: 2px 8px; border-radius: 20px; font-size: 0.6rem; margin-left: 6px;';
-                earningPerClick.parentElement.appendChild(badge);
-            }
-            if (badge) badge.innerText = `🔥 x${paydayMultiplier}`;
-        } else {
-            earningPerClick.style.color = '';
-            earningPerClick.style.fontWeight = '';
-            const badge = earningPerClick.parentElement?.querySelector('.payday-badge');
-            if (badge) badge.remove();
+if (earningPerClick) {
+    earningPerClick.innerText = displayEarning.toFixed(2);
+    if (isPaydayActive) {
+        earningPerClick.style.color = '#FF6B00';
+        earningPerClick.style.fontWeight = '800';
+        // Добавляем бейдж с множителем
+        let badge = earningPerClick.parentElement?.querySelector('.payday-badge');
+        if (!badge && earningPerClick.parentElement) {
+            badge = document.createElement('span');
+            badge.className = 'payday-badge';
+            badge.style.cssText = 'background: #FF6B00; color: white; padding: 2px 8px; border-radius: 20px; font-size: 0.6rem; margin-left: 6px;';
+            earningPerClick.parentElement.appendChild(badge);
         }
+        if (badge) badge.innerText = `🔥 x${paydayMultiplier}`;
+    } else {
+        earningPerClick.style.color = '';
+        earningPerClick.style.fontWeight = '';
+        const badge = earningPerClick.parentElement?.querySelector('.payday-badge');
+        if (badge) badge.remove();
     }
+}
+
+if (clickAmount) {
+    clickAmount.innerText = displayEarning.toFixed(2);
+    if (isPaydayActive) {
+        clickAmount.style.color = '#FF6B00';
+        clickAmount.style.fontWeight = '800';
+    } else {
+        clickAmount.style.color = '';
+        clickAmount.style.fontWeight = '';
+    }
+}
 
     if (clickAmount) {
         clickAmount.innerText = displayEarning.toFixed(2);
@@ -473,545 +361,492 @@ function updateUI() {
     }
 
     const totalTickets = document.getElementById('totalTickets');
-    if (totalTickets) totalTickets.innerText = currentTickets.length;
+if (totalTickets) totalTickets.innerText = currentTickets.length;
+const totalTicketsMini = document.getElementById('totalTicketsMini');
+if (totalTicketsMini) totalTicketsMini.innerText = currentTickets.length;
 
-    const totalTicketsMini = document.getElementById('totalTicketsMini');
-    if (totalTicketsMini) totalTicketsMini.innerText = currentTickets.length;
+// ========== ОБНОВЛЕНИЕ УЛУЧШЕНИЙ (ВСЕ 5) ==========
+const upgradeCount1 = document.getElementById('upgradeCount1');
+if (upgradeCount1) upgradeCount1.innerText = upgradeCounts[1] || 0;
+const upgradeCount2 = document.getElementById('upgradeCount2');
+if (upgradeCount2) upgradeCount2.innerText = upgradeCounts[2] || 0;
+const upgradeCount3 = document.getElementById('upgradeCount3');
+if (upgradeCount3) upgradeCount3.innerText = upgradeCounts[3] || 0;
+const upgradeCount4 = document.getElementById('upgradeCount4');
+if (upgradeCount4) upgradeCount4.innerText = upgradeCounts[4] || 0;
+const upgradeCount5 = document.getElementById('upgradeCount5');
+if (upgradeCount5) upgradeCount5.innerText = upgradeCounts[5] || 0;
 
-    // ========== ОБНОВЛЕНИЕ УЛУЧШЕНИЙ (ВСЕ 5) ==========
-    const upgradeCount1 = document.getElementById('upgradeCount1');
-    if (upgradeCount1) upgradeCount1.innerText = upgradeCounts[1] || 0;
+const upgradeCost1 = document.getElementById('upgradeCost1');
+if (upgradeCost1) upgradeCost1.innerHTML = (upgradeCosts[1] || 0).toFixed(2);
+const upgradeCost2 = document.getElementById('upgradeCost2');
+if (upgradeCost2) upgradeCost2.innerHTML = (upgradeCosts[2] || 0).toFixed(2);
+const upgradeCost3 = document.getElementById('upgradeCost3');
+if (upgradeCost3) upgradeCost3.innerHTML = (upgradeCosts[3] || 0).toFixed(2);
+const upgradeCost4 = document.getElementById('upgradeCost4');
+if (upgradeCost4) upgradeCost4.innerHTML = (upgradeCosts[4] || 0).toFixed(2);
+const upgradeCost5 = document.getElementById('upgradeCost5');
+if (upgradeCost5) upgradeCost5.innerHTML = (upgradeCosts[5] || 0).toFixed(2);
 
-    const upgradeCount2 = document.getElementById('upgradeCount2');
-    if (upgradeCount2) upgradeCount2.innerText = upgradeCounts[2] || 0;
+// ========== ЗВЁЗДНЫЙ МАГАЗИН ==========
+const starsBalance = document.getElementById('starsBalance');
+if (starsBalance) starsBalance.innerText = localStars;
+const currentMaxEnergy = document.getElementById('currentMaxEnergy');
+if (currentMaxEnergy) currentMaxEnergy.innerText = localMaxEnergy;
+const energyUpgradeCount = document.getElementById('energyUpgradeCount');
+if (energyUpgradeCount) energyUpgradeCount.innerText = localEnergyUpgrades;
+const energyUpgradeCountProgress = document.getElementById('energyUpgradeCountProgress');
+if (energyUpgradeCountProgress) energyUpgradeCountProgress.innerText = localEnergyUpgrades;
 
-    const upgradeCount3 = document.getElementById('upgradeCount3');
-    if (upgradeCount3) upgradeCount3.innerText = upgradeCounts[3] || 0;
+let upgradesLeft = Math.max(0, 15 - localEnergyUpgrades);
+const energyUpgradesLeft = document.getElementById('energyUpgradesLeft');
+if (energyUpgradesLeft) energyUpgradesLeft.innerText = upgradesLeft;
 
-    const upgradeCount4 = document.getElementById('upgradeCount4');
-    if (upgradeCount4) upgradeCount4.innerText = upgradeCounts[4] || 0;
+let progressPercent = (localEnergyUpgrades / 15) * 100;
+const energyUpgradeProgressFill = document.getElementById('energyUpgradeProgressFill');
+if (energyUpgradeProgressFill) energyUpgradeProgressFill.style.width = progressPercent + '%';
 
-    const upgradeCount5 = document.getElementById('upgradeCount5');
-    if (upgradeCount5) upgradeCount5.innerText = upgradeCounts[5] || 0;
-
-    const upgradeCost1 = document.getElementById('upgradeCost1');
-    if (upgradeCost1) upgradeCost1.innerHTML = (upgradeCosts[1] || 0).toFixed(2);
-
-    const upgradeCost2 = document.getElementById('upgradeCost2');
-    if (upgradeCost2) upgradeCost2.innerHTML = (upgradeCosts[2] || 0).toFixed(2);
-
-    const upgradeCost3 = document.getElementById('upgradeCost3');
-    if (upgradeCost3) upgradeCost3.innerHTML = (upgradeCosts[3] || 0).toFixed(2);
-
-    const upgradeCost4 = document.getElementById('upgradeCost4');
-    if (upgradeCost4) upgradeCost4.innerHTML = (upgradeCosts[4] || 0).toFixed(2);
-
-    const upgradeCost5 = document.getElementById('upgradeCost5');
-    if (upgradeCost5) upgradeCost5.innerHTML = (upgradeCosts[5] || 0).toFixed(2);
-
-    // ========== ЗВЁЗДНЫЙ МАГАЗИН ==========
-    const starsBalance = document.getElementById('starsBalance');
-    if (starsBalance) starsBalance.innerText = localStars;
-
-    const currentMaxEnergy = document.getElementById('currentMaxEnergy');
-    if (currentMaxEnergy) currentMaxEnergy.innerText = localMaxEnergy;
-
-    const energyUpgradeCount = document.getElementById('energyUpgradeCount');
-    if (energyUpgradeCount) energyUpgradeCount.innerText = localEnergyUpgrades;
-
-    const energyUpgradeCountProgress = document.getElementById('energyUpgradeCountProgress');
-    if (energyUpgradeCountProgress) energyUpgradeCountProgress.innerText = localEnergyUpgrades;
-
-    let upgradesLeft = Math.max(0, 15 - localEnergyUpgrades);
-    const energyUpgradesLeft = document.getElementById('energyUpgradesLeft');
-    if (energyUpgradesLeft) energyUpgradesLeft.innerText = upgradesLeft;
-
-    let progressPercent = (localEnergyUpgrades / 15) * 100;
-    const energyUpgradeProgressFill = document.getElementById('energyUpgradeProgressFill');
-    if (energyUpgradeProgressFill) energyUpgradeProgressFill.style.width = progressPercent + '%';
-
-    let upgradeBtn = document.getElementById('energyUpgradeBtn');
-    let upgradeCard = document.getElementById('energyUpgradeCard');
-    if (upgradeBtn && upgradeCard) {
-        if (localEnergyUpgrades >= 15) {
-            upgradeBtn.innerText = '✅ Максимум достигнут';
-            upgradeBtn.disabled = true;
-            upgradeBtn.classList.add('disabled');
-            upgradeCard.classList.add('disabled');
-        } else {
-            upgradeBtn.innerHTML = '<img src="/static/star_small.png" alt="Stars" style="width: 16px; height: 16px;"> Купить за 27 звёзд';
-            upgradeBtn.disabled = false;
-            upgradeBtn.classList.remove('disabled');
-            upgradeCard.classList.remove('disabled');
-        }
+let upgradeBtn = document.getElementById('energyUpgradeBtn');
+let upgradeCard = document.getElementById('energyUpgradeCard');
+if (upgradeBtn && upgradeCard) {
+    if (localEnergyUpgrades >= 15) {
+        upgradeBtn.innerText = '✅ Максимум достигнут';
+        upgradeBtn.disabled = true;
+        upgradeBtn.classList.add('disabled');
+        upgradeCard.classList.add('disabled');
+    } else {
+        upgradeBtn.innerHTML = '<img src="/static/star_small.png" alt="Stars" style="width: 16px; height: 16px;"> Купить за 27 звёзд';
+        upgradeBtn.disabled = false;
+        upgradeBtn.classList.remove('disabled');
+        upgradeCard.classList.remove('disabled');
     }
+}
 
     const badgesContainer = document.getElementById('profileBadges');
     if (badgesContainer) {
         const t = TRANSLATIONS[currentLanguage] || TRANSLATIONS.ru;
         let badgesHtml = '';
-        if (localRole === 'founder') {
-            badgesHtml += `<span class="role-badge founder">👑 ${t.role_founder || 'ОСНОВАТЕЛЬ'}</span>`;
-        } else if (localRole === 'legend') {
-            badgesHtml += `<span class="role-badge legend">👑 ${t.role_legend || 'ЛЕГЕНДА'}</span>`;
-        } else if (localRole === 'pioneer') {
-            badgesHtml += `<span class="role-badge pioneer">⭐ ${t.role_pioneer || 'ПЕРВООТКРЫВАТЕЛЬ'}</span>`;
-        } else {
-            badgesHtml += `<span class="role-badge player">🎮 ${t.role_player || 'Игрок'}</span>`;
-        }
+        if (localRole === 'founder') badgesHtml += `<span class="role-badge founder">👑 ${t.role_founder || 'ОСНОВАТЕЛЬ'}</span>`;
+        else if (localRole === 'legend') badgesHtml += `<span class="role-badge legend">👑 ${t.role_legend || 'ЛЕГЕНДА'}</span>`;
+        else if (localRole === 'pioneer') badgesHtml += `<span class="role-badge pioneer">⭐ ${t.role_pioneer || 'ПЕРВООТКРЫВАТЕЛЬ'}</span>`;
+        else badgesHtml += `<span class="role-badge player">🎮 ${t.role_player || 'Игрок'}</span>`;
         badgesContainer.innerHTML = badgesHtml;
     }
 }
 
-function updateModalBadges(role) {
-    const badgesContainer = document.getElementById('playerModalBadges');
-    if (!badgesContainer) return;
-    const t = TRANSLATIONS[currentLanguage] || TRANSLATIONS.ru;
-    let badgesHtml = '';
-    if (role === 'founder') {
-        badgesHtml += `<span class="role-badge founder">👑 ${t.role_founder || 'ОСНОВАТЕЛЬ'}</span>`;
-    } else if (role === 'pioneer') {
-        badgesHtml += `<span class="role-badge pioneer">⭐ ${t.role_pioneer || 'ПЕРВООТКРЫВАТЕЛЬ'}</span>`;
-    } else if (role === 'legend') {
-        badgesHtml += `<span class="role-badge legend">👑 ${t.role_legend || 'ЛЕГЕНДА'}</span>`;
-    } else {
-        badgesHtml += `<span class="role-badge player">🎮 ${t.role_player || 'Игрок'}</span>`;
+    function updateModalBadges(role) {
+        const badgesContainer = document.getElementById('playerModalBadges');
+        if (!badgesContainer) return;
+        const t = TRANSLATIONS[currentLanguage] || TRANSLATIONS.ru;
+        let badgesHtml = '';
+        if (role === 'founder') badgesHtml += `<span class="role-badge founder">👑 ${t.role_founder || 'ОСНОВАТЕЛЬ'}</span>`;
+        else if (role === 'pioneer') badgesHtml += `<span class="role-badge pioneer">⭐ ${t.role_pioneer || 'ПЕРВООТКРЫВАТЕЛЬ'}</span>`;
+        else if (role === 'legend') badgesHtml += `<span class="role-badge legend">👑 ${t.role_legend || 'ЛЕГЕНДА'}</span>`;
+        else badgesHtml += `<span class="role-badge player">🎮 ${t.role_player || 'Игрок'}</span>`;
+        badgesContainer.innerHTML = badgesHtml;
     }
-    badgesContainer.innerHTML = badgesHtml;
+
+    function animateClick() {
+        let coin = document.getElementById('coin');
+        let plus = document.getElementById('clickPlus');
+        if (coin) coin.classList.add('coin-click');
+        if (plus) plus.classList.add('show');
+        setTimeout(() => {
+            if (coin) coin.classList.remove('coin-click');
+            if (plus) plus.classList.remove('show');
+        }, 80);
+    }
+
+    // ========== ОПТИМИЗИРОВАННЫЙ СИНХРОНИЗАТОР ==========
+    let syncInterval = null;
+    let lastSyncTime = 0;
+    let isSyncing = false;
+    const SYNC_DELAY = 2000;
+
+    async function syncData(force = false) {
+        if (isSyncing) return;
+        const now = Date.now();
+        if (!force && now - lastSyncTime < SYNC_DELAY) return;
+        isSyncing = true;
+        lastSyncTime = now;
+        try {
+            const response = await fetch('/api/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: userId }),
+                signal: AbortSignal.timeout(5000)
+            });
+            if (!response.ok) throw new Error('Sync failed');
+            const data = await response.json();
+            if (!data.success || !data.status) {
+                console.error('Sync error: invalid response');
+                return;
+            }
+
+            // Обновляем статус игрока
+            const status = data.status;
+            localWG = status.wg || 0;
+            localLP = status.lp || 0;
+            localEnergy = status.energy || 0;
+            localClicks = status.total_clicks || 0;
+            localEarning = status.earning_per_click || 0.01;
+            localUSDT = status.usdt || 0;
+            localWins = status.wins || 0;
+            localRole = status.role || 'player';
+            localStars = status.stars || 0;
+            localMaxEnergy = status.max_energy || 500;
+            localEnergyUpgrades = status.energy_upgrades || 0;
+
+            if (status.upgrade_counts) {
+    upgradeCounts = status.upgrade_counts;
+    for (let i = 1; i <= 5; i++) {
+        upgradeCosts[i] = getUpgradeCost(i, upgradeCounts[i] || 0);
+    }
 }
 
-function animateClick() {
-    let coin = document.getElementById('coin');
-    let plus = document.getElementById('clickPlus');
-    if (coin) coin.classList.add('coin-click');
-    if (plus) plus.classList.add('show');
-    setTimeout(() => {
-        if (coin) coin.classList.remove('coin-click');
-        if (plus) plus.classList.remove('show');
-    }, 80);
-}
+            // ========== КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: обновляем лотерею из data.lottery ==========
+            if (data.lottery) {
+                console.log('📊 Получены данные лотереи:', data.lottery);
 
-// ================================================================
-// ОПТИМИЗИРОВАННЫЙ СИНХРОНИЗАТОР
-// ================================================================
-
-let syncInterval = null;
-let lastSyncTime = 0;
-let isSyncing = false;
-const SYNC_DELAY = 2000;
-
-async function syncData(force = false) {
-    if (isSyncing) return;
-    const now = Date.now();
-    if (!force && now - lastSyncTime < SYNC_DELAY) return;
-    isSyncing = true;
-    lastSyncTime = now;
-    try {
-        const response = await fetch('/api/sync', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId }),
-            signal: AbortSignal.timeout(5000)
-        });
-        if (!response.ok) throw new Error('Sync failed');
-        const data = await response.json();
-        if (!data.success || !data.status) {
-            console.error('Sync error: invalid response');
-            return;
-        }
-
-        // Обновляем статус игрока
-        const status = data.status;
-        localWG = status.wg || 0;
-        localLP = status.lp || 0;
-        localEnergy = status.energy || 0;
-        localClicks = status.total_clicks || 0;
-        localEarning = status.earning_per_click || 0.01;
-        localUSDT = status.usdt || 0;
-        localWins = status.wins || 0;
-        localRole = status.role || 'player';
-        localStars = status.stars || 0;
-        localMaxEnergy = status.max_energy || 500;
-        localEnergyUpgrades = status.energy_upgrades || 0;
-
-        if (status.upgrade_counts) {
-            upgradeCounts = status.upgrade_counts;
-            for (let i = 1; i <= 5; i++) {
-                upgradeCosts[i] = getUpgradeCost(i, upgradeCounts[i] || 0);
-            }
-        }
-
-        // ========== ОБНОВЛЯЕМ ЛОТЕРЕЮ ==========
-        if (data.lottery) {
-            console.log('📊 Получены данные лотереи:', data.lottery);
-
-            const prizePoolEl = document.getElementById('prizePool');
-            if (prizePoolEl && data.lottery.prize_pool !== undefined) {
-                prizePoolEl.innerText = data.lottery.prize_pool.toFixed(2);
-            }
-
-            if (data.lottery.user_tickets !== undefined) {
-                const ticketsCountEl = document.getElementById('ticketsCount');
-                if (ticketsCountEl) ticketsCountEl.innerText = data.lottery.user_tickets;
-                const totalTicketsEl = document.getElementById('totalTickets');
-                if (totalTicketsEl) totalTicketsEl.innerText = data.lottery.user_tickets;
-                const totalTicketsMiniEl = document.getElementById('totalTicketsMini');
-                if (totalTicketsMiniEl) totalTicketsMiniEl.innerText = data.lottery.user_tickets;
-            }
-
-            const lotteryLPEl = document.getElementById('lotteryLPBalance');
-            if (lotteryLPEl && data.lottery.user_lp !== undefined) {
-                lotteryLPEl.innerText = data.lottery.user_lp;
-            }
-
-            if (data.lottery.is_drawn !== undefined) {
-                isDrawn = data.lottery.is_drawn;
-                winningNumbers = data.lottery.winning_numbers || [];
-                updateDrawUI();
-            }
-
-            if (data.lottery.tickets && !isScratchingActive) {
-                currentTickets = data.lottery.tickets;
-                if (typeof updateCarousel === 'function') {
-                    updateCarousel();
+                // Обновляем призовой фонд
+                const prizePoolEl = document.getElementById('prizePool');
+                if (prizePoolEl && data.lottery.prize_pool !== undefined) {
+                    prizePoolEl.innerText = data.lottery.prize_pool.toFixed(2);
                 }
-                if (isDrawn && typeof updateTopPlayers === 'function') {
-                    updateTopPlayers();
+
+                // Обновляем количество билетов у игрока
+                if (data.lottery.user_tickets !== undefined) {
+                    const ticketsCountEl = document.getElementById('ticketsCount');
+                    if (ticketsCountEl) ticketsCountEl.innerText = data.lottery.user_tickets;
+                    const totalTicketsEl = document.getElementById('totalTickets');
+                    if (totalTicketsEl) totalTicketsEl.innerText = data.lottery.user_tickets;
+                    const totalTicketsMiniEl = document.getElementById('totalTicketsMini');
+                    if (totalTicketsMiniEl) totalTicketsMiniEl.innerText = data.lottery.user_tickets;
                 }
-            } else if (data.lottery.tickets && isScratchingActive) {
-                console.log('⏳ Стирание активно, отложили обновление билетов');
-                if (pendingRefreshTimeout) clearTimeout(pendingRefreshTimeout);
-                pendingRefreshTimeout = setTimeout(() => {
-                    if (!isScratchingActive) {
-                        currentTickets = data.lottery.tickets;
-                        if (typeof updateCarousel === 'function') updateCarousel();
-                        if (isDrawn && typeof updateTopPlayers === 'function') updateTopPlayers();
+
+                // Обновляем LP в лотерейном блоке
+                const lotteryLPEl = document.getElementById('lotteryLPBalance');
+                if (lotteryLPEl && data.lottery.user_lp !== undefined) {
+                    lotteryLPEl.innerText = data.lottery.user_lp;
+                }
+
+                // Обновляем статус розыгрыша
+                if (data.lottery.is_drawn !== undefined) {
+                    isDrawn = data.lottery.is_drawn;
+                    winningNumbers = data.lottery.winning_numbers || [];
+                    updateDrawUI();
+                }
+
+                // Обновляем билеты ТОЛЬКО если НЕ ИДЁТ АКТИВНОЕ СТИРАНИЕ
+                if (data.lottery.tickets && !isScratchingActive) {
+                    currentTickets = data.lottery.tickets;
+                    if (typeof updateCarousel === 'function') {
+                        updateCarousel();
                     }
-                    pendingRefreshTimeout = null;
-                }, 1000);
+                    if (isDrawn && typeof updateTopPlayers === 'function') {
+                        updateTopPlayers();
+                    }
+                } else if (data.lottery.tickets && isScratchingActive) {
+                    console.log('⏳ Стирание активно, отложили обновление билетов');
+                    // Откладываем обновление на 1 секунду
+                    if (pendingRefreshTimeout) clearTimeout(pendingRefreshTimeout);
+                    pendingRefreshTimeout = setTimeout(() => {
+                        if (!isScratchingActive) {
+                            currentTickets = data.lottery.tickets;
+                            if (typeof updateCarousel === 'function') updateCarousel();
+                            if (isDrawn && typeof updateTopPlayers === 'function') updateTopPlayers();
+                        }
+                        pendingRefreshTimeout = null;
+                    }, 1000);
+                }
             }
+
+            if (data.leaderboard && data.leaderboard.length > 0) {
+                updateLeaderboardMiniFast(data.leaderboard);
+            }
+            if (data.recent_players && data.recent_players.length > 0) {
+                updateRecentPlayersFast(data.recent_players);
+            }
+
+            updateUI();
+
+        } catch(e) {
+            console.error('Sync error:', e);
+            setTimeout(() => syncData(true), 5000);
+        } finally {
+            isSyncing = false;
         }
-
-        if (data.leaderboard && data.leaderboard.length > 0) {
-            updateLeaderboardMiniFast(data.leaderboard);
-        }
-        if (data.recent_players && data.recent_players.length > 0) {
-            updateRecentPlayersFast(data.recent_players);
-        }
-
-        updateUI();
-
-    } catch(e) {
-        console.error('Sync error:', e);
-        setTimeout(() => syncData(true), 5000);
-    } finally {
-        isSyncing = false;
     }
-}
 
-function updateLeaderboardMiniFast(leaderboardData) {
-    const container = document.getElementById('leaderboardMini');
-    if (!container || !leaderboardData || leaderboardData.length === 0) {
-        if (container) container.innerHTML = '<div class="loading">Загрузка...</div>';
-        return;
-    }
-    let html = '';
-    for (let i = 0; i < leaderboardData.length; i++) {
-        const user = leaderboardData[i];
-        const avatar = (user.avatar && user.avatar !== '👤' && user.avatar !== '')
-            ? `<img src="${user.avatar}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;">`
-            : '👤';
-        const userName = user.username || 'Игрок';
-        const dailyClicks = user.daily_clicks || user.clicks || 0;
-        html += `<div class="leaderboard-mini-item">
-            <span class="rank">${user.rank}</span>
-            <span class="avatar-mini">${avatar}</span>
-            <span class="name">${escapeHtml(userName)}</span>
-            <span class="clicks">${dailyClicks.toLocaleString()} кликов</span>
-        </div>`;
-    }
-    container.innerHTML = html;
-}
-
-function updateRecentPlayersFast(players) {
-    const container = document.getElementById('recentPlayersList');
-    if (!container) return;
-    if (!players || players.length === 0) {
-        container.innerHTML = '<div class="empty-state">😢 Пока нет участников</div>';
-        return;
-    }
-    let html = '';
-    for (let i = 0; i < players.length; i++) {
-        const p = players[i];
-        const avatarHtml = (p.avatar_url && p.avatar_url !== '')
-            ? `<img src="${p.avatar_url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`
-            : '👤';
-        let playerName = p.username || 'Игрок';
-        if (playerName.startsWith('@')) playerName = playerName.substring(1);
-        let roleBadge = '';
-        if (p.role === 'founder') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#ef4444;">👑</span>';
-        else if (p.role === 'pioneer') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#00b4d8;">⭐</span>';
-        else if (p.role === 'legend') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#FFD700;">👑</span>';
-        html += `<div class="recent-player-item" onclick="openPlayerProfile(${p.user_id}, 0)">
-            <div class="recent-player-avatar">${avatarHtml}</div>
-            <div class="recent-player-info">
-                <div class="recent-player-name">${escapeHtml(playerName)}${roleBadge}</div>
-                <div class="recent-player-time">🕐 ${p.time_ago || 'только что'}</div>
-            </div>
-            <div class="recent-player-ticket">🎫 #${p.ticket_number}</div>
-        </div>`;
-    }
-    container.innerHTML = html;
-}
-
-function updateRecentPlayers(players) {
-    const container = document.getElementById('recentPlayersList');
-    if (!container) return;
-    if (!players || players.length === 0) {
-        container.innerHTML = '<div class="empty-state">😢 Пока нет участников</div>';
-        return;
-    }
-    let html = '';
-    for (let p of players) {
-        let avatarHtml = (p.avatar_url && p.avatar_url !== '')
-            ? `<img src="${p.avatar_url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" onerror="this.parentElement.innerHTML='👤'">`
-            : '👤';
-        let playerName = p.username || 'Игрок';
-        if (playerName.startsWith('@')) playerName = playerName.substring(1);
-        let roleBadge = '';
-        if (p.role === 'founder') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#ef4444;">👑</span>';
-        else if (p.role === 'pioneer') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#00b4d8;">⭐</span>';
-        else if (p.role === 'legend') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#FFD700;">👑</span>';
-        html += `<div class="recent-player-item" onclick="openPlayerProfile(${p.user_id}, 0)">
-            <div class="recent-player-avatar">${avatarHtml}</div>
-            <div class="recent-player-info">
-                <div class="recent-player-name">${escapeHtml(playerName)}${roleBadge}</div>
-                <div class="recent-player-time">🕐 ${p.time_ago || 'только что'}</div>
-            </div>
-            <div class="recent-player-ticket">🎫 #${p.ticket_number}</div>
-        </div>`;
-    }
-    container.innerHTML = html;
-}
-
-// ================================================================
-// РЕГИСТРАЦИЯ И НАСТРОЙКИ
-// ================================================================
-
-async function autoRegister() {
-    if (!userId) return;
-    try {
-        let urlParams = new URLSearchParams(window.location.search);
-        let refCode = urlParams.get('startapp') || '';
-        const response = await fetch('/api/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                user_id: userId,
-                username: username || '',
-                first_name: firstName || '',
-                last_name: lastName || '',
-                avatar_url: photoUrl,
-                referral_code: refCode
-            })
-        });
-        const data = await response.json();
-        if (data.success) {
-            console.log('✅ Регистрация успешна');
-            const greetingEl = document.getElementById('userGreeting');
-            if (greetingEl) greetingEl.innerText = firstName || username || 'Игрок';
-        }
-    } catch(e) {
-        console.error('AutoRegister error:', e);
-    }
-}
-
-async function loadSettings() {
-    try {
-        let res = await fetch('/api/get_settings', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId })
-        });
-        let settings = await res.json();
-
-        const notificationsToggle = document.getElementById('notificationsToggle');
-        if (notificationsToggle) notificationsToggle.checked = settings.notifications || false;
-
-        const soundsToggle = document.getElementById('soundsToggle');
-        if (soundsToggle) soundsToggle.checked = settings.sounds || false;
-
-        const vibrationToggle = document.getElementById('vibrationToggle');
-        if (vibrationToggle) vibrationToggle.checked = settings.vibration || false;
-
-        const hideFromTopToggle = document.getElementById('hideFromTopToggle');
-        if (hideFromTopToggle) hideFromTopToggle.checked = settings.hideFromTop || false;
-        localHideFromTop = settings.hideFromTop || false;
-
-        if (settings.theme === 'light') {
-            document.body.classList.add('light-theme');
-        } else {
-            document.body.classList.remove('light-theme');
-        }
-
-        const themeToggle = document.getElementById('themeToggle');
-        if (themeToggle) themeToggle.checked = settings.theme === 'dark';
-    } catch(e) {}
-}
-
-async function saveSetting(setting, value) {
-    try {
-        await fetch('/api/update_settings', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId, setting: setting, value: value })
-        });
-        if (setting === 'theme') {
-            if (value) document.body.classList.add('light-theme');
-            else document.body.classList.remove('light-theme');
-        }
-        if (setting === 'hideFromTop') localHideFromTop = value;
-
-        let settingNames = {
-            'notifications': 'Уведомления',
-            'sounds': 'Звуки',
-            'vibration': 'Вибрация',
-            'theme': 'Тёмная тема',
-            'hideFromTop': 'Скрытие из топа'
-        };
-        let status = value ? 'включены' : 'выключены';
-        if (setting === 'theme') status = value ? 'включена' : 'выключена';
-        showToast(`${settingNames[setting]} ${status}`, 'info');
-    } catch(e) {}
-}
-
-// Назначаем обработчики переключателей
-const themeToggle = document.getElementById('themeToggle');
-if (themeToggle) themeToggle.onchange = (e) => saveSetting('theme', e.target.checked);
-
-const notificationsToggle = document.getElementById('notificationsToggle');
-if (notificationsToggle) notificationsToggle.onchange = (e) => saveSetting('notifications', e.target.checked);
-
-const soundsToggle = document.getElementById('soundsToggle');
-if (soundsToggle) soundsToggle.onchange = (e) => saveSetting('sounds', e.target.checked);
-
-const vibrationToggle = document.getElementById('vibrationToggle');
-if (vibrationToggle) vibrationToggle.onchange = (e) => saveSetting('vibration', e.target.checked);
-
-const hideFromTopToggle = document.getElementById('hideFromTopToggle');
-if (hideFromTopToggle) hideFromTopToggle.onchange = (e) => saveSetting('hideFromTop', e.target.checked);
-
-// ================================================================
-// РЕФЕРАЛЫ
-// ================================================================
-
-async function loadReferralLink() {
-    try {
-        let res = await fetch('/api/get_referral_link', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId })
-        });
-        let data = await res.json();
-        const referralInput = document.getElementById('referralLinkInput');
-        if (referralInput) referralInput.value = data.link;
-    } catch(e) {
-        const referralInput = document.getElementById('referralLinkInput');
-        if (referralInput) referralInput.value = 'Ошибка';
-    }
-}
-
-async function loadReferrals() {
-    try {
-        let res = await fetch('/api/get_referrals', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId })
-        });
-        let data = await res.json();
-
-        const referralsCount = document.getElementById('referralsCount');
-        if (referralsCount) referralsCount.innerText = `(${data.referrals.length})`;
-
-        const totalEarnedLP = document.getElementById('totalEarnedLP');
-        if (totalEarnedLP) totalEarnedLP.innerText = data.total_earned_lp.toFixed(2);
-
-        const totalEarnedWG = document.getElementById('totalEarnedWG');
-        if (totalEarnedWG) totalEarnedWG.innerText = data.total_earned_wg.toFixed(2);
-
-        let container = document.getElementById('referralsList');
-        if (!container) return;
-
-        if (data.referrals.length === 0) {
-            container.innerHTML = '<div class="empty-referrals">😢 Пока нет друзей</div>';
+    function updateLeaderboardMiniFast(leaderboardData) {
+        const container = document.getElementById('leaderboardMini');
+        if (!container || !leaderboardData || leaderboardData.length === 0) {
+            if (container) container.innerHTML = '<div class="loading">Загрузка...</div>';
             return;
         }
-
         let html = '';
-        for (let ref of data.referrals) {
-            let avatarLetter = (ref.username.charAt(0) || '👤').toUpperCase();
-            html += `<div class="referral-item">
-                <div class="referral-avatar">${avatarLetter}</div>
-                <div class="referral-info">
-                    <div class="referral-name">${escapeHtml(ref.username)}</div>
-                    <div class="referral-date">${ref.date || 'Недавно'}</div>
-                </div>
-                <div class="referral-earned" style="text-align: right;">
-                    <div class="referral-earned-amount" style="color: #FFD700;">+${ref.earned_wg.toFixed(4)} WG</div>
-                    <div class="referral-earned-label">10% от кликов</div>
-                    <div class="referral-earned-amount" style="color: #00E5FF; margin-top: 4px;">+${ref.earned_lp.toFixed(2)} LP</div>
-                    <div class="referral-earned-label">5% от трат</div>
-                </div>
+        for (let i = 0; i < leaderboardData.length; i++) {
+            const user = leaderboardData[i];
+            const avatar = (user.avatar && user.avatar !== '👤' && user.avatar !== '')
+                ? `<img src="${user.avatar}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;">`
+                : '👤';
+            const userName = user.username || 'Игрок';
+            const dailyClicks = user.daily_clicks || user.clicks || 0;
+            html += `<div class="leaderboard-mini-item">
+                <span class="rank">${user.rank}</span>
+                <span class="avatar-mini">${avatar}</span>
+                <span class="name">${escapeHtml(userName)}</span>
+                <span class="clicks">${dailyClicks.toLocaleString()} кликов</span>
             </div>`;
         }
         container.innerHTML = html;
-    } catch(e) {
-        console.error('Error loading referrals:', e);
     }
-}
 
-// ================================================================
-// ВЫВОДЫ
-// ================================================================
-
-async function loadWithdrawals() {
-    try {
-        let res = await fetch('/api/get_withdrawals', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId })
-        });
-        let data = await res.json();
-
-        let historyHtml = '';
-        for (let w of data.withdrawals) {
-            let statusClass = '';
-            let statusText = '';
-            if (w.status === 'pending') {
-                statusClass = 'withdrawal-status-pending';
-                statusText = '⏳ Ожидание';
-            } else if (w.status === 'completed') {
-                statusClass = 'withdrawal-status-completed';
-                statusText = '✅ Выполнено';
-            } else {
-                statusClass = 'withdrawal-status-rejected';
-                statusText = '❌ Отклонено';
-            }
-            let maskedAddress = w.address.substring(0, 10) + '****' + w.address.substring(w.address.length - 6);
-            historyHtml += `<div class="withdrawal-history-item">
-                <div class="withdrawal-history-header">
-                    <span class="withdrawal-amount">${w.amount} USDT</span>
-                    <span class="${statusClass}">${statusText}</span>
+    function updateRecentPlayersFast(players) {
+        const container = document.getElementById('recentPlayersList');
+        if (!container) return;
+        if (!players || players.length === 0) {
+            container.innerHTML = '<div class="empty-state">😢 Пока нет участников</div>';
+            return;
+        }
+        let html = '';
+        for (let i = 0; i < players.length; i++) {
+            const p = players[i];
+            const avatarHtml = (p.avatar_url && p.avatar_url !== '')
+                ? `<img src="${p.avatar_url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`
+                : '👤';
+            let playerName = p.username || 'Игрок';
+            if (playerName.startsWith('@')) playerName = playerName.substring(1);
+            let roleBadge = '';
+            if (p.role === 'founder') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#ef4444;">👑</span>';
+            else if (p.role === 'pioneer') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#00b4d8;">⭐</span>';
+            else if (p.role === 'legend') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#FFD700;">👑</span>';
+            html += `<div class="recent-player-item" onclick="openPlayerProfile(${p.user_id}, 0)">
+                <div class="recent-player-avatar">${avatarHtml}</div>
+                <div class="recent-player-info">
+                    <div class="recent-player-name">${escapeHtml(playerName)}${roleBadge}</div>
+                    <div class="recent-player-time">🕐 ${p.time_ago || 'только что'}</div>
                 </div>
-                <div class="withdrawal-details">Адрес: ${maskedAddress}</div>
-                <div class="withdrawal-details">Сеть: ${w.network}</div>
-                <div class="withdrawal-details">${w.created_at}</div>
+                <div class="recent-player-ticket">🎫 #${p.ticket_number}</div>
             </div>`;
         }
-        const historyList = document.getElementById('withdrawalHistoryList');
-        if (historyList) historyList.innerHTML = historyHtml || '<div class="empty-state">История пуста</div>';
-    } catch(e) {}
-}
+        container.innerHTML = html;
+    }
+
+    function updateRecentPlayers(players) {
+        const container = document.getElementById('recentPlayersList');
+        if (!container) return;
+        if (!players || players.length === 0) {
+            container.innerHTML = '<div class="empty-state">😢 Пока нет участников</div>';
+            return;
+        }
+        let html = '';
+        for (let p of players) {
+            let avatarHtml = (p.avatar_url && p.avatar_url !== '')
+                ? `<img src="${p.avatar_url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" onerror="this.parentElement.innerHTML='👤'">`
+                : '👤';
+            let playerName = p.username || 'Игрок';
+            if (playerName.startsWith('@')) playerName = playerName.substring(1);
+            let roleBadge = '';
+            if (p.role === 'founder') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#ef4444;">👑</span>';
+            else if (p.role === 'pioneer') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#00b4d8;">⭐</span>';
+            else if (p.role === 'legend') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#FFD700;">👑</span>';
+            html += `<div class="recent-player-item" onclick="openPlayerProfile(${p.user_id}, 0)">
+                <div class="recent-player-avatar">${avatarHtml}</div>
+                <div class="recent-player-info">
+                    <div class="recent-player-name">${escapeHtml(playerName)}${roleBadge}</div>
+                    <div class="recent-player-time">🕐 ${p.time_ago || 'только что'}</div>
+                </div>
+                <div class="recent-player-ticket">🎫 #${p.ticket_number}</div>
+            </div>`;
+        }
+        container.innerHTML = html;
+    }
+
+    async function autoRegister() {
+        if (!userId) return;
+        try {
+            let urlParams = new URLSearchParams(window.location.search);
+            let refCode = urlParams.get('startapp') || '';
+            const response = await fetch('/api/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: userId,
+                    username: username || '',
+                    first_name: firstName || '',
+                    last_name: lastName || '',
+                    avatar_url: photoUrl,
+                    referral_code: refCode
+                })
+            });
+            const data = await response.json();
+            if (data.success) {
+                console.log('✅ Регистрация успешна');
+                const greetingEl = document.getElementById('userGreeting');
+                if (greetingEl) greetingEl.innerText = firstName || username || 'Игрок';
+            }
+        } catch(e) {
+            console.error('AutoRegister error:', e);
+        }
+    }
+
+    async function loadSettings() {
+        try {
+            let res = await fetch('/api/get_settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: userId })
+            });
+            let settings = await res.json();
+            const notificationsToggle = document.getElementById('notificationsToggle');
+            if (notificationsToggle) notificationsToggle.checked = settings.notifications || false;
+            const soundsToggle = document.getElementById('soundsToggle');
+            if (soundsToggle) soundsToggle.checked = settings.sounds || false;
+            const vibrationToggle = document.getElementById('vibrationToggle');
+            if (vibrationToggle) vibrationToggle.checked = settings.vibration || false;
+            const hideFromTopToggle = document.getElementById('hideFromTopToggle');
+            if (hideFromTopToggle) hideFromTopToggle.checked = settings.hideFromTop || false;
+            localHideFromTop = settings.hideFromTop || false;
+            if (settings.theme === 'light') document.body.classList.add('light-theme');
+            else document.body.classList.remove('light-theme');
+            const themeToggle = document.getElementById('themeToggle');
+            if (themeToggle) themeToggle.checked = settings.theme === 'dark';
+        } catch(e) {}
+    }
+
+    async function saveSetting(setting, value) {
+        try {
+            await fetch('/api/update_settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: userId, setting: setting, value: value })
+            });
+            if (setting === 'theme') {
+                if (value) document.body.classList.add('light-theme');
+                else document.body.classList.remove('light-theme');
+            }
+            if (setting === 'hideFromTop') localHideFromTop = value;
+            let settingNames = {
+                'notifications': 'Уведомления',
+                'sounds': 'Звуки',
+                'vibration': 'Вибрация',
+                'theme': 'Тёмная тема',
+                'hideFromTop': 'Скрытие из топа'
+            };
+            let status = value ? 'включены' : 'выключены';
+            if (setting === 'theme') status = value ? 'включена' : 'выключена';
+            showToast(`${settingNames[setting]} ${status}`, 'info');
+        } catch(e) {}
+    }
+
+    const themeToggle = document.getElementById('themeToggle');
+    if (themeToggle) themeToggle.onchange = (e) => saveSetting('theme', e.target.checked);
+    const notificationsToggle = document.getElementById('notificationsToggle');
+    if (notificationsToggle) notificationsToggle.onchange = (e) => saveSetting('notifications', e.target.checked);
+    const soundsToggle = document.getElementById('soundsToggle');
+    if (soundsToggle) soundsToggle.onchange = (e) => saveSetting('sounds', e.target.checked);
+    const vibrationToggle = document.getElementById('vibrationToggle');
+    if (vibrationToggle) vibrationToggle.onchange = (e) => saveSetting('vibration', e.target.checked);
+    const hideFromTopToggle = document.getElementById('hideFromTopToggle');
+    if (hideFromTopToggle) hideFromTopToggle.onchange = (e) => saveSetting('hideFromTop', e.target.checked);
+
+    async function loadReferralLink() {
+        try {
+            let res = await fetch('/api/get_referral_link', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: userId })
+            });
+            let data = await res.json();
+            const referralInput = document.getElementById('referralLinkInput');
+            if (referralInput) referralInput.value = data.link;
+        } catch(e) {
+            const referralInput = document.getElementById('referralLinkInput');
+            if (referralInput) referralInput.value = 'Ошибка';
+        }
+    }
+
+    async function loadReferrals() {
+        try {
+            let res = await fetch('/api/get_referrals', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: userId })
+            });
+            let data = await res.json();
+            const referralsCount = document.getElementById('referralsCount');
+            if (referralsCount) referralsCount.innerText = `(${data.referrals.length})`;
+            const totalEarnedLP = document.getElementById('totalEarnedLP');
+            if (totalEarnedLP) totalEarnedLP.innerText = data.total_earned_lp.toFixed(2);
+            const totalEarnedWG = document.getElementById('totalEarnedWG');
+            if (totalEarnedWG) totalEarnedWG.innerText = data.total_earned_wg.toFixed(2);
+            let container = document.getElementById('referralsList');
+            if (!container) return;
+            if (data.referrals.length === 0) {
+                container.innerHTML = '<div class="empty-referrals">😢 Пока нет друзей</div>';
+                return;
+            }
+            let html = '';
+            for (let ref of data.referrals) {
+                let avatarLetter = (ref.username.charAt(0) || '👤').toUpperCase();
+                html += `<div class="referral-item">
+                    <div class="referral-avatar">${avatarLetter}</div>
+                    <div class="referral-info">
+                        <div class="referral-name">${escapeHtml(ref.username)}</div>
+                        <div class="referral-date">${ref.date || 'Недавно'}</div>
+                    </div>
+                    <div class="referral-earned" style="text-align: right;">
+                        <div class="referral-earned-amount" style="color: #FFD700;">+${ref.earned_wg.toFixed(4)} WG</div>
+                        <div class="referral-earned-label">10% от кликов</div>
+                        <div class="referral-earned-amount" style="color: #00E5FF; margin-top: 4px;">+${ref.earned_lp.toFixed(2)} LP</div>
+                        <div class="referral-earned-label">5% от трат</div>
+                    </div>
+                </div>`;
+            }
+            container.innerHTML = html;
+        } catch(e) {
+            console.error('Error loading referrals:', e);
+        }
+    }
+
+    async function loadWithdrawals() {
+        try {
+            let res = await fetch('/api/get_withdrawals', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: userId })
+            });
+            let data = await res.json();
+            let historyHtml = '';
+            for (let w of data.withdrawals) {
+                let statusClass = '';
+                let statusText = '';
+                if (w.status === 'pending') {
+                    statusClass = 'withdrawal-status-pending';
+                    statusText = '⏳ Ожидание';
+                } else if (w.status === 'completed') {
+                    statusClass = 'withdrawal-status-completed';
+                    statusText = '✅ Выполнено';
+                } else {
+                    statusClass = 'withdrawal-status-rejected';
+                    statusText = '❌ Отклонено';
+                }
+                let maskedAddress = w.address.substring(0, 10) + '****' + w.address.substring(w.address.length - 6);
+                historyHtml += `<div class="withdrawal-history-item">
+                    <div class="withdrawal-history-header">
+                        <span class="withdrawal-amount">${w.amount} USDT</span>
+                        <span class="${statusClass}">${statusText}</span>
+                    </div>
+                    <div class="withdrawal-details">Адрес: ${maskedAddress}</div>
+                    <div class="withdrawal-details">Сеть: ${w.network}</div>
+                    <div class="withdrawal-details">${w.created_at}</div>
+                </div>`;
+            }
+            const historyList = document.getElementById('withdrawalHistoryList');
+            if (historyList) historyList.innerHTML = historyHtml || '<div class="empty-state">История пуста</div>';
+        } catch(e) {}
+    }
 
     // ==================== КЛИКЕР ====================
     let lastClickTime = 0;
@@ -5509,7 +5344,9 @@ document.addEventListener("DOMContentLoaded", () => {
     syncData(true);
 
     // ===== ПРИНУДИТЕЛЬНАЯ ЗАГРУЗКА МИНИ-ЛИДЕРБОРДА =====
-    loadLeaderboardData('day', true);
+    setTimeout(() => {
+        loadLeaderboardData('day', true);
+    }, 500);
 
     loadReferralLink();
     loadReferrals();
