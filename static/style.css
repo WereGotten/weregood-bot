@@ -6650,4 +6650,82 @@ body.light-theme .star-upgrade-card {
     0%, 100% { opacity: 0.3; transform: scale(1); }
     50% { opacity: 1; transform: scale(1.2); }
 }
+/* ============================================================
+   ВКЛАДКИ МАГАЗИНА - ИЗОЛИРОВАННЫЕ КЛАССЫ
+   ============================================================ */
+
+.shop-tabs-container {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 20px;
+    background: rgba(255,255,255,0.04);
+    padding: 5px;
+    border-radius: 50px;
+    justify-content: center;
+}
+
+.shop-tab-btn {
+    flex: 1;
+    text-align: center;
+    padding: 8px 12px;
+    border-radius: 40px;
+    font-weight: 600;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: transparent;
+    color: rgba(255,255,255,0.5);
+    max-width: 140px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    white-space: nowrap;
+    border: none;
+    user-select: none;
+}
+
+.shop-tab-btn.active {
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    color: #0a0a1a;
+    box-shadow: 0 2px 10px rgba(255,215,0,0.25);
+    font-weight: 700;
+}
+
+.shop-tab-btn img {
+    width: 18px;
+    height: 18px;
+    display: block;
+    flex-shrink: 0;
+}
+
+.shop-tab-btn span {
+    font-size: 0.7rem;
+}
+
+/* ===== ПАНЕЛИ МАГАЗИНА ===== */
+.shop-pane-content {
+    display: none;
+    animation: fadeIn 0.2s ease;
+}
+
+.shop-pane-content.active {
+    display: block;
+}
+
+/* ===== АДАПТАЦИЯ ПОД МОБИЛЬНЫЕ ===== */
+@media (max-width: 480px) {
+    .shop-tab-btn {
+        font-size: 0.65rem;
+        padding: 6px 8px;
+        max-width: 100px;
+    }
+    .shop-tab-btn img {
+        width: 16px;
+        height: 16px;
+    }
+    .shop-tab-btn span {
+        font-size: 0.6rem;
+    }
+}
 

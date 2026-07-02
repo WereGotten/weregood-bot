@@ -3,18 +3,18 @@
      ============================================================ -->
 <div id="tabShop" class="tab-pane">
 
-    <!-- ===== ВКЛАДКИ ===== -->
-    <div class="shop-tabs">
-        <div class="shop-tab active" data-shop-tab="normal">
-            <img src="/static/shop_icon.png" alt="Магазин">
+    <!-- ===== ВКЛАДКИ МАГАЗИНА (СПЕЦИАЛЬНЫЕ КЛАССЫ) ===== -->
+    <div class="shop-tabs-container">
+        <div class="shop-tab-btn active" data-shop-tab="normal">
+            <img src="/static/shop_icon.png" alt="Магазин" style="width: 20px; height: 20px;">
             <span data-lang="shop">Магазин</span>
         </div>
-        <div class="shop-tab" data-shop-tab="stars">
-            <img src="/static/star_small.png" alt="Донат">
+        <div class="shop-tab-btn" data-shop-tab="stars">
+            <img src="/static/star_small.png" alt="Донат" style="width: 20px; height: 20px;">
             <span data-lang="star_shop">Донат</span>
         </div>
-        <div class="shop-tab" data-shop-tab="cases">
-            <span style="font-size: 20px;">🎁</span>
+        <div class="shop-tab-btn" data-shop-tab="cases">
+            <span style="font-size: 18px;">🎁</span>
             <span>Кейсы</span>
         </div>
     </div>
@@ -22,7 +22,7 @@
     <!-- ============================================================
          ВКЛАДКА 1: ОБЫЧНЫЙ МАГАЗИН
          ============================================================ -->
-    <div id="shopNormal" class="shop-pane active">
+    <div id="shopNormal" class="shop-pane-content active">
 
         <h2 class="section-title">
             <img src="/static/shop_icon.png" alt="Магазин" style="width: 30px; height: 30px;">
@@ -140,7 +140,7 @@
     <!-- ============================================================
          ВКЛАДКА 2: ЗВЁЗДНЫЙ МАГАЗИН
          ============================================================ -->
-    <div id="shopStars" class="shop-pane">
+    <div id="shopStars" class="shop-pane-content">
 
         <!-- Баланс звёзд -->
         <div class="stars-balance-card">
@@ -303,7 +303,7 @@
     <!-- ============================================================
          ВКЛАДКА 3: КЕЙСЫ
          ============================================================ -->
-    <div id="shopCases" class="shop-pane">
+    <div id="shopCases" class="shop-pane-content">
 
         <!-- ДЛЯ ОБЫЧНЫХ ИГРОКОВ -->
         <div id="casesAccessDenied" style="display: none; text-align: center; padding: 50px 20px;">
