@@ -747,7 +747,10 @@ function updateLeaderboardMiniFast(leaderboardData) {
 }
 
 // ===== ЗАГРУЗКА ПОСЛЕДНИХ УЧАСТНИКОВ =====
+// ===== ЗАГРУЗКА ПОСЛЕДНИХ УЧАСТНИКОВ =====
 async function loadRecentPlayers() {
+    console.log('🔄 Загрузка последних участников...');
+
     try {
         const res = await fetch('/api/recent_players', {
             method: 'GET',
@@ -755,22 +758,22 @@ async function loadRecentPlayers() {
                 'Cache-Control': 'no-cache, no-store, must-revalidate'
             }
         });
-        const players = await res.json();
-        console.log('📋 Загружены последние участники:', players.length);
 
-        if (players && players.length > 0) {
-            updateRecentPlayersFast(players);
-        } else {
-            const container = document.getElementById('recentPlayersList');
-            if (container) {
-                container.innerHTML = '<div class="empty-state">😢 Пока нет участников</div>';
-            }
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
         }
+
+        const players = await res.json();
+        console.log('📋 Загружены последние участники:', players.length, players);
+
+        // Обновляем UI
+        updateRecentPlayersFast(players);
+
     } catch(e) {
-        console.error('Error loading recent players:', e);
+        console.error('❌ Error loading recent players:', e);
         const container = document.getElementById('recentPlayersList');
         if (container) {
-            container.innerHTML = '<div class="empty-state">😢 Пока нет участников</div>';
+            container.innerHTML = '<div class="empty-state">😢 Ошибка загрузки участников</div>';
         }
     }
 }
@@ -778,9 +781,11 @@ async function loadRecentPlayers() {
 function updateRecentPlayersFast(players) {
     const container = document.getElementById('recentPlayersList');
     if (!container) {
-        console.warn('recentPlayersList container not found');
+        console.warn('⚠️ recentPlayersList container not found');
         return;
     }
+
+    console.log('🎨 Обновление последних участников, получено:', players?.length || 0);
 
     if (!players || players.length === 0) {
         container.innerHTML = '<div class="empty-state">😢 Пока нет участников</div>';
@@ -790,26 +795,45 @@ function updateRecentPlayersFast(players) {
     let html = '';
     for (let i = 0; i < Math.min(players.length, 5); i++) {
         const p = players[i];
+
+        // Аватарка
         const avatarHtml = (p.avatar_url && p.avatar_url !== '')
             ? `<img src="${p.avatar_url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" onerror="this.parentElement.innerHTML='👤'">`
             : '👤';
-        let playerName = p.username || 'Игрок';
-        if (playerName.startsWith('@')) playerName = playerName.substring(1);
-        let roleBadge = '';
-        if (p.role === 'founder') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#ef4444;">👑</span>';
-        else if (p.role === 'pioneer') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#00b4d8;">⭐</span>';
-        else if (p.role === 'legend') roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#FFD700;">👑</span>';
 
-        html += `<div class="recent-player-item" onclick="openPlayerProfile(${p.user_id}, 0)">
-            <div class="recent-player-avatar">${avatarHtml}</div>
-            <div class="recent-player-info">
-                <div class="recent-player-name">${escapeHtml(playerName)}${roleBadge}</div>
-                <div class="recent-player-time">🕐 ${p.time_ago || 'только что'}</div>
+        // Имя игрока
+        let playerName = p.username || 'Игрок';
+        if (playerName.startsWith('@')) {
+            playerName = playerName.substring(1);
+        }
+
+        // Бейдж роли
+        let roleBadge = '';
+        if (p.role === 'founder') {
+            roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#ef4444;">👑</span>';
+        } else if (p.role === 'pioneer') {
+            roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#00b4d8;">⭐</span>';
+        } else if (p.role === 'legend') {
+            roleBadge = '<span style="margin-left:5px;font-size:0.6rem;color:#FFD700;">👑</span>';
+        }
+
+        // Время
+        const timeAgo = p.time_ago || 'только что';
+
+        html += `
+            <div class="recent-player-item" onclick="openPlayerProfile(${p.user_id}, 0)">
+                <div class="recent-player-avatar">${avatarHtml}</div>
+                <div class="recent-player-info">
+                    <div class="recent-player-name">${escapeHtml(playerName)}${roleBadge}</div>
+                    <div class="recent-player-time">🕐 ${escapeHtml(timeAgo)}</div>
+                </div>
+                <div class="recent-player-ticket">🎫 #${p.ticket_number}</div>
             </div>
-            <div class="recent-player-ticket">🎫 #${p.ticket_number}</div>
-        </div>`;
+        `;
     }
+
     container.innerHTML = html;
+    console.log('✅ Последние участники отображены');
 }
 
 function updateRecentPlayers(players) {
@@ -6232,6 +6256,9 @@ function updateLottery() {
     // Загружаем актуальные данные
     loadUserTickets();
 
+    // ===== ЗАГРУЖАЕМ ПОСЛЕДНИХ УЧАСТНИКОВ =====
+    loadRecentPlayers();
+
     // Обновляем статус розыгрыша
     fetch('/api/lottery_status', {
         method: 'POST',
@@ -6242,25 +6269,21 @@ function updateLottery() {
     .then(data => {
         console.log('📊 Данные лотереи:', data);
 
-        // Обновляем призовой фонд
         const prizePoolEl = document.getElementById('prizePool');
         if (prizePoolEl && data.prize_pool !== undefined) {
             prizePoolEl.innerText = data.prize_pool.toFixed(2);
         }
 
-        // Обновляем баланс LP
         const lotteryLPEl = document.getElementById('lotteryLPBalance');
         if (lotteryLPEl && data.user_lp !== undefined) {
             lotteryLPEl.innerText = data.user_lp;
         }
 
-        // Обновляем количество билетов
         const ticketsCountEl = document.getElementById('ticketsCount');
         if (ticketsCountEl && data.user_tickets !== undefined) {
             ticketsCountEl.innerText = data.user_tickets;
         }
 
-        // Обновляем статус розыгрыша
         if (data.is_drawn !== undefined) {
             isDrawn = data.is_drawn;
             winningNumbers = data.winning_numbers || [];
