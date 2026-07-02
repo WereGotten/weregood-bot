@@ -5499,21 +5499,240 @@ function closeGamepad() {
         }
     }
 
-    // ==================== DOMCONTENTLOADED ====================
+
+    // ================================================================
+// БЫСТРОЕ ОБНОВЛЕНИЕ БАЛАНСА (для первого показа)
+// ================================================================
+async function quickBalanceUpdate() {
+    if (!userId) {
+        console.warn('⚠️ quickBalanceUpdate: userId нет');
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/sync_light', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            const d = data.data;
+            console.log('📊 Быстрая загрузка баланса:', d);
+
+            // Обновляем балансы
+            const wgEl = document.getElementById('wgBalance');
+            if (wgEl) wgEl.textContent = d.wg.toFixed(2);
+
+            const lpEl = document.getElementById('lpBalance');
+            if (lpEl) lpEl.textContent = d.lp;
+
+            const energyEl = document.getElementById('energyValue');
+            if (energyEl) energyEl.textContent = d.energy;
+
+            const maxEnergyEl = document.getElementById('maxEnergyValue');
+            if (maxEnergyEl) maxEnergyEl.textContent = d.max_energy;
+
+            const earningEl = document.getElementById('earningPerClick');
+            if (earningEl) earningEl.textContent = d.earning_per_click.toFixed(2);
+
+            const clickAmountEl = document.getElementById('clickAmount');
+            if (clickAmountEl) clickAmountEl.textContent = d.earning_per_click.toFixed(2);
+
+            const totalClicksEl = document.getElementById('totalClicksMini');
+            if (totalClicksEl) totalClicksEl.textContent = d.total_clicks || 0;
+
+            // Обновляем локальные переменные
+            localWG = d.wg || 0;
+            localLP = d.lp || 0;
+            localEnergy = d.energy || 0;
+            localMaxEnergy = d.max_energy || 500;
+            localEarning = d.earning_per_click || 0.01;
+            localClicks = d.total_clicks || 0;
+
+            // Обновляем энергобар
+            const percent = (d.energy / d.max_energy) * 100;
+            const bar = document.getElementById('energyBar');
+            if (bar) bar.style.width = percent + '%';
+
+            const headerEnergy = document.getElementById('energyHeader');
+            if (headerEnergy) headerEnergy.textContent = d.energy;
+
+            // Обновляем мини-статистику
+            const totalWGmini = document.getElementById('totalWGmini');
+            if (totalWGmini) totalWGmini.textContent = d.wg.toFixed(2);
+
+            // Загружаем билеты
+            try {
+                const ticketRes = await fetch('/api/lottery_status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId })
+                });
+                const ticketData = await ticketRes.json();
+
+                if (ticketData.user_tickets !== undefined) {
+                    const totalTicketsMini = document.getElementById('totalTicketsMini');
+                    if (totalTicketsMini) totalTicketsMini.textContent = ticketData.user_tickets;
+
+                    const totalTickets = document.getElementById('totalTickets');
+                    if (totalTickets) totalTickets.textContent = ticketData.user_tickets;
+
+                    const ticketsCount = document.getElementById('ticketsCount');
+                    if (ticketsCount) ticketsCount.textContent = ticketData.user_tickets;
+                }
+
+                const prizePool = document.getElementById('prizePool');
+                if (prizePool && ticketData.prize_pool !== undefined) {
+                    prizePool.textContent = ticketData.prize_pool.toFixed(2);
+                }
+            } catch(e) {
+                console.warn('⚠️ Быстрая загрузка билетов не удалась:', e);
+            }
+
+            // Обновляем профиль
+            const totalWG = document.getElementById('totalWG');
+            if (totalWG) totalWG.textContent = d.wg.toFixed(2);
+
+            const totalLP = document.getElementById('totalLP');
+            if (totalLP) totalLP.textContent = d.lp;
+
+            const profileClicks = document.getElementById('profileClicks');
+            if (profileClicks) profileClicks.textContent = d.total_clicks || 0;
+        }
+    } catch(e) {
+        console.warn('⚠️ quickBalanceUpdate error:', e);
+    }
+}
+
+
+// ================================================================
+// ЗАГРУЗКА МИНИ-ЛИДЕРБОРДА
+// ================================================================
+async function loadMiniLeaderboard() {
+    const container = document.getElementById('leaderboardMini');
+    if (!container) {
+        console.warn('⚠️ leaderboardMini не найден');
+        return;
+    }
+
+    try {
+        container.innerHTML = '<div class="loading">Загрузка...</div>';
+
+        const res = await fetch('/api/leaderboard/daily?force=true');
+        const data = await res.json();
+
+        if (!data || data.length === 0) {
+            container.innerHTML = '<div style="text-align:center;opacity:0.4;font-size:0.7rem;padding:8px;">Нет данных за сегодня</div>';
+            return;
+        }
+
+        let html = '';
+        for (let i = 0; i < Math.min(data.length, 5); i++) {
+            const user = data[i];
+            const avatar = (user.avatar && user.avatar !== '👤' && user.avatar !== '')
+                ? `<img src="${user.avatar}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;" onerror="this.parentElement.innerHTML='👤'">`
+                : '👤';
+
+            let displayName = user.username || 'Игрок';
+            if (displayName.startsWith('@')) displayName = displayName.substring(1);
+            if (displayName.length > 15) displayName = displayName.substring(0, 13) + '…';
+
+            const dailyClicks = user.daily_clicks || 0;
+
+            let rankDisplay = user.rank;
+            if (user.rank === 1) rankDisplay = '🥇';
+            else if (user.rank === 2) rankDisplay = '🥈';
+            else if (user.rank === 3) rankDisplay = '🥉';
+
+            if (user.hide_from_top) {
+                displayName = 'Аноним';
+            }
+
+            html += `
+                <div class="leaderboard-mini-item" onclick="openPlayerProfile(${user.user_id}, 0)">
+                    <span class="rank">${rankDisplay}</span>
+                    <span class="avatar-mini">${avatar}</span>
+                    <span class="name">${escapeHtml(displayName)}</span>
+                    <span class="clicks">${dailyClicks.toLocaleString()} кликов</span>
+                </div>
+            `;
+        }
+        container.innerHTML = html;
+
+    } catch(e) {
+        console.error('❌ Ошибка загрузки мини-лидерборда:', e);
+        container.innerHTML = '<div style="text-align:center;opacity:0.4;font-size:0.7rem;padding:8px;">Ошибка загрузки</div>';
+    }
+}
+
+
+// ================================================================
+// ЗАПАСНЫЕ ТАЙМЕРЫ ДЛЯ ФОРСИРОВАННОЙ ЗАГРУЗКИ
+// ================================================================
+// Если через 2 секунды данные всё ещё пустые — форсируем
+setTimeout(() => {
+    if (localWG === 0 && localLP === 0) {
+        console.log('⚠️ Данные не загрузились, форсируем...');
+        quickBalanceUpdate();
+        syncData(true);
+        loadMiniLeaderboard();
+    }
+}, 2000);
+
+// Ещё один запасной через 4 секунды
+setTimeout(() => {
+    if (localWG === 0 && localLP === 0) {
+        console.log('⚠️ Второй запасной таймер...');
+        quickBalanceUpdate();
+        syncData(true);
+        loadMiniLeaderboard();
+    }
+}, 4000);
+
+
+// ================================================================
+// DOMCONTENTLOADED
+// ================================================================
 document.addEventListener("DOMContentLoaded", () => {
+    // ===== 1. БАЗОВАЯ ИНИЦИАЛИЗАЦИЯ =====
     initTonConnect();
     loadTonWalletStatus();
     initSocket();
     autoRegister();
     loadAvatar();
     logGameEntry();
-    syncData(true);
 
-    // ===== ПРИНУДИТЕЛЬНАЯ ЗАГРУЗКА МИНИ-ЛИДЕРБОРДА =====
+    // ===== 2. ПЕРВАЯ ВОЛНА ЗАГРУЗКИ (МГНОВЕННАЯ) =====
+    // Сразу показываем данные
     setTimeout(() => {
-        loadLeaderboardData('day', true);
-    }, 500);
+        quickBalanceUpdate();
+    }, 50);
 
+    // ===== 3. ВТОРАЯ ВОЛНА (МИНИ-ЛИДЕРБОРД) =====
+    setTimeout(() => {
+        loadMiniLeaderboard();
+    }, 200);
+
+    // ===== 4. ТРЕТЬЯ ВОЛНА (ПОЛНАЯ СИНХРОНИЗАЦИЯ) =====
+    setTimeout(() => {
+        syncData(true);
+    }, 400);
+
+    // ===== 5. ЧЕТВЁРТАЯ ВОЛНА (ДУБЛИРУЕМ ДЛЯ НАДЁЖНОСТИ) =====
+    setTimeout(() => {
+        syncData(true);
+        loadMiniLeaderboard();
+    }, 800);
+
+    // ===== 6. ПЯТАЯ ВОЛНА (ЗАПАСНАЯ) =====
+    setTimeout(() => {
+        quickBalanceUpdate();
+        loadMiniLeaderboard();
+    }, 1500);
+
+    // ===== 7. ОСТАЛЬНЫЕ ДАННЫЕ =====
     loadReferralLink();
     loadReferrals();
     loadSettings();
@@ -5521,16 +5740,12 @@ document.addEventListener("DOMContentLoaded", () => {
     setTimeout(checkAndStartTutorial, 2000);
 
     // ============================================================
-    // ОПТИМИЗИРОВАННЫЙ СИНХРОНИЗАТОР (КАК В NOTCOIN)
+    // ОПТИМИЗИРОВАННЫЙ СИНХРОНИЗАТОР
     // ============================================================
 
     // 1️⃣ БЫСТРОЕ ОБНОВЛЕНИЕ БАЛАНСА (каждые 2 секунды)
-    // Используем ЛЁГКИЙ эндпоинт /api/sync_light - только баланс и энергия
     setInterval(async () => {
-        if (isScratchingActive) {
-            // Если идёт стирание - пропускаем
-            return;
-        }
+        if (isScratchingActive) return;
 
         try {
             const res = await fetch('/api/sync_light', {
@@ -5543,7 +5758,6 @@ document.addEventListener("DOMContentLoaded", () => {
             if (data.success) {
                 const d = data.data;
 
-                // Обновляем ТОЛЬКО цифры (мгновенно!)
                 const wgEl = document.getElementById('wgBalance');
                 if (wgEl) wgEl.textContent = d.wg.toFixed(2);
 
@@ -5562,45 +5776,47 @@ document.addEventListener("DOMContentLoaded", () => {
                 const clickAmountEl = document.getElementById('clickAmount');
                 if (clickAmountEl) clickAmountEl.textContent = d.earning_per_click.toFixed(2);
 
-                // Обновляем энергобар
                 const percent = (d.energy / d.max_energy) * 100;
                 const bar = document.getElementById('energyBar');
                 if (bar) bar.style.width = percent + '%';
 
-                // Обновляем энергию в хедере
                 const headerEnergy = document.getElementById('energyHeader');
                 if (headerEnergy) headerEnergy.textContent = d.energy;
+
+                // Обновляем локальные переменные
+                localWG = d.wg || 0;
+                localLP = d.lp || 0;
+                localEnergy = d.energy || 0;
+                localMaxEnergy = d.max_energy || 500;
+                localEarning = d.earning_per_click || 0.01;
             }
         } catch(e) {
-            // Тихая ошибка - не беспокоим игрока
+            // Тихая ошибка
         }
-    }, 2000); // ← 2 секунды, как в Notcoin!
+    }, 2000);
 
-    // 2️⃣ ТЯЖЕЛЫЕ ДАННЫЕ (лотерея, лидерборд, рефералы) - РЕДКО!
+    // 2️⃣ ТЯЖЕЛЫЕ ДАННЫЕ (раз в 30 секунд)
     setInterval(() => {
         if (isScratchingActive) return;
 
         const activeTab = document.querySelector('.tab-pane.active');
 
-        // Если на вкладке "Лотерея" - обновляем лотерею
         if (activeTab && activeTab.id === 'tabLottery') {
             loadUserTickets();
             updateLottery();
         }
 
-        // Если на вкладке "Профиль" - обновляем рефералов
         if (activeTab && activeTab.id === 'tabProfile') {
             loadReferrals();
         }
 
-        // Всегда обновляем лидерборд (но редко)
         if (activeTab && activeTab.id === 'tabHome') {
             loadLeaderboardData('day', true);
         }
-    }, 30000); // ← 30 секунд
+    }, 30000);
 
     console.log('✅ Оптимизированный синхронизатор запущен!');
-    console.log('   📊 Баланс обновляется каждые 2 секунды (лёгкий запрос)');
+    console.log('   📊 Баланс обновляется каждые 2 секунды');
     console.log('   🎰 Лотерея обновляется каждые 30 секунд');
     console.log('   👥 Рефералы обновляются каждые 30 секунд');
     console.log('   🏆 Мини-лидерборд загружен при старте!');
@@ -5608,6 +5824,7 @@ document.addEventListener("DOMContentLoaded", () => {
     startDailyLeaderboardTimer();
     updateLPBoostCount();
 
+    // ===== ОБРАБОТКА ПАРАМЕТРОВ ЗАПУСКА =====
     if (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
         const startParam = tg.initDataUnsafe.start_param;
         if (startParam && startParam.startsWith('claim_')) {
@@ -5641,18 +5858,22 @@ document.addEventListener("DOMContentLoaded", () => {
         tg.expand();
     }
 
+    // ===== ОБРАБОТЧИКИ ДЛЯ ФОРТУНЫ =====
     const closeBetModalBtn = document.querySelector('#betModal .bet-modal-close');
     if (closeBetModalBtn) {
         closeBetModalBtn.addEventListener('click', closeBetModal);
     }
+
     const submitBetBtn = document.getElementById('submitBetBtn');
     if (submitBetBtn) {
         submitBetBtn.addEventListener('click', submitBet);
     }
+
     const betAmountInput = document.getElementById('betAmount');
     if (betAmountInput) {
         betAmountInput.addEventListener('input', calculateBet);
     }
+
     const betPresets = document.querySelectorAll('.bet-preset-premium');
     betPresets.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -5664,6 +5885,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     });
+
     const betBtnYellow = document.getElementById('betBtnYellow');
     if (betBtnYellow) {
         betBtnYellow.addEventListener('click', (e) => {
@@ -5672,6 +5894,7 @@ document.addEventListener("DOMContentLoaded", () => {
             openBetModal('yellow');
         });
     }
+
     const betBtnRed = document.getElementById('betBtnRed');
     if (betBtnRed) {
         betBtnRed.addEventListener('click', (e) => {
@@ -5682,60 +5905,66 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
-    document.addEventListener('click', function(e) {
-        const btn = e.target.closest('.bet-btn-premium');
-        if (btn && btn.getAttribute('data-team')) {
-            e.stopPropagation();
-            const team = btn.getAttribute('data-team');
-            if (team === 'yellow' || team === 'red') {
-                openBetModal(team);
-            }
-        }
-    });
 
-    function loadAvatar() {
-        if (photoUrl && photoUrl !== '') {
-            const userAvatar = document.getElementById('userAvatar');
-            const avatarPlaceholder = document.getElementById('avatarPlaceholder');
-            if (userAvatar) {
-                userAvatar.src = photoUrl;
-                userAvatar.style.display = 'block';
-                if (avatarPlaceholder) avatarPlaceholder.style.display = 'none';
-            }
-        } else {
-            const avatarPlaceholder = document.getElementById('avatarPlaceholder');
-            if (avatarPlaceholder) avatarPlaceholder.style.display = 'flex';
+// ===== ОБРАБОТЧИК КЛИКОВ ДЛЯ СТАВОК (вне DOMContentLoaded) =====
+document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.bet-btn-premium');
+    if (btn && btn.getAttribute('data-team')) {
+        e.stopPropagation();
+        const team = btn.getAttribute('data-team');
+        if (team === 'yellow' || team === 'red') {
+            openBetModal(team);
         }
     }
+});
 
-    function logGameEntry() {
-        fetch('/api/log_game_entry', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId })
-        }).catch(e => console.log('Log entry error:', e));
-    }
 
-    function updateStatus() {
-        syncData(true);
-    }
+// ================================================================
+// ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+// ================================================================
 
-    function updateLeaderboard() {
-        syncData(true);
+function loadAvatar() {
+    if (photoUrl && photoUrl !== '') {
+        const userAvatar = document.getElementById('userAvatar');
+        const avatarPlaceholder = document.getElementById('avatarPlaceholder');
+        if (userAvatar) {
+            userAvatar.src = photoUrl;
+            userAvatar.style.display = 'block';
+            if (avatarPlaceholder) avatarPlaceholder.style.display = 'none';
+        }
+    } else {
+        const avatarPlaceholder = document.getElementById('avatarPlaceholder');
+        if (avatarPlaceholder) avatarPlaceholder.style.display = 'flex';
     }
+}
 
-    function updateLottery() {
-        syncData(true);
-    }
+function logGameEntry() {
+    fetch('/api/log_game_entry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId })
+    }).catch(e => console.log('Log entry error:', e));
+}
 
-    function loadRecentPlayers() {
-        syncData(true);
-    }
+function updateStatus() {
+    syncData(true);
+}
 
-    // Заглушка для calculateBet (если не определена)
-    function calculateBet() {
-        // функция расчёта комиссии, если нужна
-    }
+function updateLeaderboard() {
+    syncData(true);
+}
+
+function updateLottery() {
+    syncData(true);
+}
+
+function loadRecentPlayers() {
+    syncData(true);
+}
+
+function calculateBet() {
+    // функция расчёта комиссии, если нужна
+}
 
     // ==================== РЕФЕРАЛЬНЫЙ КОНКУРС ====================
 let contestTimerInterval = null;
